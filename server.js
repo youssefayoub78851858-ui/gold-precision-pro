@@ -208,6 +208,15 @@ const server = http.createServer(async (req, res) => {
     }
         }
   
+
+if (url.pathname === "/api/backtest") {
+  return send(res, 200, {
+    status: "ready",
+    backtestLoaded: typeof backtest === "function",
+    message: "Historical test not run yet"
+  });
+}
+  
   return send(res, 404, { error: "Not found" });
 });
 
