@@ -171,7 +171,7 @@ const server = http.createServer(async (req, res) => {
         const ordered = [...candles[frame]].reverse();
         const closes = ordered.map(c => Number(c.close));
         if (closes.length < 50 || closes.some(v => !Number.isFinite(v))) {
-          return send(res, 502, { error: "Insufficient candles" });
+        return send(res, 502, { error: "Insufficient candles", frame, count: closes.length, invalidPrices: closes.filter(v => !Number.isFinite(v)).length });
         }
 
         const fast = ema(closes, 20);
