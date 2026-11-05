@@ -49,3 +49,61 @@
   }
 })();
 </script>
+
+<script>
+(function () {
+  const API = "https://gold-precision-pro.onrender.com/api/candles";
+  const box = document.createElement("section");
+
+  box.style.cssText =
+    "direction:rtl;background:#182238;color:white;" +
+    "padding:18px;margin:20px;border:1px solid #c9a45d;" +
+    "border-radius:16px;font-family:Arial";
+
+  box.innerHTML = `
+    <h3 style="color:#e5bc70">تحليل بيانات الذهب</h3>
+    <p id="gold-data-status">اضغط لجلب الشموع</p>
+    <div id="gold-data-results"></div>
+    <button id="gold-data-button"
+      style="background:#d7ae62;padding:12px;border:0;border-radius:8px">
+      تحديث بيانات الذهب
+    </button>
+  `;
+
+  document.body.appendChild(box);
+
+  async function loadGold() {
+    const status = box.querySelector("#gold-data-status");
+    const results = box.querySelector("#gold-data-results");
+    status.textContent = "جاري جلب البيانات...";
+    results.textContent = "";
+
+    for (const [interval, label] of [
+      ["15min", "M15"],
+      ["1h", "H1"],
+      ["4h", "H4"]
+    ]) {
+      try {
+        const response = await fetch(API + "?interval=" + interval);
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const data = await response.json();
+        const candle = data.values && data.values[0];
+        if (!candle) throw new Error("No candles");
+
+        const p = document.createElement("p");
+        p.textContent = label + " | " + candle.datetime +
+          " | إغلاق: $" + Number(candle.close).toFixed(2);
+        results.appendChild(p);
+      } catch (error) {
+        const p = document.createElement("p");
+        p.textContent = label + ": تعذّر جلب البيانات";
+        results.appendChild(p);
+      }
+    }
+    status.textContent = "اكتمل فحص الفريمات";
+  }
+
+  box.querySelector("#gold-data-button")
+    .addEventListener("click", loadGold);
+})();
+</script>
