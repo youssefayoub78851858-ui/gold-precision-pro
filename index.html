@@ -107,3 +107,56 @@
     .addEventListener("click", loadGold);
 })();
 </script>
+
+<div id="gold-live-analysis" dir="rtl" style="margin:24px 16px 180px;padding:20px;background:#172238;color:white;border:1px solid #b99a58;border-radius:18px;font-family:Arial,sans-serif">
+  <h2 style="color:#e5bf70">مراقبة الذهب M15 / H1 / H4</h2>
+  <p id="gold-analysis-status">جاري الاتصال بالتحليل...</p>
+  <div id="gold-analysis-results"></div>
+  <p style="font-size:12px;color:#b9c4d6">إشارات تجريبية وليست أوامر تداول.</p>
+</div>
+
+<script>
+(function () {
+  const API = "https://gold-precision-pro.onrender.com/api/analyze";
+  const status = document.getElementById("gold-analysis-status");
+  const results = document.getElementById("gold-analysis-results");
+
+  async function refreshAnalysis() {
+    try {
+      const response = await fetch(API, { cache: "no-store" });
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const data = await response.json();
+
+      if (!["BUY", "SELL", "WAIT"].includes(data.signal)) {
+        throw new Error("Invalid signal");
+      }
+
+      status.textContent = "التوصية التجريبية: " + data.signal +
+        " | توافق الفريمات: " + (data.agreement || "غير متاح");
+
+      results.replaceChildren();
+
+      for (const frame of ["15min", "1h", "4h"]) {
+        const info = data.indicators && data.indicators[frame];
+        const p = document.createElement("p");
+        p.textContent = frame + ": " + (
+          info
+            ? "الاتجاه " + info.trend +
+              " | RSI " + info.rsi14 +
+              " | إغلاق " + info.close +
+              " | الشمعة " + info.candleTime
+            : "البيانات غير متاحة"
+        );
+        results.appendChild(p);
+      }
+    } catch (error) {
+      status.textContent = "تعذّر تحديث التحليل، لا توجد إشارة صالحة حالياً";
+      results.replaceChildren();
+    }
+  }
+
+  refreshAnalysis();
+  setInterval(refreshAnalysis, 60000);
+})();
+        </script>
+        
