@@ -17,10 +17,10 @@ function backtest(candles, signals, options = {}) {
     throw new Error("Invalid test settings");
   }
 
-  let wins = 0, losses = 0, totalR = 0;
+  let wins = 0, losses = 0, totalR = 0; let lastExitIndex = -1;
   const trades = [];
 
-  for (const s of signals) {
+  for (const s of signals) { if (s.index < lastExitIndex) continue;
     if (!["BUY", "SELL"].includes(s.side)) continue;
     if (!Number.isInteger(s.index) ||
         s.index < 0 || s.index >= candles.length - 1) continue;
@@ -54,7 +54,7 @@ function backtest(candles, signals, options = {}) {
         else losses++;
         totalR += netR;
         trades.push({ result, netR, entry, stop, target, exitIndex: i });
-        break;
+        lastExitIndex = i; break;
       }
     }
   }
