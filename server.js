@@ -62,7 +62,7 @@ const server = http.createServer(async (req, res) => {
       const endpoint = new URL("https://api.twelvedata.com/time_series");
       endpoint.searchParams.set("symbol", "XAU/USD");
       endpoint.searchParams.set("interval", interval);
-      endpoint.searchParams.set("outputsize", "500");
+      endpoint.searchParams.set("outputsize", "2000");
       endpoint.searchParams.set("timezone", "UTC");
       endpoint.searchParams.set("apikey", API_KEY);
 
