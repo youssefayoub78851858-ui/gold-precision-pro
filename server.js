@@ -209,13 +209,34 @@ const server = http.createServer(async (req, res) => {
         }
   
 
+
 if (url.pathname === "/api/backtest") {
-  return send(res, 200, {
-    status: "ready",
-    backtestLoaded: typeof backtest === "function",
-    message: "Historical test not run yet"
+  if (req.method !== "POST") {
+    return send(res, 405, {
+      error: "POST required"
+    });
+  }
+
+  let body = "";
+  req.on("data", chunk => {
+    body += chunk;
+    if (body.length > 1000000) req.destroy();
   });
+
+  req.on("end", () => {
+    try {
+      const input = JSON.parse(body);
+      const result = backtest(input);
+      return send(res, 200, result);
+    } catch (error) {
+      return send(res, 400, {
+        error: "Invalid backtest input"
+      });
+    }
+  });
+  return;
 }
+
   
   return send(res, 404, { error: "Not found" });
 });
