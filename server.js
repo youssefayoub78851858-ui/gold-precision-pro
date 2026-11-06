@@ -60,6 +60,7 @@ const server = http.createServer(async (req, res) => {
       endpoint.searchParams.set("symbol", "XAU/USD");
       endpoint.searchParams.set("interval", interval);
       endpoint.searchParams.set("outputsize", "30");
+      endpoint.searchParams.set("timezone", "UTC");
       endpoint.searchParams.set("apikey", API_KEY);
 
       const response = await fetch(endpoint, {
