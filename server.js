@@ -168,7 +168,7 @@ const server = http.createServer(async (req, res) => {
       let votes = 0;
 
       for (const frame of frames) {
-        const ordered = [...candles[frame]].reverse();
+        const ordered = [...candles[frame]].slice(1).reverse();
         const closes = ordered.map(c => Number(c.close));
         if (closes.length < 50 || closes.some(v => !Number.isFinite(v))) {
         return send(res, 502, { error: "Insufficient candles", frame, count: closes.length, invalidPrices: closes.filter(v => !Number.isFinite(v)).length });
