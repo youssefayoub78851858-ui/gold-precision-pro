@@ -227,11 +227,25 @@ for (let i = 65; i < candles.length - 1; i++) {
   }
 
   if (!side) continue;
+let trTotal = 0;
+for (let j = i - 13; j <= i; j++) {
+  const high = Number(candles[j].high);
+  const low = Number(candles[j].low);
+  const prevClose = closes[j - 1];
 
+  trTotal += Math.max(
+    high - low,
+    Math.abs(high - prevClose),
+    Math.abs(low - prevClose)
+  );
+}
+
+const stopDistance = (trTotal / 14) * 1.5;
+if (!Number.isFinite(stopDistance) || stopDistance <= 0) continue;
   signals.push({
     index: i,
     side,
-    stop: side === "BUY" ? close - 5 : close + 5
+    stop: side === "BUY" ? close - stopDistance : close + stopDistance
   });
 }
     
