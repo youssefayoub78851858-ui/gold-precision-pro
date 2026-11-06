@@ -197,6 +197,8 @@ for (let i = 50; i < candles.length - 1; i++) {
     stop: side === "BUY" ? close - 5 : close + 5
   });
 }
+    result.textContent = "عدد الشموع: " + candles.length +
+  " | عدد الإشارات: " + signals.length;
 const testResponse = await fetch(
   "https://gold-precision-pro.onrender.com/api/backtest",
   {
