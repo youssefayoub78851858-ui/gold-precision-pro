@@ -53,7 +53,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 503, { error: "API key not configured" });
     }
 
-    const saved = cache.get(interval);
+    const saved = cache.get("history:" + interval);
     if (saved && Date.now() - saved.time < 60000) {
       return send(res, 200, saved.data);
     }
@@ -86,7 +86,7 @@ const server = http.createServer(async (req, res) => {
         values: result.values
       };
 
-      cache.set(interval, { time: Date.now(), data });
+      cache.set("history:" + interval, { time: Date.now(), data });
       return send(res, 200, data);
     } catch (error) {
       return send(res, 502, { error: "Market data request failed" });
