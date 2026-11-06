@@ -33,6 +33,7 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, {
       system: "Gold Precision Pro AI",
       status: "online",
+      serverTimeUTC: new Date().toISOString(),
       apiKeyConfigured: Boolean(API_KEY),
       trading: "disabled"
     });
