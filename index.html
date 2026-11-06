@@ -272,7 +272,9 @@ if (!testResponse.ok) {
   throw new Error(test.error || "فشل الاختبار التاريخي");
 }
 
-result.textContent = JSON.stringify(test, null, 2);
+
+result.textContent = "عدد الشموع: " + candles.length + "\nعدد الإشارات: " + signals.length + "\n" + JSON.stringify(test, null, 2);
+    
     
     
   } catch (error) {
