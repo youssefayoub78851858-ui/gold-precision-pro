@@ -23,9 +23,12 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, {});
   }
 
-  if (req.method !== "GET") {
-    return send(res, 405, { error: "Method not allowed" });
-  }
+  if (
+  req.method !== "GET" &&
+  !(req.method === "POST" && req.url.split("?")[0] === "/api/backtest")
+) {
+  return send(res, 405, { error: "Method not allowed" });
+}
 
   const url = new URL(req.url, "http://localhost");
 
