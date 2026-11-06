@@ -180,7 +180,8 @@ document.getElementById("backtest-btn").addEventListener("click", async function
     if (!response.ok || !Array.isArray(data.values)) {
       throw new Error("تعذّر جلب شموع الذهب");
     }
-
+const candles = [...data.values].reverse();
+const signals = [];
 const testResponse = await fetch(
   "https://gold-precision-pro.onrender.com/api/backtest",
   {
@@ -189,9 +190,9 @@ const testResponse = await fetch(
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      candles: [...data.values].reverse(),
+      candles,
 
-signals: []      
+signals      
     })
   }
 );
