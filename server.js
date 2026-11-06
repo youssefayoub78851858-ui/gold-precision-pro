@@ -229,7 +229,7 @@ if (url.pathname === "/api/backtest") {
   req.on("end", () => {
     try {
       const input = JSON.parse(body);
-      const result = backtest(input);
+      const result = backtest(input.candles, input.signals, input.options || {});
       return send(res, 200, result);
     } catch (error) {
       return send(res, 400, {
