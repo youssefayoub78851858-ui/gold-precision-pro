@@ -312,7 +312,8 @@ JSON.stringify({
   all: summarizeTrades(closedTrades),
   older: summarizeTrades(closedTrades.filter(t => t.exitIndex < midpoint)),
   newer: summarizeTrades(closedTrades.filter(t => t.exitIndex >= midpoint))
-}, null, 2);    
+}, null, 2);
+    result.textContent = "من: " + candles[0].datetime + " | إلى: " + candles[candles.length - 1].datetime + "\n" + result.textContent;
     
   } catch (error) {
     result.textContent = "فشل جلب البيانات: " + error.message;
