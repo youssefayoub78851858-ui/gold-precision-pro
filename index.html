@@ -181,22 +181,60 @@ document.getElementById("backtest-btn").addEventListener("click", async function
       throw new Error("تعذّر جلب شموع الذهب");
     }
 const candles = [...data.values].reverse();
+
 const signals = [];
+const closes = candles.map(c => Number(c.close));
 
-for (let i = 50; i < candles.length - 1; i++) {
-  const close = Number(candles[i].close);
-  const prev = Number(candles[i - 1].close);
+function ema(values, period) {
+  const result = Array(values.length).fill(null);
+  const k = 2 / (period + 1);
+  if (values.length < period) return result;
 
-  if (!Number.isFinite(close) || !Number.isFinite(prev)) continue;
+  let sum = 0;
+  for (let i = 0; i < period; i++) sum += values[i];
+  result[period - 1] = sum / period;
 
-  const side = close > prev ? "BUY" : "SELL";
+  for (let i = period; i < values.length; i++) {
+    result[i] = values[i] * k + result[i - 1] * (1 - k);
+  }
+  return result;
+}
+
+const ema20 = ema(closes, 20);
+const ema50 = ema(closes, 50);
+
+for (let i = 65; i < candles.length - 1; i++) {
+  const close = closes[i];
+  const change = closes[i] - closes[i - 1];
+
+  let gains = 0, losses = 0;
+  for (let j = i - 13; j <= i; j++) {
+    const diff = closes[j] - closes[j - 1];
+    gains += Math.max(diff, 0);
+    losses += Math.max(-diff, 0);
+  }
+
+  const rsi = losses === 0
+    ? (gains === 0 ? 50 : 100)
+    : 100 - 100 / (1 + gains / losses);
+
+  let side = null;
+
+  if (ema20[i] > ema50[i] && rsi > 55 && change > 0) {
+    side = "BUY";
+  } else if (ema20[i] < ema50[i] && rsi < 45 && change < 0) {
+    side = "SELL";
+  }
+
+  if (!side) continue;
 
   signals.push({
     index: i,
-    side: side,
+    side,
     stop: side === "BUY" ? close - 5 : close + 5
   });
 }
+    
     result.textContent = "عدد الشموع: " + candles.length +
   " | عدد الإشارات: " + signals.length;
 const testResponse = await fetch(
