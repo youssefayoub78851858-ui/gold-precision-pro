@@ -44,6 +44,7 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === "/api/candles") {
     const interval = url.searchParams.get("interval") || "15min";
+    const endDate = url.searchParams.get("period") === "older" ? "2026-09-30" : null;
 
     if (!intervals.has(interval)) {
       return send(res, 400, { error: "Invalid interval" });
@@ -53,7 +54,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 503, { error: "API key not configured" });
     }
 
-    const saved = cache.get("history:" + interval);
+    const saved = cache.get("history:" + interval + ":" + (endDate || "latest"));
     if (saved && Date.now() - saved.time < 60000) {
       return send(res, 200, saved.data);
     }
@@ -65,6 +66,7 @@ const server = http.createServer(async (req, res) => {
       endpoint.searchParams.set("outputsize", "2000");
       endpoint.searchParams.set("timezone", "UTC");
       endpoint.searchParams.set("apikey", API_KEY);
+      if (endDate) endpoint.searchParams.set("end_date", endDate);
 
       const response = await fetch(endpoint, {
         signal: AbortSignal.timeout(12000)
@@ -86,7 +88,7 @@ const server = http.createServer(async (req, res) => {
         values: result.values
       };
 
-      cache.set("history:" + interval, { time: Date.now(), data });
+      cache.set("history:" + interval + ":" + (endDate || "latest"), { time: Date.now(), data });
       return send(res, 200, data);
     } catch (error) {
       return send(res, 502, { error: "Market data request failed" });
