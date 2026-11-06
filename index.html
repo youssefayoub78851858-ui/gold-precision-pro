@@ -288,8 +288,8 @@ const runHalf = async (part, sigs) => {
   return response.json();
 };
 
-const olderTest = await runHalf(candles.slice(0, midpoint), olderSignals);
-const newerTest = await runHalf(candles.slice(midpoint), newerSignals);
+//const olderTest = await runHalf(candles.slice(0, midpoint), olderSignals);
+//const newerTest = await runHalf(candles.slice(midpoint), newerSignals);
 //result.textContent = "عدد الشموعcandles.length + "\nعدد الإشارات: " + signals.length + "\n" + JSON.stringify(test, null, 2);
 result.textContent = "عدد الشموع: " + candles.length + "\nعدد الإشارات: " + signals.length + "\n" + JSON.stringify({all: test, older: olderTest, newer: newerTest}, (k, v) => k === "tradesDetail" ? undefined : v, 2);    
 const summarizeTrades = a => {
