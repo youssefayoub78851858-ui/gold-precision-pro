@@ -174,7 +174,7 @@ document.getElementById("backtest-btn").addEventListener("click", async function
   result.textContent = "جاري فحص البيانات التاريخية...";
 
   try {
-    const response = await fetch("https://gold-precision-pro.onrender.com/api/candles?interval=15min");
+    const response = await fetch("https://gold-precision-pro.onrender.com/api/candles?interval=15min" + (window.confirm("بدك تختبر الفترة القديمة حتى 30 أيلول 2026؟") ? "&period=older" : ""));
     const data = await response.json();
 
     if (!response.ok || !Array.isArray(data.values)) {
