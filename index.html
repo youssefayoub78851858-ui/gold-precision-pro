@@ -182,6 +182,21 @@ document.getElementById("backtest-btn").addEventListener("click", async function
     }
 const candles = [...data.values].reverse();
 const signals = [];
+
+for (let i = 50; i < candles.length - 1; i++) {
+  const close = Number(candles[i].close);
+  const prev = Number(candles[i - 1].close);
+
+  if (!Number.isFinite(close) || !Number.isFinite(prev)) continue;
+
+  const side = close > prev ? "BUY" : "SELL";
+
+  signals.push({
+    index: i,
+    side: side,
+    stop: side === "BUY" ? close - 5 : close + 5
+  });
+}
 const testResponse = await fetch(
   "https://gold-precision-pro.onrender.com/api/backtest",
   {
