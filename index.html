@@ -181,11 +181,28 @@ document.getElementById("backtest-btn").addEventListener("click", async function
       throw new Error("تعذّر جلب شموع الذهب");
     }
 
-    result.textContent =
-      "تم الاتصال بنجاح\n" +
-      "عدد الشموع: " + data.values.length + "\n" +
-      "مصدر البيانات: " + data.source + "\n" +
-      "الاختبار التاريخي للصفقات لم يُشغّل بعد.";
+const testResponse = await fetch(
+  "https://gold-precision-pro.onrender.com/api/backtest",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      candles: data.values
+    })
+  }
+);
+
+const test = await testResponse.json();
+
+if (!testResponse.ok) {
+  throw new Error(test.error || "فشل الاختبار التاريخي");
+}
+
+result.textContent = JSON.stringify(test, null, 2);
+    
+    
   } catch (error) {
     result.textContent = "فشل جلب البيانات: " + error.message;
   }
