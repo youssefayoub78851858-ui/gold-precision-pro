@@ -189,7 +189,8 @@ const testResponse = await fetch(
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      candles: data.values
+      candles: [...data.values].reverse(),
+signals: []
     })
   }
 );
