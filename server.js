@@ -85,7 +85,25 @@ const server = http.createServer(async (req, res) => {
         symbol: "XAU/USD",
         interval,
         source: "Twelve Data",
-        values: result.values
+        values: result.values.filter(c => {
+  const d = new Date(c.datetime.replace(" ", "T") + "Z");
+  if (Number.isNaN(d.getTime())) return false;
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+    hour: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(d);
+
+  const day = parts.find(p => p.type === "weekday").value;
+  const hour = Number(parts.find(p => p.type === "hour").value);
+
+  return day !== "Sat" &&
+    !(day === "Sun" && hour < 18) &&
+    !(day === "Fri" && hour >= 17) &&
+    hour !== 17;
+})
       };
 
       cache.set("history:" + interval + ":" + (endDate || "latest"), { time: Date.now(), data });
