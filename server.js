@@ -238,6 +238,28 @@ const endDate = period === "older" ? "2026-09-30" :
 
       const signal = votes === 3 ? "BUY" :
                      votes === -3 ? "SELL" : "WAIT";
+      const now = Date.now();
+const limits = { "15min": 30, "1h": 90, "4h": 300 };
+const marketParts = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  weekday: "short",
+  hour: "2-digit",
+  hourCycle: "h23"
+}).formatToParts(new Date(now));
+const marketDay = marketParts.find(p => p.type === "weekday").value;
+const marketHour = Number(marketParts.find(p => p.type === "hour").value);
+const marketOpen = marketDay !== "Sat" &&
+  !(marketDay === "Sun" && marketHour < 18) &&
+  !(marketDay === "Fri" && marketHour >= 17) &&
+  marketHour !== 17;
+const dataFresh = marketOpen && frames.every(frame => {
+  const latest = candles[frame]?.[0];
+  if (!latest?.datetime) return false;
+  const timestamp = Date.parse(latest.datetime.replace(" ", "T") + "Z");
+  const ageMinutes = (now - timestamp) / 60000;
+  return Number.isFinite(ageMinutes) &&
+    ageMinutes >= 0 && ageMinutes <= limits[frame];
+});
 
       return send(res, 200, {
         symbol: "XAU/USD",
@@ -248,7 +270,7 @@ const endDate = period === "older" ? "2026-09-30" :
   Object.fromEntries(
     frames.map(f => [f, [...candles[f]].slice(1).reverse()])
   ),
-  { dataFresh: false }
+  { dataFresh: dataFresh }
 ),
         warning: "Experimental indicators, not a validated trade signal. No automatic trading."
       });
