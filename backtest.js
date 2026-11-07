@@ -104,7 +104,7 @@ function backtest(candles, signals, options = {}) {
   }
 
   const count = trades.length;
-  const wins = trades.filter(t => t.result === "WIN").length;
+  const wins = trades.filter(t => t.netR > 0).length;
   const losses = count - wins;
   const totalR = trades.reduce((sum, t) => sum + t.netR, 0);
   const profit = trades.reduce((sum, t) =>
