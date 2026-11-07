@@ -44,7 +44,9 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === "/api/candles") {
     const interval = url.searchParams.get("interval") || "15min";
-    const endDate = url.searchParams.get("period") === "older" ? "2026-09-30" : null;
+    const period = url.searchParams.get("period");
+const endDate = period === "older" ? "2026-09-30" :
+  period === "august" ? "2026-08-31" : null;
 
     if (!intervals.has(interval)) {
       return send(res, 400, { error: "Invalid interval" });
