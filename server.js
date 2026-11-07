@@ -1,4 +1,5 @@
 const { backtest } = require("./backtest");
+const { analyze } = require("./strategy");
 const http = require("http");
 
 const PORT = process.env.PORT || 3000;
