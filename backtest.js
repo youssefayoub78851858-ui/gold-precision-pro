@@ -87,6 +87,7 @@ function backtest(candles, signals, options = {}) {
         const netR = grossR - spread / distance;
         trades.push({
           result, netR, grossR,
+          side: s.side,
           entry, stop, target, exitPrice,
           signalIndex: s.index,
           entryIndex, exitIndex: i
