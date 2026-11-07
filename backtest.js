@@ -4,7 +4,7 @@
 // Candles: oldest first. Research only, no live orders.
 function backtest(candles, signals, options = {}) {
   const rr = options.rr ?? 2;
-  const spread = options.spread ?? 0.40;
+  const spread = options.spread ?? 0.21;
   const risk = options.risk ?? 1;
 
   if (!Array.isArray(candles) || !Array.isArray(signals)) {
