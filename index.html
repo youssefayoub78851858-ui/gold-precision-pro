@@ -326,6 +326,21 @@ sell: summarizeTrades(sellTrades),
   newer: summarizeTrades(closedTrades.filter(t => t.entryIndex >= midpoint))
 }, null, 2);
     result.textContent = "من: " + candles[0].datetime + " | إلى: " + candles[candles.length - 1].datetime + "\n" + result.textContent;
+    const diagnostic = {
+  totalTrades: closedTrades.length,
+  buy: summarizeTrades(buyTrades),
+  sell: summarizeTrades(sellTrades),
+  stoppedOut: closedTrades.filter(t => t.result === "LOSS").length,
+  grossWinningButNetLosing: closedTrades.filter(
+    t => t.grossR > 0 && t.netR <= 0
+  ).length,
+  averageNetR: closedTrades.length
+    ? +(closedTrades.reduce((sum, t) => sum + t.netR, 0) / closedTrades.length).toFixed(3)
+    : 0
+};
+
+result.textContent += "\n\n--- تشخيص الصفقات ---\n" +
+  JSON.stringify(diagnostic, null, 2);
     // Gold Precision Pro v1: comparison-only filter. Paste after the existing results line.
 // This does NOT change the original recommendation or the original backtest.
 const filteredSignals = signals.filter(s => {
