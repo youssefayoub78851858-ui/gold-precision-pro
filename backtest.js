@@ -24,7 +24,7 @@ function backtest(candles, signals, options = {}) {
   let openAtEnd = 0;
 
   for (const s of orderedSignals) {
-    if (s.index < lastExitIndex) continue;
+    if (s.index <= lastExitIndex) continue;
     if (s.side !== "BUY" && s.side !== "SELL") continue;
     if (s.index < 0 || s.index >= candles.length - 1) continue;
 
