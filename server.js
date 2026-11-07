@@ -260,9 +260,12 @@ const dataFresh = marketOpen && frames.every(frame => {
   return Number.isFinite(ageMinutes) &&
     ageMinutes >= 0 && ageMinutes <= limits[frame];
 });
-
+const marketStatus = marketOpen ? "OPEN" : "CLOSED";
+const dataStatus = !marketOpen ? "MARKET_CLOSED" : dataFresh ? "FRESH" : "STALE";
       return send(res, 200, {
         symbol: "XAU/USD",
+        marketStatus,
+dataStatus,
         signal,
         agreement: Math.abs(votes) + "/3",
         indicators,
