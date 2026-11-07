@@ -313,8 +313,8 @@ const closedTrades = test.tradesDetail || [];
 result.textContent = "عدد الشموع: " + candles.length + "\n" +
 JSON.stringify({
   all: summarizeTrades(closedTrades),
-  older: summarizeTrades(closedTrades.filter(t => t.exitIndex < midpoint)),
-  newer: summarizeTrades(closedTrades.filter(t => t.exitIndex >= midpoint))
+  older: summarizeTrades(closedTrades.filter(t => t.entryIndex < midpoint)),
+  newer: summarizeTrades(closedTrades.filter(t => t.entryIndex >= midpoint))
 }, null, 2);
     result.textContent = "من: " + candles[0].datetime + " | إلى: " + candles[candles.length - 1].datetime + "\n" + result.textContent;
     // Gold Precision Pro v1: comparison-only filter. Paste after the existing results line.
