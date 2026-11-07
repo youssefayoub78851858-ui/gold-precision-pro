@@ -229,6 +229,12 @@ const endDate = period === "older" ? "2026-09-30" :
         signal,
         agreement: Math.abs(votes) + "/3",
         indicators,
+        experimentalV2: analyze(
+  Object.fromEntries(
+    frames.map(f => [f, [...candles[f]].slice(1).reverse()])
+  ),
+  { dataFresh: false }
+),
         warning: "Experimental indicators, not a validated trade signal. No automatic trading."
       });
 
