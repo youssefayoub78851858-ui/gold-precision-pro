@@ -314,6 +314,44 @@ JSON.stringify({
   newer: summarizeTrades(closedTrades.filter(t => t.exitIndex >= midpoint))
 }, null, 2);
     result.textContent = "من: " + candles[0].datetime + " | إلى: " + candles[candles.length - 1].datetime + "\n" + result.textContent;
+    // Gold Precision Pro v1: comparison-only filter. Paste after the existing results line.
+// This does NOT change the original recommendation or the original backtest.
+const filteredSignals = signals.filter(s => {
+  const i = s.index;
+  if (i < 55 || i >= candles.length - 1) return false;
+  let trueRangeSum = 0;
+  for (let j = i - 13; j <= i; j++) {
+    const prevClose = Number(candles[j - 1].close);
+    const high = Number(candles[j].high);
+    const low = Number(candles[j].low);
+    trueRangeSum += Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+  }
+  const atr = trueRangeSum / 14;
+  if (!(atr > 0) || !Number.isFinite(ema20[i]) || !Number.isFinite(ema50[i])) return false;
+  const gap = Math.abs(ema20[i] - ema50[i]) / atr;
+  const slope = (ema20[i] - ema20[i - 4]) / atr;
+  return gap >= 0.35 && (s.side === 'BUY'
+    ? ema20[i] > ema50[i] && slope >= 0.12 && Number(candles[i].close) > ema20[i]
+    : ema20[i] < ema50[i] && slope <= -0.12 && Number(candles[i].close) < ema20[i]);
+});
+try {
+  const filteredResponse = await fetch('https://gold-precision-pro.onrender.com/api/backtest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ candles, signals: filteredSignals })
+  });
+  if (!filteredResponse.ok) throw new Error('فشل اختبار فلتر الاتجاه');
+  const filteredTest = await filteredResponse.json();
+  result.textContent += '\n\n--- مقارنة فلتر قوة الاتجاه (اختباري فقط) ---' +
+    '\nعدد الإشارات: ' + filteredSignals.length + ' من ' + signals.length +
+    '\nعدد الصفقات: ' + filteredTest.trades +
+    '\nنسبة النجاح: ' + filteredTest.winRate + '%' +
+    '\nProfit Factor: ' + filteredTest.profitFactor +
+    '\nصافي R: ' + filteredTest.totalR +
+    '\nالنتيجة الأصلية لم تتغيّر. نحتاج اختبار الفترتين قبل اعتماد الفلتر.';
+} catch (filterError) {
+  result.textContent += '\n\nتعذّر فحص الفلتر: ' + filterError.message;
+}
     
   } catch (error) {
     result.textContent = "فشل جلب البيانات: " + error.message;
