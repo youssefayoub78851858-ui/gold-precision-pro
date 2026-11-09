@@ -92,3 +92,8 @@ jobs:
           assert (directory/'latest-backup.sqlite3').exists()
           print('PASS: one-shot paper observation persisted, backup created, no paper entry, recorded mode')
           PY
+      - name: Recorded closed-bar paper replay and restart
+        working-directory: coordinator
+        env:
+          PAPER_DATA_MODE: recorded_replay
+        run: python -m unittest -v test_recorded_closed_bars
