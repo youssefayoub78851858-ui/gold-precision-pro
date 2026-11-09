@@ -67,3 +67,28 @@ jobs:
       - name: Offline V2 API integration failure-safety
         working-directory: coordinator
         run: python -m unittest -v test_api_integration
+      - name: Paper worker one-shot recorded synthetic smoke
+        working-directory: coordinator
+        env:
+          PAPER_DATA_MODE: recorded_replay
+        run: |
+          python - <<'PY'
+          import json,pathlib
+          fixture={f:{'symbol':'XAU/USD','interval':f,'values':[]} for f in ['15min','1h','4h']}
+          pathlib.Path('/tmp/gold-v2-synthetic-closed.json').write_text(json.dumps(fixture))
+          PY
+          DATA_DIR="$RUNNER_TEMP/v2-paper-smoke" python app/worker.py --fixture /tmp/gold-v2-synthetic-closed.json
+          DATA_DIR="$RUNNER_TEMP/v2-paper-smoke" python app/worker.py --backup
+          DATA_DIR="$RUNNER_TEMP/v2-paper-smoke" python - <<'PY'
+          import json,os,pathlib,sqlite3
+          directory=pathlib.Path(os.environ['DATA_DIR'])
+          with sqlite3.connect(directory/'monitor.sqlite3') as db:
+              observations=db.execute('SELECT COUNT(*) FROM observations WHERE status="PROCESSED"').fetchone()[0]
+              events=[json.loads(x[0]) for x in db.execute('SELECT json FROM events')]
+              mode=db.execute("SELECT value FROM metadata WHERE key='paperDataMode'").fetchone()[0]
+          assert observations==1,(observations,events)
+          assert mode=='recorded_replay',mode
+          assert events and all(e.get('type')!='PAPER_ENTRY' for e in events),events
+          assert (directory/'latest-backup.sqlite3').exists()
+          print('PASS: one-shot paper observation persisted, backup created, no paper entry, recorded mode')
+          PY
