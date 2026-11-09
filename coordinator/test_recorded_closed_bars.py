@@ -1,6 +1,7 @@
 """Deterministic closed-bar paper replay with persistence and restart; no external data."""
-import datetime,json,pathlib,tempfile,unittest
-from app import worker
+import datetime,json,pathlib,tempfile,unittest,sys
+sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent/'app'))
+import worker
 UTC=datetime.timezone.utc
 def millis(s):return int(datetime.datetime.fromisoformat(s.replace('Z','+00:00')).timestamp()*1000)
 def fixture(now):
