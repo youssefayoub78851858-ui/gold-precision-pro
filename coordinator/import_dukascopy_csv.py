@@ -30,7 +30,7 @@ def convert(root):
     bars.append({'datetime':dt.isoformat().replace('+00:00','Z'),'open':float(row[o]),'high':float(row[h]),'low':float(row[l]),'close':float(row[c])})
    if not bars:raise ValueError(f'{folder}: empty')
    result[frame]=sorted(bars,key=lambda x:x['datetime'])
- return {'source':'Dukascopy historical XAUUSD BID CSV via dukascopy-node, 2026-09-01 to 2026-10-01','symbol':'XAU/USD','frames':result}
+ return {'source':'Dukascopy historical XAUUSD BID CSV via dukascopy-node; observed range from candle timestamps','symbol':'XAU/USD','frames':result}
 if __name__=='__main__':
  try:
   output=convert(pathlib.Path(sys.argv[1]))
