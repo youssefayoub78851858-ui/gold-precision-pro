@@ -1,0 +1,22 @@
+name: V2 offline unit tests
+on:
+  push:
+    branches:
+      - review/v2-portable-tests-20261109
+  workflow_dispatch:
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Offline Python tests
+        working-directory: coordinator/app
+        run: python -m unittest -v test_worker test_reduced
