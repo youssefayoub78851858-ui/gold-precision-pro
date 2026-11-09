@@ -16,11 +16,13 @@ def validate(document):
  frames=document.get('frames')
  if not isinstance(frames,dict):raise ValueError('Missing frames')
  report={}
+ gaps={}
  for frame,minutes in DURATIONS.items():
   candles=frames.get(frame)
   if not isinstance(candles,list) or len(candles)<60:
    raise ValueError(f'{frame}: at least 60 candles required')
   previous=None
+  gaps[frame]=0
   for i,c in enumerate(candles):
    if not isinstance(c,dict):raise ValueError(f'{frame}[{i}]: invalid candle')
    try:
@@ -37,11 +39,13 @@ def validate(document):
     raise ValueError(f'{frame}[{i}]: misaligned UTC open')
    if previous is not None and stamp<=previous:
     raise ValueError(f'{frame}[{i}]: duplicate or unsorted time')
-   if previous is not None and (stamp-previous).total_seconds()<minutes*60:
-    raise ValueError(f'{frame}[{i}]: overlapping bars')
+   if previous is not None:
+    delta=(stamp-previous).total_seconds()
+    if delta<minutes*60:raise ValueError(f'{frame}[{i}]: overlapping bars')
+    if delta>minutes*60:gaps[frame]+=1
    previous=stamp
   report[frame]={'count':len(candles),'lastOpenUTC':previous.isoformat()}
- return {'status':'VALID','symbol':document['symbol'],'source':document['source'],'frames':report,'note':'Validity does not prove completeness, source authenticity or profitability'}
+ return {'status':'VALID','symbol':document['symbol'],'source':document['source'],'frames':report,'gapCounts':gaps,'note':'Validity does not prove completeness, source authenticity or profitability'}
 if __name__=='__main__':
  try:print(json.dumps(validate(json.loads(pathlib.Path(sys.argv[1]).read_text())),indent=2))
  except (ValueError,IndexError,OSError,json.JSONDecodeError) as e:
