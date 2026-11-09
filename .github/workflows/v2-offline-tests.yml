@@ -64,3 +64,6 @@ jobs:
               assert error.code==400,error.code
           print('PASS: V2 API health, trading disabled, invalid interval rejected; no provider used')
           PY
+      - name: Offline V2 API integration failure-safety
+        working-directory: coordinator
+        run: python -m unittest -v test_api_integration
