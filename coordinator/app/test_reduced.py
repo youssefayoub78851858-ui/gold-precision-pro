@@ -48,6 +48,7 @@ class ReducedSchedule(unittest.TestCase):
   reduced.defer(self.db,a['slot'],start+65124)
   self.assertEqual(reduced.reserve(self.db,start+65000)['action'],'WAIT')
   self.assertEqual(reduced.reserve(self.db,start+65124)['action'],'FETCH')
+ @unittest.skipUnless(pathlib.Path('/workspace/gold-v2-audit/frames.json').exists(), "External audit frames are unavailable; integration replay must run with the original fixture")
  def test_frozen_sell_entry_exit_and_restart_are_persisted_once(self):
   # Replay transport fixture only: shifted old prices; never logged as live or holdout results.
   original=json.loads(pathlib.Path('/workspace/gold-v2-audit/frames.json').read_text());shift=14*86400000
