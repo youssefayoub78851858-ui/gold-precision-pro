@@ -1,6 +1,11 @@
 name: V2 historical XAUUSD research (Dukascopy, no provider key)
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - review/v2-portable-tests-20261109
+    paths:
+      - '.github/workflows/v2-real-history.yml'
 jobs:
   historical-research:
     runs-on: ubuntu-latest
