@@ -38,11 +38,12 @@ jobs:
           node coordinator/analyze_historical_losses.js research/consistent-history.json > research/loss-analysis.json
           node coordinator/diagnose_signal_bias.js research/consistent-history.json > research/bias-diagnostics.json
           node coordinator/compare_entry_filters.js research/consistent-history.json > research/filter-comparison.json
+          node coordinator/audit_execution_assumptions.js research/consistent-history.json > research/execution-audit.json
       - name: Print performance summary
         run: |
           cat research/original-report.json
           cat research/consistent-report.json
-          cat research/filter-comparison.json
+          cat research/execution-audit.json
           python - <<'PY'
           import json
           d=json.load(open('research/filter-comparison.json'))
@@ -62,5 +63,6 @@ jobs:
             research/loss-analysis.json
             research/bias-diagnostics.json
             research/filter-comparison.json
+            research/execution-audit.json
             research/history.json
           retention-days: 7
