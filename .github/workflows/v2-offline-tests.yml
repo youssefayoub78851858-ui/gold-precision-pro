@@ -105,3 +105,6 @@ jobs:
       - name: Synthetic backtest accounting regression
         working-directory: coordinator
         run: node test_backtest_accounting.js
+      - name: Historical signal replay future-data leakage
+        working-directory: coordinator
+        run: node test_historical_no_lookahead.js
