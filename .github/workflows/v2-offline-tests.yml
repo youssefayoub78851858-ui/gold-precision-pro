@@ -97,3 +97,8 @@ jobs:
         env:
           PAPER_DATA_MODE: recorded_replay
         run: python -m unittest -v test_recorded_closed_bars
+      - name: Paper entry exit transactional lifecycle
+        working-directory: coordinator
+        env:
+          PAPER_DATA_MODE: recorded_replay
+        run: python -m unittest -v test_paper_event_lifecycle
