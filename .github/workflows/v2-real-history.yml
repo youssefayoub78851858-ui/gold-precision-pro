@@ -29,14 +29,16 @@ jobs:
       - name: Convert and validate market candles
         run: python coordinator/import_dukascopy_csv.py research/raw research/history.json
       - name: Backtest frozen V2 engine without placing orders
-        run: node coordinator/run_historical_backtest.js research/history.json > research/report.json
+        run: node coordinator/run_historical_backtest.js research/history.json --details > research/report-with-trades.txt
+          node coordinator/analyze_historical_losses.js research/history.json > research/loss-analysis.json
       - name: Print performance summary
-        run: cat research/report.json
+        run: cat research/loss-analysis.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: xauusd-historical-research-sep-2026
           path: |
-            research/report.json
+            research/report-with-trades.txt
+            research/loss-analysis.json
             research/history.json
           retention-days: 7
