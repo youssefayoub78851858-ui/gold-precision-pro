@@ -4,7 +4,7 @@ const {generateHistoricalSignals}=require('./app/frozen/strategy');
 const {backtestFrames}=require('./app/frozen/backtest');
 const step=900000,origin=Date.parse('2026-09-01T00:00:00Z');
 const candle=(t,i)=>{const c=4100+i*.075+Math.sin(i/6)*1.1;return {datetime:new Date(t).toISOString(),open:c-.2,high:c+1,low:c-1,close:c};};
-const m15=Array.from({length:960},(_,i)=>candle(origin+i*step,i));
+const m15=Array.from({length:1600},(_,i)=>candle(origin+i*step,i));
 const aggregate=(n)=>Array.from({length:Math.floor(m15.length/n)},(_,j)=>{
  const bars=m15.slice(j*n,(j+1)*n);
  return {datetime:bars[0].datetime,open:bars[0].open,close:bars.at(-1).close,
@@ -17,7 +17,7 @@ assert.equal(result.generatedSignals,signals.length);
 assert.equal(result.tradesDetail.length,result.trades);
 assert.equal(result.estimatedPnLIsHypothetical,true);
 assert.ok(Number.isFinite(result.totalR));
-const index=800;
+const index=1200;
 const prefix={'15min':m15.slice(0,index+2),'1h':frames['1h'].filter(b=>Date.parse(b.datetime)+3600000<=Date.parse(m15[index+1].datetime)),'4h':frames['4h'].filter(b=>Date.parse(b.datetime)+14400000<=Date.parse(m15[index+1].datetime))};
 const before=generateHistoricalSignals(prefix).filter(s=>s.index<=index);
 const altered=JSON.parse(JSON.stringify(frames));
