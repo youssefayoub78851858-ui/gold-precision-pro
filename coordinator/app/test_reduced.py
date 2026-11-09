@@ -25,8 +25,8 @@ class ReducedSchedule(unittest.TestCase):
  def test_closed_market_has_no_data_requests(self):
   a=reduced.reserve(self.db,ms('2026-11-08T15:00:05Z'));self.assertEqual(a['reason'],'MARKET_CLOSED');self.assertEqual(self.db.execute('SELECT COUNT(*) FROM poll_attempts').fetchone()[0],0)
  def test_stale_m15_and_higher_frame_must_retry(self):
-  def row(t):return {'datetime':t}
-  now=ms('2026-11-09T04:00:05Z');raw={'15min':{'values':[row('2026-11-09T03:45:00Z')]},'1h':{'values':[row('2026-11-09T03:00:00Z')]},'4h':{'values':[row('2026-11-09T00:00:00Z')]}}
+  def row(t):return {'datetime':t,'open':'4100','high':'4110','low':'4090','close':'4105'}
+  now=ms('2026-11-09T04:00:05Z');raw={f:{'symbol':'XAU/USD','values':[row(t)]} for f,t in [('15min','2026-11-09T03:45:00Z'),('1h','2026-11-09T03:00:00Z'),('4h','2026-11-09T00:00:00Z')]}
   self.assertTrue(reduced.input_ready(raw,now));raw['1h']['values']=[row('2026-11-09T02:00:00Z')];self.assertFalse(reduced.input_ready(raw,now))
  def test_full_day_one_success_per_slot_requires_288_credits(self):
   start=ms('2026-11-10T00:00:05Z');used=0
