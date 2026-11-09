@@ -111,3 +111,6 @@ jobs:
       - name: Validate historical data provenance and OHLC
         working-directory: coordinator
         run: python -m unittest -v test_validate_history
+      - name: Historical backtest runner safety gates
+        working-directory: coordinator
+        run: node test_historical_runner.js
