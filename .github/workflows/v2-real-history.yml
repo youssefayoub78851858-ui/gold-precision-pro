@@ -1,4 +1,5 @@
 name: V2 historical XAUUSD research (Dukascopy, no provider key)
+# Audit raw BUY/SELL signal balance independently of closed trades.
 on:
   workflow_dispatch:
   push:
