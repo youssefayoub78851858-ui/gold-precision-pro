@@ -33,8 +33,9 @@ jobs:
         run: |
           node coordinator/run_historical_backtest.js research/history.json --details > research/report-with-trades.txt
           node coordinator/analyze_historical_losses.js research/history.json > research/loss-analysis.json
+          node coordinator/diagnose_signal_bias.js research/history.json > research/bias-diagnostics.json
       - name: Print performance summary
-        run: cat research/loss-analysis.json
+        run: cat research/bias-diagnostics.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -42,5 +43,6 @@ jobs:
           path: |
             research/report-with-trades.txt
             research/loss-analysis.json
+            research/bias-diagnostics.json
             research/history.json
           retention-days: 7
