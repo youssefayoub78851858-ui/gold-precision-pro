@@ -1,0 +1,28 @@
+{
+  "files": {
+    "config.json": "a7d944a7d61b71db5bb1de6004d58f5f5091342295cc2d917aeb1570e873e923",
+    "freeze-manifest.json": "724095b4d645b10c1aae00bd3c666684525076ef505055960227983811ec3ed1",
+    "paper-core.js": "ab30b407dd65a31352cc3a76e8f03f82929d41ab4dc4aaa503cb860338a632b8",
+    "frozen/strategy.js": "36f5adfd5269c9fedfef69084995c0004e567401a8daa9cd316b117ace1e6587",
+    "frozen/backtest.js": "e3a3b324bf095ebc4e8ec800bbe2338160aac7f1f1652c1c9e13d4419fd663d4",
+    "evaluate.js": "d82ea0372c7e055d6428eef652a8d8574edf4abe7e7c89f915b2514913d4b4d2",
+    "worker.py": "e33103a8bda38879a9a1fdaf713ffa31bdda057ab7a6d73cdc4de87d129318cb",
+    "reduced.py": "73d90a187cd8b32c8488c308c45b6529611781101be0d8e115d5b7e487647af0",
+    "scheduler.json": "6b7ca34cf5faceee2ab2bd637fc7b8630c5fe0d44e5e96e75633267cfc08fe82",
+    "../timing.js": "23aee630209ed30a34eee33362e1128aba193ca7d7824c9dc46830ab43acf11a",
+    "../timing-cli.js": "9a8ae35fccbe45ca8f05082812337e0bb186e0a797d4a5912f59efa6248e81fe",
+    "../historical.js": "b8d94c6804891791f2fe0948b4c8c0056a1f544e1647f62444892a5dcc2e649c",
+    "../service/server.js": "30747a85db017376c3bfee2267bac2eb24366535d35143229051eca432c88efb",
+    "../service/backtest.js": "9de8d73fcb7f72d916194e3a905fb21bdb3911e9fe0692bc0363b6d1e19691a6",
+    "../broker.py": "ae46ccab44ccde62a6a92d3d9746b6d95c5757b3d2dd9281c7e44f1c219ce0b1",
+    "../broker_process.py": "f12dc3fac5ff8701736c8d61d283d723e1d138e6dd4be68863a6c796bc7f8401",
+    "../supervise.py": "e73bef718e8fbafe04394c496bc2d093eb7b67ccf63e38241ac9fddc9ad23e9c",
+    "../startup_guard.py": "4f68c93c893fea82fc5796e317fb56dd3304af9bfc97f6d185f9892eb0fa76ff",
+    "../handoff_guard.py": "327a2fe7ecd2911339359b49333438597259bc0448826ae774e258d3abefaa02",
+    "../process_inventory.py": "6fd59f53fb2660b94849c9ff708f406e44a9e0f0d074685bfd87386bce1c9268",
+    "../entrypoint.py": "62a9c6544a95bfe8014f1c5946528e0b603855a28310a7b875e8ab2848125ef7",
+    "../usage_probe.py": "804a26fdef54a0522e354eb689e271e816c6502214665aa756ee3c94751d8f48",
+    "../acceptance_watch.py": "ff1bfc8a57c67e44564bf33a1fe341463fd95916b904baeaac95e1d4091ce274"
+  },
+  "reviewPolicy": "LATEST_EXPECTED_CLOSED_UTC_BAR_V1; not original frozen prospective execution policy"
+}

@@ -3,7 +3,9 @@ const { analyze } = require("./strategy");
 const http = require("http");
 
 const PORT = process.env.PORT || 3000;
-const API_KEY = process.env.TWELVE_DATA_API_KEY;
+const API_KEY = Boolean(process.env.MARKET_DATA_BROKER_URL);
+if (!API_KEY || !process.env.BROKER_TOKEN || process.env.BROKER_TOKEN.length < 32) throw new Error("Shared data broker and strong token required");
+const FRAME_MS = {"15min":900000,"1h":3600000,"4h":14400000};
 
 const cache = new Map();
 const intervals = new Set(["15min", "1h", "4h"]);
@@ -58,21 +60,21 @@ const endDate = period === "older" ? "2026-09-30" :
     }
 
     const saved = cache.get("history:" + interval + ":" + (endDate || "latest"));
-    if (saved && Date.now() - saved.time < 60000) {
+    if (saved && Date.now() - saved.time < 60000 && (endDate || saved.bucket === Math.floor(Date.now()/FRAME_MS[interval]))) {
       return send(res, 200, saved.data);
     }
 
     try {
-      const endpoint = new URL("https://api.twelvedata.com/time_series");
+      const endpoint = new URL("/time_series", process.env.MARKET_DATA_BROKER_URL);
       endpoint.searchParams.set("symbol", "XAU/USD");
       endpoint.searchParams.set("interval", interval);
       endpoint.searchParams.set("outputsize", "2000");
       endpoint.searchParams.set("timezone", "UTC");
-      endpoint.searchParams.set("apikey", API_KEY);
       if (endDate) endpoint.searchParams.set("end_date", endDate);
 
       const response = await fetch(endpoint, {
-        signal: AbortSignal.timeout(12000)
+        signal: AbortSignal.timeout(12000),
+        headers: { Authorization: "Bearer " + process.env.BROKER_TOKEN }
       });
 
       const result = await response.json();
@@ -80,7 +82,8 @@ const endDate = period === "older" ? "2026-09-30" :
       if (!response.ok || result.status === "error" || !result.values) {
         return send(res, 502, {
           error: "Market data unavailable",
-          detail: result.message || "Provider returned no candles"
+          detail: result.message || "Provider returned no candles",
+          retryAtMS: result.retryAtMS ?? null
         });
       }
 
@@ -109,7 +112,7 @@ const endDate = period === "older" ? "2026-09-30" :
 })
       };
 
-      cache.set("history:" + interval + ":" + (endDate || "latest"), { time: Date.now(), data });
+      cache.set("history:" + interval + ":" + (endDate || "latest"), { time: Date.now(), data, bucket: Math.floor(Date.now()/FRAME_MS[interval]) });
       return send(res, 200, data);
     } catch (error) {
       return send(res, 502, { error: "Market data request failed" });
@@ -127,20 +130,20 @@ const endDate = period === "older" ? "2026-09-30" :
     try {
       for (const frame of frames) {
         const saved = cache.get(frame);
-        if (saved && Date.now() - saved.time < 60000) {
+        if (saved && Date.now() - saved.time < 60000 && saved.bucket === Math.floor(Date.now()/FRAME_MS[frame])) {
           candles[frame] = saved.data.values;
           continue;
         }
 
-        const endpoint = new URL("https://api.twelvedata.com/time_series");
+        const endpoint = new URL("/time_series", process.env.MARKET_DATA_BROKER_URL);
         endpoint.searchParams.set("symbol", "XAU/USD");
         endpoint.searchParams.set("interval", frame);
         endpoint.searchParams.set("outputsize", "500");
         endpoint.searchParams.set("timezone", "UTC");
-        endpoint.searchParams.set("apikey", API_KEY);
-
+  
         const response = await fetch(endpoint, {
-          signal: AbortSignal.timeout(12000)
+          signal: AbortSignal.timeout(12000),
+        headers: { Authorization: "Bearer " + process.env.BROKER_TOKEN }
         });
         const result = await response.json();
 
@@ -148,7 +151,8 @@ const endDate = period === "older" ? "2026-09-30" :
             !Array.isArray(result.values)) {
           return send(res, 502, {
             error: "Market data unavailable",
-            interval: frame
+            interval: frame,
+            retryAtMS: result.retryAtMS ?? null
           });
         }
 
@@ -173,7 +177,7 @@ const endDate = period === "older" ? "2026-09-30" :
     hour !== 17;
 })
         };
-        cache.set(frame, { time: Date.now(), data });
+        cache.set(frame, { time: Date.now(), data, bucket: Math.floor(Date.now()/FRAME_MS[frame]) });
         candles[frame] = data.values;
       }
 

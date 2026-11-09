@@ -1,0 +1,18 @@
+{
+  "strategyCommit": "3cc4132edd504b8bacf6a8703d38ef28fa1fdcb7",
+  "strategySha256": "36f5adfd5269c9fedfef69084995c0004e567401a8daa9cd316b117ace1e6587",
+  "endpoint": "https://gold-precision-pro.onrender.com/api/candles",
+  "prospectiveStartUTC": "2026-11-08T23:00:00Z",
+  "prospectiveEndUTC": "2026-12-06T23:00:00Z",
+  "pollSecondsOpen": 60,
+  "pollSecondsClosed": 900,
+  "maximumEntryDelaySeconds": 90,
+  "spreadUSDPerOz": 0.4,
+  "roundTripCommissionUSDPerOz": 0.07,
+  "slippagePerSideUSDPerOz": 0.1,
+  "exitTarget": "target2Reference",
+  "positionLimit": 1,
+  "fillModel": "Paper only: next M15 open observed within 90 seconds, not executable bid/ask. Stop first on ambiguous closed bars; target1 tracked, target2 closes. Costs are illustrative overlays.",
+  "dataLimitations": "Native Render candles; known H4/session quality caveats remain. No independent broker quotes or news-risk feed. No automatic orders.",
+  "freezePolicy": "No strategy or parameter optimization during prospective window. Changes require a separate version and invalidate continuity. Historical candidates have unconfirmed prior development exposure."
+}

@@ -1,0 +1,38 @@
+{
+  "createdUTC": "2026-11-08T19:12:59.347268Z",
+  "accountInventoryComplete": false,
+  "allAccountConsumersRouted": false,
+  "consumers": [
+    {
+      "name": "RenderPublishedService",
+      "route": "DIRECT_PROVIDER_LAST_RECORDED",
+      "routeVerifiedAtUTC": "2026-11-08T15:45:55Z",
+      "requiredLocalTransportPatch": "/workspace/gold-v2-link-plan/deployed-transport-only.patch",
+      "authority": "existing_public_service_legacy_engine_1ab1f33",
+      "mayModifyNow": false
+    },
+    {
+      "name": "LegacyLocalPaper",
+      "route": "PUBLIC_RENDER_API_UNCOORDINATED_UPSTREAM",
+      "running": false,
+      "authority": "paused_with_verified_checkpoint_before_prospective_window",
+      "checkpoint": "/workspace/gold-system-acceptance/legacy-checkpoint"
+    },
+    {
+      "name": "IntegratedPaperCandidate",
+      "route": "LOCAL_BROKER",
+      "running": false,
+      "authority": "candidate_only_not_enabled"
+    }
+  ],
+  "providerUsage": {
+    "dailyUsed": null,
+    "observedUTC": null,
+    "postMeasurementCallsReserved": null
+  },
+  "minuteTrafficDrained": false,
+  "durableQuotaLedgerConfirmed": false,
+  "frozenStrategyCommit": "3cc4132edd504b8bacf6a8703d38ef28fa1fdcb7",
+  "publishedServiceMustRemainUnchanged": true,
+  "candidateRemoteHandoffApproved": false
+}

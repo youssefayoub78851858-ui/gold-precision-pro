@@ -1,0 +1,11 @@
+{
+  "version": "m15-close-v1-review",
+  "slotSeconds": 900,
+  "attemptOffsetsSeconds": [5, 25, 65],
+  "maximumObservationDelaySeconds": 90,
+  "reservedCreditsPerAttempt": 3,
+  "maximumReservedCreditsPerUTCDay": 400,
+  "maximumDatabaseBytes": 430000000,
+  "minimumFreeBytes": 64000000,
+  "status": "local review only; not enabled in old monitor or deployed"
+}

@@ -1,0 +1,11 @@
+{
+  "commit": "3cc4132edd504b8bacf6a8703d38ef28fa1fdcb7",
+  "registeredAtUTC": "2026-11-08T13:40:21.343469+00:00",
+  "configSha256": "a7d944a7d61b71db5bb1de6004d58f5f5091342295cc2d917aeb1570e873e923",
+  "frozenFiles": {
+    "backtest.js": "e3a3b324bf095ebc4e8ec800bbe2338160aac7f1f1652c1c9e13d4419fd663d4",
+    "strategy.js": "36f5adfd5269c9fedfef69084995c0004e567401a8daa9cd316b117ace1e6587"
+  },
+  "priorAuditManifestSha256": "c67d00ad5f63f01f87dcc9900709051e8201e8cf4ee88956acafe252a34f9690",
+  "independence": "Historical independence unknown by user confirmation; prospective period preregistered before observations."
+}
