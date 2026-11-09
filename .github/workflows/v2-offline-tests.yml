@@ -102,3 +102,6 @@ jobs:
         env:
           PAPER_DATA_MODE: recorded_replay
         run: python -m unittest -v test_paper_event_lifecycle
+      - name: Synthetic backtest accounting regression
+        working-directory: coordinator
+        run: node test_backtest_accounting.js
