@@ -38,3 +38,29 @@ jobs:
       - name: Offline Python tests
         working-directory: coordinator/app
         run: python -m unittest -v test_worker test_reduced
+      - name: V2 API isolated smoke test (no provider)
+        working-directory: coordinator
+        env:
+          BROKER_TOKEN: offline-test-token-0123456789-strong
+          MARKET_DATA_BROKER_URL: http://127.0.0.1:9
+          PORT: '3129'
+        run: |
+          node service/server.js > /tmp/v2-api.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3129/health > /tmp/v2-health.json; then break; fi
+            sleep 0.2
+          done
+          python - <<'PY'
+          import json,urllib.request,urllib.error
+          data=json.load(open('/tmp/v2-health.json'))
+          assert data['signalEngine']=='Gold Precision Pro V2',data
+          assert data['trading']=='disabled',data
+          try:
+              urllib.request.urlopen('http://127.0.0.1:3129/api/candles?interval=invalid')
+              raise AssertionError('Invalid interval unexpectedly accepted')
+          except urllib.error.HTTPError as error:
+              assert error.code==400,error.code
+          print('PASS: V2 API health, trading disabled, invalid interval rejected; no provider used')
+          PY
