@@ -17,6 +17,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Verify package integrity and report every mismatch
+        working-directory: coordinator/app
+        run: |
+          python - <<'PY'
+          import json,hashlib,pathlib,sys
+          root=pathlib.Path('.')
+          manifest=json.loads((root/'package-manifest.json').read_text())
+          mismatches=[]
+          for name,expected in manifest['files'].items():
+              file=root/name
+              actual=hashlib.sha256(file.read_bytes()).hexdigest() if file.exists() else 'MISSING'
+              if actual!=expected:
+                  mismatches.append((name,expected,actual))
+          for name,expected,actual in mismatches:
+              print(f'MISMATCH {name}: expected={expected} actual={actual}')
+          print(f'INTEGRITY: {len(manifest["files"])-len(mismatches)} matched; {len(mismatches)} mismatched')
+          if mismatches: sys.exit(1)
+          PY
       - name: Offline Python tests
         working-directory: coordinator/app
         run: python -m unittest -v test_worker test_reduced
