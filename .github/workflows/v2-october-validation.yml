@@ -25,7 +25,7 @@ jobs:
         run: |
           mkdir -p research/raw
           for frame in m15 h1 h4; do
-            npx --yes dukascopy-node -i xauusd -from 2026-11-01 -to 2026-11-01 -t "$frame" -f csv -dir "research/raw/$frame"
+            npx --yes dukascopy-node -i xauusd -from 2026-10-01 -to 2026-11-01 -t "$frame" -f csv -dir "research/raw/$frame"
           done
       - name: Convert and validate market candles
         run: python coordinator/import_dukascopy_csv.py research/raw research/history.json
