@@ -37,11 +37,12 @@ jobs:
           node coordinator/run_historical_backtest.js research/consistent-history.json > research/consistent-report.json
           node coordinator/analyze_historical_losses.js research/consistent-history.json > research/loss-analysis.json
           node coordinator/diagnose_signal_bias.js research/consistent-history.json > research/bias-diagnostics.json
+          node coordinator/compare_entry_filters.js research/consistent-history.json > research/filter-comparison.json
       - name: Print performance summary
         run: |
           cat research/original-report.json
           cat research/consistent-report.json
-          cat research/bias-diagnostics.json
+          cat research/filter-comparison.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -52,5 +53,6 @@ jobs:
             research/consistent-history.json
             research/loss-analysis.json
             research/bias-diagnostics.json
+            research/filter-comparison.json
             research/history.json
           retention-days: 7
