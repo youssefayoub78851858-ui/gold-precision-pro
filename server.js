@@ -1,6 +1,7 @@
 const { backtest } = require("./backtest");
 const { analyze } = require("./strategy");
 const http = require("http");
+const v2Api = require("./coordinator/service/server");
 
 const PORT = process.env.PORT || 3000;
 const API_KEY = Boolean(process.env.MARKET_DATA_BROKER_URL);
@@ -119,175 +120,11 @@ const endDate = period === "older" ? "2026-09-30" :
     }
   }
 
+  // Reuse the frozen V2 API and the already validated timing policy.
   if (url.pathname === "/api/analyze") {
-    if (!API_KEY) {
-      return send(res, 503, { error: "Data API not configured" });
-    }
-
-    const frames = ["15min", "1h", "4h"];
-    const candles = {};
-
-    try {
-      for (const frame of frames) {
-        const saved = cache.get(frame);
-        if (saved && Date.now() - saved.time < 60000 && saved.bucket === Math.floor(Date.now()/FRAME_MS[frame])) {
-          candles[frame] = saved.data.values;
-          continue;
-        }
-
-        const endpoint = new URL("/time_series", process.env.MARKET_DATA_BROKER_URL);
-        endpoint.searchParams.set("symbol", "XAU/USD");
-        endpoint.searchParams.set("interval", frame);
-        endpoint.searchParams.set("outputsize", "500");
-        endpoint.searchParams.set("timezone", "UTC");
-  
-        const response = await fetch(endpoint, {
-          signal: AbortSignal.timeout(12000),
-        headers: { Authorization: "Bearer " + process.env.BROKER_TOKEN }
-        });
-        const result = await response.json();
-
-        if (!response.ok || result.status === "error" ||
-            !Array.isArray(result.values)) {
-          return send(res, 502, {
-            error: "Market data unavailable",
-            interval: frame,
-            retryAtMS: result.retryAtMS ?? null
-          });
-        }
-
-        const data = {
-          symbol: "XAU/USD",
-          interval: frame,
-          source: "Twelve Data",
-          values: result.values.filter(c => {
-  const d = new Date(c.datetime.replace(" ", "T") + "Z");
-  if (Number.isNaN(d.getTime())) return false;
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    weekday: "short",
-    hour: "2-digit",
-    hourCycle: "h23"
-  }).formatToParts(d);
-  const day = parts.find(p => p.type === "weekday").value;
-  const hour = Number(parts.find(p => p.type === "hour").value);
-  return day !== "Sat" &&
-    !(day === "Sun" && hour < 18) &&
-    !(day === "Fri" && hour >= 17) &&
-    hour !== 17;
-})
-        };
-        cache.set(frame, { time: Date.now(), data, bucket: Math.floor(Date.now()/FRAME_MS[frame]) });
-        candles[frame] = data.values;
-      }
-
-      function ema(values, period) {
-        if (values.length < period) return null;
-        let average = values.slice(0, period)
-          .reduce((a, b) => a + b, 0) / period;
-        const k = 2 / (period + 1);
-        for (let i = period; i < values.length; i++) {
-          average = values[i] * k + average * (1 - k);
-        }
-        return average;
-      }
-
-      function rsi(values, period = 14) {
-        if (values.length <= period) return null;
-        let gain = 0, loss = 0;
-        for (let i = 1; i <= period; i++) {
-          const diff = values[i] - values[i - 1];
-          gain += Math.max(diff, 0);
-          loss += Math.max(-diff, 0);
-        }
-        gain /= period;
-        loss /= period;
-
-        for (let i = period + 1; i < values.length; i++) {
-          const diff = values[i] - values[i - 1];
-          gain = (gain * (period - 1) + Math.max(diff, 0)) / period;
-          loss = (loss * (period - 1) + Math.max(-diff, 0)) / period;
-        }
-        if (loss === 0) return gain === 0 ? 50 : 100;
-        return 100 - 100 / (1 + gain / loss);
-      }
-
-      const indicators = {};
-      let votes = 0;
-
-      for (const frame of frames) {
-        const ordered = [...candles[frame]].slice(1).reverse();
-        const closes = ordered.map(c => Number(c.close));
-        if (closes.length < 50 || closes.some(v => !Number.isFinite(v))) {
-        return send(res, 502, { error: "Insufficient candles", frame, count: closes.length, invalidPrices: closes.filter(v => !Number.isFinite(v)).length });
-        }
-
-        const fast = ema(closes, 20);
-        const slow = ema(closes, 50);
-        const momentum = rsi(closes);
-        const trend = fast > slow ? "UP" : fast < slow ? "DOWN" : "FLAT";
-
-        indicators[frame] = {
-          candleTime: ordered[ordered.length - 1].datetime,
-          close: closes[closes.length - 1],
-          ema20: Number(fast.toFixed(2)),
-          ema50: Number(slow.toFixed(2)),
-          rsi14: Number(momentum.toFixed(2)),
-          trend
-        };
-
-        if (trend === "UP" && momentum > 50 && momentum < 70) votes++;
-        if (trend === "DOWN" && momentum < 50 && momentum > 30) votes--;
-      }
-
-      const signal = votes === 3 ? "BUY" :
-                     votes === -3 ? "SELL" : "WAIT";
-      const now = Date.now();
-const limits = { "15min": 30, "1h": 90, "4h": 300 };
-const marketParts = new Intl.DateTimeFormat("en-US", {
-  timeZone: "America/New_York",
-  weekday: "short",
-  hour: "2-digit",
-  hourCycle: "h23"
-}).formatToParts(new Date(now));
-const marketDay = marketParts.find(p => p.type === "weekday").value;
-const marketHour = Number(marketParts.find(p => p.type === "hour").value);
-const marketOpen = marketDay !== "Sat" &&
-  !(marketDay === "Sun" && marketHour < 18) &&
-  !(marketDay === "Fri" && marketHour >= 17) &&
-  marketHour !== 17;
-const dataFresh = marketOpen && frames.every(frame => {
-  const latest = candles[frame]?.[0];
-  if (!latest?.datetime) return false;
-  const timestamp = Date.parse(latest.datetime.replace(" ", "T") + "Z");
-  const ageMinutes = (now - timestamp) / 60000;
-  return Number.isFinite(ageMinutes) &&
-    ageMinutes >= 0 && ageMinutes <= limits[frame];
-});
-const marketStatus = marketOpen ? "OPEN" : "CLOSED";
-const dataStatus = !marketOpen ? "MARKET_CLOSED" : dataFresh ? "FRESH" : "STALE";
-      return send(res, 200, {
-        symbol: "XAU/USD",
-        marketStatus,
-dataStatus,
-        signal,
-        agreement: Math.abs(votes) + "/3",
-        indicators,
-        experimentalV2: analyze(
-  Object.fromEntries(
-    frames.map(f => [f, [...candles[f]].slice(1).reverse()])
-  ),
-  { dataFresh: dataFresh }
-),
-        warning: "Experimental indicators, not a validated trade signal. No automatic trading."
-      });
-
-    } catch (error) {
-      return send(res, 502, { error: "Analysis temporarily unavailable" });
-    }
-        }
-  
-
+    v2Api.emit("request", req, res);
+    return;
+  }
 
 if (url.pathname === "/api/backtest") {
   if (req.method !== "POST") {

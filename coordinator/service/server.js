@@ -170,4 +170,5 @@ const server = http.createServer(async (req, res) => {
   return send(res, 404, { error: "Not found" });
 });
 
-server.listen(PORT, "127.0.0.1");
+module.exports = server;
+if (require.main === module) server.listen(PORT, "127.0.0.1");
