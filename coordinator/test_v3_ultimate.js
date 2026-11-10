@@ -45,3 +45,8 @@ assert.equal(evidence('DXY',{...archived,instrument:'GC'},now).status,'UNAVAILAB
 assert.equal(evidence('DXY',{...archived,entitlementVerified:false},now).status,'UNAVAILABLE');
 assert.equal(evidence('calendar',{...calendar,mode:'recorded',instrument:'USD_EVENTS',entitlementVerified:true,availableUTC:asOfUTC},now).status,'UNAVAILABLE');
 console.log('PASS direct Ultimate recorded evidence cannot bypass arrival, instrument, entitlement or news publication gates');
+
+const genuinePastNews={...calendar,mode:'recorded',instrument:'GOLD_USD_NEWS',entitlementVerified:true,availableUTC:asOfUTC,events:[]};
+assert.equal(evidence('headlines',genuinePastNews,now).status,'UNAVAILABLE');
+assert.match(evidence('headlines',genuinePastNews,now).reason,/Future headline/);
+console.log('PASS recorded headlines cannot assert knowledge of future unknown events');

@@ -1,0 +1,82 @@
+{
+  "kind": "NON_EXECUTABLE_DATA_ABLATION",
+  "executable": false,
+  "executionProhibited": true,
+  "tradesEvaluated": false,
+  "baselineCompleteObservations": 0,
+  "note": "Removing absent layers cannot estimate economic effects. No layer is bypassed and no candidate/entry/return is generated.",
+  "experiments": [
+    {
+      "removedLayer": "XAUUSD",
+      "availableObservationsLost": 4573,
+      "completeCoverageAfterRemoval": 0,
+      "additionalBlockedObservations": 0,
+      "marginalPerformanceEffect": null,
+      "interpretation": "NOT_IDENTIFIABLE_MISSING_BASELINE_EVIDENCE",
+      "executionProhibited": true
+    },
+    {
+      "removedLayer": "DXY",
+      "availableObservationsLost": 0,
+      "completeCoverageAfterRemoval": 0,
+      "additionalBlockedObservations": 0,
+      "marginalPerformanceEffect": null,
+      "interpretation": "NOT_IDENTIFIABLE_MISSING_BASELINE_EVIDENCE",
+      "executionProhibited": true
+    },
+    {
+      "removedLayer": "US02Y",
+      "availableObservationsLost": 0,
+      "completeCoverageAfterRemoval": 0,
+      "additionalBlockedObservations": 0,
+      "marginalPerformanceEffect": null,
+      "interpretation": "NOT_IDENTIFIABLE_MISSING_BASELINE_EVIDENCE",
+      "executionProhibited": true
+    },
+    {
+      "removedLayer": "US10Y",
+      "availableObservationsLost": 0,
+      "completeCoverageAfterRemoval": 0,
+      "additionalBlockedObservations": 0,
+      "marginalPerformanceEffect": null,
+      "interpretation": "NOT_IDENTIFIABLE_MISSING_BASELINE_EVIDENCE",
+      "executionProhibited": true
+    },
+    {
+      "removedLayer": "GC",
+      "availableObservationsLost": 0,
+      "completeCoverageAfterRemoval": 0,
+      "additionalBlockedObservations": 0,
+      "marginalPerformanceEffect": null,
+      "interpretation": "NOT_IDENTIFIABLE_MISSING_BASELINE_EVIDENCE",
+      "executionProhibited": true
+    },
+    {
+      "removedLayer": "calendar",
+      "availableObservationsLost": 0,
+      "completeCoverageAfterRemoval": 0,
+      "additionalBlockedObservations": 0,
+      "marginalPerformanceEffect": null,
+      "interpretation": "NOT_IDENTIFIABLE_MISSING_BASELINE_EVIDENCE",
+      "executionProhibited": true
+    },
+    {
+      "removedLayer": "headlines",
+      "availableObservationsLost": 0,
+      "completeCoverageAfterRemoval": 0,
+      "additionalBlockedObservations": 0,
+      "marginalPerformanceEffect": null,
+      "interpretation": "NOT_IDENTIFIABLE_MISSING_BASELINE_EVIDENCE",
+      "executionProhibited": true
+    },
+    {
+      "removedLayer": "orderFlow",
+      "availableObservationsLost": 0,
+      "completeCoverageAfterRemoval": 0,
+      "additionalBlockedObservations": 0,
+      "marginalPerformanceEffect": null,
+      "interpretation": "NOT_IDENTIFIABLE_MISSING_BASELINE_EVIDENCE",
+      "executionProhibited": true
+    }
+  ]
+}

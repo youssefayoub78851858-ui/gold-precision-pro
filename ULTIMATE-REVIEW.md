@@ -1,5 +1,7 @@
 # Ultimate offline research batch
 
+Data-readiness continuation: [source inventory, missing-layer audit and prospective plan](ULTIMATE-DATA-READINESS.md).
+
 Continuation: [paper lifecycle and recorded validation](ULTIMATE-PAPER-VALIDATION.md) implements the next batch. The remaining-work list below describes the original batch boundary.
 
 Review branch only: `review/v2-portable-tests-20261109`.

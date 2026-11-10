@@ -10,7 +10,7 @@ import statistics
 import subprocess
 import tempfile
 from ultimate_paper import PaperAccount, DEFAULTS, timestamp, iso, BAR_MS
-from ultimate_connectors import load_export, snapshot
+from ultimate_connectors import load_export, EvidenceIndex
 from validate_history import validate
 
 
@@ -28,15 +28,16 @@ def verify_dataset(path):
     return doc, item
 
 
-def generate(document, config, evidence=None):
+def generate(document, config, evidence=None, diagnostics=False):
     risk = {k: config[k] for k in ('riskFraction', 'dailyLossFraction', 'valuePerPoint', 'lotStep', 'minLot', 'maxLot', 'commissionPerLot', 'slippage')}
     risk.update(equity=config['initialBalance'], dailyLoss=0, killSwitch=False, activeTrades=0)
     prepared = {}
     if evidence:
+        index = EvidenceIndex(evidence)
         for bar in document['frames']['15min']:
             as_of = iso(timestamp(bar['datetime']) + BAR_MS)
-            prepared[as_of] = snapshot(evidence, as_of)
-    data = dict(frames=document['frames'], evidence=prepared, spread=config['spread'], risk=risk)
+            prepared[as_of] = index.snapshot(as_of)
+    data = dict(frames=document['frames'], evidence=prepared, spread=config['spread'], risk=risk, diagnostics=diagnostics)
     result = subprocess.run(['node', str(pathlib.Path(__file__).with_name('ultimate_signals.js'))], input=json.dumps(data), text=True, capture_output=True, check=True)
     return json.loads(result.stdout)
 

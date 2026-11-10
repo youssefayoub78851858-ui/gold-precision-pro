@@ -1,0 +1,164 @@
+{
+  "reviewedUTCDate": "2026-11-10",
+  "scope": "Public documentation review only; no market feeds/accounts/quotas activated",
+  "sources": [
+    {
+      "layer": "XAUUSD",
+      "instrument": "Spot XAU/USD BID",
+      "candidate": "Existing Dukascopy-derived GitHub archives; future entitled broker exports",
+      "noAdditionalSubscription": "EXISTING_FILES_ONLY_RIGHTS_UNVERIFIED",
+      "rights": "No internal-commercial or redistribution entitlement verified. Website access and an open-source downloader are not a data licence.",
+      "history": "Local: 2026-09-01 through 2026-10-30; broader provider start/coverage not verified",
+      "update": "Local M15; H1/H4 rebuilt from complete groups. No update service active.",
+      "limits": "BID only; no ASK/spread/ticks/latency archive. 864 absent M15 calendar slots are not classified session defects.",
+      "gateFitness": "PRICE_TECHNICALLY_PARTIAL_RIGHTS_UNRESOLVED",
+      "references": [
+        "https://www.dukascopy.com/swiss/english/legal-pages/terms-of-use/",
+        "https://www.dukascopy.com/swiss/english/marketwatch/historical/"
+      ],
+      "networkEnabled": false,
+      "requestsSent": 0,
+      "entitlementIndependentlyVerified": false
+    },
+    {
+      "layer": "DXY",
+      "instrument": "ICE U.S. Dollar Index DXY",
+      "candidate": "ICE currency-index products; authorised existing broker export if entitled",
+      "noAdditionalSubscription": "NO_VERIFIED_MACHINE_USE_ENTITLEMENT",
+      "rights": "ICE proprietary index/data rights; public delayed display does not grant automated non-display use or redistribution.",
+      "history": "Vendor-specific real-time/delayed/EOD/historical products; no local DXY history",
+      "update": "Public FX display delayed minimum 15 minutes; contracted feeds differ",
+      "limits": "Delay exceeds 5-minute gate; FRED broad dollar index and DX futures are not silently interchangeable with DXY.",
+      "gateFitness": "UNAVAILABLE",
+      "references": [
+        "https://developer.ice.com/fixed-income-data-services/catalog/ice-data-indices-currency-indices",
+        "https://www.ice.com/forex",
+        "https://www.ice.com/fixed-income-data-services/data-and-analytics/proprietary-data"
+      ],
+      "networkEnabled": false,
+      "requestsSent": 0,
+      "entitlementIndependentlyVerified": false
+    },
+    {
+      "layer": "US02Y",
+      "instrument": "DGS2 constant-maturity yield, percent/year",
+      "candidate": "Federal Reserve H.15 / FRED DGS2",
+      "noAdditionalSubscription": "PUBLIC_DAILY_DATA_AVAILABLE_NOT_IMPORTED",
+      "rights": "Series Public Domain: Citation Requested; cite Federal Reserve Board and FRED. FRED site/API terms still apply.",
+      "history": "DGS2 begins 1976-06-01; no local yield exports or availability vintages",
+      "update": "Daily business-day release, H.15 16:15 US Eastern, holidays/closures excluded; publication/vintage can lag observation date",
+      "limits": "Not an intraday tradable Treasury quote. API key registration may be required for API access; no key/request quota tested. Date-only data cannot establish first availability.",
+      "gateFitness": "DAILY_CONTEXT_ONLY_INCOMPATIBLE_WITH_INTRADAY_REQUIREMENT",
+      "references": [
+        "https://fred.stlouisfed.org/series/DGS2",
+        "https://fred.stlouisfed.org/data/DGS2",
+        "https://www.federalreserve.gov/releases/h15/",
+        "https://fred.stlouisfed.org/legal/terms/"
+      ],
+      "networkEnabled": false,
+      "requestsSent": 0,
+      "entitlementIndependentlyVerified": false
+    },
+    {
+      "layer": "US10Y",
+      "instrument": "DGS10 constant-maturity yield, percent/year",
+      "candidate": "Federal Reserve H.15 / FRED DGS10",
+      "noAdditionalSubscription": "PUBLIC_DAILY_DATA_AVAILABLE_NOT_IMPORTED",
+      "rights": "Series Public Domain: Citation Requested; cite Federal Reserve Board and FRED; obey site/API terms.",
+      "history": "DGS10 begins 1962-01-02; no local yield exports or availability vintages",
+      "update": "Daily H.15 business-day release at 16:15 US Eastern, not continuous",
+      "limits": "Same first-availability/daily-frequency problem as DGS2; intraday on-the-run yields would require a separately identified instrument and reviewed contract.",
+      "gateFitness": "DAILY_CONTEXT_ONLY_INCOMPATIBLE_WITH_INTRADAY_REQUIREMENT",
+      "references": [
+        "https://fred.stlouisfed.org/series/DGS10",
+        "https://www.federalreserve.gov/releases/h15/",
+        "https://fred.stlouisfed.org/legal/terms/"
+      ],
+      "networkEnabled": false,
+      "requestsSent": 0,
+      "entitlementIndependentlyVerified": false
+    },
+    {
+      "layer": "GC",
+      "instrument": "CME/COMEX gold futures, actual dated contract required",
+      "candidate": "CME reference/delayed public pages; licensed local exchange/broker exports",
+      "noAdditionalSubscription": "REFERENCE_DISPLAY_ONLY_NOT_VERIFIED_FOR_AUTOMATED_USE",
+      "rights": "CME data licensing and vendor entitlement apply, including delayed/historical/non-display use; no active licence verified.",
+      "history": "DataMine historical product coverage varies; no local GC history or roll map",
+      "update": "Contract-specific trades/quotes; website delayed reference data, not a real-time validation feed",
+      "limits": "Website quotes are reference only. Historical retrieval/licensing may incur fees; do not activate trials. GC is futures, not spot XAUUSD; retain contract and roll/expiry rules.",
+      "gateFitness": "UNAVAILABLE",
+      "references": [
+        "https://www.cmegroup.com/trading/about-quotes.html",
+        "https://www.cmegroup.com/market-data/real-time-and-historical-data.html",
+        "https://www.cmegroup.com/articles/faqs/access-to-cme-group-settlement-data-faq.html"
+      ],
+      "networkEnabled": false,
+      "requestsSent": 0,
+      "entitlementIndependentlyVerified": false
+    },
+    {
+      "layer": "calendar",
+      "instrument": "USD scheduled economic events",
+      "candidate": "BLS release schedules; Federal Reserve FOMC calendar, official release archives",
+      "noAdditionalSubscription": "PUBLIC_PARTIAL_SCHEDULES_AVAILABLE_NOT_IMPORTED",
+      "rights": "BLS publications public domain except identified images; Board information public domain unless otherwise indicated, cite source.",
+      "history": "Official schedule/release archives vary; no complete point-in-time schedule snapshot imported",
+      "update": "Scheduled releases and schedule revisions; no guaranteed machine latency/SLA",
+      "limits": "BLS/FOMC alone miss other agencies/events. Need time-zone/DST conversion, original publication and capture times; impact labels are research annotations, not official forecasts/consensus.",
+      "gateFitness": "PARTIAL_SCOPE_NOT_FULL_EVENT_COVERAGE",
+      "references": [
+        "https://www.bls.gov/schedule/",
+        "https://www.bls.gov/opub/copyright-information.htm",
+        "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+        "https://www.federalreserve.gov/disclaimer.htm"
+      ],
+      "networkEnabled": false,
+      "requestsSent": 0,
+      "entitlementIndependentlyVerified": false
+    },
+    {
+      "layer": "headlines",
+      "instrument": "Gold/USD material news coverage",
+      "candidate": "Federal Reserve official press releases/RSS; BLS official release pages",
+      "noAdditionalSubscription": "PUBLIC_OFFICIAL_NEWS_SUBSET_AVAILABLE_NOT_IMPORTED",
+      "rights": "Board/BLS public-domain original text with attribution/exceptions; third-party linked articles/photos remain separate rights.",
+      "history": "Release pages/archives vary; RSS recent retention is not a comprehensive point-in-time history",
+      "update": "Event-driven publications with no full-market coverage or latency SLA",
+      "limits": "Not global/geopolitical/commercial newswire coverage. Future unknown headlines cannot be attested; current plus-30-minute completeness condition is structurally unsatisfiable for genuine headlines.",
+      "gateFitness": "PARTIAL_SCOPE_AND_CONTRACT_CONFLICT",
+      "references": [
+        "https://www.federalreserve.gov/feeds/feeds.htm",
+        "https://www.federalreserve.gov/disclaimer.htm",
+        "https://www.bls.gov/opub/copyright-information.htm"
+      ],
+      "networkEnabled": false,
+      "requestsSent": 0,
+      "entitlementIndependentlyVerified": false
+    },
+    {
+      "layer": "orderFlow",
+      "instrument": "Actual GC exchange trade sides and/or order-book data",
+      "candidate": "Licensed CME trade-side/depth exports or already entitled broker/vendor exports",
+      "noAdditionalSubscription": "NO_VERIFIED_FREE_COMPLETE_ENTITLEMENT",
+      "rights": "Exchange/non-display/historical licensing applies. Limited public samples do not establish full GC coverage or usage rights.",
+      "history": "Vendor/product/contract-specific; none locally imported",
+      "update": "Tick/trade/message-level with sequence numbers required; no active stream",
+      "limits": "Candle volume, COT, spot tick counts and retail DOM are not exchange-wide GC order flow. Retain true aggressor semantics, sequence gaps, contract and timestamps; no inferred sides presented as facts.",
+      "gateFitness": "UNAVAILABLE",
+      "references": [
+        "https://www.cmegroup.com/market-data/real-time-and-historical-data.html",
+        "https://www.cmegroup.com/datamine.html",
+        "https://cmegroupclientsite.atlassian.net/wiki/spaces/EPICSANDBOX/pages/457319709/CME+DataMine+Support"
+      ],
+      "networkEnabled": false,
+      "requestsSent": 0,
+      "entitlementIndependentlyVerified": false
+    }
+  ],
+  "limitations": [
+    "Public documentation is not an account-specific licence determination. No connected broker/data entitlement was verified.",
+    "Dukascopy terms page direct fetch timed out; indexed official terms and source URL were found. Exact allowed use needs source-specific confirmation before new data capture/redistribution.",
+    "No numerical provider rate limit is invented. Future allowed collection must honor documented/vendor-agreed limits and budget zero requests until approved."
+  ]
+}

@@ -1,6 +1,7 @@
 """Prepared offline adapters for vendor exports. No HTTP clients, SDKs or credentials.
 Live transport is intentionally absent; planning never sends requests.
 """
+import bisect
 import csv
 import datetime as dt
 import json
@@ -53,8 +54,11 @@ def validate(name, row):
             utc(event['timeUTC'])
         if name == 'headlines' and any(utc(e['timeUTC']) > available for e in row['events']):
             raise ValueError('Future headline')
-        utc(row['coverageStartUTC'])
-        utc(row['coverageEndUTC'])
+        start, end = utc(row['coverageStartUTC']), utc(row['coverageEndUTC'])
+        if start > end:
+            raise ValueError('Reversed event coverage interval')
+        if name == 'headlines' and end > available:
+            raise ValueError('Cannot attest future headline coverage')
     else:
         if row.get('kind') != 'trades' or row.get('licensed') is not True:
             raise ValueError('Trade sides and licensing required')
@@ -63,15 +67,43 @@ def validate(name, row):
     return row
 
 
-def snapshot(records, as_of):
-    cutoff, selected = utc(as_of), {}
+def validate_records(records):
+    if not isinstance(records, dict) or any(name not in SPECS for name in records):
+        raise ValueError('Expected known evidence layer mapping')
     for name, rows in records.items():
+        if not isinstance(rows, list):
+            raise ValueError('Layer rows must be a list')
+        previous = None
+        seen = set()
         for row in rows:
+            if not isinstance(row, dict):
+                raise ValueError('Evidence row must be an object')
             validate(name, row)
-        eligible = [r for r in rows if utc(r['availableUTC']) <= cutoff and utc(r['observedUTC']) <= cutoff]
-        if eligible:
-            selected[name] = max(eligible, key=lambda r: utc(r['availableUTC']))
-    return selected
+            key = (utc(row['observedUTC']), utc(row['availableUTC']))
+            if key in seen or (previous is not None and (key[1] <= previous[1] or key[0] < previous[0])):
+                raise ValueError('Duplicate or reversed evidence arrival')
+            seen.add(key)
+            previous = key
+    return records
+
+
+class EvidenceIndex:
+    def __init__(self, records):
+        validate_records(records)
+        self.records = records
+        self.times = {name: [utc(row['availableUTC']) for row in rows] for name, rows in records.items()}
+
+    def snapshot(self, as_of):
+        result, cutoff = {}, utc(as_of)
+        for name, rows in self.records.items():
+            index = bisect.bisect_right(self.times[name], cutoff) - 1
+            if index >= 0:
+                result[name] = rows[index]
+        return result
+
+
+def snapshot(records, as_of):
+    return EvidenceIndex(records).snapshot(as_of)
 
 
 def load_export(path):

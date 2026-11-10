@@ -146,7 +146,21 @@ jobs:
         working-directory: coordinator
         run: |
           node test_v3_ultimate.js
-          python -m unittest -v test_ultimate_http test_ultimate_replay test_ultimate_paper test_ultimate_connectors test_ultimate_walkforward
+          python -m unittest -v test_ultimate_http test_ultimate_replay test_ultimate_paper test_ultimate_connectors test_ultimate_walkforward test_ultimate_intake
 
       - name: Recorded BID walk-forward comparison (offline, no provider)
         run: python coordinator/ultimate_walkforward.py research/recorded/2026-09-bid.json research/recorded/2026-10-bid.json --output /tmp/ultimate-walkforward.json
+
+      - name: Recorded data coverage, missing-layer research and holdout freeze (no connections)
+        run: |
+          python coordinator/ultimate_forward_plan.py research/ultimate-prospective-plan.json
+          python coordinator/ultimate_coverage.py research/recorded/2026-09-bid.json research/recorded/2026-10-bid.json --output /tmp/ultimate-data-coverage.json --absence-output /tmp/ultimate-layer-absence.json
+      - name: Upload derived data readiness reports only
+        uses: actions/upload-artifact@v4
+        with:
+          name: ultimate-data-readiness
+          path: |
+            /tmp/ultimate-data-coverage.json
+            /tmp/ultimate-layer-absence.json
+            /tmp/ultimate-walkforward.json
+          retention-days: 14

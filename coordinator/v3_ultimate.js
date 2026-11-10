@@ -19,6 +19,7 @@ function evidence(name,feed,now){
   if(!Array.isArray(feed.events))return bad('Event coverage unavailable');
   if(feed.mode==='recorded'&&feed.events.some(e=>!finite(Date.parse(e.publishedUTC))||Date.parse(e.publishedUTC)>Date.parse(feed.availableUTC)||(name==='headlines'&&Date.parse(e.timeUTC)>now)))return bad('Unknown or future news publication');
   const start=Date.parse(feed.coverageStartUTC),end=Date.parse(feed.coverageEndUTC);
+  if(feed.mode==='recorded'&&name==='headlines'&&end>Date.parse(feed.availableUTC))return bad('Future headline completeness cannot be attested');
   if(!(start<=now-1800000&&end>=now+1800000))return bad('Event window not covered');
   if(feed.events.some(e=>!finite(Date.parse(e.timeUTC))||!['low','medium','high'].includes(e.impact)))return bad('Invalid event');
   return {status:'READY',mode:feed.mode,source:feed.source,blocked:feed.events.some(e=>e.impact==='high'&&Math.abs(Date.parse(e.timeUTC)-now)<=1800000)};
