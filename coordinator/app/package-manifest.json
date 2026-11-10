@@ -12,7 +12,7 @@
     "../timing.js": "23aee630209ed30a34eee33362e1128aba193ca7d7824c9dc46830ab43acf11a",
     "../timing-cli.js": "9a8ae35fccbe45ca8f05082812337e0bb186e0a797d4a5912f59efa6248e81fe",
     "../historical.js": "b8d94c6804891791f2fe0948b4c8c0056a1f544e1647f62444892a5dcc2e649c",
-    "../service/server.js": "6251c64f752e6ec03680e514e285acfd52bad55647e8b19d84edd38d3fd4c153",
+    "../service/server.js": "c0b426906f38311e710d33e76df94cab3920c1fea7c56b8173b98f14510018d3",
     "../service/backtest.js": "9de8d73fcb7f72d916194e3a905fb21bdb3911e9fe0692bc0363b6d1e19691a6",
     "../broker.py": "ae46ccab44ccde62a6a92d3d9746b6d95c5757b3d2dd9281c7e44f1c219ce0b1",
     "../broker_process.py": "f12dc3fac5ff8701736c8d61d283d723e1d138e6dd4be68863a6c796bc7f8401",

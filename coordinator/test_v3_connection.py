@@ -43,7 +43,7 @@ class Connection(unittest.TestCase):
    except urllib.error.HTTPError as e:return e.code,json.load(e)
   finally:p.terminate();p.communicate(timeout=5)
  def test_public_route_reaches_v3_with_closed_native_frames(self):
-  code,x=self.request('/api/v3/research');self.assertEqual(code,200);self.assertEqual(x['engine'],'V3');self.assertEqual(x['dataStatus'],'FRESH');self.assertEqual(x['signal'],'WAIT');self.assertFalse(x['executable']);self.assertEqual(x['candles']['15min']['ageAfterCloseSeconds'],5)
+  code,x=self.request('/api/v3/research');self.assertEqual(code,200);self.assertEqual(x['engine'],'V3');self.assertEqual(x['dataStatus'],'FRESH');self.assertEqual(x['signal'],'WAIT');self.assertFalse(x['executable']);self.assertAlmostEqual(x['candles']['15min']['close'],4100.2);self.assertEqual(x['candles']['15min']['closeUTC'],'2026-11-10T09:00:00.000Z');self.assertEqual(x['candles']['15min']['ageAfterCloseSeconds'],5)
  def test_late_window_wait(self):
   _,x=self.request('/api/v3/research',NOW+90000);self.assertEqual(x['dataStatus'],'STALE');self.assertEqual(x['reason'],'MISSED_OBSERVATION_WINDOW')
  def test_missing_latest_h4_wait(self):

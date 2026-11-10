@@ -183,6 +183,7 @@ const server = http.createServer(async (req, res) => {
         candles[interval] = latest ? {
           openUTC:new Date(timestamp(latest.datetime)).toISOString(),
           closeUTC:new Date(timestamp(latest.datetime) + minutes * 60000).toISOString(),
+          close:Number(latest.close),
           ageAfterCloseSeconds:(now - timestamp(latest.datetime) - minutes * 60000)/1000
         } : null;
       }
