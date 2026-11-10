@@ -12,7 +12,7 @@
     "../timing.js": "23aee630209ed30a34eee33362e1128aba193ca7d7824c9dc46830ab43acf11a",
     "../timing-cli.js": "9a8ae35fccbe45ca8f05082812337e0bb186e0a797d4a5912f59efa6248e81fe",
     "../historical.js": "b8d94c6804891791f2fe0948b4c8c0056a1f544e1647f62444892a5dcc2e649c",
-    "../service/server.js": "d8c6ea3b9075ddf92662cbf62f28e986933ee1c8afa0628ef72972cdbe2618e1",
+    "../service/server.js": "6251c64f752e6ec03680e514e285acfd52bad55647e8b19d84edd38d3fd4c153",
     "../service/backtest.js": "9de8d73fcb7f72d916194e3a905fb21bdb3911e9fe0692bc0363b6d1e19691a6",
     "../broker.py": "ae46ccab44ccde62a6a92d3d9746b6d95c5757b3d2dd9281c7e44f1c219ce0b1",
     "../broker_process.py": "f12dc3fac5ff8701736c8d61d283d723e1d138e6dd4be68863a6c796bc7f8401",
@@ -20,9 +20,12 @@
     "../startup_guard.py": "4f68c93c893fea82fc5796e317fb56dd3304af9bfc97f6d185f9892eb0fa76ff",
     "../handoff_guard.py": "327a2fe7ecd2911339359b49333438597259bc0448826ae774e258d3abefaa02",
     "../process_inventory.py": "6fd59f53fb2660b94849c9ff708f406e44a9e0f0d074685bfd87386bce1c9268",
-    "../entrypoint.py": "62a9c6544a95bfe8014f1c5946528e0b603855a28310a7b875e8ab2848125ef7",
+    "../entrypoint.py": "abca9d290e7807a88508c6ef877b74d529f47b0a3108d1730200142e41f8e0d0",
     "../usage_probe.py": "804a26fdef54a0522e354eb689e271e816c6502214665aa756ee3c94751d8f48",
-    "../acceptance_watch.py": "ff1bfc8a57c67e44564bf33a1fe341463fd95916b904baeaac95e1d4091ce274"
+    "../acceptance_watch.py": "ff1bfc8a57c67e44564bf33a1fe341463fd95916b904baeaac95e1d4091ce274",
+    "../v3_market_structure.js": "18327e51e7013c168bbf6ebaf3061044d2137810649cdbd2637ecfd558797e6b",
+    "../v3_multitimeframe.js": "8b056b8ea993d11de18e2521b04a72d65a816fc05b224f1e9de4156a24dc57e2",
+    "../v3_trade_plan.js": "f606b2fd108a87ed699eb79eb9e904dcc507c8474affd0fefcf1e59954e83e01"
   },
   "reviewPolicy": "LATEST_EXPECTED_CLOSED_UTC_BAR_V1; not original frozen prospective execution policy"
 }

@@ -126,3 +126,11 @@ jobs:
       - name: V3 research-only trade plan tests
         working-directory: coordinator
         run: node test_v3_trade_plan.js
+
+      - name: V3 review API and UI connection acceptance (offline)
+        working-directory: coordinator
+        run: |
+          python -m unittest -v test_v3_connection
+          node test_review_ui.js
+      - name: Actual coordinator image build and standby restart (no provider)
+        run: python coordinator/test_container_standby.py

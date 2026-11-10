@@ -15,6 +15,7 @@ class Handler(BaseHTTPRequestHandler):
   health=authenticated and self.path=='/health'
   status=401 if not authenticated else 200 if health else 503
   body={'status':'standby','providerAccess':False,'paperRunning':False} if health else {'status':'error','message':'Unauthorized' if not authenticated else 'Coordinator awaiting approved cutover'}
+  if authenticated and self.path=='/api/v3/research':body={'engine':'V3','signal':'WAIT','executable':False,'dataStatus':'STANDBY','reason':'Coordinator in standby; provider access disabled'}
   data=json.dumps(body).encode();self.send_response(status);self.send_header('Content-Type','application/json');self.end_headers();self.wfile.write(data)
 server=ThreadingHTTPServer(('0.0.0.0',int(os.environ.get('BROKER_PORT','3110'))),Handler)
 signal.signal(signal.SIGTERM,lambda *_:threading.Thread(target=server.shutdown,daemon=True).start())

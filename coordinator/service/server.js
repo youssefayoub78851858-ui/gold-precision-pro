@@ -3,6 +3,7 @@
 const { backtestFrames } = require("./backtest");
 const { analyze } = require("./strategy");
 const { plan: v3Plan } = require("../v3_trade_plan");
+const { checkFrame: checkV3Frame } = require("../v3_multitimeframe");
 const http = require("http");
 
 const PORT = process.env.PORT || 3000;
@@ -65,6 +66,17 @@ async function fetchCandles(frame, outputsize = "500", endDate = null) {
     const failure = new Error(result.message || "Market data unavailable");
     failure.retryAtMS = result.retryAtMS;
     throw failure;
+  }
+  if (result.meta?.interval && result.meta.interval !== frame) throw new Error("Wrong broker timeframe");
+  if (result.symbol && result.symbol !== "XAU/USD") throw new Error("Wrong broker symbol");
+  let previous = Infinity;
+  for (const c of result.values) {
+    const t = timestamp(c.datetime);
+    const [o,h,l,v] = [c.open,c.high,c.low,c.close].map(Number);
+    if (!Number.isFinite(t) || t >= previous || t > Date.now() ||
+        ![o,h,l,v].every(x => Number.isFinite(x) && x > 0) ||
+        l > Math.min(o,v) || h < Math.max(o,v)) throw new Error("Invalid broker OHLC/time/order");
+    previous = t;
   }
   return removeClosedMarketCandles(result.values);
 }
@@ -145,49 +157,55 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === "/api/v3/research") {
-    // Research only. Reuses the existing broker, with no direct provider access.
-    // Fail closed if any timeframe is missing, stale, or not fully closed.
-    if (!marketIsOpen()) return send(res, 200, {
-      engine: "V3", signal: "WAIT", executable: false,
-      reason: "Market closed", dataStatus: "MARKET_CLOSED"
-    });
+    // Transport/data admission only; V3 planning rules remain unchanged.
     const now = Date.now();
-    const frames = {};
+    const base = {engine:"V3", symbol:"XAU/USD", signal:"WAIT", executable:false,
+      observedUTC:new Date(now).toISOString()};
+    if (!marketIsOpen()) return send(res, 200, {...base,
+      reason:"Market closed", dataStatus:"MARKET_CLOSED"});
+    const closed = {}, candles = {};
     try {
       for (const [interval, minutes] of Object.entries(FRAME_MINUTES)) {
-        const key = "live:" + interval;
-        const saved = cache.get(key);
+        const saved = cache.get("live:" + interval);
         let values;
         if (saved && now - saved.time < 60000 &&
-            saved.bucket === Math.floor(now / (minutes * 60000))) {
-          values = saved.values;
-        } else {
+            saved.bucket === Math.floor(now / (minutes * 60000))) values = saved.values;
+        else {
           values = await fetchCandles(interval);
-          cache.set(key, {time: now, values,
-            bucket: Math.floor(now / (minutes * 60000))});
+          cache.set("live:" + interval, {time:now, values,
+            bucket:Math.floor(now / (minutes * 60000))});
         }
-        const name = interval === "15min" ? "M15" : interval === "1h" ? "H1" : "H4";
-        frames[name] = values
-          .filter(c => Number.isFinite(timestamp(c.datetime)))
-          .map(c => ({datetime: new Date(timestamp(c.datetime)).toISOString(),
-            open: Number(c.open), high: Number(c.high),
-            low: Number(c.low), close: Number(c.close)}))
-          .filter(c =>
-            Date.parse(c.datetime) + minutes * 60000 <= now)
-          .sort((a,b) => Date.parse(a.datetime)-Date.parse(b.datetime));
+        if (values.some(c => !Number.isFinite(timestamp(c.datetime)) || timestamp(c.datetime) > now))
+          throw new Error("Invalid broker timestamps");
+        // Keep native order: reversed newest-first bars must be strictly ascending.
+        closed[interval] = values.filter(c => timestamp(c.datetime) + minutes * 60000 <= now).slice().reverse();
+        const latest = closed[interval].at(-1);
+        candles[interval] = latest ? {
+          openUTC:new Date(timestamp(latest.datetime)).toISOString(),
+          closeUTC:new Date(timestamp(latest.datetime) + minutes * 60000).toISOString(),
+          ageAfterCloseSeconds:(now - timestamp(latest.datetime) - minutes * 60000)/1000
+        } : null;
       }
-      const result = v3Plan(frames, new Date(now).toISOString(), {
-        spread: NaN
-      });
-      return send(res, 200, {
-        engine: "V3", symbol: "XAU/USD", dataStatus: "BROKER_RESEARCH",
-        ...result, signal: "WAIT", executable: false,
-        warning: "Research only. No broker spread, news gate, or live trading."
-      });
+      const timing = require('../timing').admit(closed, now, {marketOpen:true});
+      if (!timing.accepted) return send(res, 200, {...base, candles,
+        dataStatus:"STALE", reason:timing.reason, blockedFrame:timing.frame || null});
+      const frames = Object.fromEntries(Object.entries(timing.frames).map(([interval, values]) => [
+        interval === "15min" ? "M15" : interval === "1h" ? "H1" : "H4",
+        values.map(c => ({datetime:new Date(timestamp(c.datetime)).toISOString(),
+          open:Number(c.open), high:Number(c.high), low:Number(c.low), close:Number(c.close)}))
+      ]));
+      for (const [name, minutes] of Object.entries({M15:15,H1:60,H4:240})) {
+        const validity = checkV3Frame(frames[name], minutes, now);
+        if (!validity.ok) return send(res, 200, {...base, candles,
+          dataStatus:"INVALID", reason:name + ": " + validity.reason});
+      }
+      const result = v3Plan(frames, new Date(now).toISOString(), {spread:NaN});
+      return send(res, 200, {...base, ...result, candles, dataStatus:"FRESH",
+        signal:"WAIT", executable:false,
+        warning:"Research only. Broker spread, news, costs and position sizing unverified."});
     } catch (error) {
-      return send(res, 503, {engine:"V3", signal:"WAIT",
-        executable:false, dataStatus:"UNAVAILABLE",
-        error:"V3 research data unavailable"});
+      return send(res, 503, {...base, dataStatus:"UNAVAILABLE",
+        reason:"Broker unavailable or invalid candles; no verified analysis"});
     }
   }
 

@@ -1,5 +1,5 @@
 
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gold Precision Pro AI</title><style>:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#090e19;color:#e9edf6;font-family:system-ui,Tahoma,sans-serif}.wrap{max-width:650px;margin:auto;padding:18px}.head{display:flex;justify-content:space-between;align-items:center}.sub{color:#98a6bb;font-size:13px}.tag{background:#3a2d18;color:#ffd18b;padding:7px 10px;border-radius:25px;font-size:12px}.card{background:#151e30;border:1px solid #2a364b;border-radius:17px;padding:17px;margin-top:14px}h1{font-size:23px;margin:0}h2{font-size:17px;margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.tile{background:#1d2940;padding:14px;border-radius:12px}.tile b{display:block;margin-bottom:5px}.pill{padding:7px 12px;border-radius:10px;background:#28364d;color:#c7d2e4;display:inline-block;margin:4px 0}.muted{color:#9eacc0}.warn{color:#ffca82}.btn{background:#d5ad63;color:#101522;border:0;border-radius:12px;padding:13px 15px;font-weight:750;cursor:pointer;width:100%;margin-top:10px}.btn2{background:#2a3852;color:#e5eaf5}.line{border-top:1px solid #2b3950;margin:12px 0}select{background:#1d2940;color:white;padding:12px;border:1px solid #45536a;border-radius:10px;width:100%;margin:7px 0}.small{font-size:12px;line-height:1.7}.status{font-size:20px;color:#d5ad63;font-weight:800}.check{display:flex;align-items:center;gap:9px;margin:9px 0}input{accent-color:#d5ad63}.note{border-right:3px solid #d5ad63;padding-right:10px}</style></head><body><main class="wrap"><div class="head"><div><h1>Gold Precision Pro AI</h1><div class="sub">لوحة تحكم للهاتف • النسخة الأولية 0.1</div></div><span class="tag" id="connection-state">لم يُفحص التحليل</span></div><div class="card"><h2>حالة السوق</h2><div class="grid"><div class="tile"><b>XAUUSD</b><span class="muted">السعر: غير متاح</span></div><div class="tile"><b>التوصية الحالية</b><span class="status" id="decision-state">—</span></div><div class="tile"><b>تدفّق الأوامر</b><span class="muted">غير مربوط</span></div><div class="tile"><b>الأخبار المباشرة</b><span class="muted">غير مربوطة</span></div></div><p class="small warn"><span id="decision-detail">لم يُطلب تحليل V2 بعد؛ لا توجد إشارة مؤكدة.</span></p></div><div class="card"><h2>محرك التحليل</h2><div class="grid"><div class="tile"><b>الاتجاه</b><span class="muted">H4 / H1</span></div><div class="tile"><b>الدخول</b><span class="muted">M15 / M5 / M1</span></div><div class="tile"><b>الأسواق المرتبطة</b><span class="muted">DXY / US10Y / US02Y / GC</span></div><div class="tile"><b>الأخبار</b><span class="muted">اقتصادية / سياسية / جيوسياسية</span></div></div><button class="btn" id="analyze-v2-button">حلّل الذهب الآن</button><p id="output" class="small muted" aria-live="polite">بانتظار ربط البيانات.</p></div><div class="card"><h2>إعدادات التوصيات</h2><label class="check"><input type="checkbox" checked disabled> تحليل V2 عند الطلب فقط</label><label class="check"><input type="checkbox" disabled> تنبيهات تلقائية (تحتاج خادم وإشعارات)</label><label class="check"><input type="checkbox" disabled> تنفيذ آلي MT5 (مقفل حتى الاختبار والربط)</label><div class="line"></div><label>أسلوب التداول المقترح</label><select id="strategy"><option>محافظ — فرص أقل وتأكيدات أكثر</option><option>متوسط — فرص M15</option><option>سريع — M1/M5 بعد توفير بيانات مناسبة</option></select><button class="btn btn2" onclick="localStorage.setItem('gpp-strategy',document.getElementById('strategy').selectedIndex);document.getElementById('saved').textContent='تم حفظ تفضيل العرض على هذا الجهاز فقط.'">حفظ التفضيل</button><p id="saved" class="small muted"></p></div><div class="card"><h2>خطة تفعيل الربط</h2><div class="note small">1. مصدر بيانات الذهب والعقود الآجلة.<br>2. مصدر أخبار موثوق مع توقيت النشر.<br>3. خادم سحابي ومحرّك قواعد وتحليل.<br>4. تنبيهات للموبايل وسجل نتائج.<br>5. اختبار تاريخي وتجريبي.<br>6. ربط MT5 بالوسيط بعد التحقق من الصلاحيات.</div><p class="small muted">لا يتم إرسال أوامر تداول، ولا حفظ بيانات حسابات أو كلمات مرور في هذه الصفحة. هذه واجهة أولية تعمل محلياً وليست منصة تداول حية.</p></div></main><script>let v=localStorage.getItem('gpp-strategy');if(v!==null)document.getElementById('strategy').selectedIndex=Number(v);</script></body></html>
+<!doctype html><html lang="ar" dir="rtl"><head><meta name="gold-api-base" content=""><script>window.GOLD_API_BASE=(document.querySelector('meta[name=gold-api-base]').content || location.origin).replace(/\/$/,'');</script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gold Precision Pro AI</title><style>:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#090e19;color:#e9edf6;font-family:system-ui,Tahoma,sans-serif}.wrap{max-width:650px;margin:auto;padding:18px}.head{display:flex;justify-content:space-between;align-items:center}.sub{color:#98a6bb;font-size:13px}.tag{background:#3a2d18;color:#ffd18b;padding:7px 10px;border-radius:25px;font-size:12px}.card{background:#151e30;border:1px solid #2a364b;border-radius:17px;padding:17px;margin-top:14px}h1{font-size:23px;margin:0}h2{font-size:17px;margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.tile{background:#1d2940;padding:14px;border-radius:12px}.tile b{display:block;margin-bottom:5px}.pill{padding:7px 12px;border-radius:10px;background:#28364d;color:#c7d2e4;display:inline-block;margin:4px 0}.muted{color:#9eacc0}.warn{color:#ffca82}.btn{background:#d5ad63;color:#101522;border:0;border-radius:12px;padding:13px 15px;font-weight:750;cursor:pointer;width:100%;margin-top:10px}.btn2{background:#2a3852;color:#e5eaf5}.line{border-top:1px solid #2b3950;margin:12px 0}select{background:#1d2940;color:white;padding:12px;border:1px solid #45536a;border-radius:10px;width:100%;margin:7px 0}.small{font-size:12px;line-height:1.7}.status{font-size:20px;color:#d5ad63;font-weight:800}.check{display:flex;align-items:center;gap:9px;margin:9px 0}input{accent-color:#d5ad63}.note{border-right:3px solid #d5ad63;padding-right:10px}</style></head><body><main class="wrap"><div class="head"><div><h1>Gold Precision Pro AI</h1><div class="sub">لوحة تحكم للهاتف • النسخة الأولية 0.1</div></div><span class="tag" id="connection-state">لم يُفحص التحليل</span></div><div class="card"><h2>حالة السوق</h2><div class="grid"><div class="tile"><b>XAUUSD</b><span class="muted">السعر: غير متاح</span></div><div class="tile"><b>التوصية الحالية</b><span class="status" id="decision-state">—</span></div><div class="tile"><b>تدفّق الأوامر</b><span class="muted">غير مربوط</span></div><div class="tile"><b>الأخبار المباشرة</b><span class="muted">غير مربوطة</span></div></div><p class="small warn"><span id="decision-detail">لم يُطلب تحليل V3 بعد؛ لا توجد إشارة مؤكدة.</span></p></div><div class="card"><h2>محرك التحليل</h2><div class="grid"><div class="tile"><b>الاتجاه</b><span class="muted">H4 / H1</span></div><div class="tile"><b>الدخول</b><span class="muted">M15 / M5 / M1</span></div><div class="tile"><b>الأسواق المرتبطة</b><span class="muted">DXY / US10Y / US02Y / GC</span></div><div class="tile"><b>الأخبار</b><span class="muted">اقتصادية / سياسية / جيوسياسية</span></div></div><button class="btn" id="analyze-v2-button">حلّل الذهب الآن</button><p id="output" class="small muted" aria-live="polite">بانتظار ربط البيانات.</p></div><div class="card"><h2>إعدادات التوصيات</h2><label class="check"><input type="checkbox" checked disabled> تحليل V3 البحثي عند الطلب فقط</label><label class="check"><input type="checkbox" disabled> تنبيهات تلقائية (تحتاج خادم وإشعارات)</label><label class="check"><input type="checkbox" disabled> تنفيذ آلي MT5 (مقفل حتى الاختبار والربط)</label><div class="line"></div><label>أسلوب التداول المقترح</label><select id="strategy"><option>محافظ — فرص أقل وتأكيدات أكثر</option><option>متوسط — فرص M15</option><option>سريع — M1/M5 بعد توفير بيانات مناسبة</option></select><button class="btn btn2" onclick="localStorage.setItem('gpp-strategy',document.getElementById('strategy').selectedIndex);document.getElementById('saved').textContent='تم حفظ تفضيل العرض على هذا الجهاز فقط.'">حفظ التفضيل</button><p id="saved" class="small muted"></p></div><div class="card"><h2>خطة تفعيل الربط</h2><div class="note small">1. مصدر بيانات الذهب والعقود الآجلة.<br>2. مصدر أخبار موثوق مع توقيت النشر.<br>3. خادم سحابي ومحرّك قواعد وتحليل.<br>4. تنبيهات للموبايل وسجل نتائج.<br>5. اختبار تاريخي وتجريبي.<br>6. ربط MT5 بالوسيط بعد التحقق من الصلاحيات.</div><p class="small muted">لا يتم إرسال أوامر تداول، ولا حفظ بيانات حسابات أو كلمات مرور في هذه الصفحة. هذه واجهة أولية تعمل محلياً وليست منصة تداول حية.</p></div></main><script>let v=localStorage.getItem('gpp-strategy');if(v!==null)document.getElementById('strategy').selectedIndex=Number(v);</script></body></html>
 
 <script>
 (function () {
@@ -22,8 +22,7 @@
       status.textContent = "تعذر تحديث السعر - تحقق من الاتصال";
     }
   }
-  updateGold();
-  setInterval(updateGold, 5000);
+  document.getElementById("gold-live-status").textContent = "جلب السعر الخارجي التلقائي متوقف في نسخة المراجعة";
 })();
 </script>
 
@@ -37,7 +36,7 @@
 
   try {
     const response = await fetch(
-      "https://gold-precision-pro.onrender.com/health"
+      window.GOLD_API_BASE + "/health"
     );
     if (!response.ok) throw new Error("HTTP " + response.status);
     const data = await response.json();
@@ -53,7 +52,7 @@
 
 <script>
 (function () {
-  const API = "https://gold-precision-pro.onrender.com/api/candles";
+  const API = window.GOLD_API_BASE + "/api/candles";
   const box = document.createElement("section");
 
   box.style.cssText =
@@ -116,56 +115,7 @@
   <p style="font-size:12px;color:#b9c4d6">إشارات تجريبية وليست أوامر تداول.</p>
 </div>
 
-<script>
-(function () {
-  const API = "https://gold-precision-pro.onrender.com/api/analyze";
-  const button = document.getElementById("analyze-v2-button");
-  const status = document.getElementById("gold-analysis-status");
-  const results = document.getElementById("gold-analysis-results");
-  const connection = document.getElementById("connection-state");
-  const signal = document.getElementById("decision-state");
-  const detail = document.getElementById("decision-detail");
-  let pending = false;
-  status.textContent = "تحليل V2 عند الطلب؛ التحديث التلقائي متوقف.";
-  async function refreshAnalysis() {
-    if (pending) return;
-    pending = true; button.disabled = true;
-    signal.textContent = "—"; results.replaceChildren();
-    connection.textContent = "جارٍ فحص V2";
-    status.textContent = detail.textContent = "جارٍ طلب التحليل...";
-    try {
-      const response = await fetch(API, {cache:"no-store", signal:AbortSignal.timeout(45000)});
-      if (!response.ok) throw new Error("HTTP " + response.status);
-      const data = await response.json();
-      if (data.engine !== "Gold Precision Pro V2" ||
-          !["BUY", "SELL", "WAIT"].includes(data.signal) ||
-          data.analysis?.signal !== data.signal ||
-          !["FRESH", "STALE", "MARKET_CLOSED"].includes(data.dataStatus) ||
-          (data.dataStatus !== "FRESH" && data.signal !== "WAIT")) {
-        throw new Error("استجابة غير متوافقة مع V2؛ تحقق من النسخة المنشورة");
-      }
-      connection.textContent = "محرك V2 متصل";
-      signal.textContent = data.signal;
-      detail.textContent = "البيانات: " + data.dataStatus + " | السبب: " + (data.analysis.reason || "غير مذكور");
-      status.textContent = "إشارة V2 البحثية: " + data.signal + " | " + detail.textContent;
-      document.getElementById("output").textContent = status.textContent;
-      for (const frame of ["15min", "1h", "4h"]) {
-        const info = data.indicators?.[frame];
-        const p = document.createElement("p");
-        p.textContent = frame + ": " + (info ? "الاتجاه " + info.direction + " | إغلاق " + info.close : "لا تتوفر مؤشرات صالحة");
-        results.appendChild(p);
-      }
-    } catch (error) {
-      connection.textContent = "لا يوجد تحليل V2 متحقق";
-      signal.textContent = "—";
-      status.textContent = detail.textContent = "تعذّر التحليل: " + error.message;
-      document.getElementById("output").textContent = status.textContent;
-      results.replaceChildren();
-    } finally {pending = false; button.disabled = false;}
-  }
-  button.addEventListener("click", refreshAnalysis);
-})();
-</script>
+<script src="review-ui.js"></script>
 
 <div id="backtest-panel" dir="rtl" style="margin:20px;padding:20px;background:#182238;color:white;border:1px solid #d4ad64;border-radius:16px">
   <h3>اختبار الذهب التاريخي Backtest</h3>
@@ -184,7 +134,7 @@ document.getElementById("backtest-btn").addEventListener("click", async function
     const selected = window.prompt("اختار الفترة: 1 = آب 2026، 2 = أيلول 2026، 3 = الحديثة", "1");
 if (selected === null) return;
 if (!["1", "2", "3"].includes(selected)) throw new Error("اختيار غير صحيح");
-const response = await fetch("https://gold-precision-pro.onrender.com/api/candles?interval=15min" + (selected === "1" ? "&period=august" : selected === "2" ? "&period=older" : ""));
+const response = await fetch(window.GOLD_API_BASE + "/api/candles?interval=15min" + (selected === "1" ? "&period=august" : selected === "2" ? "&period=older" : ""));
     const data = await response.json();
 
     if (!response.ok || !Array.isArray(data.values)) {
@@ -265,7 +215,7 @@ if (!Number.isFinite(stopDistance) || stopDistance <= 0) continue;
 const olderSignals = signals.filter(s => s.index < midpoint - 1);
 const newerSignals = signals.filter(s => s.index >= midpoint).map(s => ({...s, index: s.index - midpoint}));
 const testResponse = await fetch(
-  "https://gold-precision-pro.onrender.com/api/backtest",
+  window.GOLD_API_BASE + "/api/backtest",
   {
     method: "POST",
     headers: {
@@ -287,7 +237,7 @@ if (!testResponse.ok) {
 
 const runHalf = async (part, sigs) => {
   const response = await fetch(
-    "https://gold-precision-pro.onrender.com/api/backtest",
+    window.GOLD_API_BASE + "/api/backtest",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -368,7 +318,7 @@ const filteredSignals = signals.filter(s => {
     : ema20[i] < ema50[i] && slope <= -0.12 && Number(candles[i].close) < ema20[i]);
 });
 try {
-  const filteredResponse = await fetch('https://gold-precision-pro.onrender.com/api/backtest', {
+  const filteredResponse = await fetch(window.GOLD_API_BASE + '/api/backtest', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ candles, signals: filteredSignals })

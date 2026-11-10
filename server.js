@@ -1,6 +1,8 @@
 const { backtest } = require("./backtest");
 const { analyze } = require("./strategy");
 const http = require("http");
+const fs = require("fs");
+const path = require("path");
 const v2Api = require("./coordinator/service/server");
 
 const PORT = process.env.PORT || 3000;
@@ -35,6 +37,12 @@ const server = http.createServer(async (req, res) => {
 }
 
   const url = new URL(req.url, "http://localhost");
+
+  if (url.pathname === "/review" || url.pathname === "/review-ui.js") {
+    const html = url.pathname === "/review";
+    res.writeHead(200, {"Content-Type": html ? "text/html; charset=utf-8" : "application/javascript; charset=utf-8", "Cache-Control": "no-store"});
+    return res.end(fs.readFileSync(path.join(__dirname, html ? "index.html" : "review-ui.js")));
+  }
 
   if (url.pathname === "/" || url.pathname === "/health") {
     return send(res, 200, {
@@ -121,7 +129,7 @@ const endDate = period === "older" ? "2026-09-30" :
   }
 
   // Reuse the frozen V2 API and the already validated timing policy.
-  if (url.pathname === "/api/analyze") {
+  if (url.pathname === "/api/analyze" || url.pathname === "/api/v3/research") {
     v2Api.emit("request", req, res);
     return;
   }
