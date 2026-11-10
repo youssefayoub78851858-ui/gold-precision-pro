@@ -14,10 +14,10 @@ function structure(candles,options={}){
  const last=c.length-1,prior=c[last-1],bar=c[last];
  const high=highs.filter(x=>x.confirmedAt<last).at(-1)||null;
  const low=lows.filter(x=>x.confirmedAt<last).at(-1)||null;
- const bosUp=!!high&&prior.close<=high.price&&bar.close>high.price;
- const bosDown=!!low&&prior.close>=low.price&&bar.close<low.price;
- const sweepHigh=!!high&&bar.high>high.price&&bar.close<high.price;
- const sweepLow=!!low&&bar.low<low.price&&bar.close>low.price;
+ const bosUp=Boolean(high&&prior.close<=high.price&&bar.close>high.price);
+ const bosDown=Boolean(low&&prior.close>=low.price&&bar.close<low.price);
+ const sweepHigh=Boolean(high&&bar.high>high.price&&bar.close<high.price);
+ const sweepLow=Boolean(low&&bar.low<low.price&&bar.close>low.price);
  // A three-candle imbalance is known only at the third candle close.
  const fvgBull=c.length>=3&&c[last-2].high<bar.low?{lower:c[last-2].high,upper:bar.low}:null;
  const fvgBear=c.length>=3&&c[last-2].low>bar.high?{lower:bar.high,upper:c[last-2].low}:null;
