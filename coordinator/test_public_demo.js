@@ -32,9 +32,16 @@ async function main(){
   assert.equal(status.mode,'DEMO_STANDBY');
   assert.equal(status.providerAccess,false);
   assert.equal(status.trading,'disabled');
-  const page=await fetch(base+'/review');
+  const page=await fetch(base+'/');
   assert.equal(page.status,200);
-  assert.match(await page.text(),/مراجعة V3/);
+  const html=await page.text();
+  assert.match(html,/مراجعة V3/);
+  assert.match(html,/id="gold-live-price">غير متاح/);
+  assert.match(html,/id="decision-state">WAIT/);
+  assert.match(html,/لا يوجد سعر لحظي موصول/);
+  const reviewPage=await fetch(base+'/review');
+  assert.equal(reviewPage.status,200);
+  assert.match(await reviewPage.text(),/مراجعة V3/);
   const response=await fetch(base+'/api/v3/research');
   assert.equal(response.status,200);
   const result=await response.json();

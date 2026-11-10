@@ -38,8 +38,9 @@ const server = http.createServer(async (req, res) => {
 
   const url = new URL(req.url, "http://localhost");
 
-  if (url.pathname === "/review" || url.pathname === "/review-ui.js") {
-    const html = url.pathname === "/review";
+  if (url.pathname === "/review" || url.pathname === "/review-ui.js" ||
+      (DEMO_MODE && url.pathname === "/")) {
+    const html = url.pathname !== "/review-ui.js";
     res.writeHead(200, {"Content-Type": html ? "text/html; charset=utf-8" : "application/javascript; charset=utf-8", "Cache-Control": "no-store"});
     return res.end(fs.readFileSync(path.join(__dirname, html ? "index.html" : "review-ui.js")));
   }
