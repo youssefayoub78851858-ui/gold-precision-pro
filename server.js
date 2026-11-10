@@ -3,11 +3,11 @@ const { analyze } = require("./strategy");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const v2Api = require("./coordinator/service/server");
-
 const PORT = process.env.PORT || 3000;
+const DEMO_MODE = process.env.DEMO_MODE === "standby";
+const v2Api = DEMO_MODE ? null : require("./coordinator/service/server");
 const API_KEY = Boolean(process.env.MARKET_DATA_BROKER_URL);
-if (!API_KEY || !process.env.BROKER_TOKEN || process.env.BROKER_TOKEN.length < 32) throw new Error("Shared data broker and strong token required");
+if (!DEMO_MODE && (!API_KEY || !process.env.BROKER_TOKEN || process.env.BROKER_TOKEN.length < 32)) throw new Error("Shared data broker and strong token required");
 const FRAME_MS = {"15min":900000,"1h":3600000,"4h":14400000};
 
 const cache = new Map();
@@ -49,7 +49,8 @@ const server = http.createServer(async (req, res) => {
       system: "Gold Precision Pro AI",
       status: "online",
       serverTimeUTC: new Date().toISOString(),
-      apiKeyConfigured: Boolean(API_KEY),
+      mode: DEMO_MODE ? "DEMO_STANDBY" : "REVIEW",
+      providerAccess: DEMO_MODE ? false : Boolean(API_KEY),
       trading: "disabled"
     });
   }
@@ -130,6 +131,18 @@ const endDate = period === "older" ? "2026-09-30" :
 
   // Reuse the frozen V2 API and the already validated timing policy.
   if (url.pathname === "/api/analyze" || url.pathname === "/api/v3/research") {
+    if (DEMO_MODE && url.pathname === "/api/v3/research") {
+      return send(res, 200, {
+        engine: "V3",
+        symbol: "XAU/USD",
+        signal: "WAIT",
+        executable: false,
+        dataStatus: "STANDBY",
+        reason: "نسخة عرض تجريبية: مزود البيانات غير موصول ولا تُعرض أسعار افتراضية.",
+        observedUTC: new Date().toISOString()
+      });
+    }
+    if (DEMO_MODE) return send(res, 503, {error:"Analysis unavailable in offline demo mode"});
     v2Api.emit("request", req, res);
     return;
   }
