@@ -2,6 +2,7 @@
 
 const { backtestFrames } = require("./backtest");
 const { analyze } = require("./strategy");
+const { plan: v3Plan } = require("../v3_trade_plan");
 const http = require("http");
 
 const PORT = process.env.PORT || 3000;
@@ -140,6 +141,52 @@ const server = http.createServer(async (req, res) => {
       });
     } catch (error) {
       return send(res, 502, { error: "Analysis temporarily unavailable" });
+    }
+  }
+
+  if (url.pathname === "/api/v3/research") {
+    // Research only. Reuses the existing broker, with no direct provider access.
+    // Fail closed if any timeframe is missing, stale, or not fully closed.
+    if (!marketIsOpen()) return send(res, 200, {
+      engine: "V3", signal: "WAIT", executable: false,
+      reason: "Market closed", dataStatus: "MARKET_CLOSED"
+    });
+    const now = Date.now();
+    const frames = {};
+    try {
+      for (const [interval, minutes] of Object.entries(FRAME_MINUTES)) {
+        const key = "live:" + interval;
+        const saved = cache.get(key);
+        let values;
+        if (saved && now - saved.time < 60000 &&
+            saved.bucket === Math.floor(now / (minutes * 60000))) {
+          values = saved.values;
+        } else {
+          values = await fetchCandles(interval);
+          cache.set(key, {time: now, values,
+            bucket: Math.floor(now / (minutes * 60000))});
+        }
+        const name = interval === "15min" ? "M15" : interval === "1h" ? "H1" : "H4";
+        frames[name] = values
+          .map(c => ({datetime: new Date(timestamp(c.datetime)).toISOString(),
+            open: Number(c.open), high: Number(c.high),
+            low: Number(c.low), close: Number(c.close)}))
+          .filter(c => Number.isFinite(Date.parse(c.datetime)) &&
+            Date.parse(c.datetime) + minutes * 60000 <= now)
+          .sort((a,b) => Date.parse(a.datetime)-Date.parse(b.datetime));
+      }
+      const result = v3Plan(frames, new Date(now).toISOString(), {
+        spread: NaN
+      });
+      return send(res, 200, {
+        engine: "V3", symbol: "XAU/USD", dataStatus: "BROKER_RESEARCH",
+        ...result, signal: "WAIT", executable: false,
+        warning: "Research only. No broker spread, news gate, or live trading."
+      });
+    } catch (error) {
+      return send(res, 503, {engine:"V3", signal:"WAIT",
+        executable:false, dataStatus:"UNAVAILABLE",
+        error:"V3 research data unavailable"});
     }
   }
 
