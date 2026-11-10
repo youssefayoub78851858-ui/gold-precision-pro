@@ -1,0 +1,91 @@
+{
+  "reviewDateUTC": "2026-11-10",
+  "baseCommit": "583d6e1360e0be1c93f31f441b8d6abeba53a1ba",
+  "purpose": "Independent historical COMEX GC candidate for private algorithmic paper research",
+  "networkOrSDKActivated": false,
+  "accountCreated": false,
+  "subscriptionPurchased": false,
+  "vendorSpendThisTaskUSD": "0",
+  "realMarketRowsDownloaded": 0,
+  "licensing": {
+    "generalFinding": "Published Databento guidance normally exempts normalized historical T+1 access from a separate exchange market-data license; usage fees and accepted user/third-party terms still apply.",
+    "historicalDefinition": "More than 24 hours in the past; do not apply this to recent/live data",
+    "intendedUse": "Private offline algorithmic/paper research, no raw/derived-data distribution to others",
+    "accountSpecificVerified": false,
+    "limitations": "Current signed User Agreement and dataset-specific account permissions were not available. Legal pages rendered an app shell; indexed official terms confirm User Agreement and third-party terms govern. No declaration, signup or agreement was submitted.",
+    "references": [
+      "https://databento.com/blog/introduction-market-data-licensing",
+      "https://databento.com/legal/terms-of-use",
+      "https://databento.com/legal"
+    ]
+  },
+  "pricing": {
+    "historicalSubscriptionRequired": false,
+    "model": "Usage-based normalized historical data; uncompressed DBN bytes, schema and requested scope determine data charge",
+    "exactDataQuoteUSD": null,
+    "exactCashTotalUSD": null,
+    "actualBilledUSD": null,
+    "missingInputs": [
+      "Dated GC contracts and UTC interval",
+      "Official saved get_cost/portal estimate for trades plus required mapping/quality inputs",
+      "Actual credit eligibility/balance/expiry",
+      "Account-specific license/other fees/tax and final metered bytes"
+    ],
+    "optionalPublishedStandardMonthlyUSD": "199",
+    "standardSelected": false,
+    "advertisedNewUserCreditsUSD": "125",
+    "creditEligibilityVerified": false,
+    "creditsClaimed": false,
+    "note": "Do not use the empty-product pricing-widget estimate as a GC quote. No monthly plan is necessary merely to evaluate historical pay-as-you-go; no cash-free result is guaranteed.",
+    "references": [
+      "https://databento.com/pricing",
+      "https://databento.com/docs/api-historical/metadata/metadata-get-cost",
+      "https://databento.com/docs/api-historical/basics/metered-pricing"
+    ]
+  },
+  "technical": {
+    "dataset": "GLBX.MDP3",
+    "schema": "trades",
+    "historicalCoverage": "Dataset documentation states futures/options coverage from June 2010; individual dated GC availability differs",
+    "sideMapping": {
+      "A": "SELL_AGGRESSOR",
+      "B": "BUY_AGGRESSOR",
+      "N": "UNKNOWN_NOT_INFERRED"
+    },
+    "clocks": [
+      "ts_event matching-engine event timestamp",
+      "ts_recv Databento capture-server receive timestamp",
+      "actual local receipt and mapping/quality receipt"
+    ],
+    "warnings": [
+      "Filtered trade sequence jumps are not proof of missing channel messages",
+      "Missing aggressor N blocks Order Flow for that window; no dropped unknown volume or inferred side",
+      "Historical vendor receive time is not automatically strategy availability",
+      "Trades support delta; not a full depth/queue reconstruction or bid/ask execution-cost feed"
+    ],
+    "references": [
+      "https://databento.com/docs/schemas/trades",
+      "https://databento.com/docs/conventions/common-fields-enums-types",
+      "https://databento.com/docs/datasets/glbx-mdp3"
+    ]
+  },
+  "freeNow": [
+    "Public-documentation review",
+    "All parser, timestamp, missing-side, gap and quote-arithmetic unit tests",
+    "Validate already lawfully owned local exports, with no provider calls",
+    "FRED/government local-file normalization; official source public-domain attribution/exceptions must be retained"
+  ],
+  "conditionalNotActivated": [
+    "Advertised new-account credits may offset an authorised historical request; signup/eligibility/payment terms unverified and no credits used",
+    "A saved metadata.get_cost estimate could be reviewed locally after separate authorisation to obtain it; no metadata API call occurred"
+  ],
+  "remaining": [
+    "No genuine Databento trade file or dataset-specific accepted rights receipt imported",
+    "No exact retrieval scope/price/credit confirmation",
+    "DXY exact ICE index lawful point-in-time feed remains absent; GC and COMEX do not supply it",
+    "Government releases are partial news and unclassified event context, not comprehensive USD/gold risk coverage",
+    "No actual spot ASK/BID, full fees/funding/FX/latency evidence; no new independent holdout outcomes"
+  ],
+  "strategyProtectionChanged": false,
+  "previousVersionsPreserved": true
+}

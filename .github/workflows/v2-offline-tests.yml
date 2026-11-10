@@ -180,3 +180,7 @@ jobs:
           name: ultimate-v2-archive-comparison
           path: /tmp/ultimate-v2-archive-comparison.json
           retention-days: 14
+
+      - name: Local Databento GC and official-file import tests (no vendor connections)
+        working-directory: coordinator
+        run: python -m unittest -v test_databento_local test_official_recorded

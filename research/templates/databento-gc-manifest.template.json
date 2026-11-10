@@ -1,0 +1,26 @@
+{
+  "manifestVersion": 1,
+  "kind": "databento-gc-trades",
+  "file": "PRIVATE_GC_EXPORT.csv",
+  "sha256": "",
+  "dataset": "GLBX.MDP3",
+  "schema": "trades",
+  "format": "csv",
+  "availabilityBasis": "ACTUAL_LOCAL_RECEIPT",
+  "accessClass": "HISTORICAL_T_PLUS_1",
+  "timestampEncoding": "CHOOSE_UNIX_NS_OR_ISO8601_NS",
+  "priceEncoding": "CHOOSE_FIXED_1E9_OR_DECIMAL_USD",
+  "targetContract": "GC_MONTH_YYYY_FROM_DEFINITION",
+  "capturedUTC": null,
+  "localReceivedUTC": null,
+  "localReceiptEvidence": "",
+  "rights": {
+    "status": "UNVERIFIED",
+    "algorithmicResearchAuthorized": false,
+    "evidenceReference": ""
+  },
+  "instrumentMappings": [],
+  "windows": [],
+  "templateOnly": true,
+  "note": "Intentionally non-operational. Obtain actual rights, hashes, source definitions, local receipts and continuity evidence; no automatic download."
+}

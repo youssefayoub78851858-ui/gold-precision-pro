@@ -1,0 +1,20 @@
+{
+  "kind": "NON_EXECUTABLE_QUOTE_REQUEST_TEMPLATE",
+  "dataset": "GLBX.MDP3",
+  "schema": "trades",
+  "stype_in": "raw_symbol",
+  "symbols": [],
+  "startUTC": null,
+  "endUTC": null,
+  "quotedUTC": null,
+  "evidenceReference": null,
+  "currency": "USD",
+  "estimatedDataUSD": null,
+  "licenseUSD": null,
+  "otherFeesUSD": null,
+  "taxUSD": null,
+  "eligibleCreditsUSD": null,
+  "spendingCapUSD": "0",
+  "networkEnabled": false,
+  "note": "Fill only from a saved official estimate for an explicitly approved historical scope; this is not an API request or permission to buy."
+}

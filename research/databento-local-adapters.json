@@ -1,0 +1,12 @@
+{
+  "adapterVersion": 1,
+  "baseCommit": "583d6e1360e0be1c93f31f441b8d6abeba53a1ba",
+  "engineProtectionModified": false,
+  "networkImplemented": false,
+  "filesSHA256": {
+    "coordinator/recorded_utils.py": "d84c25ed1f2b4ffb637f69e8bbf7f30f62c01d5a4c5aafbfc33b8237fcb7dfbf",
+    "coordinator/databento_gc_import.py": "f9908e98708ab74a16f2b082418ef8b25e89458b1ee435f60001253c8042736f",
+    "coordinator/databento_cost_preflight.py": "d72e5e764ee6e10bbb493d81c8498ac53af3bebf5d32c2f2fd86d4d1833f12a7",
+    "coordinator/official_recorded_import.py": "26633554ea3e68cc3faea6534d018f13ca70d3fdb51fa99ad090422862d1e12a"
+  }
+}
