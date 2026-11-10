@@ -1,0 +1,22 @@
+"use strict";
+const assert=require("node:assert/strict");
+const {structure}=require("./v3_market_structure");
+const bar=(o,h,l,c)=>({open:o,high:h,low:l,close:c});
+const base=[bar(10,11,9,10),bar(10,12,9.5,11),bar(11,15,10,14),bar(14,13,10.5,12),bar(12,12.5,10,11),bar(11,12,9.8,11),bar(11,14,10,13)];
+let a=structure(base);
+assert.equal(a.signal,"WAIT");assert.equal(a.executable,false);
+assert.equal(a.bosUp,false); // 13 does not cross 15
+let b=structure([...base,bar(13,16,12,15.5)]);
+assert.equal(b.bosUp,true);assert.equal(b.high.price,15);
+assert.equal(b.signal,"WAIT");
+let sweep=structure([...base,bar(13,16,11,14)]);
+assert.equal(sweep.sweepHigh,true);
+assert.equal(sweep.bosUp,false);
+let fvg=structure([...base,bar(13,17,15,16)]);
+assert.deepEqual(fvg.fvgBull,{lower:12,upper:15});
+let prefix=structure(base);
+let future=structure([...base,bar(13,30,8,20)]);
+assert.deepEqual(prefix,structure(base),"future appended must not change past decision");
+assert.equal(structure([bar(1,2,0,1)]).signal,"WAIT");
+assert.throws(()=>structure(base,{right:0}),/Invalid/);
+console.log("PASS V3 confirmed swings, BOS, liquidity sweep, FVG, no-lookahead prefix, WAIT-only");
