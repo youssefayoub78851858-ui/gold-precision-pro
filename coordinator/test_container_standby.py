@@ -6,7 +6,7 @@ def main():
  tag='gold-v3-standby:ci';cid=None
  subprocess.run(['docker','build','-f',str(ROOT/'Dockerfile'),'-t',tag,str(ROOT)],check=True)
  with tempfile.TemporaryDirectory() as d:
-  tmp=pathlib.Path(d);data=tmp/'data';data.mkdir();envfile=tmp/'runtime.env';envfile.write_text('CUTOVER_MODE=standby\nDATA_DIR=/var/data/gold-live\nBROKER_PORT=3110\nBROKER_TOKEN='+secrets.token_urlsafe(40)+'\n');envfile.chmod(0o600)
+  tmp=pathlib.Path(d);data=tmp/'data';data.mkdir();(data/'gold-live').mkdir();envfile=tmp/'runtime.env';envfile.write_text('CUTOVER_MODE=standby\nDATA_DIR=/var/data/gold-live\nBROKER_PORT=3110\nBROKER_TOKEN='+secrets.token_urlsafe(40)+'\n');envfile.chmod(0o600)
   def start():
    return subprocess.check_output(['docker','run','-d','--network=none','--memory=512m','--cpus=0.5','--env-file',str(envfile),'--mount','type=bind,src='+str(data)+',dst=/var/data',tag],text=True).strip()
   def execute(code):return subprocess.check_output(['docker','exec','-i',cid,'python3','-'],input=code,text=True)
