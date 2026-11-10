@@ -168,10 +168,11 @@ const server = http.createServer(async (req, res) => {
         }
         const name = interval === "15min" ? "M15" : interval === "1h" ? "H1" : "H4";
         frames[name] = values
+          .filter(c => Number.isFinite(timestamp(c.datetime)))
           .map(c => ({datetime: new Date(timestamp(c.datetime)).toISOString(),
             open: Number(c.open), high: Number(c.high),
             low: Number(c.low), close: Number(c.close)}))
-          .filter(c => Number.isFinite(Date.parse(c.datetime)) &&
+          .filter(c =>
             Date.parse(c.datetime) + minutes * 60000 <= now)
           .sort((a,b) => Date.parse(a.datetime)-Date.parse(b.datetime));
       }
