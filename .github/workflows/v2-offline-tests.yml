@@ -122,3 +122,7 @@ jobs:
       - name: V3 multi-timeframe closed-bar unit tests
         working-directory: coordinator
         run: node test_v3_multitimeframe.js
+
+      - name: V3 research-only trade plan tests
+        working-directory: coordinator
+        run: node test_v3_trade_plan.js
