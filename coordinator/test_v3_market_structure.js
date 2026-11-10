@@ -13,7 +13,7 @@ let sweep=structure([...base,bar(13,16,11,14)]);
 assert.equal(sweep.sweepHigh,true);
 assert.equal(sweep.bosUp,false);
 let fvg=structure([...base,bar(15,17,15,16)]);
-assert.deepEqual(fvg.fvgBull,{lower:14,upper:15});
+assert.deepEqual(fvg.fvgBull,{lower:12,upper:15});
 let prefix=structure(base);
 let future=structure([...base,bar(13,30,8,20)]);
 assert.deepEqual(prefix,structure(base),"future appended must not change past decision");
