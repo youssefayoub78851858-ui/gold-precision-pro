@@ -2,7 +2,7 @@
 const assert=require("node:assert/strict");
 const {structure}=require("./v3_market_structure");
 const bar=(o,h,l,c)=>({open:o,high:h,low:l,close:c});
-const base=[bar(10,11,9,10),bar(10,12,9.5,11),bar(11,15,10,14),bar(14,13,10.5,12),bar(12,12.5,10,11),bar(11,12,9.8,11),bar(11,14,10,13)];
+const base=[bar(10,11,9,10),bar(10,12,9.5,11),bar(11,15,10,14),bar(14,14,10.5,12),bar(12,12.5,10,11),bar(11,12,9.8,11),bar(11,14,10,13)];
 let a=structure(base);
 assert.equal(a.signal,"WAIT");assert.equal(a.executable,false);
 assert.equal(a.bosUp,false); // 13 does not cross 15
