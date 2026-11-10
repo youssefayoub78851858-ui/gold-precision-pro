@@ -45,6 +45,23 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, {});
   }
 
+  if (req.url.split("?")[0] === "/api/v3/ultimate") {
+    if (req.method !== "POST") return send(res,405,{error:"POST offline evidence JSON required"});
+    const chunks=[];let size=0;
+    try {
+      for await (const chunk of req) {
+        size+=chunk.length;
+        if(size>1024*1024) return send(res,413,{error:"Evidence exceeds 1 MiB"});
+        chunks.push(chunk);
+      }
+      return send(res,200,require("./coordinator/v3_ultimate").evaluate(JSON.parse(Buffer.concat(chunks).toString("utf8"))));
+    } catch(error) { return send(res,400,{error:"Invalid offline evidence: "+error.message}); }
+  }
+  if (req.method === "GET" && req.url.split("?")[0] === "/ultimate") {
+    res.writeHead(200,{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store"});
+    return res.end(fs.readFileSync(path.join(__dirname,"ultimate.html")));
+  }
+
   if (
   req.method !== "GET" &&
   !(req.method === "POST" && req.url.split("?")[0] === "/api/backtest")

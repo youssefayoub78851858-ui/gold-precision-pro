@@ -141,3 +141,9 @@ jobs:
           node test_public_demo.js
       - name: Actual coordinator image build and standby restart (no provider)
         run: python coordinator/test_container_standby.py
+
+      - name: Ultimate offline evidence, risk and HTTP acceptance
+        working-directory: coordinator
+        run: |
+          node test_v3_ultimate.js
+          python -m unittest -v test_ultimate_http test_ultimate_replay

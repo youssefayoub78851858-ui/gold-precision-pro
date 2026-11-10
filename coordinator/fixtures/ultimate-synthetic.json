@@ -1,0 +1,711 @@
+{
+  "asOfUTC": "2026-11-10T12:00:00Z",
+  "frames": {
+    "M15": [
+      {
+        "datetime": "2026-11-10T04:30:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T04:45:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T05:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T05:15:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T05:30:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T05:45:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T06:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T06:15:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T06:30:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T06:45:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T07:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T07:15:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T07:30:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T07:45:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T08:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T08:15:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T08:30:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T08:45:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T09:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T09:15:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T09:30:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T09:45:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T10:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T10:15:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T10:30:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T10:45:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T11:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T11:15:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T11:30:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T11:45:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      }
+    ],
+    "H1": [
+      {
+        "datetime": "2026-11-09T06:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T07:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T08:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T09:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T10:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T11:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T12:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T13:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T14:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T15:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T16:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T17:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T18:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T19:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T20:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T21:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T22:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T23:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T00:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T01:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T02:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T03:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T04:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T05:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T06:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T07:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T08:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T09:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T10:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T11:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      }
+    ],
+    "H4": [
+      {
+        "datetime": "2026-11-05T12:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-05T16:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-05T20:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-06T00:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-06T04:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-06T08:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-06T12:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-06T16:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-06T20:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-07T00:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-07T04:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-07T08:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-07T12:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-07T16:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-07T20:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-08T00:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-08T04:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-08T08:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-08T12:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-08T16:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-08T20:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T00:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T04:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T08:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T12:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T16:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-09T20:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T00:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T04:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      },
+      {
+        "datetime": "2026-11-10T08:00:00+00:00",
+        "open": 100,
+        "high": 101,
+        "low": 99,
+        "close": 100
+      }
+    ]
+  },
+  "feeds": {
+    "DXY": {
+      "mode": "synthetic",
+      "source": "Generated test evidence; not market observations",
+      "observedUTC": "2026-11-10T12:00:00Z",
+      "previous": 100,
+      "value": 99
+    },
+    "US02Y": {
+      "mode": "synthetic",
+      "source": "Generated test evidence; not market observations",
+      "observedUTC": "2026-11-10T12:00:00Z",
+      "previous": 100,
+      "value": 99
+    },
+    "US10Y": {
+      "mode": "synthetic",
+      "source": "Generated test evidence; not market observations",
+      "observedUTC": "2026-11-10T12:00:00Z",
+      "previous": 100,
+      "value": 99
+    },
+    "GC": {
+      "mode": "synthetic",
+      "source": "Generated test evidence; not market observations",
+      "observedUTC": "2026-11-10T12:00:00Z",
+      "previous": 100,
+      "value": 101
+    },
+    "calendar": {
+      "mode": "synthetic",
+      "source": "Synthetic empty event calendar",
+      "observedUTC": "2026-11-10T12:00:00Z",
+      "coverageStartUTC": "2026-11-10T11:00:00Z",
+      "coverageEndUTC": "2026-11-10T13:00:00Z",
+      "events": []
+    },
+    "headlines": {
+      "mode": "synthetic",
+      "source": "Synthetic empty event calendar",
+      "observedUTC": "2026-11-10T12:00:00Z",
+      "coverageStartUTC": "2026-11-10T11:00:00Z",
+      "coverageEndUTC": "2026-11-10T13:00:00Z",
+      "events": []
+    },
+    "orderFlow": {
+      "mode": "synthetic",
+      "source": "Synthetic trade sides, no licensed feed connected",
+      "observedUTC": "2026-11-10T12:00:00Z",
+      "licensed": true,
+      "kind": "trades",
+      "buyVolume": 80,
+      "sellVolume": 20
+    }
+  },
+  "spread": 0.1,
+  "risk": {
+    "equity": 10000,
+    "dailyLoss": 0,
+    "riskFraction": 0.005,
+    "dailyLossFraction": 0.02,
+    "valuePerPoint": 100,
+    "lotStep": 0.01,
+    "minLot": 0.01,
+    "maxLot": 10,
+    "commissionPerLot": 5,
+    "slippage": 0.1,
+    "killSwitch": false,
+    "activeTrades": 0
+  }
+}
