@@ -1,0 +1,92 @@
+{
+  "datasets": [
+    {
+      "file": "2026-09-bid.json",
+      "sha256": "f26f05c50b2431f759161cc3b0c52fd531a2f3ffbd03e9033c3ce4e2f1509af4",
+      "artifactID": 13712631853,
+      "artifactDigest": "sha256:616101fd81a6ff56a0210b87b5e4a18d911386ea1c9e456a59abf264444fd1e5",
+      "workflowRun": {
+        "id": 42704406027,
+        "repository_id": 1445931621,
+        "head_repository_id": 1445931621,
+        "head_branch": "review/v2-portable-tests-20261109",
+        "head_sha": "c657dc383852cdff5e99677f70c38960a42f547c"
+      },
+      "createdUTC": "2026-11-09T21:38:48Z",
+      "repository": "youssefayoub78851858-ui/gold-precision-pro",
+      "member": "consistent-history.json",
+      "priceConvention": "BID",
+      "verification": "Retrieved from existing repository Actions artifact; provider authenticity not independently attested",
+      "archiveDigestVerifiedAtImport": true,
+      "qualityReport": {
+        "status": "VALID",
+        "symbol": "XAU/USD",
+        "source": "Dukascopy historical XAUUSD BID CSV via dukascopy-node, 2026-09-01 to 2026-10-01; H1/H4 rebuilt from complete M15 groups only",
+        "frames": {
+          "15min": {
+            "count": 2448,
+            "lastOpenUTC": "2026-09-30T23:45:00+00:00"
+          },
+          "1h": {
+            "count": 612,
+            "lastOpenUTC": "2026-09-30T23:00:00+00:00"
+          },
+          "4h": {
+            "count": 152,
+            "lastOpenUTC": "2026-09-30T20:00:00+00:00"
+          }
+        },
+        "gapCounts": {
+          "15min": 4,
+          "1h": 4,
+          "4h": 4
+        },
+        "note": "Validity does not prove completeness, source authenticity or profitability"
+      }
+    },
+    {
+      "file": "2026-10-bid.json",
+      "sha256": "2ce22184be6cdadd16e24b79945c4cb5a02974cb3f0b6541dcc6a759d1878f4e",
+      "artifactID": 13713792221,
+      "artifactDigest": "sha256:0fa2f66c57eba1df0f2136203d16894e870351c91f49e8153e7e89c44bce1a36",
+      "workflowRun": {
+        "id": 42706196306,
+        "repository_id": 1445931621,
+        "head_repository_id": 1445931621,
+        "head_branch": "review/v2-portable-tests-20261109",
+        "head_sha": "65efde41ef2045ee50d13bd50f23312d88f26dd1"
+      },
+      "createdUTC": "2026-11-09T21:50:18Z",
+      "repository": "youssefayoub78851858-ui/gold-precision-pro",
+      "member": "consistent-history.json",
+      "priceConvention": "BID",
+      "verification": "Retrieved from existing repository Actions artifact; provider authenticity not independently attested",
+      "archiveDigestVerifiedAtImport": true,
+      "qualityReport": {
+        "status": "VALID",
+        "symbol": "XAU/USD",
+        "source": "Dukascopy historical XAUUSD BID CSV via dukascopy-node; observed range from candle timestamps; H1/H4 rebuilt from complete M15 groups only",
+        "frames": {
+          "15min": {
+            "count": 2436,
+            "lastOpenUTC": "2026-10-30T20:45:00+00:00"
+          },
+          "1h": {
+            "count": 609,
+            "lastOpenUTC": "2026-10-30T20:00:00+00:00"
+          },
+          "4h": {
+            "count": 151,
+            "lastOpenUTC": "2026-10-30T16:00:00+00:00"
+          }
+        },
+        "gapCounts": {
+          "15min": 4,
+          "1h": 4,
+          "4h": 4
+        },
+        "note": "Validity does not prove completeness, source authenticity or profitability"
+      }
+    }
+  ]
+}

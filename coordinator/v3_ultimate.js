@@ -9,8 +9,15 @@ function evidence(name,feed,now){
  if(!feed||!['synthetic','recorded'].includes(feed.mode)||typeof feed.source!=='string'||!feed.source.trim())return bad('Provenance missing');
  const time=Date.parse(feed.observedUTC);
  if(!finite(time)||time>now||now-time>300000)return bad('Stale or future evidence');
+ if(feed.mode==='recorded'){
+  const available=Date.parse(feed.availableUTC);
+  const instruments={DXY:'DXY',US02Y:'DGS2',US10Y:'DGS10',GC:'GC',calendar:'USD_EVENTS',headlines:'GOLD_USD_NEWS',orderFlow:'GC_TRADES'};
+  if(!finite(available)||available<time||available>now)return bad('Evidence not available at decision time');
+  if(feed.instrument!==instruments[name]||(!['US02Y','US10Y'].includes(name)&&feed.entitlementVerified!==true))return bad('Recorded instrument or entitlement unverified');
+ }
  if(['calendar','headlines'].includes(name)){
   if(!Array.isArray(feed.events))return bad('Event coverage unavailable');
+  if(feed.mode==='recorded'&&feed.events.some(e=>!finite(Date.parse(e.publishedUTC))||Date.parse(e.publishedUTC)>Date.parse(feed.availableUTC)||(name==='headlines'&&Date.parse(e.timeUTC)>now)))return bad('Unknown or future news publication');
   const start=Date.parse(feed.coverageStartUTC),end=Date.parse(feed.coverageEndUTC);
   if(!(start<=now-1800000&&end>=now+1800000))return bad('Event window not covered');
   if(feed.events.some(e=>!finite(Date.parse(e.timeUTC))||!['low','medium','high'].includes(e.impact)))return bad('Invalid event');

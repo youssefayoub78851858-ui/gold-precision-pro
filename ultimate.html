@@ -1,15 +1,28 @@
 <!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Gold Precision Pro Ultimate — Offline Research</title>
-<style>body{font:18px system-ui;background:#101820;color:#eee;max-width:1000px;margin:3em auto;padding:1em}button,input{font:inherit;padding:12px}pre{direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;background:#192630;padding:20px}h1{color:#e4bd69}</style>
+<style>body{font:18px system-ui;background:#101820;color:#eee;max-width:1000px;margin:3em auto;padding:1em}button,input{font:inherit;padding:12px;box-sizing:border-box;max-width:100%}label{display:block;margin:1em 0}pre{max-width:100%;box-sizing:border-box}@media(max-width:600px){body{margin:.5em auto;padding:.7em;font-size:16px}button{width:100%}}pre{direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;background:#192630;padding:20px}h1{color:#e4bd69}</style>
 <h1>Gold Precision Pro Ultimate</h1><p>مختبر بيانات محاكاة أو مسجلة فقط. لا اتصال بمزودي الأسعار ولا تنفيذ أوامر. النتائج ليست إثباتاً لربحية الاستراتيجية.</p>
-<label>ملف أدلة JSON <input id="file" type="file" accept=".json,application/json"></label><button id="run">تحليل الملف</button><p id="status" role="status">اختر ملفاً؛ لا جلب تلقائي.</p><pre id="result"></pre>
+<label>ملف أدلة JSON <input id="file" type="file" accept=".json,application/json"></label><button id="run">تحليل الملف</button><p id="data-mode" role="status">البيانات: لم تُحمّل؛ لا اتصال حي.</p><p id="status" role="status">اختر ملفاً؛ لا جلب تلقائي.</p><ul id="gate-summary"></ul><details><summary>تفاصيل الأدلة والقرار</summary><pre id="result"></pre></details>
+<section aria-labelledby="paper-title"><h2 id="paper-title">سجل التداول الورقي المحلي</h2><p>ارفع تقرير CLI من حساب SQLite. التقرير ملف محلي للعرض فقط، وليس حساب وسيط أو نتيجة تداول حقيقية. المحاكاة الاصطناعية لا تثبت الربحية.</p><label>تقرير ورقي JSON <input id="paper-file" type="file" accept=".json,application/json"></label><button id="paper-load">عرض السجل المحلي</button><p id="paper-status" role="status">لا يوجد حساب محمّل.</p><div id="paper-trades"></div><details><summary>تفاصيل الحساب والصفقات</summary><pre id="paper-result"></pre></details></section>
 <script>
 const button=document.getElementById('run');button.onclick=async()=>{
- button.disabled=true;document.getElementById('result').textContent='';
+ button.disabled=true;document.getElementById('result').textContent='';document.getElementById('gate-summary').replaceChildren();document.getElementById('data-mode').textContent='جارٍ فحص نوع البيانات؛ لا اتصال حي.';
  try{const f=document.getElementById('file').files[0];if(!f)throw Error('اختر ملف JSON');if(f.size>1048576)throw Error('الحد الأقصى 1 MiB');
  const response=await fetch('/api/v3/ultimate',{method:'POST',headers:{'Content-Type':'application/json'},body:await f.text(),signal:AbortSignal.timeout(10000)});
  const data=await response.json();if(!response.ok)throw Error(data.error);if(data.executable!==false||data.signal!=='WAIT')throw Error('استجابة غير آمنة');
  document.getElementById('status').textContent='WAIT | '+data.reason+' | مصادر جاهزة: '+data.monitoring.readyFeeds+'/'+data.monitoring.totalFeeds;
+ const modes=[...new Set(Object.values(data.layers).filter(x=>x.mode).map(x=>x.mode))];
+ document.getElementById('data-mode').textContent='البيانات: '+(modes.length?modes.join(' / '):'غير متاحة')+' | synthetic = اصطناعية، recorded = مسجلة؛ لا بيانات حية.';
+ for(const reason of data.monitoring.blocked){const item=document.createElement('li');item.textContent='سبب الحجب: '+reason;document.getElementById('gate-summary').appendChild(item);}
  document.getElementById('result').textContent=JSON.stringify(data,null,2);
  }catch(e){document.getElementById('status').textContent=e.message;}finally{button.disabled=false;}
+};
+document.getElementById('paper-load').onclick=async()=>{
+ document.getElementById('paper-result').textContent='';document.getElementById('paper-trades').replaceChildren();
+ try{const f=document.getElementById('paper-file').files[0];if(!f||f.size>1048576)throw Error('اختر تقريراً محلياً أقل من 1 MiB');
+ const data=JSON.parse(await f.text());if(data.mode!=='OFFLINE_PAPER'||data.executable!==false||!Array.isArray(data.trades)||!Number.isFinite(data.account?.balance))throw Error('تقرير ورقي غير متوافق');
+ document.getElementById('paper-status').textContent='ورقي تجريبي فقط | المصدر: '+(data.dataOrigin||'غير موثّق')+' | الرصيد المحاكى: '+data.account.balance.toFixed(2)+' | الصفقات المغلقة: '+data.trades.length;
+ for(const trade of data.trades){const p=document.createElement('p');p.textContent=trade.side+' | دخول '+trade.entry+' | خروج '+trade.exit+' | الصافي المحاكى '+Number(trade.net).toFixed(2)+' | '+trade.reason;document.getElementById('paper-trades').appendChild(p);}
+ document.getElementById('paper-result').textContent=JSON.stringify(data,null,2);
+ }catch(e){document.getElementById('paper-status').textContent=e.message;}
 };
 </script></html>

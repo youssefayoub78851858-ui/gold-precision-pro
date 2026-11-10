@@ -37,3 +37,11 @@ assert.equal(evaluate(disagrees).researchCandidate,'NONE');
 const staleFeed=structuredClone(aligned);staleFeed.feeds.GC.observedUTC='2026-11-10T11:00:00Z';
 assert.equal(evaluate(staleFeed).researchCandidate,'NONE');
 console.log('PASS fully aligned synthetic candidate and independent event, disagreement and stale-feed vetoes');
+
+const archived={...base,mode:'recorded',instrument:'DXY',entitlementVerified:true,availableUTC:asOfUTC};
+assert.equal(evidence('DXY',archived,now).status,'READY');
+assert.equal(evidence('DXY',{...archived,availableUTC:'2026-11-10T12:01:00Z'},now).status,'UNAVAILABLE');
+assert.equal(evidence('DXY',{...archived,instrument:'GC'},now).status,'UNAVAILABLE');
+assert.equal(evidence('DXY',{...archived,entitlementVerified:false},now).status,'UNAVAILABLE');
+assert.equal(evidence('calendar',{...calendar,mode:'recorded',instrument:'USD_EVENTS',entitlementVerified:true,availableUTC:asOfUTC},now).status,'UNAVAILABLE');
+console.log('PASS direct Ultimate recorded evidence cannot bypass arrival, instrument, entitlement or news publication gates');

@@ -1,5 +1,7 @@
 # Ultimate offline research batch
 
+Continuation: [paper lifecycle and recorded validation](ULTIMATE-PAPER-VALIDATION.md) implements the next batch. The remaining-work list below describes the original batch boundary.
+
 Review branch only: `review/v2-portable-tests-20261109`.
 Base: `1526b317eaaa34d3bbd00df6c7838188f24c97e7`.
 

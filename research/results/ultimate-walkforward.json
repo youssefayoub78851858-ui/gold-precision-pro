@@ -1,0 +1,715 @@
+{
+  "mode": "RECORDED_BID_RESEARCH",
+  "executable": false,
+  "statisticallyValidated": false,
+  "provenance": [
+    {
+      "file": "2026-09-bid.json",
+      "sha256": "f26f05c50b2431f759161cc3b0c52fd531a2f3ffbd03e9033c3ce4e2f1509af4",
+      "artifactID": 13712631853,
+      "artifactDigest": "sha256:616101fd81a6ff56a0210b87b5e4a18d911386ea1c9e456a59abf264444fd1e5",
+      "workflowRun": {
+        "id": 42704406027,
+        "repository_id": 1445931621,
+        "head_repository_id": 1445931621,
+        "head_branch": "review/v2-portable-tests-20261109",
+        "head_sha": "c657dc383852cdff5e99677f70c38960a42f547c"
+      },
+      "createdUTC": "2026-11-09T21:38:48Z",
+      "repository": "youssefayoub78851858-ui/gold-precision-pro",
+      "member": "consistent-history.json",
+      "priceConvention": "BID",
+      "verification": "Retrieved from existing repository Actions artifact; provider authenticity not independently attested",
+      "archiveDigestVerifiedAtImport": true,
+      "qualityReport": {
+        "status": "VALID",
+        "symbol": "XAU/USD",
+        "source": "Dukascopy historical XAUUSD BID CSV via dukascopy-node, 2026-09-01 to 2026-10-01; H1/H4 rebuilt from complete M15 groups only",
+        "frames": {
+          "15min": {
+            "count": 2448,
+            "lastOpenUTC": "2026-09-30T23:45:00+00:00"
+          },
+          "1h": {
+            "count": 612,
+            "lastOpenUTC": "2026-09-30T23:00:00+00:00"
+          },
+          "4h": {
+            "count": 152,
+            "lastOpenUTC": "2026-09-30T20:00:00+00:00"
+          }
+        },
+        "gapCounts": {
+          "15min": 4,
+          "1h": 4,
+          "4h": 4
+        },
+        "note": "Validity does not prove completeness, source authenticity or profitability"
+      }
+    },
+    {
+      "file": "2026-10-bid.json",
+      "sha256": "2ce22184be6cdadd16e24b79945c4cb5a02974cb3f0b6541dcc6a759d1878f4e",
+      "artifactID": 13713792221,
+      "artifactDigest": "sha256:0fa2f66c57eba1df0f2136203d16894e870351c91f49e8153e7e89c44bce1a36",
+      "workflowRun": {
+        "id": 42706196306,
+        "repository_id": 1445931621,
+        "head_repository_id": 1445931621,
+        "head_branch": "review/v2-portable-tests-20261109",
+        "head_sha": "65efde41ef2045ee50d13bd50f23312d88f26dd1"
+      },
+      "createdUTC": "2026-11-09T21:50:18Z",
+      "repository": "youssefayoub78851858-ui/gold-precision-pro",
+      "member": "consistent-history.json",
+      "priceConvention": "BID",
+      "verification": "Retrieved from existing repository Actions artifact; provider authenticity not independently attested",
+      "archiveDigestVerifiedAtImport": true,
+      "qualityReport": {
+        "status": "VALID",
+        "symbol": "XAU/USD",
+        "source": "Dukascopy historical XAUUSD BID CSV via dukascopy-node; observed range from candle timestamps; H1/H4 rebuilt from complete M15 groups only",
+        "frames": {
+          "15min": {
+            "count": 2436,
+            "lastOpenUTC": "2026-10-30T20:45:00+00:00"
+          },
+          "1h": {
+            "count": 609,
+            "lastOpenUTC": "2026-10-30T20:00:00+00:00"
+          },
+          "4h": {
+            "count": 151,
+            "lastOpenUTC": "2026-10-30T16:00:00+00:00"
+          }
+        },
+        "gapCounts": {
+          "15min": 4,
+          "1h": 4,
+          "4h": 4
+        },
+        "note": "Validity does not prove completeness, source authenticity or profitability"
+      }
+    }
+  ],
+  "evidenceLayersProvided": [],
+  "scenarios": [
+    {
+      "name": "base",
+      "costs": {
+        "initialBalance": 10000,
+        "riskFraction": 0.005,
+        "dailyLossFraction": 0.02,
+        "valuePerPoint": 100,
+        "lotStep": 0.01,
+        "minLot": 0.01,
+        "maxLot": 10,
+        "spread": 0.4,
+        "slippage": 0.1,
+        "commissionPerLot": 7
+      },
+      "windows": [
+        {
+          "window": "train",
+          "startUTC": "2026-09-01T00:00:00Z",
+          "endUTC": "2026-09-30T22:30:00Z",
+          "trainingStartUTC": null,
+          "trainingEndUTC": null,
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 31,
+            "netPnL": -88.41300000008243,
+            "expectancyR": -0.14724420171525812,
+            "expectancy": -2.852032258067175,
+            "profitFactor": 0.8982724892116489,
+            "winRate": 0.2903225806451613,
+            "maxClosedBalanceDrawdown": 367.07950000002165,
+            "bootstrapMean95": [
+              -23.262918202767565,
+              17.433072580642396
+            ],
+            "openAtEnd": 1,
+            "pendingAtEnd": 0,
+            "inference": "EXPLORATORY_IID_ONLY"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        },
+        {
+          "window": "validation",
+          "startUTC": "2026-09-30T22:30:00Z",
+          "endUTC": "2026-10-15T21:45:00Z",
+          "trainingStartUTC": null,
+          "trainingEndUTC": null,
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 24,
+            "netPnL": -412.3259642857862,
+            "expectancyR": -0.40537746952535997,
+            "expectancy": -17.18024851190776,
+            "profitFactor": 0.500877378312528,
+            "winRate": 0.20833333333333334,
+            "maxClosedBalanceDrawdown": 529.1093928571936,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        },
+        {
+          "window": "test",
+          "startUTC": "2026-10-15T21:45:00Z",
+          "endUTC": "2026-10-30T21:00:00Z",
+          "trainingStartUTC": null,
+          "trainingEndUTC": null,
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 24,
+            "netPnL": 345.13785714283404,
+            "expectancyR": 0.33285225154041664,
+            "expectancy": 14.380744047618085,
+            "profitFactor": 1.5549824176449747,
+            "winRate": 0.4583333333333333,
+            "maxClosedBalanceDrawdown": 287.6531428571434,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        },
+        {
+          "window": "walk_forward_1",
+          "startUTC": "2026-09-22T00:00:00Z",
+          "endUTC": "2026-09-29T00:00:00Z",
+          "trainingStartUTC": "2026-09-01T00:00:00Z",
+          "trainingEndUTC": "2026-09-22T00:00:00Z",
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 17,
+            "netPnL": 62.56071428566542,
+            "expectancyR": 0.03780714440601368,
+            "expectancy": 3.6800420168038483,
+            "profitFactor": 1.137761433719154,
+            "winRate": 0.35294117647058826,
+            "maxClosedBalanceDrawdown": 340.12428571430064,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        },
+        {
+          "window": "walk_forward_2",
+          "startUTC": "2026-09-29T00:00:00Z",
+          "endUTC": "2026-10-06T00:00:00Z",
+          "trainingStartUTC": "2026-09-01T00:00:00Z",
+          "trainingEndUTC": "2026-09-29T00:00:00Z",
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 6,
+            "netPnL": -264.3803571428662,
+            "expectancyR": -1.000000000000026,
+            "expectancy": -44.06339285714437,
+            "profitFactor": 0.0,
+            "winRate": 0.0,
+            "maxClosedBalanceDrawdown": 264.38035714286707,
+            "bootstrapMean95": null,
+            "openAtEnd": 1,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        },
+        {
+          "window": "walk_forward_3",
+          "startUTC": "2026-10-06T00:00:00Z",
+          "endUTC": "2026-10-13T00:00:00Z",
+          "trainingStartUTC": "2026-09-01T00:00:00Z",
+          "trainingEndUTC": "2026-10-06T00:00:00Z",
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 13,
+            "netPnL": -183.69153571432508,
+            "expectancyR": -0.3301080722993699,
+            "expectancy": -14.13011813187116,
+            "profitFactor": 0.5730275209707999,
+            "winRate": 0.23076923076923078,
+            "maxClosedBalanceDrawdown": 204.97671428572176,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        },
+        {
+          "window": "walk_forward_4",
+          "startUTC": "2026-10-13T00:00:00Z",
+          "endUTC": "2026-10-20T00:00:00Z",
+          "trainingStartUTC": "2026-09-01T00:00:00Z",
+          "trainingEndUTC": "2026-10-13T00:00:00Z",
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 5,
+            "netPnL": -104.01371428572112,
+            "expectancyR": -0.4395014599846143,
+            "expectancy": -20.802742857144224,
+            "profitFactor": 0.4472060252672229,
+            "winRate": 0.2,
+            "maxClosedBalanceDrawdown": 104.0137142857202,
+            "bootstrapMean95": null,
+            "openAtEnd": 1,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        },
+        {
+          "window": "walk_forward_5",
+          "startUTC": "2026-10-20T00:00:00Z",
+          "endUTC": "2026-10-27T00:00:00Z",
+          "trainingStartUTC": "2026-09-01T00:00:00Z",
+          "trainingEndUTC": "2026-10-20T00:00:00Z",
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 9,
+            "netPnL": 254.23657142855114,
+            "expectancyR": 0.6121586697565086,
+            "expectancy": 28.248507936505682,
+            "profitFactor": 2.350701039291974,
+            "winRate": 0.5555555555555556,
+            "maxClosedBalanceDrawdown": 97.76278571429248,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 1,
+            "inference": "INSUFFICIENT"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        }
+      ],
+      "ultimateBlockedCounts": {
+        "DXY": 4884,
+        "US02Y": 4884,
+        "US10Y": 4884,
+        "GC": 4884,
+        "calendar": 4884,
+        "headlines": 4884,
+        "orderFlow": 4884,
+        "risk": 4881,
+        "technical": 4880,
+        "volatility/spread": 707
+      }
+    },
+    {
+      "name": "stress",
+      "costs": {
+        "initialBalance": 10000,
+        "riskFraction": 0.005,
+        "dailyLossFraction": 0.02,
+        "valuePerPoint": 100,
+        "lotStep": 0.01,
+        "minLot": 0.01,
+        "maxLot": 10,
+        "spread": 0.8,
+        "slippage": 0.3,
+        "commissionPerLot": 10
+      },
+      "windows": [
+        {
+          "window": "train",
+          "startUTC": "2026-09-01T00:00:00Z",
+          "endUTC": "2026-09-30T22:30:00Z",
+          "trainingStartUTC": null,
+          "trainingEndUTC": null,
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 31,
+            "netPnL": -312.12296428575445,
+            "expectancyR": -0.29432419809930493,
+            "expectancy": -10.068482718895305,
+            "profitFactor": 0.6591255013348616,
+            "winRate": 0.25806451612903225,
+            "maxClosedBalanceDrawdown": 504.68232142860325,
+            "bootstrapMean95": [
+              -27.011646313365084,
+              9.132221198154665
+            ],
+            "openAtEnd": 1,
+            "pendingAtEnd": 0,
+            "inference": "EXPLORATORY_IID_ONLY"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        },
+        {
+          "window": "validation",
+          "startUTC": "2026-09-30T22:30:00Z",
+          "endUTC": "2026-10-15T21:45:00Z",
+          "trainingStartUTC": null,
+          "trainingEndUTC": null,
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 24,
+            "netPnL": -440.32489285718617,
+            "expectancyR": -0.430568264292708,
+            "expectancy": -18.346870535716093,
+            "profitFactor": 0.46058808605126383,
+            "winRate": 0.20833333333333334,
+            "maxClosedBalanceDrawdown": 554.7354642857426,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        },
+        {
+          "window": "test",
+          "startUTC": "2026-10-15T21:45:00Z",
+          "endUTC": "2026-10-30T21:00:00Z",
+          "trainingStartUTC": null,
+          "trainingEndUTC": null,
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 25,
+            "netPnL": 265.52339285709627,
+            "expectancyR": 0.22177045768611098,
+            "expectancy": 10.620935714283851,
+            "profitFactor": 1.4221961453604621,
+            "winRate": 0.44,
+            "maxClosedBalanceDrawdown": 273.157357142878,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        },
+        {
+          "window": "walk_forward_1",
+          "startUTC": "2026-09-22T00:00:00Z",
+          "endUTC": "2026-09-29T00:00:00Z",
+          "trainingStartUTC": "2026-09-01T00:00:00Z",
+          "trainingEndUTC": "2026-09-22T00:00:00Z",
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 17,
+            "netPnL": -111.2592857143112,
+            "expectancyR": -0.2133294691450726,
+            "expectancy": -6.544663865547718,
+            "profitFactor": 0.7793528317682279,
+            "winRate": 0.29411764705882354,
+            "maxClosedBalanceDrawdown": 339.1028571428669,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        },
+        {
+          "window": "walk_forward_2",
+          "startUTC": "2026-09-29T00:00:00Z",
+          "endUTC": "2026-10-06T00:00:00Z",
+          "trainingStartUTC": "2026-09-01T00:00:00Z",
+          "trainingEndUTC": "2026-09-29T00:00:00Z",
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 7,
+            "netPnL": -283.59928571429043,
+            "expectancyR": -1.0000000000000122,
+            "expectancy": -40.514183673470065,
+            "profitFactor": 0.0,
+            "winRate": 0.0,
+            "maxClosedBalanceDrawdown": 283.5992857142919,
+            "bootstrapMean95": null,
+            "openAtEnd": 1,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        },
+        {
+          "window": "walk_forward_3",
+          "startUTC": "2026-10-06T00:00:00Z",
+          "endUTC": "2026-10-13T00:00:00Z",
+          "trainingStartUTC": "2026-09-01T00:00:00Z",
+          "trainingEndUTC": "2026-10-06T00:00:00Z",
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 13,
+            "netPnL": -224.53582142859065,
+            "expectancyR": -0.35982116208131426,
+            "expectancy": -17.27198626373774,
+            "profitFactor": 0.4984250298156343,
+            "winRate": 0.23076923076923078,
+            "maxClosedBalanceDrawdown": 224.53582142858795,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        },
+        {
+          "window": "walk_forward_4",
+          "startUTC": "2026-10-13T00:00:00Z",
+          "endUTC": "2026-10-20T00:00:00Z",
+          "trainingStartUTC": "2026-09-01T00:00:00Z",
+          "trainingEndUTC": "2026-10-13T00:00:00Z",
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 5,
+            "netPnL": -97.55064285715235,
+            "expectancyR": -0.44135307500098586,
+            "expectancy": -19.51012857143047,
+            "profitFactor": 0.4579825112504194,
+            "winRate": 0.2,
+            "maxClosedBalanceDrawdown": 97.55064285715162,
+            "bootstrapMean95": null,
+            "openAtEnd": 1,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        },
+        {
+          "window": "walk_forward_5",
+          "startUTC": "2026-10-20T00:00:00Z",
+          "endUTC": "2026-10-27T00:00:00Z",
+          "trainingStartUTC": "2026-09-01T00:00:00Z",
+          "trainingEndUTC": "2026-10-20T00:00:00Z",
+          "optimizationApplied": false,
+          "v2": {
+            "trades": 10,
+            "netPnL": 170.3744642857053,
+            "expectancyR": 0.38134999035734607,
+            "expectancy": 17.03744642857053,
+            "profitFactor": 1.7855038396035283,
+            "winRate": 0.5,
+            "maxClosedBalanceDrawdown": 136.4862142857146,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 1,
+            "inference": "INSUFFICIENT"
+          },
+          "ultimate": {
+            "trades": 0,
+            "netPnL": 0,
+            "expectancyR": null,
+            "expectancy": null,
+            "profitFactor": null,
+            "winRate": null,
+            "maxClosedBalanceDrawdown": 0,
+            "bootstrapMean95": null,
+            "openAtEnd": 0,
+            "pendingAtEnd": 0,
+            "inference": "INSUFFICIENT"
+          }
+        }
+      ],
+      "ultimateBlockedCounts": {
+        "DXY": 4884,
+        "US02Y": 4884,
+        "US10Y": 4884,
+        "GC": 4884,
+        "calendar": 4884,
+        "headlines": 4884,
+        "orderFlow": 4884,
+        "risk": 4881,
+        "technical": 4880,
+        "volatility/spread": 1136
+      }
+    }
+  ],
+  "walkForwardPolicy": "Fixed parameters, expanding history, weekly forward evaluation after 21 days; no fitting or selection. Each window resets account and purges pending/open positions at boundaries; warmup uses past bars only.",
+  "limitations": [
+    "BID OHLC, modeled constant ASK spread; no true intrabar sequence, variable spread or latency",
+    "Stop-first on ambiguous candles; gap stops fill at adverse open; targets capped at limit then adverse slippage",
+    "No forced liquidation at window end: open/pending counts disclosed and unrealized PnL excluded",
+    "IID bootstrap exploratory only; no dependence-adjusted statistical proof",
+    "September/October were previously researched: these are chronological OOS diagnostics, not untouched holdouts",
+    "Without recorded cross-market/news/trade-side evidence, Ultimate remains blocked; zero trades is not success"
+  ]
+}

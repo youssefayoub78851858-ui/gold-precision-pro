@@ -1,0 +1,43 @@
+{
+  "mode": "OFFLINE_PAPER",
+  "executable": false,
+  "config": {
+    "commissionPerLot": 7,
+    "dailyLossFraction": 0.02,
+    "initialBalance": 10000,
+    "lotStep": 0.01,
+    "maxLot": 10,
+    "minLot": 0.01,
+    "riskFraction": 0.005,
+    "slippage": 0.1,
+    "spread": 0.4,
+    "valuePerPoint": 100
+  },
+  "dataOrigin": "SYNTHETIC \u2014 not market observations",
+  "account": {
+    "balance": 10074.64,
+    "peak": 10074.64,
+    "killed": 0,
+    "last_ms": 1794312900000
+  },
+  "position": [],
+  "pending": [],
+  "trades": [
+    {
+      "id": 1,
+      "side": "BUY",
+      "entry": 104.5,
+      "exit": 113.9,
+      "stop": 99.0,
+      "target": 114.0,
+      "lots": 0.08,
+      "gross": 75.20000000000005,
+      "commission": 0.56,
+      "net": 74.64000000000004,
+      "risk": 45.36,
+      "opened": "2026-11-10T12:00:00Z",
+      "closed": "2026-11-10T12:30:00Z",
+      "reason": "TARGET"
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "DXY": {
+    "vendor": "ICE export",
+    "instrument": "DXY",
+    "licenseRequired": true,
+    "enabled": false,
+    "networkImplemented": false,
+    "credentialConfigured": false,
+    "requestsSent": 0,
+    "status": "EXPORT_ONLY",
+    "note": "Vendor entitlement must be verified before any future transport"
+  },
+  "US02Y": {
+    "vendor": "FRED export",
+    "instrument": "DGS2",
+    "licenseRequired": false,
+    "requestTemplate": {
+      "method": "GET",
+      "endpoint": "https://api.stlouisfed.org/fred/series/observations",
+      "parameters": {
+        "series_id": "DGS2",
+        "file_type": "json"
+      },
+      "credentialName": "FRED_API_KEY"
+    },
+    "enabled": false,
+    "networkImplemented": false,
+    "credentialConfigured": false,
+    "requestsSent": 0,
+    "status": "EXPORT_ONLY",
+    "note": "FRED daily values are delayed context, not fresh intraday confirmation"
+  },
+  "US10Y": {
+    "vendor": "FRED export",
+    "instrument": "DGS10",
+    "licenseRequired": false,
+    "requestTemplate": {
+      "method": "GET",
+      "endpoint": "https://api.stlouisfed.org/fred/series/observations",
+      "parameters": {
+        "series_id": "DGS10",
+        "file_type": "json"
+      },
+      "credentialName": "FRED_API_KEY"
+    },
+    "enabled": false,
+    "networkImplemented": false,
+    "credentialConfigured": false,
+    "requestsSent": 0,
+    "status": "EXPORT_ONLY",
+    "note": "FRED daily values are delayed context, not fresh intraday confirmation"
+  },
+  "GC": {
+    "vendor": "CME export",
+    "instrument": "GC",
+    "licenseRequired": true,
+    "enabled": false,
+    "networkImplemented": false,
+    "credentialConfigured": false,
+    "requestsSent": 0,
+    "status": "EXPORT_ONLY",
+    "note": "Vendor entitlement must be verified before any future transport"
+  },
+  "calendar": {
+    "vendor": "Economic calendar export",
+    "instrument": "USD_EVENTS",
+    "licenseRequired": true,
+    "enabled": false,
+    "networkImplemented": false,
+    "credentialConfigured": false,
+    "requestsSent": 0,
+    "status": "EXPORT_ONLY",
+    "note": "Vendor entitlement must be verified before any future transport"
+  },
+  "headlines": {
+    "vendor": "Licensed news export",
+    "instrument": "GOLD_USD_NEWS",
+    "licenseRequired": true,
+    "enabled": false,
+    "networkImplemented": false,
+    "credentialConfigured": false,
+    "requestsSent": 0,
+    "status": "EXPORT_ONLY",
+    "note": "Vendor entitlement must be verified before any future transport"
+  },
+  "orderFlow": {
+    "vendor": "Licensed exchange trade export",
+    "instrument": "GC_TRADES",
+    "licenseRequired": true,
+    "enabled": false,
+    "networkImplemented": false,
+    "credentialConfigured": false,
+    "requestsSent": 0,
+    "status": "EXPORT_ONLY",
+    "note": "Vendor entitlement must be verified before any future transport"
+  }
+}
