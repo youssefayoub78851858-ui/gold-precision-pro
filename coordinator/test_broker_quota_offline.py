@@ -124,6 +124,20 @@ class BrokerQuotaOfflineTests(unittest.TestCase):
             self.assertEqual(blocked.exception.reason, "DAILY_SAFETY_LIMIT")
             self.assertEqual(len(calls), 1)
 
+    def test_history_budget_blocks_after_two_hundred_reserved_calls(self):
+        with tempfile.TemporaryDirectory() as directory:
+            calls = []
+            broker = self.make_broker(pathlib.Path(directory) / "quota.sqlite3", calls)
+            with broker.db() as db:
+                db.executemany("INSERT INTO calls VALUES(?,?,?,?,?)", [
+                    (f"history-{i}", NOW - 1_000_000 - i, NOW // 86400000, 1, "history")
+                    for i in range(200)
+                ])
+            with self.assertRaises(Blocked) as blocked:
+                broker.get("15min", end="2026-08-31", kind="history")
+            self.assertEqual(blocked.exception.reason, "HISTORY_BUDGET_LIMIT")
+            self.assertEqual(calls, [])
+
     def test_provider_429_cooldown_blocks_other_frames_globally(self):
         with tempfile.TemporaryDirectory() as directory:
             calls = []

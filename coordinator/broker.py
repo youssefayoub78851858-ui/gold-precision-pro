@@ -124,7 +124,9 @@ def serve(broker,port=3110,host='127.0.0.1',token=None):
     body=json.dumps({'status':'error','message':e.reason,'retryAtMS':e.retry_ms}).encode();self.send_response(429 if 'LIMIT' in e.reason else 503);self.send_header('Retry-After',str(max(1,(e.retry_ms-broker.clock()+999)//1000)))
    except Exception:
     body=b'{"status":"error","message":"Data unavailable"}';self.send_response(503)
-   self.send_header('Content-Type','application/json');self.end_headers();self.wfile.write(body)
+   self.send_header('Content-Type','application/json');self.end_headers()
+   try:self.wfile.write(body)
+   except BrokenPipeError:pass # caller timed out; the committed quota reservation stays spent
  return ThreadingHTTPServer((host,port),Handler)
 if __name__=='__main__':
  if os.environ.get('ALL_KEY_CONSUMERS_ROUTED')!='1' or 'INITIAL_DAILY_USAGE' not in os.environ:raise SystemExit('Refusing provider access: all consumers must first be routed through the shared ledger')

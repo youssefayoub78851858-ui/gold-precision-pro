@@ -7,8 +7,8 @@ const { checkFrame: checkV3Frame } = require("../v3_multitimeframe");
 const http = require("http");
 
 const PORT = process.env.PORT || 3000;
-const API_KEY = Boolean(process.env.MARKET_DATA_BROKER_URL);
-if (!API_KEY || !process.env.BROKER_TOKEN || process.env.BROKER_TOKEN.length < 32) throw new Error("Shared market-data broker URL and strong token required");
+const BROKER_CONFIGURED = Boolean(process.env.MARKET_DATA_BROKER_URL &&
+  process.env.BROKER_TOKEN && process.env.BROKER_TOKEN.length >= 32);
 const cache = new Map();
 const intervals = new Set(["15min", "1h", "4h"]);
 const FRAME_MINUTES = { "15min": 15, "1h": 60, "4h": 240 };
@@ -54,6 +54,7 @@ function removeClosedMarketCandles(values) {
 }
 
 async function fetchCandles(frame, outputsize = "500", endDate = null) {
+  if (!BROKER_CONFIGURED) throw new Error("Shared data broker not configured");
   const endpoint = new URL("/time_series", process.env.MARKET_DATA_BROKER_URL);
   endpoint.searchParams.set("symbol", "XAU/USD");
   endpoint.searchParams.set("interval", frame);
@@ -90,7 +91,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === "/" || url.pathname === "/health") {
     return send(res, 200, {
       system: "Gold Precision Pro AI", status: "online",
-      serverTimeUTC: new Date().toISOString(), apiKeyConfigured: Boolean(API_KEY),
+      serverTimeUTC: new Date().toISOString(), apiKeyConfigured: BROKER_CONFIGURED,
       signalEngine: "Gold Precision Pro V2", trading: "disabled"
     });
   }
@@ -100,7 +101,7 @@ const server = http.createServer(async (req, res) => {
     const period = url.searchParams.get("period");
     const endDate = period === "older" ? "2026-09-30" : period === "august" ? "2026-08-31" : null;
     if (!intervals.has(interval)) return send(res, 400, { error: "Invalid interval" });
-    if (!API_KEY) return send(res, 503, { error: "API key not configured" });
+    if (!BROKER_CONFIGURED) return send(res, 503, { error: "API key not configured" });
     const cacheKey = "history:" + interval + ":" + (endDate || "latest");
     const saved = cache.get(cacheKey);
     if (saved && Date.now() - saved.time < 60000 && (endDate || saved.bucket === Math.floor(Date.now() / (FRAME_MINUTES[interval] * 60000)))) return send(res, 200, saved.data);
@@ -110,12 +111,12 @@ const server = http.createServer(async (req, res) => {
       cache.set(cacheKey, { time: Date.now(), data, bucket: Math.floor(Date.now() / (FRAME_MINUTES[interval] * 60000)) });
       return send(res, 200, data);
     } catch (error) {
-      return send(res, 502, { error: "Market data unavailable", detail: error.message, retryAtMS: error.retryAtMS || null });
+      return send(res, 502, { error: "Market data unavailable", detail: error.message });
     }
   }
 
   if (url.pathname === "/api/analyze") {
-    if (!API_KEY) return send(res, 503, { error: "Data API not configured" });
+    if (!BROKER_CONFIGURED) return send(res, 503, { error: "Data API not configured" });
     const frames = Object.keys(FRAME_MINUTES);
     const raw = {};
     try {
