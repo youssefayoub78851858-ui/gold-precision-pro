@@ -2,10 +2,67 @@
   "createdUTC": "2026-11-08T19:12:59.347268Z",
   "accountInventoryComplete": false,
   "allAccountConsumersRouted": false,
+  "inventoryScope": {
+    "observedOnUTC": "2026-11-10",
+    "source": "Read-only Render service inventory and repository inspection",
+    "accountWideTwelveDataUsageVerified": false,
+    "note": "This is not a complete inventory of every process or external app using the Twelve Data account."
+  },
+  "quotaPolicy": {
+    "providerPlanAssumption": "Twelve Data Basic limits recorded in CUTOVER.md; must be confirmed from the account before handoff",
+    "providerRequestsPerRollingMinute": 8,
+    "providerRequestsPerUTCday": 800,
+    "usageProbeRequests": 1,
+    "brokerSafetyRequestsPerRolling60Seconds": 7,
+    "brokerSafetyRequestsPerUTCday": 720,
+    "brokerHistoryRequestsPerUTCday": 200,
+    "verifiedAgainstLiveAccount": false
+  },
+  "duplicateRequestProtection": {
+    "sharedCacheKey": "nativeInterval:endDate (latest or fixed historical date)",
+    "nativeIntervals": ["15min", "1h", "4h"],
+    "latestCacheExpiry": "next native timeframe boundary",
+    "historicalCacheExpiryDays": 365,
+    "crossProcessLeaseSeconds": 15,
+    "quotaReservedBeforeProviderIO": true,
+    "uncertainProviderCallsRefunded": false,
+    "automatedRetry": false,
+    "verifiedByOfflineBrokerTests": true
+  },
+  "renderServiceInventory": [
+    {
+      "name": "gold-precision-pro",
+      "id": "srv-dbm385tg1s2s73c0frb0",
+      "branch": "fix-analysis-v2",
+      "autoDeploy": true,
+      "route": "DIRECT_TWELVE_DATA_API_IN_DEPLOYED_CODE",
+      "runtimeProviderKeyPresenceVerified": false,
+      "providerTrafficObserved": false,
+      "mayModifyNow": false
+    },
+    {
+      "name": "gold-precision-coordinator",
+      "id": "srv-dbosre95efls73ete99g",
+      "branch": "review/v2-portable-tests-20261109",
+      "autoDeploy": false,
+      "mode": "STANDBY_UNTIL_EXPLICIT_HANDOFF",
+      "route": "SHARED_BROKER_CANDIDATE_NOT_LIVE",
+      "mayModifyNow": false
+    },
+    {
+      "name": "gold-precision-v3-review-demo",
+      "id": "srv-dbpkrjon74is738ou9ng",
+      "branch": "review/v2-portable-tests-20261109",
+      "autoDeploy": false,
+      "mode": "NO_DATA_REVIEW_DEMO",
+      "route": "NO_PROVIDER_CALLS",
+      "mayModifyNow": false
+    }
+  ],
   "consumers": [
     {
       "name": "RenderPublishedService",
-      "route": "DIRECT_PROVIDER_LAST_RECORDED",
+      "route": "DIRECT_TWELVE_DATA_API_CONFIRMED_IN_DEPLOYED_BRANCH",
       "routeVerifiedAtUTC": "2026-11-08T15:45:55Z",
       "requiredLocalTransportPatch": "/workspace/gold-v2-link-plan/deployed-transport-only.patch",
       "authority": "existing_public_service_legacy_engine_1ab1f33",

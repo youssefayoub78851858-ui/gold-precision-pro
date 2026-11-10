@@ -38,6 +38,9 @@ jobs:
       - name: Offline Python tests
         working-directory: coordinator/app
         run: python -m unittest -v test_worker test_reduced
+      - name: Shared broker quota, cache and duplicate request tests (mock provider only)
+        working-directory: coordinator
+        run: python -m unittest -v test_broker_quota_offline
       - name: V2 API isolated smoke test (no provider)
         working-directory: coordinator
         env:
