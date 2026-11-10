@@ -1,0 +1,41 @@
+{
+  "baseCommit": "42306717ab1fd81a3096fb05f129d5be6d8c58c6",
+  "versions": [
+    {
+      "id": "ultimate-v1-preserved",
+      "filesSHA256": {
+        "coordinator/v3_ultimate.js": "7e15216970ab26056b41c7db06bd8e5a0795f0b46cd393015ba1ebb381ed87d9",
+        "coordinator/v3_multitimeframe.js": "8b056b8ea993d11de18e2521b04a72d65a816fc05b224f1e9de4156a24dc57e2",
+        "coordinator/v3_market_structure.js": "18327e51e7013c168bbf6ebaf3061044d2137810649cdbd2637ecfd558797e6b",
+        "coordinator/v3_trade_plan.js": "f606b2fd108a87ed699eb79eb9e904dcc507c8474affd0fefcf1e59954e83e01",
+        "coordinator/ultimate_connectors.py": "9588aeada674b2e73ba1bb9cf54898ce6c22907d28e6f79d1dab4e76358d87d8",
+        "coordinator/ultimate_import.py": "2521b639d57b53dea5dc056d1b37b6949adb94308f9a8204d236ed3838b3ff85",
+        "coordinator/ultimate_walkforward.py": "53da079453b66acca7417bbfff28867af4ff7f5803a0ae37c8e00d819448bcf4",
+        "coordinator/ultimate_signals.js": "ab64615bb7522dace965a0b6d3f033f2f05ece10d448fbec01705414e6ab2a03",
+        "coordinator/ultimate_paper.py": "79af7ca1949140a2657e26ce5270220c12a1436726c8bf1a9a8acbbe38e60487",
+        "coordinator/ultimate_forward_plan.py": "b99c603cd3db9b5efe8be760ddda5c71061cce66d5307346f12280593952e075",
+        "research/ultimate-prospective-plan.json": "93e3703b82aa65a0e0c066f8d955b3c11becbd0fdcc1d4494258e0d1f0befbc3",
+        "research/results/ultimate-data-coverage.json": "8c7a1e755ab2d9e628eb1bf1897ef7664045389d76032ebb2cbded4f98540cf4",
+        "research/results/ultimate-layer-absence.json": "4a1219405e6eeceb5bef61b1f5c651313b9304e47aa2b8c5f7f915531afb29de",
+        "research/results/ultimate-walkforward.json": "5d05cf8722c3a2f76865d1a46f55256e1d1a1270748e520a1760b2e821cbbe57"
+      },
+      "defaultExistingAPI": true,
+      "realTradingEnabled": false
+    },
+    {
+      "id": "ultimate-context-events-v2",
+      "filesSHA256": {
+        "coordinator/ultimate_v2.js": "0f4ab8d55d6be7b09481ba298dd6a943379fcd0232338aa05ea59521642a82e3",
+        "coordinator/ultimate_v2_contracts.js": "3e4f979348e061f23b090128f59c390f7bcabe76e17520246869397882874f06",
+        "coordinator/ultimate_v2_intake.py": "e3bdb6b78d3182890b639eec0fe0c952a99d57a9c9b0dd154e48012ecbfcde4f",
+        "coordinator/ultimate_v2_replay.js": "7d710211f9f1bc1fad45d3860d4fbd879ed6234d8ac8f654652932b3a0e6a306",
+        "coordinator/ultimate_v2_compare.py": "8ce7b8d1bfee276abf13ba52d65038379651cd2be3debd21a895be7857d45ce9"
+      },
+      "defaultExistingAPI": false,
+      "automaticPaperSwitch": false,
+      "realTradingEnabled": false,
+      "networkEnabled": false,
+      "comparison": "Same development archives, not an independent holdout"
+    }
+  ]
+}

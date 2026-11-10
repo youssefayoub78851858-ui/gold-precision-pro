@@ -1,0 +1,139 @@
+{
+  "reviewedUTCDate": "2026-11-10",
+  "networkActivation": false,
+  "subscriptionChange": false,
+  "realTrading": false,
+  "userReported": {
+    "chartPlan": "TradingView Essential",
+    "COMEX": "Real-Time active inside TradingView",
+    "footprint": "Indicator present; name/vendor/calculation method unknown",
+    "level1Level2Tick": "UNKNOWN"
+  },
+  "accountVerificationPerformed": false,
+  "findings": [
+    {
+      "topic": "Data access",
+      "status": "DISPLAY_CONFIRMED_BY_USER_ONLY",
+      "conclusion": "User confirms chart access; no account session, data feed, API entitlement or export right was inspected."
+    },
+    {
+      "topic": "Non-display and automation",
+      "status": "NOT_AUTHORIZED_BY_CURRENT_EVIDENCE",
+      "conclusion": "Published TradingView terms restrict machine-driven/non-display use and automated extraction. Chart access, paper-only use, CSV availability or a webhook is not permission for this evaluator. Obtain written source-specific permission before ingestion.",
+      "references": [
+        "https://www.tradingview.com/policies/"
+      ]
+    },
+    {
+      "topic": "Official interfaces",
+      "status": "NO_REUSABLE_API_ASSUMED",
+      "conclusion": "Current terms mention an official MCP interface and a narrow personal question-answering exception; this is not permission to build archives or run this algorithmic evaluator. Account/plan/tool availability was not checked and nothing was connected.",
+      "references": [
+        "https://www.tradingview.com/policies/"
+      ]
+    },
+    {
+      "topic": "Manual CSV",
+      "status": "FEATURE_EXISTS_ACCOUNT_INCLUSION_UNVERIFIED",
+      "conclusion": "Official help describes manual CSV export of loaded chart data. Public pricing includes feature text but does not reliably resolve this account entitlement; no upgrade, UI login or extraction was attempted. Bar timestamps do not establish historical first-availability receipts.",
+      "references": [
+        "https://www.tradingview.com/support/solutions/43000537255-how-to-export-chart-data/",
+        "https://www.tradingview.com/pricing/"
+      ]
+    },
+    {
+      "topic": "History",
+      "status": "DOCUMENTED_LIMIT_NOT_EXPORT_OR_LICENSE",
+      "conclusion": "Official help describes approximately 10,000 intraday bars for Essential/Plus plus interval-boundary extras; actual symbol history and permitted export must be verified separately.",
+      "references": [
+        "https://www.tradingview.com/support/solutions/43000480679-historical-intraday-data-bars-and-limits-explained/"
+      ]
+    },
+    {
+      "topic": "Footprint",
+      "status": "NOT_PROOF_OF_EXCHANGE_AGGRESSOR_EXPORT",
+      "conclusion": "Native default uses intrabar-direction estimates. Optional tick mode can use exchange aggressor flags with fallback methods. The user indicator and mode are unverified. GC trade-side admission requires actual exchange flags and gap evidence; L2 depth is not itself proof of aggressor coverage.",
+      "references": [
+        "https://www.tradingview.com/support/solutions/43000726164-volume-footprint-charts-a-complete-guide/"
+      ]
+    },
+    {
+      "topic": "COMEX entitlement",
+      "status": "DISPLAY_SCOPE_NOT_PORTABLE_BY_ASSUMPTION",
+      "conclusion": "Existing COMEX display subscription does not establish ICE DXY rights, raw trades, history export, API access or non-display licensing. Actual vendor agreements and package detail remain unknown.",
+      "references": [
+        "https://www.tradingview.com/support/solutions/43000471705-how-to-purchase-additional-market-data/",
+        "https://www.cmegroup.com/market-data/license-data.html"
+      ]
+    }
+  ],
+  "minimumLogicalSourceSet": [
+    {
+      "group": "Spot price",
+      "feeds": [
+        "XAUUSD"
+      ],
+      "cost": "Existing archive inspection only; future spot BID/ASK entitlement and cost unverified",
+      "required": "Source-specific lawful spot quotes and actual availability, not substitution with GC futures"
+    },
+    {
+      "group": "Official daily context",
+      "feeds": [
+        "US02Y DGS2",
+        "US10Y DGS10"
+      ],
+      "cost": "Public-domain series with attribution; no paid subscription required",
+      "required": "Point-in-time daily vintages, prior-value vintages and known release calendar; no five-minute retimestamping",
+      "references": [
+        "https://fred.stlouisfed.org/series/DGS2",
+        "https://fred.stlouisfed.org/series/DGS10",
+        "https://www.federalreserve.gov/releases/h15/"
+      ]
+    },
+    {
+      "group": "ICE index",
+      "feeds": [
+        "DXY"
+      ],
+      "cost": "No reusable entitlement verified; additional cost unknown unless an existing authorised source covers it",
+      "required": "Actual ICE DXY with licensed recorded/non-display use and market-time receipts; neither DX futures nor broad dollar index is silently substituted"
+    },
+    {
+      "group": "COMEX trade feed",
+      "feeds": [
+        "GC",
+        "OrderFlow"
+      ],
+      "cost": "Existing TradingView display is paid already; external algorithmic use/export unverified. A new cost may be needed only if no existing lawful export entitlement covers it; nothing purchased",
+      "required": "One authorised trade feed can supply dated GC prices and exchange-aggressor volume with continuity/contract metadata. Full Level 2 book is not required by this delta-only revision, but tick/trade-side completeness is."
+    },
+    {
+      "group": "Known event schedule",
+      "feeds": [
+        "calendar"
+      ],
+      "cost": "Official BLS/BEA/Federal Reserve/Treasury schedules can be free under respective source terms; compiled point-in-time coverage not present",
+      "required": "Known publication/arrival times, USD event scope, timezone/DST and schedule revisions; no future outcomes"
+    },
+    {
+      "group": "Observed news",
+      "feeds": [
+        "headlines"
+      ],
+      "cost": "Official releases are free partial input; comprehensive timely licensed coverage is not verified in the existing account. Additional cost unknown",
+      "required": "Agreed gold/USD material-news universe, original publication/arrival and monitored past-window watermark; no statement of knowledge of future news"
+    }
+  ],
+  "consolidation": "One authorised multi-asset vendor could cover DXY plus GC/trades if both ICE and COMEX rights are included; supplier count does not remove separate feed/rights requirements. No complete zero-additional-cost solution has been established.",
+  "nextEvidence": {
+    "action": "Ask TradingView/CME support for a written entitlement answer; do not send credentials or activate a feed",
+    "questions": [
+      "Exact COMEX product and Level 1/Level 2/trade-tick scope for this account",
+      "Is native manual export included in Essential for a dated GC contract, and which columns/side methods are exported?",
+      "Is private offline algorithmic research/paper evaluation outside TradingView permitted for those exact data, with no orders or redistribution?",
+      "Are true exchange aggressor flags, continuity and point-in-time archives available, rather than estimated Footprint values?",
+      "Is any documented official machine interface included and expressly permitted? Do not assume an API or use internal endpoints."
+    ],
+    "afterPermission": "Only after a separate collection approval, provide a small lawful dated export plus receipt/rights reference; check it locally with v2 intake. A screenshot or indicator name is metadata, not raw market evidence."
+  }
+}

@@ -164,3 +164,19 @@ jobs:
             /tmp/ultimate-layer-absence.json
             /tmp/ultimate-walkforward.json
           retention-days: 14
+
+      - name: Independent Ultimate v2 temporal contracts and preserved v1 registry
+        working-directory: coordinator
+        run: |
+          node test_ultimate_v2.js
+          python -m unittest -v test_ultimate_v2
+      - name: Reinterpret existing archives under Ultimate v2 (not a fresh holdout)
+        run: |
+          python coordinator/ultimate_forward_plan.py research/ultimate-v2-prospective-plan.json
+          python coordinator/ultimate_v2_compare.py research/recorded/2026-09-bid.json research/recorded/2026-10-bid.json --output /tmp/ultimate-v2-archive-comparison.json
+      - name: Upload derived version comparison only
+        uses: actions/upload-artifact@v4
+        with:
+          name: ultimate-v2-archive-comparison
+          path: /tmp/ultimate-v2-archive-comparison.json
+          retention-days: 14

@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "status": "DRAFT_BLOCKED",
+  "strategyBaseCommit": "42306717ab1fd81a3096fb05f129d5be6d8c58c6",
+  "freezeNotBeforeUTC": "2026-11-10T00:00:00Z",
+  "earliestCaptureUTC": "2026-11-11T00:00:00Z",
+  "networkEnabled": false,
+  "executionEnabled": false,
+  "providerRequestBudget": 0,
+  "strategySHA256": {
+    "coordinator/ultimate_v2.js": "0f4ab8d55d6be7b09481ba298dd6a943379fcd0232338aa05ea59521642a82e3",
+    "coordinator/ultimate_v2_contracts.js": "3e4f979348e061f23b090128f59c390f7bcabe76e17520246869397882874f06",
+    "coordinator/ultimate_v2_intake.py": "e3bdb6b78d3182890b639eec0fe0c952a99d57a9c9b0dd154e48012ecbfcde4f",
+    "coordinator/ultimate_v2_replay.js": "7d710211f9f1bc1fad45d3860d4fbd879ed6234d8ac8f654652932b3a0e6a306",
+    "coordinator/ultimate_v2_compare.py": "8ce7b8d1bfee276abf13ba52d65038379651cd2be3debd21a895be7857d45ce9",
+    "coordinator/v3_ultimate.js": "7e15216970ab26056b41c7db06bd8e5a0795f0b46cd393015ba1ebb381ed87d9",
+    "coordinator/v3_multitimeframe.js": "8b056b8ea993d11de18e2521b04a72d65a816fc05b224f1e9de4156a24dc57e2",
+    "coordinator/v3_trade_plan.js": "f606b2fd108a87ed699eb79eb9e904dcc507c8474affd0fefcf1e59954e83e01",
+    "coordinator/v3_market_structure.js": "18327e51e7013c168bbf6ebaf3061044d2137810649cdbd2637ecfd558797e6b",
+    "coordinator/ultimate_paper.py": "79af7ca1949140a2657e26ce5270220c12a1436726c8bf1a9a8acbbe38e60487",
+    "research/ultimate-versions.json": "2168b103f3019e387be590aa783c4d4233d166ae07da485b561fd4b9c1f6fb9a"
+  },
+  "unresolvedPrerequisites": [
+    "Written non-display/recorded algorithmic-use rights for each source; TradingView display access is insufficient evidence",
+    "Actual daily vintage and next-release schedule receipts for DGS2/DGS10",
+    "Known complete event schedule plus monitored past-only material-news coverage; official RSS alone is partial",
+    "Actual DXY and dated GC trade/aggressor/continuity files with lawful exports; no inferred Footprint side labels",
+    "Verified spot BID/ASK and full commissions/fees/funding/FX/latency model before account-PnL claims",
+    "Separate explicit approval and declared request budget for any future data capture",
+    "New prospective data after version freeze; existing September/October archives are development evidence only"
+  ],
+  "protocol": {
+    "duration": "30 prospectively selected market sessions, maximum 90 calendar days; count all outages",
+    "noReuse": "Exclude all observations before earliestCaptureUTC, even if downloaded later. September/October 2026 development archives are never holdout.",
+    "stages": [
+      "Rights/schema/clock validation using private local exports",
+      "Observation-only capture after separate approval; validate real first-receipt timestamps",
+      "Frozen paper evaluation only after all prerequisites and data-quality criteria pass"
+    ],
+    "minJointRequiredDataCoveragePct": 99,
+    "freshnessSeconds": 300,
+    "maxReadyCrossAssetSkewSeconds": 60,
+    "riskFraction": 0.001,
+    "dailyLossFraction": 0.005,
+    "oneActiveTrade": true,
+    "killSwitchInitiallyOn": true,
+    "stops": [
+      "Any unresolved provenance, timing, duplicate/conflicting data or source outage blocks entries",
+      "Stop study for ledger/accounting discrepancy; preserve input and event hashes",
+      "Keep every adverse fill, rejected entry and stopped session in results; never tune on holdout"
+    ],
+    "costs": [
+      "Actual contemporaneous ASK-BID spread, never less than predeclared conservative floor",
+      "Adverse entry and exit slippage, latency/gap stress and partial/missed-fill assumptions",
+      "Round-trip broker commission plus exchange, clearing and regulatory charges if applicable",
+      "Overnight financing/rollover and FX conversion; if unknown, account performance remains blocked",
+      "Data-access costs separately from trade net PnL; no trial or purchase is authorized"
+    ],
+    "hypotheses": "No directional profitability claim; compare frozen V2 and full Ultimate with identical quote/cost/account assumptions.",
+    "endpoints": [
+      "Joint and per-layer coverage, arrival latency/skew, explicit missingness",
+      "Net expectancy in R and currency, drawdown, exposure, open liabilities, rejected/gap fills",
+      "Dependence-aware confidence intervals and regime diagnostics; report insufficient sample without reoptimization"
+    ],
+    "inferenceRule": "A small sample or zero Ultimate trades is inconclusive. No readiness claim from engineering tests or IID intervals alone.",
+    "dailyContext": "Mandatory known daily vintages, expire at documented next release or 7-day hard age cap, excluded from intraday directional vote and 60-second cross-market skew",
+    "calendar": "Known schedule -30/+30 minutes; snapshot review deadline at most 24 hours",
+    "news": "Observed past 30 minutes only; monitored coverage watermark at most 60 seconds behind decision; no future completeness claim",
+    "intraday": "DXY/GC/true exchange-aggressor flow remain mandatory and fresh within 300 seconds, max 60-second observed skew, same GC contract"
+  },
+  "contractVersion": "ultimate-context-events-v2"
+}
