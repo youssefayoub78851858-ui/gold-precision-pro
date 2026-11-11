@@ -14,7 +14,7 @@ class UltimateHTTP(unittest.TestCase):
         with socket.socket() as sock:
             sock.bind(('127.0.0.1', 0))
             port = sock.getsockname()[1]
-        env = {**os.environ, 'PORT': str(port), 'DEMO_MODE': 'standby', 'H15_OFFICIAL_RSS_DISABLED': '1', 'OFFICIAL_MACRO_DISABLED': '1'}
+        env = {**os.environ, 'PORT': str(port), 'DEMO_MODE': 'standby', 'H15_OFFICIAL_RSS_DISABLED': '1', 'OFFICIAL_MACRO_DISABLED': '1', 'GOLD_SPOT_REFERENCE_DISABLED': '1'}
         proc = subprocess.Popen(['node', str(Path(__file__).resolve().parent.parent / 'server.js')], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         base = f'http://127.0.0.1:{port}'
         def request(path, payload=None):
@@ -34,6 +34,18 @@ class UltimateHTTP(unittest.TestCase):
             self.assertIn(b'Gold Precision Pro Ultimate', request('/ultimate')[1])
             self.assertIn(b'recorded-review-load', request('/ultimate')[1])
             self.assertIn(b'free-context-load', request('/ultimate')[1])
+            self.assertIn(b'spot-refresh', request('/ultimate')[1])
+            sc, sr = request('/api/v3/ultimate/gold-spot-reference')
+            self.assertEqual(sc, 200)
+            spot = json.loads(sr)
+            self.assertEqual(spot['mode'], 'FREE_XAU_SPOT_REFERENCE')
+            self.assertEqual(spot['dataStatus'], 'DISABLED_OFFLINE')
+            self.assertIsNone(spot['price'])
+            self.assertFalse(spot['executable'])
+            self.assertFalse(spot['realOHLC'])
+            self.assertFalse(spot['readyForUltimateTrading'])
+            self.assertTrue(all(f['closedCandles'] == 0 for f in spot['frames'].values()))
+            self.assertEqual(request('/api/v3/ultimate/gold-spot-reference', b'{}')[0], 405)
             self.assertIn(b'macro-refresh', request('/ultimate')[1])
             mc, mr = request('/api/v3/ultimate/official-macro')
             self.assertEqual(mc, 200)
