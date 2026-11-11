@@ -184,6 +184,20 @@ class XauUsdResearchPipeline(unittest.TestCase):
         self.assertFalse(result["ultimateR2"]["risk"]["ok"])
         self.assertEqual(result["signal"], "WAIT")
 
+    def test_all_unlicensed_external_layers_absent_remain_wait(self):
+        payload, _, now = fixture_bundle()
+        unavailable = {"v3Feeds": {}, "r2Feeds": {}, "spread": None,
+                       "risk": {"killSwitch": False}}
+        result = simulate(payload, unavailable, now)
+        self.assertEqual(result["status"], "SYNTHETIC_TEST_ONLY")
+        self.assertEqual(result["engineCandidates"], {"v3": "NONE", "ultimateR2": "NONE"})
+        self.assertEqual(result["researchCandidate"], "NONE")
+        self.assertEqual(result["signal"], "WAIT")
+        self.assertFalse(result["researchEligible"])
+        self.assertFalse(result["executable"])
+        for key in ("DXY", "GC", "calendar", "headlines", "orderFlow"):
+            self.assertNotIn(key, result["v3"].get("feeds", {}))
+
     def test_engine_outage_returns_wait_without_paper_input(self):
         payload, context, now = fixture_bundle()
         with patch("xauusd_research_pipeline.subprocess.run", side_effect=FileNotFoundError("node unavailable")):
