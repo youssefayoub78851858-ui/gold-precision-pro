@@ -44,6 +44,10 @@ function monitoringAlerts(frames,result,risk){
   if(layer?.blocked)items.push({severity:'BLOCKING',code:'EVENT_RISK_WINDOW',source:name,message:'High-impact event is inside the configured blackout window'});
   else if(layer?.status!=='READY')items.push({severity:'BLOCKING',code:'SOURCE_'+(layer?.status||'MISSING'),source:name,message:layer?.reason||'Admissible fresh evidence is unavailable'});
  }
+ for(const blocker of result?.monitoring?.blocked||[]){
+  if(typeof blocker==='string'&&blocker.endsWith(': disagreement'))
+   items.push({severity:'BLOCKING',code:'ANALYSIS_CONFLICT',source:blocker.slice(0,-': disagreement'.length),message:'Independent market evidence conflicts with the technical candidate'});
+ }
  if(!risk?.ok)items.push({severity:'BLOCKING',code:'RISK_GATE_BLOCKED',source:'risk',message:risk?.reason||'Required risk inputs or limits did not pass'});
  return {status:items.length?'BLOCKED':'CLEAR',delivery:'RESPONSE_ONLY_NO_PUSH_OR_EMAIL',signal:'WAIT',executable:false,items};
 }

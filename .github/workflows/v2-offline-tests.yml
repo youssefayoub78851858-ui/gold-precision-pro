@@ -217,4 +217,6 @@ jobs:
 
       - name: XAUUSD signed intake, UTC candle quality, gaps and outage backoff (offline fixtures)
         working-directory: coordinator
-        run: python -m unittest -v test_xauusd_feed_gate
+        run: |
+          python -m unittest -v test_xauusd_feed_gate
+          python -m unittest -v test_xauusd_research_pipeline

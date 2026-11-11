@@ -33,6 +33,8 @@ assert.ok(alertView.items.some(x=>x.code==='TIMEFRAME_UNAVAILABLE'&&x.source==='
 assert.ok(alertView.items.some(x=>x.code==='SOURCE_UNAVAILABLE'&&x.source==='DXY'));
 assert.ok(alertView.items.some(x=>x.code==='EVENT_RISK_WINDOW'&&x.source==='calendar'));
 assert.ok(alertView.items.some(x=>x.code==='RISK_GATE_BLOCKED'));
+const conflictAlerts=monitoringAlerts({M15:{status:'READY'},H1:{status:'READY'},H4:{status:'READY'}},{layers:{DXY:okLayer,US02Y:okLayer,US10Y:okLayer,GC:okLayer,calendar:okLayer,headlines:okLayer,orderFlow:okLayer},monitoring:{blocked:['DXY: disagreement']}},{ok:true});
+assert.ok(conflictAlerts.items.some(x=>x.code==='ANALYSIS_CONFLICT'&&x.source==='DXY'));
 
 const valid=diagnostics({asOfUTC,frames}, {signal:'WAIT',executable:false});
 for(const tf of ['M15','H1','H4'])assert.equal(valid.technical.frames[tf].status,'READY');
