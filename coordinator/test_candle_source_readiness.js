@@ -19,7 +19,8 @@ function run(){
  assert.deepEqual(report.derivedSampleCounts,{M15:96,H1:24,H4:6});
  assert.equal(report.legalStatus,"AWAITING_WRITTEN_PERMISSION");
  assert.equal(report.permissionEvidenceAvailable,false);
- assert.ok(!Object.keys(report).some(k=>/values|candles|ohlc|prices|bars/i.test(k)));
+ assert.ok(!["candles","ohlc","bars","prices","frames","values"].some(k=>Object.hasOwn(report,k)));
+ assert.ok(!Object.values(report).some(value=>Array.isArray(value)));
  const policy=JSON.parse(fs.readFileSync(policyFile,"utf8"));
  for(const flag of ["writtenPermissionReceived","automatedCollectionAuthorized",
    "scheduledPollingAuthorized","privateDataStorageAuthorized",
