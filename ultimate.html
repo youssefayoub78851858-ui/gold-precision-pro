@@ -90,11 +90,12 @@ document.getElementById('r2-run').onclick=async()=>{
   if(data.version!==2||data.contractVersion!=='ultimate-context-events-v2'||data.signal!=='WAIT'||data.executable!==false||data.networkEnabled!==false)throw Error('استجابة r2 لا تطابق عقد البحث الآمن');
   status.textContent='Ultimate r2 | WAIT | مصادر جاهزة: '+data.monitoring.readyFeeds+'/'+data.monitoring.totalFeeds+' | التنفيذ والتداول معطّلان.';
   for(const reason of data.monitoring.blocked){const item=document.createElement('li');item.textContent='سبب الحجب: '+reason;document.getElementById('r2-gates').appendChild(item);}
-  const diag=data.diagnostics||{},technical=diag.technical||{},flow=diag.orderFlow||{},risk=diag.riskPlan||{};
+  const diag=data.diagnostics||{},technical=diag.technical||{},flow=diag.orderFlow||{},news=diag.news||{},risk=diag.riskPlan||{};
   const summary=document.getElementById('r2-diagnostics');summary.replaceChildren();
   const lines=[
    'التحليل الفني: '+(technical.status||'غير متاح')+' — M15/H1/H4: '+Object.entries(technical.frames||{}).map(([tf,x])=>tf+' '+(x.status==='READY'?'جاهز بحثياً':x.status==='PARTIAL'?'جزئي':'غير متاح')).join(' | '),
    'Order Flow: '+(flow.status||'غير متاح')+' — '+(flow.reason||'لا توجد بيانات مؤهلة'),
+   'الأخبار: '+(news.status||'غير متاحة')+' — '+(news.reason||'تصنيف وصفي بلا تصويت أو إشارة تداول'),
    'إدارة المخاطر: '+(risk.status||'WAIT')+(risk.entry!==null&&risk.entry!==undefined?' — دخول بحثي '+risk.entry+' / SL '+risk.sl+' / TP '+[risk.tp1,risk.tp2,risk.tp3].join(', '):' — لا توجد مستويات مؤهلة'),
    'كل المؤشرات وصفية فقط؛ القرار WAIT والتداول معطّل.'
   ];for(const line of lines){const p=document.createElement('p');p.textContent=line;summary.appendChild(p);}

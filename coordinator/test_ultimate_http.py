@@ -124,6 +124,7 @@ class UltimateHTTP(unittest.TestCase):
             self.assertFalse(r2['diagnostics']['executable'])
             self.assertEqual(r2['diagnostics']['technical']['frames']['M15']['status'],'PARTIAL')
             self.assertEqual(r2['diagnostics']['orderFlow']['status'],'BLOCKED_EVIDENCE')
+            self.assertEqual(r2['diagnostics']['news']['status'],'BLOCKED_SOURCE')
             self.assertEqual(r2['diagnostics']['riskPlan']['status'],'WAIT_NO_MTF_CANDIDATE')
             self.assertEqual(request('/api/v3/ultimate', b' ' * (1048576 + 1))[0], 413)
             self.assertEqual(request('/api/v3/ultimate/r2', b' ' * (1048576 + 1))[0], 413)
