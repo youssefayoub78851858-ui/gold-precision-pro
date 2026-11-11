@@ -56,5 +56,24 @@
     "Legal distribution rights for public service",
     "Other mandatory DXY/GC/order flow layers"
   ],
-  "nextMilestone": "Private entitlement and reliability review before gated scheduled capture; no public OHLC exposure or paid data source without approval."
+  "nextMilestone": "Private-only bar-close filtering, legal entitlement and reliability audit before any scheduled fetch. No public OHLC distribution.",
+  "latestProbe": {
+    "checkedUTC": "2026-11-11T16:33:01Z",
+    "instrument": "XAUUSD",
+    "source": "dukascopy-node getRealTimeRates (experimental)",
+    "interval": "15min",
+    "returnedRows": 24,
+    "hasOHLC": true,
+    "earliestUTC": "2026-11-11T10:45:00Z",
+    "lastOpenUTC": "2026-11-11T16:30:00Z",
+    "latestBarClosedAtProbe": false,
+    "lastOpenAgeMinutesAtProbe": 3,
+    "sourceIndependentAuthenticityVerified": false,
+    "providerRedistributionRightsVerified": false,
+    "realTradingAllowed": false,
+    "rawOHLCStoredOrPublished": false,
+    "testRunId": 43059395385,
+    "decision": "RESEARCH_FEASIBLE_ONLY",
+    "requiredFollowup": "Filter unclosed bar, monitor source continuity and legal entitlement; not a proven 24/7 feed."
+  }
 }
