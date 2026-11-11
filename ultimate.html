@@ -1,6 +1,15 @@
 <!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Gold Precision Pro Ultimate — Offline Research</title>
 <style>body{font:18px system-ui;background:#101820;color:#eee;max-width:1000px;margin:3em auto;padding:1em}button,input{font:inherit;padding:12px;box-sizing:border-box;max-width:100%}label{display:block;margin:1em 0}pre{max-width:100%;box-sizing:border-box}@media(max-width:600px){body{margin:.5em auto;padding:.7em;font-size:16px}button{width:100%}}pre{direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;background:#192630;padding:20px}h1{color:#e4bd69}</style>
 <h1>Gold Precision Pro Ultimate</h1><p>مختبر بيانات محاكاة أو مسجلة فقط. لا اتصال بمزودي الأسعار ولا تنفيذ أوامر. النتائج ليست إثباتاً لربحية الاستراتيجية.</p>
+<section id="macro-research" aria-labelledby="macro-title">
+<h2 id="macro-title">الأخبار الاقتصادية والتقويم الأميركي — مصادر رسمية</h2>
+<p>إعلانات الفيدرالي وجدول نشر بيانات BLS، للبحث فقط. مواعيد الأحداث ليست نتائجها، ولا يوجد تحليل مفاجأة السوق أو تنفيذ صفقات.</p>
+<button id="macro-refresh" type="button">تحديث الأخبار والتقويم الرسمي</button>
+<p id="macro-status" role="status">لم يتم فحص المصادر بعد.</p>
+<div id="macro-calendar"></div>
+<div id="macro-headlines"></div>
+<p>المصادر: <a style="color:#e4bd69" href="https://www.bls.gov/schedule/news_release/bls.ics" target="_blank" rel="noopener noreferrer">تقويم BLS</a> و <a style="color:#e4bd69" href="https://www.federalreserve.gov/feeds/press_monetary.xml" target="_blank" rel="noopener noreferrer">أخبار الفيدرالي النقدية</a>.</p>
+</section><hr>
 <section id="free-daily-context" aria-labelledby="free-daily-title">
 <h2 id="free-daily-title">عوائد السندات الأميركية الرسمية — مجاناً</h2>
 <p>يُراجع المرجع الرسمي H.15 تلقائياً عند فتح الصفحة، ثم يحتفظ بنسخة مؤقتة لمدة ساعة. ليس تغذية لحظية ولا يُستخدم لتأكيد صفقة M15.</p>
@@ -138,5 +147,48 @@ document.getElementById('free-context-load').onclick=async()=>{
 if(document.readyState==='loading'){
  document.addEventListener('DOMContentLoaded',()=>document.getElementById('free-context-load').click(),{once:true});
 }else{document.getElementById('free-context-load').click();}
+</script>
+<script>
+document.getElementById('macro-refresh').onclick=async()=>{
+ const btn=document.getElementById('macro-refresh'),status=document.getElementById('macro-status');
+ const calendar=document.getElementById('macro-calendar'),headlines=document.getElementById('macro-headlines');
+ btn.disabled=true;calendar.replaceChildren();headlines.replaceChildren();
+ status.textContent='جارٍ قراءة أخبار الفيدرالي وتقويم BLS الرسميين...';
+ const local=(iso)=>new Date(iso).toLocaleString('ar-LB',{timeZone:'Asia/Beirut',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+ try{
+  const response=await fetch('/api/v3/ultimate/official-macro',{cache:'no-store',signal:AbortSignal.timeout(20000)});
+  if(!response.ok)throw Error('تعذّر تحميل بيانات الاقتصاد: '+response.status);
+  const data=await response.json();
+  if(data.mode!=='OFFICIAL_MACRO_REVIEW'||data.executable!==false||
+   data.signal!=='WAIT'||data.liveData!==false||!Array.isArray(data.calendar)||!Array.isArray(data.headlines))
+   throw Error('رفض بيانات اقتصادية غير متوافقة مع الأمان');
+  const fedOk=data.feeds.fed==='OFFICIAL_REFRESHED',blsOk=data.feeds.bls==='OFFICIAL_REFRESHED';
+  status.textContent='حالة النظام WAIT | تقويم BLS: '+(blsOk?'متصل':'غير متاح')+
+   ' | أخبار الفيدرالي: '+(fedOk?'متصل':'غير متاح')+
+   ' | آخر فحص: '+(data.checkedUTC?local(data.checkedUTC):'اختبار دون اتصال');
+  const render=(target,title,items,formatter)=>{
+   const h=document.createElement('h3');h.textContent=title;target.appendChild(h);
+   if(!items.length){const p=document.createElement('p');p.textContent='لا توجد بيانات موثّقة متاحة للعرض من هذا المصدر حالياً.';target.appendChild(p);return;}
+   const list=document.createElement('ul');
+   for(const item of items){
+    const li=document.createElement('li');li.style.marginBottom='12px';
+    formatter(li,item);list.appendChild(li);
+   }
+   target.appendChild(list);
+  };
+  render(calendar,'الأحداث الاقتصادية القادمة — مواعيد فقط',data.calendar,(li,e)=>{
+   li.textContent=local(e.scheduledUTC)+' — '+e.title+' (موعد نشر، مش نتيجة خبر)';
+  });
+  render(headlines,'آخر إعلانات السياسة النقدية — منشورة بالفعل',data.headlines,(li,e)=>{
+   const a=document.createElement('a');a.href=e.url;a.target='_blank';a.rel='noopener noreferrer';a.style.color='#e4bd69';
+   a.textContent=e.title;li.textContent=local(e.publishedUTC)+' — ';li.appendChild(a);
+  });
+  const p=document.createElement('p');p.textContent='لا توجد أسعار حيّة، أو مقارنة توقعات السوق بالنتائج، أو استنتاج تأثير الخبر على الذهب. هذه معلومات للمتابعة فقط؛ أي بيانات ناقصة تمنع التداول.';headlines.appendChild(p);
+ }catch(e){status.textContent=e.message;}
+ finally{btn.disabled=false;}
+};
+if(document.readyState==='loading'){
+ document.addEventListener('DOMContentLoaded',()=>document.getElementById('macro-refresh').click(),{once:true});
+}else{document.getElementById('macro-refresh').click();}
 </script>
 </html>
