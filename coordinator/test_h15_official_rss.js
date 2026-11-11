@@ -43,6 +43,15 @@ async function run(){
  assert.equal(offline.sourceStatus,"STORED_FALLBACK");
  assert.equal(offline.readyForFiveMinuteGate,false);
  assert.equal(offline.officialFeedRequests,0);
+ const failed=await readAutoDailyContext({
+  fetchFn:async()=>({ok:false,status:403}),
+  nowMs:Date.parse("2026-11-12T17:00:00Z")
+ });
+ assert.equal(failed.sourceStatus,"STORED_FALLBACK");
+ assert.equal(failed.refreshDiagnosticCode,"FED_RSS_HTTP_ERROR");
+ assert.equal(failed.signal,"WAIT");
+ assert.equal(failed.readyForUltimateTrading,false);
+ assert.equal(failed.readyForFiveMinuteGate,false);
  console.log("PASS official H15 RSS: validate series/dates, no market vendor calls, cache, safe fallback, WAIT and gate isolation");
 }
 run().catch(e=>{console.error(e);process.exitCode=1;});
