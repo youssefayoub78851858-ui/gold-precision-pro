@@ -27,8 +27,10 @@ jobs:
               const events=(txt.match(/BEGIN:VEVENT/g)||[]).length;
               const tags=[...txt.matchAll(/<(title|pubDate|link)\b[^>]*>([\s\S]*?)<\/\1>/gi)].slice(0,9).map(m=>[m[1],m[2].replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0,120)]);
               const vevent=txt.includes('BEGIN:VEVENT')?txt.substring(txt.indexOf('BEGIN:VEVENT'),txt.indexOf('END:VEVENT')+10).split(/\r?\n/).slice(0,20):[];
+              const firstRssItem=txt.includes('<item>')?txt.substring(txt.indexOf('<item>'),txt.indexOf('</item>')+7).slice(0,1300):'';
+              const futureSamples=txt.split('BEGIN:VEVENT').slice(1).filter(e=>/DTSTART[^\r\n]*2026111[1-9]/.test(e)).slice(0,3).map(e=>e.split(/\r?\n/).filter(l=>/^(DTSTART|SUMMARY|UID|DTEND)/.test(l)).slice(0,6));
               console.log(JSON.stringify({name,http:resp.status,type:resp.headers.get('content-type'),
-                bytes:txt.length,items,events,first:txt.substring(0,120).replace(/\s+/g,' '),tags,vevent}));
+                bytes:txt.length,items,events,first:txt.substring(0,120).replace(/\s+/g,' '),tags,vevent,firstRssItem,futureSamples}));
             } catch(e){console.log(JSON.stringify({name,error:e.name,message:String(e.message).slice(0,120)}));}
           }
           JS
