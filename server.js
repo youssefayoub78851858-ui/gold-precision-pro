@@ -45,6 +45,22 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, {});
   }
 
+  // Read-only metadata about historic XAUUSD candle feasibility and legal prerequisites.
+  // Never calls Dukascopy, stores OHLC or opens live trading.
+  if (req.url.split("?")[0] === "/api/v3/ultimate/candle-source-readiness") {
+    if (req.method !== "GET") return send(res,405,{error:"GET only"});
+    try{
+      const info=require("./coordinator/candle_source_readiness").inspectCandleSource();
+      if(info.signal!=="WAIT"||info.executable!==false||
+         info.automaticPollingEnabled!==false||
+         info.publicOhlcDistributionEnabled!==false)throw Error("Unsafe source permission gate");
+      return send(res,200,info);
+    }catch(_err){
+      return send(res,503,{signal:"WAIT",executable:false,
+        error:"Candle-source permission status unverified or unavailable"});
+    }
+  }
+
   // Free independent indicative gold quote — DISPLAY ONLY, never passed to candle/signal engines.
   if (req.url.split("?")[0] === "/api/v3/ultimate/gold-spot-reference") {
     if (req.method !== "GET") return send(res,405,{error:"GET only"});
