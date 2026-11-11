@@ -1,0 +1,27 @@
+name: One-time Ultimate macro public endpoint live smoke
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths: [.github/workflows/ultimate-macro-live-smoke.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Inspect deployed review endpoint without touching production
+        run: |
+          node <<'JS'
+          const url='https://gold-precision-v3-review-demo.onrender.com/api/v3/ultimate/official-macro?probe=1';
+          const resp=await fetch(url,{signal:AbortSignal.timeout(25000)});
+          const data=await resp.json();
+          const safe={http:resp.status,mode:data.mode,signal:data.signal,executable:data.executable,
+            liveData:data.liveData,feeds:data.feeds,calendarCount:data.calendar?.length||0,
+            headlinesCount:data.headlines?.length||0,
+            nextCalendar:data.calendar?.slice(0,3).map(e=>({title:e.title,scheduledUTC:e.scheduledUTC})),
+            lastHeadline:data.headlines?.[0]&&{title:data.headlines[0].title,publishedUTC:data.headlines[0].publishedUTC}};
+          console.log(JSON.stringify(safe));
+          if(!resp.ok||data.mode!=='OFFICIAL_MACRO_REVIEW'||data.executable!==false||
+             data.signal!=='WAIT'||data.liveData!==false)process.exitCode=1;
+          JS
