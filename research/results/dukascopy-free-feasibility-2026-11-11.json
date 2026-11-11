@@ -1,0 +1,60 @@
+{
+  "kind": "FREE_XAUUSD_DATA_FEASIBILITY",
+  "checkedUTC": "2026-11-11T16:28:26Z",
+  "project": "Gold Precision Pro Ultimate",
+  "reviewBranch": "review/v2-portable-tests-20261109",
+  "sample": {
+    "observedStartUTC": "2026-11-10T00:00:00Z",
+    "observedLastOpenUTC": "2026-11-10T23:45:00Z",
+    "source": "Dukascopy XAUUSD via community dukascopy-node@1.51.1",
+    "convention": "BID, UTC-open M15 OHLC, historical",
+    "rowsReceived": 96,
+    "validM15": 96,
+    "completeH1": 24,
+    "completeH4": 6,
+    "outOfOrderOrDuplicate": 0,
+    "misaligned": 0,
+    "invalidOHLC": 0,
+    "rawSamplesCommitted": false,
+    "rawSamplesRedistributed": false,
+    "runId": 43058635623,
+    "result": "PRIVATE_ONE_DAY_VALID_FORMAT_ONLY"
+  },
+  "freeTrialCheck": {
+    "provider": "Twelve Data",
+    "symbol": "XAU/USD",
+    "interval": "15min",
+    "method": "Public apikey=demo trial-only query; no account and no card",
+    "httpStatus": 401,
+    "result": "NO_FREE_ANONYMOUS_CANDLES",
+    "runId": 43058434117
+  },
+  "mobileMT5": {
+    "mobileExpertAdvisorSupported": false,
+    "computerOrVPSRequiredForAutomatedBrokerExport": true,
+    "brokerageCredentialsRequested": false
+  },
+  "implemented": {
+    "importer": "coordinator/import_dukascopy_single_m15.py",
+    "tests": "coordinator/test_import_dukascopy_single_m15.py",
+    "status": "OFFLINE_PRIVATE_RESEARCH_ONLY",
+    "transforms": "single M15 UTC BID CSV to only complete H1/H4 UTC OHLC",
+    "syntheticFilledBars": 0,
+    "sourceIndependentlyAuthenticated": false,
+    "rightsForPublicRedistributionVerified": false,
+    "availableForLiveDecisions": false,
+    "providerSubscriptionEnabled": false,
+    "productionModified": false,
+    "realTradesAllowed": false,
+    "signal": "WAIT"
+  },
+  "unresolved": [
+    "Dukascopy source-specific personal internal-use and automated-fetch permissions",
+    "Reliable production-grade intraday continuity and missed-bar recovery",
+    "Provider-to-CFI quote differences and bid/ask",
+    "Authenticated first-availability and repeatability",
+    "Legal distribution rights for public service",
+    "Other mandatory DXY/GC/order flow layers"
+  ],
+  "nextMilestone": "Private entitlement and reliability review before gated scheduled capture; no public OHLC exposure or paid data source without approval."
+}
