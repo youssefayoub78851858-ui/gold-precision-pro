@@ -220,3 +220,4 @@ jobs:
         run: |
           python -m unittest -v test_xauusd_feed_gate
           python -m unittest -v test_xauusd_research_pipeline
+          python -m unittest -v test_research_monitor
