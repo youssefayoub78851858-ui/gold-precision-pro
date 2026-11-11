@@ -222,3 +222,4 @@ jobs:
           python -m unittest -v test_xauusd_research_pipeline
           python -m unittest -v test_research_monitor
           python -m unittest -v test_research_monitor_runner
+          python -m unittest -v test_research_watchdog
