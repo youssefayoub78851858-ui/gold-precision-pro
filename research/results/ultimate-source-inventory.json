@@ -5,20 +5,31 @@
     {
       "layer": "XAUUSD",
       "instrument": "Spot XAU/USD BID",
-      "candidate": "Existing Dukascopy-derived GitHub archives; future entitled broker exports",
-      "noAdditionalSubscription": "EXISTING_FILES_ONLY_RIGHTS_UNVERIFIED",
-      "rights": "No internal-commercial or redistribution entitlement verified. Website access and an open-source downloader are not a data licence.",
+      "candidate": "Existing Dukascopy-derived archives (rights unresolved) plus new local MT5 read-only export candidate; not tested against user terminal",
+      "noAdditionalSubscription": "LOCAL_BROKER_TERMINAL_EXPORT_CANDIDATE_NO_NEW_SERVICE",
+      "rights": "Existing Dukascopy-derived history has no verified internal/commercial or redistribution entitlement. MT5 export uses a broker terminal, but account-specific data-use rights and origin are not independently verified.",
       "history": "Local: 2026-09-01 through 2026-10-30; broader provider start/coverage not verified",
-      "update": "Local M15; H1/H4 rebuilt from complete groups. No update service active.",
-      "limits": "BID only; no ASK/spread/ticks/latency archive. 864 absent M15 calendar slots are not classified session defects.",
-      "gateFitness": "PRICE_TECHNICALLY_PARTIAL_RIGHTS_UNRESOLVED",
+      "update": "M15-only EA prototype writes closed bars locally. Python adapter validates timestamps/OHLC/duplicates, rejects stale/in-progress rows, and derives UTC-aligned H1/H4 only from complete M15 groups. No network upload, terminal run, or scheduled collection.",
+      "limits": "MT5 server UTC-offset history/DST is not authenticated; tick volume is not GC exchange volume; broker symbol, origin, entitlement and continuity remain unverified. Demo/production services are not connected.",
+      "gateFitness": "LOCAL_BRIDGE_CODE_READY_NOT_ACCOUNT_TESTED_OR_ENTITLED",
       "references": [
         "https://www.dukascopy.com/swiss/english/legal-pages/terms-of-use/",
         "https://www.dukascopy.com/swiss/english/marketwatch/historical/"
       ],
       "networkEnabled": false,
       "requestsSent": 0,
-      "entitlementIndependentlyVerified": false
+      "entitlementIndependentlyVerified": false,
+      "adapter": {
+        "ea": "mt5/Experts/GoldPrecisionReadOnlyExport.mq5",
+        "normalizer": "coordinator/import_mt5_readonly.py",
+        "test": "coordinator/test_mt5_readonly_export.py",
+        "mode": "LOCAL_PRIVATE_RESEARCH_ONLY",
+        "terminalRunVerified": false,
+        "metaEditorCompilationVerified": false,
+        "networkEnabled": false,
+        "automatedUploadEnabled": false,
+        "signal": "WAIT"
+      }
     },
     {
       "layer": "DXY",

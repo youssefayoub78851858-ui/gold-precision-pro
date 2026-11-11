@@ -93,5 +93,20 @@
     "requestsSent": 0,
     "status": "EXPORT_ONLY",
     "note": "Vendor entitlement must be verified before any future transport"
+  },
+  "XAUUSD_MT5_LOCAL_EXPORT": {
+    "vendor": "User-selected broker MT5 terminal",
+    "instrument": "Exact broker XAU symbol; M15 export, H1/H4 derived from complete UTC M15 groups",
+    "licenseRequired": "Account-specific rights not verified",
+    "enabled": false,
+    "networkImplemented": false,
+    "credentialConfigured": false,
+    "requestsSent": 0,
+    "localExporterImplemented": true,
+    "terminalRunVerified": false,
+    "entitlementVerified": false,
+    "historicalOffsetVerified": false,
+    "status": "LOCAL_RESEARCH_CANDIDATE_NOT_RUN",
+    "note": "Desktop/VPS required; local CSV only. No upload, no order functions, no trading readiness; output is always WAIT."
   }
 }

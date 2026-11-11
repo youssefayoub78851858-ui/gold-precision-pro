@@ -150,6 +150,10 @@ jobs:
         working-directory: coordinator
         run: node test_candle_source_readiness.js
 
+      - name: Read-only MT5 local candle bridge validation (synthetic, no broker/network)
+        working-directory: coordinator
+        run: python -m unittest -v test_mt5_readonly_export
+
       - name: Free independent XAU spot reference validation and candle-blocking tests (mock only)
         working-directory: coordinator
         run: node test_gold_spot_reference.js
