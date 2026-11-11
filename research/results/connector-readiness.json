@@ -119,5 +119,34 @@
     "historicalOffsetVerified": false,
     "status": "LOCAL_RESEARCH_CANDIDATE_NOT_RUN",
     "note": "Desktop/VPS required; local CSV only. No upload, no order functions, no trading readiness; output is always WAIT."
+  },
+  "XAUUSD_TWELVE_DATA_CANDIDATE": {
+    "vendor": "Twelve Data",
+    "instrument": "XAU/USD commodity time series; exact display/cloud rights unconfirmed",
+    "intervalsDocumented": [
+      "15min",
+      "1h",
+      "4h"
+    ],
+    "planReview": {
+      "basicUSDPerMonth": 0,
+      "basicApiCreditsPerMinute": 8,
+      "basicApiRequestsPerDay": 800,
+      "growUSDPerMonth": 79,
+      "growIncludesCommodityMarketData": true,
+      "growIncludesInternalDisplay": true
+    },
+    "licenseRequired": "Plan/account-specific terms require confirmation before display, automated analysis, or cloud use",
+    "enabled": false,
+    "networkImplemented": false,
+    "credentialConfigured": false,
+    "requestsSent": 0,
+    "status": "CANDIDATE_ENTITLEMENT_AND_CONTINUITY_UNVERIFIED",
+    "continuousOHLCVerified": false,
+    "closedBarSemanticsVerified": false,
+    "cloudDisplayRightsVerified": false,
+    "adapter": "coordinator/xauusd_feed_gate.py",
+    "tests": "coordinator/test_xauusd_feed_gate.py",
+    "note": "No API call, trial, account, or payment. Basic listing says non-display while XAU/USD is classified as a commodity; Grow is the lowest published tier explicitly listing commodity market data and internal display. Exact Render use and legal entitlement need written confirmation. Free Render does not guarantee always-on polling."
   }
 }

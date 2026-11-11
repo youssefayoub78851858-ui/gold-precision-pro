@@ -214,3 +214,7 @@ jobs:
       - name: Local Databento GC and official-file import tests (no vendor connections)
         working-directory: coordinator
         run: python -m unittest -v test_databento_local test_official_recorded
+
+      - name: XAUUSD signed intake, UTC candle quality, gaps and outage backoff (offline fixtures)
+        working-directory: coordinator
+        run: python -m unittest -v test_xauusd_feed_gate

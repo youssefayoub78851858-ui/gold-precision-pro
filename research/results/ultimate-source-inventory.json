@@ -32,6 +32,35 @@
       }
     },
     {
+      "layer": "XAUUSD",
+      "instrument": "XAU/USD spot candles M15/H1/H4",
+      "candidate": "Twelve Data REST OHLC; closest cloud-hosted candidate, not approved or tested",
+      "noAdditionalSubscription": "BASIC_TECHNICAL_CANDIDATE_ONLY_RIGHTS_UNCONFIRMED; Grow displayed at USD 79/month",
+      "rights": "Basic is described as internal non-display; XAU/USD is classified as commodity; Grow explicitly lists commodity market data and internal display. Written confirmation is required for this app, Render hosting, automated analysis, and retention.",
+      "history": "15min, 1h and 4h intervals documented; instrument-specific intraday depth and revisions remain unverified.",
+      "update": "REST OHLC may arrive about 0.3–2 minutes after candle close depending on instrument; no continuity test performed.",
+      "limits": "Basic listing: 8 API credits/minute, 800/day. A single M15 request every 15 minutes calculates to 96/day, but quota does not prove rights or continuity. Lower-tier WebSocket trial does not establish persistent OHLC access.",
+      "gateFitness": "BLOCKED_PENDING_WRITTEN_ENTITLEMENT_AND_USER_AUTHORIZATION",
+      "references": [
+        "https://twelvedata.com/pricing",
+        "https://twelvedata.com/markets/commodities/xau-usd",
+        "https://twelvedata.com/docs#time-series",
+        "https://support.twelvedata.com/en/articles/5615848-how-fast-is-your-data",
+        "https://twelvedata.com/terms"
+      ],
+      "networkEnabled": false,
+      "requestsSent": 0,
+      "entitlementIndependentlyVerified": false,
+      "adapter": {
+        "module": "coordinator/xauusd_feed_gate.py",
+        "tests": "coordinator/test_xauusd_feed_gate.py",
+        "providerClientImplemented": false,
+        "httpEndpointConnected": false,
+        "mode": "DISABLED_UNTIL_RIGHTS_AND_SOURCE_TEST",
+        "signal": "WAIT"
+      }
+    },
+    {
       "layer": "XAUUSD_CFI_MT5",
       "instrument": "CFI Lebanon MT5 exact broker XAUUSD symbol; native closed M15/H1/H4 capability unconfirmed",
       "candidate": "Official CFI Lebanon read-only market-data API, MT5 gateway, FIX, or authorized export method; pending support response",
@@ -197,5 +226,11 @@
     "Public documentation is not an account-specific licence determination. No connected broker/data entitlement was verified.",
     "Dukascopy terms page direct fetch timed out; indexed official terms and source URL were found. Exact allowed use needs source-specific confirmation before new data capture/redistribution.",
     "No numerical provider rate limit is invented. Future allowed collection must honor documented/vendor-agreed limits and budget zero requests until approved."
-  ]
+  ],
+  "decision": {
+    "primarySource": "NONE_VERIFIED",
+    "recommendedCandidate": "Twelve Data XAU/USD subject to written rights confirmation and explicit user approval",
+    "independentConfirmation": "COMEX GC only after separate CME/vendor license; not a substitute for spot XAU/USD",
+    "sourceRequestsMade": 0
+  }
 }
