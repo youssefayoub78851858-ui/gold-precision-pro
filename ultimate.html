@@ -1,6 +1,14 @@
 <!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Gold Precision Pro Ultimate — Offline Research</title>
 <style>body{font:18px system-ui;background:#101820;color:#eee;max-width:1000px;margin:3em auto;padding:1em}button,input{font:inherit;padding:12px;box-sizing:border-box;max-width:100%}label{display:block;margin:1em 0}pre{max-width:100%;box-sizing:border-box}@media(max-width:600px){body{margin:.5em auto;padding:.7em;font-size:16px}button{width:100%}}pre{direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;background:#192630;padding:20px}h1{color:#e4bd69}</style>
 <h1>Gold Precision Pro Ultimate</h1><p>مختبر بيانات محاكاة أو مسجلة فقط. لا اتصال بمزودي الأسعار ولا تنفيذ أوامر. النتائج ليست إثباتاً لربحية الاستراتيجية.</p>
+<section id="free-daily-context" aria-labelledby="free-daily-title">
+<h2 id="free-daily-title">عوائد السندات الأميركية الرسمية — مجاناً</h2>
+<p>مرجع يومي موثّق من تقرير H.15 الأميركي، وليس تغذية لحظية. لا يُستخدم لتأكيد صفقة M15 ولا يُفعّل التداول.</p>
+<button id="free-context-load" type="button">عرض عوائد السندات الرسمية (يومية)</button>
+<p id="free-context-status" role="status">اضغط لعرض آخر عينة رسمية محفوظة، بدون اشتراك أو اتصال بمزود سوق.</p>
+<div id="free-context-data"></div>
+<p>المصدر: <a href="https://www.federalreserve.gov/releases/h15/" target="_blank" rel="noopener noreferrer" style="color:#e4bd69">Federal Reserve H.15</a></p>
+</section><hr>
 <section id="recorded-review" aria-labelledby="recorded-review-title">
 <h2 id="recorded-review-title">نتائج الذهب التاريخية — بدون تنزيل ملف</h2>
 <p>مراجعة محفوظة لشهري أيلول وتشرين الأول 2026: لا أسعار مباشرة، ولا بيانات GC أو Order Flow مؤكدة، ولا تنفيذ صفقات. نعرض النتائج المشتقة فقط؛ الشموع الخام لا تُنشر من هذه الصفحة لأن حقوق إعادة توزيعها لم تُتحقق.</p>
@@ -81,6 +89,38 @@ historicalButton.onclick=async()=>{
   area.appendChild(caution);
  }catch(error){status.textContent=error.message;}
  finally{historicalButton.disabled=false;}
+};
+</script>
+<script>
+document.getElementById('free-context-load').onclick=async()=>{
+ const button=document.getElementById('free-context-load');
+ const status=document.getElementById('free-context-status');
+ const container=document.getElementById('free-context-data');
+ button.disabled=true;container.replaceChildren();
+ status.textContent='جارٍ قراءة المرجع الرسمي المحفوظ...';
+ try{
+  const response=await fetch('/api/v3/ultimate/free-context',{cache:'no-store',signal:AbortSignal.timeout(10000)});
+  if(!response.ok)throw Error('تعذّر قراءة المرجع: '+response.status);
+  const d=await response.json();
+  if(d.mode!=='OFFICIAL_RECORDED_DAILY_CONTEXT'||d.executable!==false||
+     d.signal!=='WAIT'||d.liveData!==false||d.readyForFiveMinuteGate!==false||
+     d.providerRequests!==0||!Array.isArray(d.rates)||d.rates.length!==2)
+     throw Error('استجابة غير آمنة أو غير متوافقة');
+  status.textContent='مرجع يومي محفوظ | تاريخ الرصد: '+d.observedDate+
+   ' | تاريخ النشرة: '+d.publicationDate+' | WAIT';
+  for(const rate of d.rates){
+   const row=document.createElement('p');
+   row.textContent=rate.series+' ('+rate.maturityYears+' سنوات): '+
+     Number(rate.latestYieldPct).toFixed(2)+'% — مقابل '+
+     Number(rate.previousYieldPct).toFixed(2)+'% بالتاريخ السابق، والتغيّر '+
+     (rate.changePercentagePoints>0?'+':'')+rate.changePercentagePoints.toFixed(2)+' نقطة مئوية';
+   container.appendChild(row);
+  }
+  const warning=document.createElement('p');
+  warning.textContent='هذه آخر قيم محفوظة وليست أسعار اليوم أو بيانات آخر 5 دقائق. مصدر التوقيت الأولي غير موثّق، لذلك شروط العوائد اللحظية ما زالت محجوبة.';
+  container.appendChild(warning);
+ }catch(e){status.textContent=e.message;}
+ finally{button.disabled=false;}
 };
 </script>
 </html>
