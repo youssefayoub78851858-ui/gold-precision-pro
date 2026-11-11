@@ -1,0 +1,34 @@
+name: One-time experimental latest Dukascopy XAU M15 feasibility
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths: [.github/workflows/dukascopy-latest-private-probe.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Read only recent public M15 timestamps in disposable environment
+        run: |
+          mkdir -p /tmp/gpp-latest
+          cd /tmp/gpp-latest
+          npm install --no-save --ignore-scripts --silent dukascopy-node@1.51.1
+          node <<'JS'
+          (async()=>{
+          const {getRealTimeRates}=require('dukascopy-node');
+          const rows=await getRealTimeRates({instrument:'xauusd',timeframe:'m15',format:'json',last:24});
+          if(!Array.isArray(rows))throw Error('No array from experimental endpoint');
+          const now=Date.now();
+          const summary={source:'dukascopy-node experimental latest XAUUSD m15',
+            privateProbeOnly:true,publishedOHLC:false,totalRows:rows.length,
+            sampleKeys:rows[0]?Object.keys(rows[0]):[],
+            earliestUTC:rows[0]?.timestamp?new Date(rows[0].timestamp).toISOString():null,
+            lastOpenUTC:rows.at(-1)?.timestamp?new Date(rows.at(-1).timestamp).toISOString():null,
+            latestBarClosed:rows.at(-1)?.timestamp?rows.at(-1).timestamp+900000<=now:null,
+            lastObservedAgeMinutes:rows.at(-1)?.timestamp?Math.round((now-rows.at(-1).timestamp)/60000):null,
+            note:'Experimental API. No trading authorization or license attestation.'};
+          console.log(JSON.stringify(summary));
+          })().catch(e=>{console.error('PROBE_ERROR '+e.name+': '+String(e.message).slice(0,160));process.exitCode=1});
+          JS
