@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict');
 const {spawn}=require('node:child_process');
 const net=require('node:net');
+const vm=require('node:vm');
 const path=require('node:path');
 
 async function freePort(){
@@ -42,6 +43,16 @@ async function main(){
   const reviewPage=await fetch(base+'/review');
   assert.equal(reviewPage.status,200);
   assert.match(await reviewPage.text(),/مراجعة V3/);
+  // Parse every inline Ultimate script, so a broken button handler fails CI.
+  const ultimatePage=await fetch(base+'/ultimate');
+  assert.equal(ultimatePage.status,200);
+  const ultimateHtml=await ultimatePage.text();
+  assert.match(ultimateHtml,/id="recorded-review-load"/);
+  const embeddedScripts=[...ultimateHtml.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
+  assert.ok(embeddedScripts.length>=2,'Ultimate inline scripts missing');
+  for(const [i,match] of embeddedScripts.entries()){
+   assert.doesNotThrow(()=>new vm.Script(match[1],{filename:'ultimate-inline-'+i+'.js'}));
+  }
   const response=await fetch(base+'/api/v3/research');
   assert.equal(response.status,200);
   const result=await response.json();
