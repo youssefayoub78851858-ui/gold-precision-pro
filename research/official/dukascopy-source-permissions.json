@@ -1,0 +1,20 @@
+{
+  "policyVersion": 1,
+  "source": "Dukascopy Bank SA historical data and dukascopy-node adapter",
+  "evidenceURL": "https://www.dukascopy.com/swiss/sk/legal-pages/terms-of-use/",
+  "status": "AWAITING_WRITTEN_PERMISSION",
+  "writtenPermissionReceived": false,
+  "writtenPermissionEvidenceReference": null,
+  "automatedCollectionAuthorized": false,
+  "scheduledPollingAuthorized": false,
+  "privateDataStorageAuthorized": false,
+  "derivedDisplayAuthorized": false,
+  "publicRedistributionAuthorized": false,
+  "productionIngestionEnabled": false,
+  "reviewIngestionEnabled": false,
+  "continuousPollingEnabled": false,
+  "tradingExecutionEnabled": false,
+  "allowedNow": "No new vendor fetch. Static synthetic tests and source-agnostic private importer development only. Preserve prior one-time feasibility metadata.",
+  "requiredAnswer": "Explicit written scope for automated collection, frequency, private storage, derived use, public dashboards, and applicable fees.",
+  "lastPolicyReviewUTC": "2026-11-11T17:00:00Z"
+}
