@@ -14,7 +14,7 @@ class UltimateHTTP(unittest.TestCase):
         with socket.socket() as sock:
             sock.bind(('127.0.0.1', 0))
             port = sock.getsockname()[1]
-        env = {**os.environ, 'PORT': str(port), 'DEMO_MODE': 'standby'}
+        env = {**os.environ, 'PORT': str(port), 'DEMO_MODE': 'standby', 'H15_OFFICIAL_RSS_DISABLED': '1'}
         proc = subprocess.Popen(['node', str(Path(__file__).resolve().parent.parent / 'server.js')], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         base = f'http://127.0.0.1:{port}'
         def request(path, payload=None):
