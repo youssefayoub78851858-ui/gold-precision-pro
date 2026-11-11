@@ -45,6 +45,18 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, {});
   }
 
+  // Public official daily reference, strictly separated from five-minute trading gates.
+  // No outbound provider calls, no broker credentials, no trade decisions.
+  if (req.url.split("?")[0] === "/api/v3/ultimate/free-context") {
+    if (req.method !== "GET") return send(res,405,{error:"GET only"});
+    try {
+      const data=require("./coordinator/h15_daily_context").readH15DailyContext();
+      return send(res,200,data);
+    } catch (error) {
+      return send(res,503,{error:"Verified official daily context unavailable",signal:"WAIT",executable:false});
+    }
+  }
+
   // Read-only view of existing derived research; never serves raw vendor candles.
   if (req.url.split("?")[0] === "/api/v3/ultimate/recorded-review") {
     if (req.method !== "GET") return send(res, 405, {error:"GET only"});
