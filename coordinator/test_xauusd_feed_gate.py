@@ -24,7 +24,7 @@ def frame(opened):
 
 
 def payload():
-    return {"provider": "UNCONFIGURED_TEST_SOURCE", "instrument": "XAU/USD", "mode": "live",
+    return {"provider": "UNIT_TEST_FIXTURE", "instrument": "XAU/USD", "mode": "synthetic",
             "receivedUTC": timestamp(NOW),
             "frames": {"15min": frame(NOW.replace(minute=0) - dt.timedelta(minutes=15)),
                        "1h": frame(NOW.replace(minute=0) - dt.timedelta(hours=1)),
@@ -42,25 +42,28 @@ def signed(data, now=NOW, nonce="test-nonce-00000001"):
 
 
 class XauUsdFeedGateTests(unittest.TestCase):
-    def test_validated_fixture_stays_wait_until_legal_source_is_approved(self):
+    def test_validated_fixture_is_explicitly_synthetic_and_never_research_eligible(self):
         result = intake_payload(payload(), NOW, SourcePolicy())
-        self.assertEqual(result["status"], "BLOCKED")
-        self.assertIn("SOURCE_RIGHTS_OR_ENABLEMENT_NOT_VERIFIED", result["blockingReasons"])
-        self.assertEqual(result["frames"], {})
+        self.assertEqual(result["status"], "SYNTHETIC_TEST_ONLY")
+        self.assertEqual(result["sourceDataMode"], "synthetic")
+        self.assertIn("SYNTHETIC_DATA_NOT_REAL_MARKET_EVIDENCE", result["blockingReasons"])
+        self.assertEqual(set(result["frames"]), {"15min", "1h", "4h"})
+        self.assertFalse(result["researchEligible"])
         self.assertEqual(result["signal"], "WAIT")
         self.assertFalse(result["executable"])
         self.assertEqual(result["sourceRequestsMade"], 0)
         self.assertFalse(result["secretPersisted"])
 
-    def test_only_closed_utc_aligned_fresh_m15_h1_h4_are_admitted_for_research(self):
-        approved_fixture_policy = SourcePolicy(True, True, True, True, "UNIT FIXTURE ONLY", "UNCONFIGURED_TEST_SOURCE")
+    def test_closed_utc_aligned_fixture_frames_are_validated_but_quarantined(self):
+        approved_fixture_policy = SourcePolicy(True, True, True, True, "UNIT FIXTURE ONLY", "UNIT_TEST_FIXTURE")
         result = intake_payload(payload(), NOW, approved_fixture_policy)
-        self.assertEqual(result["status"], "ADMISSIBLE_FOR_RESEARCH_ONLY", result)
+        self.assertEqual(result["status"], "SYNTHETIC_TEST_ONLY", result)
         self.assertEqual(set(result["frames"]), {"15min", "1h", "4h"})
         self.assertTrue(all(row["closed"] and row["aligned"] and not row["gaps"]
                             for row in result["frames"].values()))
         self.assertEqual(result["signal"], "WAIT")
         self.assertFalse(result["executable"])
+        self.assertFalse(result["researchEligible"])
 
     def test_missing_gap_is_rejected_and_does_not_leak_other_frames_as_complete(self):
         data = payload()
@@ -105,7 +108,7 @@ class XauUsdFeedGateTests(unittest.TestCase):
 
     def test_timestamp_provider_and_mode_mismatches_block(self):
         policy = SourcePolicy(True, True, True, True, "UNIT FIXTURE ONLY", "EXPECTED_PROVIDER")
-        for field, value in (("instrument", "CFI-XAUUSD"), ("provider", "OTHER"), ("mode", "synthetic")):
+        for field, value in (("instrument", "CFI-XAUUSD"), ("provider", "OTHER"), ("mode", "unknown")):
             data = payload()
             data[field] = value
             result = intake_payload(data, NOW, policy)

@@ -167,17 +167,18 @@ def validate_frame(interval: str, frame: dict, now: dt.datetime) -> dict:
 
 
 def intake_payload(payload: dict, now: dt.datetime, policy: SourcePolicy) -> dict:
-    """Validate one normalized packet. Decision remains WAIT in all modes."""
+    """Validate a packet; explicitly synthetic packets stay quarantined from research."""
     reasons = []
-    if not policy.authorized:
+    mode = payload.get("mode") if isinstance(payload, dict) else None
+    if mode not in {"live", "recorded", "synthetic"}:
+        reasons.append("DATA_MODE_UNRECOGNIZED")
+    if mode in {"live", "recorded"} and not policy.authorized:
         reasons.append("SOURCE_RIGHTS_OR_ENABLEMENT_NOT_VERIFIED")
     if not isinstance(payload, dict):
         reasons.append("PAYLOAD_INVALID")
         payload = {}
     if payload.get("instrument") != "XAU/USD":
         reasons.append("INSTRUMENT_IDENTITY_UNCONFIRMED")
-    if payload.get("mode") != "live":
-        reasons.append("NON_LIVE_OR_UNVERIFIED_DATA")
     provider = payload.get("provider")
     if not isinstance(provider, str) or not provider.strip() or (policy.expected_provider and provider != policy.expected_provider):
         reasons.append("PROVIDER_IDENTITY_MISMATCH")
@@ -201,10 +202,14 @@ def intake_payload(payload: dict, now: dt.datetime, policy: SourcePolicy) -> dic
                 reasons.append(f"{interval.upper()}_REJECTED:{error}")
     if reasons:
         validated = {}
-    return {"status": "ADMISSIBLE_FOR_RESEARCH_ONLY" if not reasons else "BLOCKED",
-            "sourceDataMode": payload.get("mode", "unknown"), "provider": provider,
+    synthetic = mode == "synthetic" and not reasons
+    status = "SYNTHETIC_TEST_ONLY" if synthetic else "ADMISSIBLE_FOR_RESEARCH_ONLY" if not reasons else "BLOCKED"
+    blocking_reasons = ["SYNTHETIC_DATA_NOT_REAL_MARKET_EVIDENCE"] if synthetic else reasons
+    return {"status": status,
+            "sourceDataMode": mode or "unknown", "provider": provider,
             "instrument": payload.get("instrument"), "frames": validated,
-            "blockingReasons": reasons, "signal": "WAIT", "executable": False,
+            "blockingReasons": blocking_reasons, "researchEligible": status == "ADMISSIBLE_FOR_RESEARCH_ONLY",
+            "signal": "WAIT", "executable": False,
             "sourceRequestsMade": 0, "secretPersisted": False}
 
 
