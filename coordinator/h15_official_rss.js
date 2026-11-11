@@ -21,7 +21,8 @@ function parseFeed(xml,years){
    const match=title&&title.match(/^US:\s*H15\s+([0-9]+(?:\.[0-9]+)?)\s+(\d{4}-\d{2}-\d{2})\s+FRB\s+(2|10)-year Treasury constant maturity$/i);
    if(!match||Number(match[3])!==years)continue;
    const pct=Number(match[1]),date=match[2];
-   if(!(pct>=0&&pct<=30)||!fullDay.test(date)||new Date(date+"T00:00:00Z").toISOString().slice(0,10)!==date)continue;
+   if(!(pct>=0&&pct<=30)||!fullDay.test(date)||new Date(date+"T00:00:00Z").toISOString().slice(0,10)!==date)
+     throw Error("Invalid official H15 observation");
    const pub=getTag(item[1],"pubDate");
    const publishedUTC=pub&&!Number.isNaN(Date.parse(pub))?new Date(pub).toISOString():null;
    rows.push({date,pct,publishedUTC});
