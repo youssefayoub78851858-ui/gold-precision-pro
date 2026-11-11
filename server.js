@@ -45,6 +45,24 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, {});
   }
 
+  // Free independent indicative gold quote — DISPLAY ONLY, never passed to candle/signal engines.
+  if (req.url.split("?")[0] === "/api/v3/ultimate/gold-spot-reference") {
+    if (req.method !== "GET") return send(res,405,{error:"GET only"});
+    try {
+      const result=await require("./coordinator/gold_spot_reference").getGoldSpotReference({
+        offline:process.env.GOLD_SPOT_REFERENCE_DISABLED==="1"
+      });
+      if(result.executable!==false||result.signal!=="WAIT"||
+         result.readyForUltimateTrading!==false||result.realOHLC!==false||
+         Object.values(result.frames).some(x=>x.readyForTrading!==false))
+        throw Error("Unsafe spot research contract");
+      return send(res,200,result);
+    }catch(error){
+      return send(res,503,{error:"Spot reference temporarily unavailable",
+        signal:"WAIT",executable:false,readyForUltimateTrading:false});
+    }
+  }
+
   // Government news/calendar metadata ONLY. No trading signal or market-data subscription.
   if (req.url.split("?")[0] === "/api/v3/ultimate/official-macro") {
     if (req.method !== "GET") return send(res,405,{error:"GET only"});
