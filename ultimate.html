@@ -17,6 +17,13 @@
 <p>هذه الطبقة للعرض فقط. الأرشيف التاريخي السابق موجود للأبحاث، لكن لا نعتبره تغذية حيّة. لا ربط مع MT5، ولا صفقات حقيقية.</p>
 <p>المصدر: <a href="https://gold-api.com/docs" target="_blank" rel="noopener noreferrer" style="color:#e4bd69">Gold API — التوثيق</a></p>
 </section><hr>
+<section id="candle-source-readiness" aria-labelledby="candle-source-title">
+<h2 id="candle-source-title">حالة مصدر شموع XAUUSD — M15 / H1 / H4</h2>
+<p>اختبار Dukascopy التاريخي نجح، لكن الربط التلقائي متوقف لغاية التحقق من الموافقة المكتوبة وشروط استخدام البيانات. لا تجميع أو تنزيل جديد من هذا القسم.</p>
+<button type="button" id="candle-source-check">عرض جاهزية مصدر الشموع</button>
+<p id="candle-source-status" role="status">الشموع الحيّة غير مفعّلة — WAIT.</p>
+<div id="candle-source-report"></div>
+</section><hr>
 <section id="macro-research" aria-labelledby="macro-title">
 <h2 id="macro-title">الأخبار الاقتصادية والتقويم الأميركي — مصادر رسمية</h2>
 <p>إعلانات الفيدرالي وجدول نشر بيانات BLS، للبحث فقط. مواعيد الأحداث ليست نتائجها، ولا يوجد تحليل مفاجأة السوق أو تنفيذ صفقات.</p>
@@ -249,5 +256,42 @@ if(document.readyState==='loading'){
  document.addEventListener('DOMContentLoaded',refreshSpotReference,{once:true});
 }else{refreshSpotReference();}
 setInterval(()=>{if(!document.hidden&&!spotButton.disabled)refreshSpotReference();},60000);
+</script>
+<script>
+async function checkCandleSource(){
+ const button=document.getElementById('candle-source-check');
+ const status=document.getElementById('candle-source-status');
+ const report=document.getElementById('candle-source-report');
+ button.disabled=true;report.replaceChildren();
+ status.textContent='جارٍ فحص جاهزية المصدر وحقوق الاستخدام، بدون الاتصال بمزود البيانات...';
+ try{
+  const response=await fetch('/api/v3/ultimate/candle-source-readiness',{cache:'no-store',signal:AbortSignal.timeout(10000)});
+  if(!response.ok)throw Error('تعذّر فحص جاهزية المصدر: '+response.status);
+  const data=await response.json();
+  if(data.mode!=='CANDLE_SOURCE_FEASIBILITY_ONLY'||data.signal!=='WAIT'||
+     data.executable!==false||data.automaticPollingEnabled!==false||
+     data.latestConnected!==false||data.publicOhlcDistributionEnabled!==false)
+   throw Error('نتيجة مصدر الشموع غير آمنة للاستخدام');
+  status.textContent='عينة تاريخية ناجحة | صلاحية الربط التلقائي: بانتظار الموافقة المكتوبة | WAIT';
+  const counts=data.derivedSampleCounts||{};
+  const paragraph=document.createElement('p');
+  paragraph.textContent='عينة '+data.sampleDateUTC+' — M15: '+counts.M15+
+   ' | H1: '+counts.H1+' | H4: '+counts.H4+
+   '. هذه أعداد اختبار، وليست شموع حيّة داخل النظام.';
+  report.appendChild(paragraph);
+  const caution=document.createElement('p');
+  caution.textContent='لا يوجد اتصال مستمر بالشموع. لا تنبيهات تداول ولا إعادة نشر أسعار خام. الإنتاج وMT5 غير متصلين بهذا المصدر.';
+  report.appendChild(caution);
+  const link=document.createElement('a');
+  link.href=data.providerTerms;link.target='_blank';link.rel='noopener noreferrer';
+  link.style.color='#e4bd69';link.textContent='شروط مصدر البيانات الرسمية';
+  report.appendChild(link);
+ }catch(e){status.textContent=e.message;}
+ finally{button.disabled=false;}
+}
+document.getElementById('candle-source-check').onclick=checkCandleSource;
+if(document.readyState==='loading'){
+ document.addEventListener('DOMContentLoaded',checkCandleSource,{once:true});
+}else{checkCandleSource();}
 </script>
 </html>
