@@ -91,8 +91,10 @@ def validate_rows(schema, rows, as_of_utc):
         else:
             _validate_mbp(row, schema)
         timestamp = _stamp(row["ts_event"])
-        if timestamp <= previous_ts:
-            raise ValueError("DUPLICATE_OR_REVERSED_EVENT_TIME")
+        # Databento MDP 3.0 records for one instrument can share ts_event;
+        # preserve source/sequence order rather than requiring unique times.
+        if timestamp < previous_ts:
+            raise ValueError("REVERSED_EVENT_TIME")
         if timestamp > cutoff:
             raise ValueError("FUTURE_EVENT")
         if row["sequence"] <= previous_sequence:

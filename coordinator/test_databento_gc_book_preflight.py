@@ -50,6 +50,13 @@ class DatabentoGCBookPreflight(unittest.TestCase):
         self.assertFalse(out["researchEligible"])
         self.assertEqual(out["orderFlow"], "UNAVAILABLE")
 
+    def test_equal_event_times_follow_sequence_without_duplicate_time_rejection(self):
+        tied = [self.mbo[0], {**self.mbo[1], "ts_event": self.mbo[0]["ts_event"]}]
+        out = validate_rows("mbo", tied, AS_OF)
+        self.assertEqual(out["rowsValidated"], 2)
+        self.assertEqual(out["status"], "SYNTHETIC_TEST_ONLY")
+        self.assertFalse(out["feedEmitted"])
+
     def test_reversed_duplicate_future_and_bad_book_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "DUPLICATE_OR_REVERSED_SEQUENCE"):
             validate_rows("mbo", [self.mbo[0], {**self.mbo[1], "sequence": 10}], AS_OF)
