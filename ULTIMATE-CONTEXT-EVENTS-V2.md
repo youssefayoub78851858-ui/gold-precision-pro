@@ -7,7 +7,7 @@
 - `coordinator/v3_ultimate.js` ومنطقها ونتائجها السابقة باقية دون تعديل.
 - `coordinator/ultimate_v2.js` مع `ultimate_v2_contracts.js` يعرّفان النسخة الجديدة صراحةً بـ`contractVersion: ultimate-context-events-v2` و`version: 2`.
 - `research/ultimate-versions.json` يثبّت بصمات ملفات ونتائج r1، وبصمات تنفيذ r2. الاختبارات تفشل عند تغيير أي ملف مثبت. يعتمد r2 على الحسابات الفنية/المخاطر المشتركة المثبتة، ويستبدل عقود الأدلة وتجميعها بصورة مستقلة؛ لا تعديل صامت للنسخة القديمة.
-- API والواجهة والعامل الورقي الحاليون لا يتحولون تلقائياً إلى r2. الوصول الجديد CLI/وحدات بحثية محلية فقط. كل مخرجاتها `signal: WAIT` و`executable: false`، حتى عند وجود مرشح بحثي.
+- بقي مسار r1 والعامل الورقي الحاليان كما هما. تضيف واجهة المراجعة رفع لقطة محلية إلى `POST /api/v3/ultimate/r2`؛ لا يجلب المسار بيانات ولا يبدّل المحرك تلقائياً، ويثبت العقد `networkEnabled: false`, `signal: WAIT`, و`executable: false`. r1 ما زال متاحاً عبر `/api/v3/ultimate` وواجهة رفعه المستقلة.
 
 ```sh
 node coordinator/ultimate_v2.js /private/ultimate-v2-snapshot.json
