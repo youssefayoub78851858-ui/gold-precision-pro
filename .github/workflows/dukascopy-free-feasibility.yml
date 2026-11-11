@@ -1,0 +1,61 @@
+name: One-time public Dukascopy XAUUSD historical OHLC private feasibility
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths: [.github/workflows/dukascopy-free-feasibility.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Download just one day into ephemeral runner; report structural stats only
+        shell: bash
+        run: |
+          mkdir -p /tmp/gpp-duk
+          cd /tmp/gpp-duk
+          timeout 120s npx --yes dukascopy-node@1.51.1 \
+            -i xauusd -from 2026-11-10 -to 2026-11-11 -t m15 -f csv \
+            --batch-size 2 --retries 1 > /dev/null
+          node <<'JS'
+          const fs=require('node:fs'),path=require('node:path');
+          function find(dir){
+           return fs.readdirSync(dir,{withFileTypes:true}).flatMap(d=>d.isDirectory()?find(path.join(dir,d.name)):
+            /\.csv$/i.test(d.name)?[path.join(dir,d.name)]:[]);
+          }
+          const files=find('/tmp/gpp-duk');
+          if(files.length!==1)throw Error('Expected 1 private CSV, found '+files.length);
+          const csv=fs.readFileSync(files[0],'utf8').trim().split(/\r?\n/);
+          const header=csv.shift().split(',');
+          const map=Object.fromEntries(header.map((name,i)=>[name.toLowerCase().trim(),i]));
+          if(!['timestamp','open','high','low','close'].every(x=>x in map))throw Error('OHLC columns unavailable');
+          let prev=-Infinity,valid=0,notUTCAligned=0,duplicates=0,first=null,last=null,invalidOHLC=0;
+          const bars=[];
+          for(const line of csv){
+           const row=line.split(','),t=Number(row[map.timestamp]);
+           const [o,h,l,c]=['open','high','low','close'].map(k=>Number(row[map[k]]));
+           if(!Number.isFinite(t)||t%900000!==0){notUTCAligned++;continue;}
+           if(t<=prev){duplicates++;continue;}
+           if(!(o>0&&h>=Math.max(o,c)&&l<=Math.min(o,c)&&l>0)){invalidOHLC++;continue;}
+           prev=t;valid++;first??=t;last=t;bars.push({t,o,h,l,c});
+          }
+          function groups(window){
+            const by=new Map();
+            for(const bar of bars){
+             const bucket=Math.floor(bar.t/(window*60000))*(window*60000);
+             if(!by.has(bucket))by.set(bucket,[]);
+             by.get(bucket).push(bar);
+            }
+            return [...by.values()].filter(a=>a.length===window/15&&
+              a.every((x,i)=>i===0||x.t-a[i-1].t===900000)).length;
+          }
+          const report={source:'Dukascopy XAUUSD through community dukascopy-node',format:'private diagnostic only',
+           rawCSVExposed:false,rows:csv.length,validM15:valid,duplicates,notUTCAligned,invalidOHLC,
+           completeH1:groups(60),completeH4:groups(240),
+           firstObservedUTC:first?new Date(first).toISOString():null,
+           lastObservedUTC:last?new Date(last).toISOString():null,
+           productionChanged:false,tradeExecution:false};
+          console.log(JSON.stringify(report));
+          if(!valid||duplicates||notUTCAligned||invalidOHLC)process.exitCode=1;
+          JS
