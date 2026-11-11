@@ -107,7 +107,7 @@ def normalize(csv_text, as_of_utc):
             "rightsToRedistributeVerified": False,
             "readyForTrading": False,
             "signal": "WAIT",
-            "zeroFilledBars": True,
+            "filledMissingBars": 0,
             "requires": "Private provenance/entitlement validation and market-quality checks before research conclusions. No live service."
         }
     }
