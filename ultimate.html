@@ -118,7 +118,8 @@ document.getElementById('free-context-load').onclick=async()=>{
   }
   const warning=document.createElement('p');
   warning.textContent='قيم يومية منشورة، وليست بيانات آخر 5 دقائق. وقت الإتاحة الأولى غير مثبت؛ لذلك شروط العوائد اللحظية ما زالت محجوبة.'+
-    (d.refreshWarning?' '+d.refreshWarning:'');
+    (d.refreshWarning?' '+d.refreshWarning:'')+
+    (d.refreshDiagnosticCode?' | رمز تشخيص الاتصال: '+d.refreshDiagnosticCode:'');
   container.appendChild(warning);
  }catch(e){status.textContent=e.message;}
  finally{button.disabled=false;}
