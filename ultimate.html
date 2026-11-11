@@ -63,8 +63,7 @@ historicalButton.onclick=async()=>{
   area.appendChild(list);
   const title=document.createElement('h3');title.textContent='نتائج V2 السابقة — حساب افتراضي (لا تخص Ultimate)';area.appendChild(title);
   const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;font-size:.88em';
-  const labels=['الفترة','الصفقات','صافي 
-,'نسبة النجاح'];
+  const labels=['الفترة','الصفقات','الصافي بالدولار','نسبة النجاح'];
   const headRow=document.createElement('tr');
   for(const label of labels){const th=document.createElement('th');th.textContent=label;th.style.padding='8px 3px';headRow.appendChild(th);}
   table.appendChild(headRow);
