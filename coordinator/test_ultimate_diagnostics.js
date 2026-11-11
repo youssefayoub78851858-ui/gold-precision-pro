@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');
-const {diagnostics,orderFlow,riskPlan}=require('./ultimate_diagnostics');
+const {diagnostics,orderFlow,riskPlan,liquidityPools,monitoringAlerts}=require('./ultimate_diagnostics');
 
 const asOfUTC='2026-11-10T12:00:00Z';
 function candles(minutes,count=72){
@@ -25,6 +25,14 @@ assert.equal(diagnostics({asOfUTC,frames:{M15:candles(15,12)}},{signal:'WAIT'}).
 assert.equal(unavailable.orderFlow.status,'BLOCKED_MISSING');
 assert.equal(unavailable.riskPlan.status,'WAIT_NO_MTF_CANDIDATE');
 assert.equal(unavailable.technical.directionalVote,false);
+assert.equal(unavailable.technical.frames.M15.marketStructure.equalLevelLiquidity.method,'Equal confirmed swing levels within 0.1 ATR; diagnostic only, no signal vote');
+const alertView=monitoringAlerts(unavailable.technical.frames,{layers:{DXY:{status:'UNAVAILABLE',reason:'stale'},calendar:{status:'READY',blocked:true}}},{ok:false,reason:'spread missing'});
+assert.equal(alertView.delivery,'RESPONSE_ONLY_NO_PUSH_OR_EMAIL');
+assert.equal(alertView.signal,'WAIT');assert.equal(alertView.executable,false);
+assert.ok(alertView.items.some(x=>x.code==='TIMEFRAME_UNAVAILABLE'&&x.source==='H1'));
+assert.ok(alertView.items.some(x=>x.code==='SOURCE_UNAVAILABLE'&&x.source==='DXY'));
+assert.ok(alertView.items.some(x=>x.code==='EVENT_RISK_WINDOW'&&x.source==='calendar'));
+assert.ok(alertView.items.some(x=>x.code==='RISK_GATE_BLOCKED'));
 
 const valid=diagnostics({asOfUTC,frames}, {signal:'WAIT',executable:false});
 for(const tf of ['M15','H1','H4'])assert.equal(valid.technical.frames[tf].status,'READY');
@@ -59,4 +67,24 @@ assert.equal(riskPlan({spread:.4,risk:{}},{technical:{candidate:'BUY'},tradePlan
 
 const stale={...frames,M15:frames.M15.map(x=>({...x}))};stale.M15.at(-1).datetime='2026-11-10T11:30:00Z';
 assert.equal(diagnostics({asOfUTC,frames:stale},{signal:'WAIT'}).technical.frames.M15.status,'UNAVAILABLE');
+
+const poolBars=[
+ {open:10,high:10.5,low:9.5,close:10},
+ {open:10,high:10.5,low:9.5,close:10},
+ {open:10,high:10.5,low:9.5,close:10},
+ {open:10,high:10.5,low:9.5,close:10},
+ {open:10,high:10.5,low:9.5,close:10},
+ {open:10,high:10.5,low:9.5,close:10},
+ {open:10,high:15.2,low:9.5,close:15.0},
+ {open:10,high:10.5,low:9.5,close:10}
+];
+const pools=liquidityPools(poolBars,{highs:[{index:1,confirmedAt:3,price:15},{index:4,confirmedAt:6,price:15.05},{index:7,confirmedAt:9,price:18}],lows:[]},.1);
+assert.equal(pools.upper.length,1);
+assert.equal(pools.upper[0].touches,2);
+assert.equal(pools.upper[0].status,'SWEPT_AND_RECLAIMED');
+assert.equal(pools.upper[0].method,'Confirmed swing clustering; ATR-scaled heuristic');
+const brokenPools=liquidityPools([...poolBars.slice(0,7),{open:15,high:16,low:14,close:15.5}],
+ {highs:[{index:1,confirmedAt:3,price:15},{index:4,confirmedAt:6,price:15.05}],lows:[]},.1);
+assert.equal(brokenPools.upper[0].status,'BROKEN');
+assert.equal(liquidityPools(poolBars,{highs:[],lows:[]},0).tolerance,null);
 console.log('Ultimate supplemental diagnostics: all offline assertions passed');

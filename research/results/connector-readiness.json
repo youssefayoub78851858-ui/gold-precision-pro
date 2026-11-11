@@ -1,4 +1,15 @@
 {
+  "XAUUSD_CFI_MT5": {
+    "vendor": "CFI Lebanon MT5",
+    "instrument": "Exact CFI XAUUSD symbol; M15/H1/H4 candle capability pending official confirmation",
+    "licenseRequired": "Pending confirmation from CFI Lebanon",
+    "enabled": false,
+    "networkImplemented": false,
+    "credentialConfigured": false,
+    "requestsSent": 0,
+    "status": "AWAITING_OFFICIAL_CFI_CONFIRMATION",
+    "note": "No public read-only market-data API or Render/cloud permission verified. Technical inquiry was sent to help.lb@cfi.trade and verified in Gmail Sent; reply pending. No account, token, or provider request used."
+  },
   "DXY": {
     "vendor": "ICE export",
     "instrument": "DXY",

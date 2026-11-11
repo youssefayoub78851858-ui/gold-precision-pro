@@ -154,6 +154,10 @@ jobs:
         working-directory: coordinator
         run: python -m unittest -v test_mt5_readonly_export
 
+      - name: CFI Lebanon read-only source remains blocked until official confirmation
+        working-directory: coordinator
+        run: python -m unittest -v test_cfi_readonly_readiness
+
       - name: Free independent XAU spot reference validation and candle-blocking tests (mock only)
         working-directory: coordinator
         run: node test_gold_spot_reference.js

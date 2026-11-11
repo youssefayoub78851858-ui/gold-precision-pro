@@ -1,5 +1,5 @@
 {
-  "reviewedUTCDate": "2026-11-10",
+  "reviewedUTCDate": "2026-11-11",
   "scope": "Public documentation review only; no market feeds/accounts/quotas activated",
   "sources": [
     {
@@ -29,6 +29,32 @@
         "networkEnabled": false,
         "automatedUploadEnabled": false,
         "signal": "WAIT"
+      }
+    },
+    {
+      "layer": "XAUUSD_CFI_MT5",
+      "instrument": "CFI Lebanon MT5 exact broker XAUUSD symbol; native closed M15/H1/H4 capability unconfirmed",
+      "candidate": "Official CFI Lebanon read-only market-data API, MT5 gateway, FIX, or authorized export method; pending support response",
+      "noAdditionalSubscription": "UNKNOWN_PENDING_CFI_SUPPORT",
+      "rights": "No public CFI Lebanon API/feed entitlement or cloud-hosting permission verified. Do not infer that a separate CFI-SC API agreement applies to a Lebanon MT5 account.",
+      "history": "M15/H1/H4 support, timestamp conventions, closed-bar semantics, and historical depth not confirmed",
+      "update": "CFI Lebanon public MT5 page documents mobile/desktop platform features but does not document a read-only market-data API or Render connection.",
+      "limits": "Official CFI technical inquiry was sent to help.lb@cfi.trade and verified in Gmail Sent; no reply was present at the latest check. No credentials or account data disclosed; no market-provider requests made.",
+      "gateFitness": "AWAITING_OFFICIAL_CFI_CONFIRMATION_NO_NETWORK_OR_ACCOUNT_ACCESS",
+      "references": [
+        "https://cfi.trade/en/lb/platforms/mt5",
+        "https://cfi.trade/en/lb/contact-us",
+        "https://cfi.trade/en/lb/company/regulatory-documents"
+      ],
+      "networkEnabled": false,
+      "requestsSent": 0,
+      "entitlementIndependentlyVerified": false,
+      "supportInquiry": {
+        "recipient": "help.lb@cfi.trade",
+        "approved": true,
+        "sent": true,
+        "messageId": "1a1cc029d89bbebd",
+        "reason": "Sent via connected Gmail and verified in Sent; awaiting CFI reply."
       }
     },
     {
