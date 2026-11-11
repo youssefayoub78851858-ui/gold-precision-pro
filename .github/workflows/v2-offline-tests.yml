@@ -215,6 +215,10 @@ jobs:
         working-directory: coordinator
         run: python -m unittest -v test_databento_local test_official_recorded
 
+      - name: Databento GC MBO and MBP normalized fixture preflight (synthetic only)
+        working-directory: coordinator
+        run: python -m unittest -v test_databento_gc_book_preflight
+
       - name: XAUUSD signed intake, UTC candle quality, gaps and outage backoff (offline fixtures)
         working-directory: coordinator
         run: |
