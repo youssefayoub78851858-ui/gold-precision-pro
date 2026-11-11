@@ -3,6 +3,7 @@
 // Does not feed trading gates, infer surprises/sentiment or access brokers.
 const FED_URL="https://www.federalreserve.gov/feeds/press_monetary.xml";
 const BLS_URL="https://www.bls.gov/schedule/news_release/bls.ics";
+const {classifyHeadline}=require("./ultimate_news_impact");
 let memo=null, expires=0, inflight=null;
 function unescapeXml(s){
  return String(s||"").replace(/^<!\[CDATA\[|\]\]>$/g,"").replace(/&#(x[0-9a-f]+|\d+);|&(amp|quot|apos|lt|gt);/gi,(all,num,ent)=>{
@@ -34,6 +35,23 @@ function parseFedPolicyRss(xml,now=new Date()){
  out.sort((a,b)=>b.publishedUTC.localeCompare(a.publishedUTC));
  if(!out.length)throw Error("FED_NO_VALID_RELEASE");
  return out.slice(0,6);
+}
+function reviewOfficialFedHeadlines(headlines,checkedUTC){
+ const checked=Date.parse(checkedUTC);
+ const base={source:"Federal Reserve",signal:"WAIT",executable:false,directionalVote:false,items:[]};
+ if(!Number.isFinite(checked)||!Array.isArray(headlines))
+  return {...base,status:"BLOCKED_SOURCE",reason:"Official feed and check time are required"};
+ const items=[];
+ for(const headline of headlines){
+  let url;try{url=new URL(headline?.url);}catch{return {...base,status:"BLOCKED_PROVENANCE",reason:"Invalid official headline URL"};}
+  if(url.protocol!=="https:"||url.hostname!=="www.federalreserve.gov"||
+     !url.pathname.startsWith("/newsevents/pressreleases/"))
+   return {...base,status:"BLOCKED_PROVENANCE",reason:"Headline is outside the verified Federal Reserve release path"};
+  items.push(classifyHeadline({id:url.pathname,title:headline.title,publishedUTC:headline.publishedUTC,
+   availableUTC:checkedUTC},{source:"Federal Reserve"},checkedUTC));
+ }
+ return {...base,status:"RESEARCH_ONLY",items,
+  reason:"Keyword-based review of official Fed RSS only; labels are low-confidence scenarios, not AI, surprise analysis, market prediction or trading advice"};
 }
 function newYorkToUTC(ymd,hms){
  if(!/^\d{8}$/.test(ymd)||!/^\d{6}$/.test(hms))throw Error("BLS_TIME");
@@ -93,7 +111,9 @@ function parseBlsCalendar(ics,now=new Date()){
 }
 async function getOfficialMacroReview({fetchFn=fetch,nowMs=Date.now(),offline=false}={}){
  if(offline)return {mode:"OFFICIAL_MACRO_REVIEW",signal:"WAIT",executable:false,trading:"disabled",liveData:false,
-  feeds:{fed:"OFFLINE_TEST",bls:"OFFLINE_TEST"},headlines:[],calendar:[],note:"Offline tests: no provider requests",updatedUTC:null};
+  feeds:{fed:"OFFLINE_TEST",bls:"OFFLINE_TEST"},headlines:[],calendar:[],
+  headlineReview:reviewOfficialFedHeadlines([],new Date(nowMs).toISOString()),
+  note:"Offline tests: no provider requests",updatedUTC:null};
  if(memo&&nowMs<expires)return memo;
  if(inflight)return inflight;
  inflight=(async()=>{
@@ -115,12 +135,16 @@ async function getOfficialMacroReview({fetchFn=fetch,nowMs=Date.now(),offline=fa
    }
   }));
   // Missing sources never magically become verified events. No trading authority.
+  const checkedUTC=new Date(nowMs).toISOString();
   const value={mode:"OFFICIAL_MACRO_REVIEW",signal:"WAIT",executable:false,trading:"disabled",liveData:false,
    researchOnly:true,automaticTrading:false,firstAvailabilityVerified:false,
    marketDataRequests:0,marketPrice:null,macroSentiment:null,
-   checkedUTC:new Date(nowMs).toISOString(),
+   checkedUTC,
    feeds:{fed:results[0].status,bls:results[1].status},
    headlines:results[0].items,calendar:results[1].items,
+   headlineReview:results[0].status==="OFFICIAL_REFRESHED"?
+    reviewOfficialFedHeadlines(results[0].items,checkedUTC):
+    {...reviewOfficialFedHeadlines([],checkedUTC),status:"BLOCKED_SOURCE",reason:"Federal Reserve RSS is unavailable; no headline review was performed"},
    fedSource:FED_URL,blsSource:BLS_URL,
    note:"Fed RSS and BLS calendar are public release metadata, not evidence of market surprise, actual-vs-consensus, or an intraday trading signal."
   };
@@ -129,4 +153,4 @@ async function getOfficialMacroReview({fetchFn=fetch,nowMs=Date.now(),offline=fa
  })();
  try{return await inflight;}finally{inflight=null;}
 }
-module.exports={FED_URL,BLS_URL,parseFedPolicyRss,newYorkToUTC,parseBlsCalendar,getOfficialMacroReview};
+module.exports={FED_URL,BLS_URL,parseFedPolicyRss,reviewOfficialFedHeadlines,newYorkToUTC,parseBlsCalendar,getOfficialMacroReview};

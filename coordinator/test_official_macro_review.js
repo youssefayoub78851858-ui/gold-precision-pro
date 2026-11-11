@@ -1,11 +1,14 @@
 "use strict";
 const assert=require("node:assert/strict");
-const {parseFedPolicyRss,newYorkToUTC,parseBlsCalendar,getOfficialMacroReview,FED_URL,BLS_URL}=require("./official_macro_review");
+const {parseFedPolicyRss,reviewOfficialFedHeadlines,newYorkToUTC,parseBlsCalendar,getOfficialMacroReview,FED_URL,BLS_URL}=require("./official_macro_review");
 const now=new Date("2026-11-11T14:30:00Z");
 const rss=`<?xml version="1.0"?><rss version="2.0"><channel><title>FRB</title>
 <item><title>Federal Reserve issues FOMC statement</title>
 <link><![CDATA[https://www.federalreserve.gov/newsevents/pressreleases/monetary20261028a.htm]]></link>
 <pubDate><![CDATA[Wed, 28 Oct 2026 18:00:00 GMT]]></pubDate></item>
+<item><title>Federal Reserve signals hawkish higher rates</title>
+<link><![CDATA[https://www.federalreserve.gov/newsevents/pressreleases/monetary20261111a.htm]]></link>
+<pubDate><![CDATA[Wed, 11 Nov 2026 14:25:00 GMT]]></pubDate></item>
 <item><title>Minutes of the Federal Open Market Committee &amp; policy</title>
 <link><![CDATA[https://www.federalreserve.gov/newsevents/pressreleases/monetary20261007a.htm]]></link>
 <pubDate><![CDATA[Wed, 07 Oct 2026 18:00:00 GMT]]></pubDate></item>
@@ -35,9 +38,16 @@ END:VEVENT
 END:VCALENDAR`;
 async function main(){
  const stories=parseFedPolicyRss(rss,now);
- assert.equal(stories.length,2);
- assert.match(stories[1].title,/& policy/);
- assert.equal(stories[0].publishedUTC,"2026-10-28T18:00:00.000Z");
+ assert.equal(stories.length,3);
+ assert.match(stories[2].title,/& policy/);
+ assert.equal(stories[0].publishedUTC,"2026-11-11T14:25:00.000Z");
+ const reviewed=reviewOfficialFedHeadlines(stories,now.toISOString());
+ assert.equal(reviewed.status,"RESEARCH_ONLY");
+ assert.equal(reviewed.items[0].goldPressure,"DOWNWARD_PRESSURE");
+ assert.equal(reviewed.items[0].confidence,"LOW");
+ assert.equal(reviewed.items[2].status,"STALE");
+ assert.equal(reviewed.executable,false);assert.equal(reviewed.signal,"WAIT");
+ assert.equal(reviewOfficialFedHeadlines([{...stories[0],url:"https://example.com/fake"}],now.toISOString()).status,"BLOCKED_PROVENANCE");
  assert.equal(newYorkToUTC("20261113","083000"),"2026-11-13T13:30:00.000Z"); // EST
  assert.equal(newYorkToUTC("20260713","083000"),"2026-07-13T12:30:00.000Z"); // EDT
  const events=parseBlsCalendar(ics,now);
@@ -63,7 +73,10 @@ async function main(){
  assert.equal(result.automaticTrading,false);
  assert.equal(result.feeds.fed,"OFFICIAL_REFRESHED");
  assert.equal(result.feeds.bls,"OFFICIAL_REFRESHED");
- assert.equal(result.headlines.length,2);
+ assert.equal(result.headlines.length,3);
+ assert.equal(result.headlineReview.status,"RESEARCH_ONLY");
+ assert.equal(result.headlineReview.items[0].goldPressure,"DOWNWARD_PRESSURE");
+ assert.equal(result.headlineReview.executable,false);
  assert.equal(result.calendar.length,2);
  assert.equal(requests.length,2);
  const cached=await getOfficialMacroReview({nowMs:now.getTime()+1000,fetchFn:()=>{throw Error("Should be cached");}});
@@ -71,6 +84,7 @@ async function main(){
  const offline=await getOfficialMacroReview({offline:true});
  assert.equal(offline.feeds.fed,"OFFLINE_TEST");
  assert.equal(offline.headlines.length,0);
+ assert.equal(offline.headlineReview.items.length,0);
  assert.equal(offline.executable,false);
  console.log("PASS: official macro RSS and ICS, daylight-saving, source-gating and no-trade contract");
 }

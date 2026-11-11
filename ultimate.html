@@ -210,7 +210,9 @@ document.getElementById('macro-refresh').onclick=async()=>{
   if(!response.ok)throw Error('تعذّر تحميل بيانات الاقتصاد: '+response.status);
   const data=await response.json();
   if(data.mode!=='OFFICIAL_MACRO_REVIEW'||data.executable!==false||
-   data.signal!=='WAIT'||data.liveData!==false||!Array.isArray(data.calendar)||!Array.isArray(data.headlines))
+   data.signal!=='WAIT'||data.liveData!==false||!Array.isArray(data.calendar)||!Array.isArray(data.headlines)||
+   !data.headlineReview||data.headlineReview.executable!==false||data.headlineReview.signal!=='WAIT'||
+   data.headlineReview.directionalVote!==false||!Array.isArray(data.headlineReview.items))
    throw Error('رفض بيانات اقتصادية غير متوافقة مع الأمان');
   const fedOk=data.feeds.fed==='OFFICIAL_REFRESHED',blsOk=data.feeds.bls==='OFFICIAL_REFRESHED';
   status.textContent='حالة النظام WAIT | تقويم BLS: '+(blsOk?'متصل':'غير متاح')+
@@ -232,8 +234,16 @@ document.getElementById('macro-refresh').onclick=async()=>{
   render(headlines,'آخر إعلانات السياسة النقدية — منشورة بالفعل',data.headlines,(li,e)=>{
    const a=document.createElement('a');a.href=e.url;a.target='_blank';a.rel='noopener noreferrer';a.style.color='#e4bd69';
    a.textContent=e.title;li.textContent=local(e.publishedUTC)+' — ';li.appendChild(a);
+   const review=data.headlineReview.items.find(x=>x.id===new URL(e.url).pathname);
+   const labels={UPWARD_PRESSURE:'ضغط محتمل صعوداً',DOWNWARD_PRESSURE:'ضغط محتمل هبوطاً',UNDETERMINED:'الأثر غير محسوم'};
+   const detail=document.createElement('div');detail.style.color='#b8c5d5';detail.style.fontSize='0.9em';
+   detail.textContent=review?.status==='RULE_TAGGED'?
+    'وسم قواعدي: '+(labels[review.goldPressure]||'غير محسوم')+' (ثقة منخفضة، سياق بحثي فقط)':
+    review?.status==='STALE'?'قديم خارج نافذة المراجعة؛ لا تصنيف للأثر':
+    'لا يوجد تصنيف موثوق للأثر: '+(review?.reason||'المصدر غير متاح');
+   li.appendChild(detail);
   });
-  const p=document.createElement('p');p.textContent='لا توجد أسعار حيّة، أو مقارنة توقعات السوق بالنتائج، أو استنتاج تأثير الخبر على الذهب. هذه معلومات للمتابعة فقط؛ أي بيانات ناقصة تمنع التداول.';headlines.appendChild(p);
+  const p=document.createElement('p');p.textContent='وسوم الكلمات قواعدية وليست ذكاءً اصطناعياً أو مقارنةً بتوقعات السوق، ولا تتنبأ برد الذهب. القرار WAIT والتنفيذ معطّل دائماً.';headlines.appendChild(p);
  }catch(e){status.textContent=e.message;}
  finally{btn.disabled=false;}
 };
