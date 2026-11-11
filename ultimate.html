@@ -1,6 +1,14 @@
 <!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Gold Precision Pro Ultimate — Offline Research</title>
 <style>body{font:18px system-ui;background:#101820;color:#eee;max-width:1000px;margin:3em auto;padding:1em}button,input{font:inherit;padding:12px;box-sizing:border-box;max-width:100%}label{display:block;margin:1em 0}pre{max-width:100%;box-sizing:border-box}@media(max-width:600px){body{margin:.5em auto;padding:.7em;font-size:16px}button{width:100%}}pre{direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;background:#192630;padding:20px}h1{color:#e4bd69}</style>
 <h1>Gold Precision Pro Ultimate</h1><p>مختبر بيانات محاكاة أو مسجلة فقط. لا اتصال بمزودي الأسعار ولا تنفيذ أوامر. النتائج ليست إثباتاً لربحية الاستراتيجية.</p>
+<section id="recorded-review" aria-labelledby="recorded-review-title">
+<h2 id="recorded-review-title">نتائج الذهب التاريخية — بدون تنزيل ملف</h2>
+<p>مراجعة محفوظة لشهري أيلول وتشرين الأول 2026: لا أسعار مباشرة، ولا بيانات GC أو Order Flow مؤكدة، ولا تنفيذ صفقات. نعرض النتائج المشتقة فقط؛ الشموع الخام لا تُنشر من هذه الصفحة لأن حقوق إعادة توزيعها لم تُتحقق.</p>
+<button id="recorded-review-load" type="button">عرض الاختبارات التاريخية المسجّلة</button>
+<p id="recorded-review-status" role="status">اضغط الزر لعرض تقارير البحث الموجودة، دون أي اتصال بمزود بيانات.</p>
+<div id="recorded-review-data"></div>
+</section>
+<hr>
 <label>ملف أدلة JSON <input id="file" type="file" accept=".json,application/json"></label><button id="run">تحليل الملف</button><p id="data-mode" role="status">البيانات: لم تُحمّل؛ لا اتصال حي.</p><p id="status" role="status">اختر ملفاً؛ لا جلب تلقائي.</p><ul id="gate-summary"></ul><details><summary>تفاصيل الأدلة والقرار</summary><pre id="result"></pre></details>
 <section aria-labelledby="paper-title"><h2 id="paper-title">سجل التداول الورقي المحلي</h2><p>ارفع تقرير CLI من حساب SQLite. التقرير ملف محلي للعرض فقط، وليس حساب وسيط أو نتيجة تداول حقيقية. المحاكاة الاصطناعية لا تثبت الربحية.</p><label>تقرير ورقي JSON <input id="paper-file" type="file" accept=".json,application/json"></label><button id="paper-load">عرض السجل المحلي</button><p id="paper-status" role="status">لا يوجد حساب محمّل.</p><div id="paper-trades"></div><details><summary>تفاصيل الحساب والصفقات</summary><pre id="paper-result"></pre></details></section>
 <script>
@@ -25,4 +33,55 @@ document.getElementById('paper-load').onclick=async()=>{
  document.getElementById('paper-result').textContent=JSON.stringify(data,null,2);
  }catch(e){document.getElementById('paper-status').textContent=e.message;}
 };
-</script></html>
+</script>
+<script>
+const historicalButton=document.getElementById('recorded-review-load');
+historicalButton.onclick=async()=>{
+ const status=document.getElementById('recorded-review-status');
+ const area=document.getElementById('recorded-review-data');
+ historicalButton.disabled=true;area.replaceChildren();status.textContent='جارٍ قراءة تقارير الاختبار المحفوظة فقط...';
+ try{
+  const response=await fetch('/api/v3/ultimate/recorded-review',{cache:'no-store',signal:AbortSignal.timeout(10000)});
+  if(!response.ok)throw Error('تعذر تحميل التقرير المحفوظ: '+response.status);
+  const data=await response.json();
+  if(data.mode!=='STORED_RECORDED_RESEARCH'||data.signal!=='WAIT'||data.executable!==false||data.liveData!==false)
+   throw Error('بيانات غير متوافقة مع وضع البحث الآمن');
+  status.textContent='WAIT — لا تداول | التغطية المشتركة: '+data.allLayersTogetherPct+'% | المصادر الخارجية الناقصة: '+data.missingLayers.length;
+  const summary=document.createElement('p');
+  summary.textContent='أيلول–تشرين الأول 2026: '+data.countM15+' لحظة M15 تاريخية، منها '+data.priceReady+' صالحة فنياً للبيانات السعرية ('+data.priceCoveragePct+'%). هذه ليست جودة مثبتة للمصدر أو نتيجة تداول.';
+  area.appendChild(summary);
+  const missing=document.createElement('p');
+  missing.textContent='المصادر غير المكتملة: '+data.missingLayers.join('، ')+'.';
+  area.appendChild(missing);
+  const cases=document.createElement('h3');cases.textContent='الحالات الفنية البحثية (ليست صفقات)';area.appendChild(cases);
+  const list=document.createElement('ul');
+  for(const c of data.researchCases){
+   const li=document.createElement('li');
+   li.textContent=c.asOfUTC+' — '+c.technicalLabel+' — محجوبة؛ عدد أسباب المنع: '+c.blockers.length;
+   list.appendChild(li);
+  }
+  area.appendChild(list);
+  const title=document.createElement('h3');title.textContent='نتائج V2 السابقة — حساب افتراضي (لا تخص Ultimate)';area.appendChild(title);
+  const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;font-size:.88em';
+  const labels=['الفترة','الصفقات','صافي 
+,'نسبة النجاح'];
+  const headRow=document.createElement('tr');
+  for(const label of labels){const th=document.createElement('th');th.textContent=label;th.style.padding='8px 3px';headRow.appendChild(th);}
+  table.appendChild(headRow);
+  const periods={train:'تدريب',validation:'تحقق',test:'اختبار'};
+  for(const w of data.v2Windows){
+   const tr=document.createElement('tr');
+   for(const v of [periods[w.window]||w.window,w.trades,Number(w.netPnL).toFixed(2),(100*w.winRate).toFixed(1)+'%']){
+    const td=document.createElement('td');td.textContent=String(v);td.style.cssText='padding:8px 3px;border-top:1px solid #4a5360;text-align:center';tr.appendChild(td);
+   }
+   table.appendChild(tr);
+  }
+  area.appendChild(table);
+  const caution=document.createElement('p');
+  caution.textContent='Ultimate فتح 0 صفقات في هذه التقارير لنقص بيانات DXY والسندات وGC والأخبار وOrder Flow. نتائج V2 تاريخية وغير مستقلة لإثبات الربحية. لا يوجد أي اتصال حي أو تكلفة بيانات.';
+  area.appendChild(caution);
+ }catch(error){status.textContent=error.message;}
+ finally{historicalButton.disabled=false;}
+};
+</script>
+</html>
