@@ -50,10 +50,16 @@ const server = http.createServer(async (req, res) => {
   if (req.url.split("?")[0] === "/api/v3/ultimate/free-context") {
     if (req.method !== "GET") return send(res,405,{error:"GET only"});
     try {
-      const data=require("./coordinator/h15_daily_context").readH15DailyContext();
+      const data=await require("./coordinator/h15_official_rss").readAutoDailyContext({
+        offline:process.env.H15_OFFICIAL_RSS_DISABLED==="1"
+      });
+      if(data.executable!==false||data.signal!=="WAIT"||
+         data.liveData!==false||data.readyForFiveMinuteGate!==false)
+        throw Error("Unsafe official context contract");
       return send(res,200,data);
     } catch (error) {
-      return send(res,503,{error:"Verified official daily context unavailable",signal:"WAIT",executable:false});
+      return send(res,503,{error:"Official daily context unavailable",
+        signal:"WAIT",executable:false,readyForFiveMinuteGate:false});
     }
   }
 
