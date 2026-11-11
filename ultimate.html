@@ -53,7 +53,7 @@
 <p>ارفع لقطة أدلة محلية لمراجعة r2. لا يوجد جلب تلقائي أو اتصال بمزود بيانات؛ المخرجات بحثية فقط وتبقى WAIT و غير قابلة للتنفيذ. r1 ونتائجها محفوظة كما هي.</p>
 <label>لقطة أدلة r2 بصيغة JSON <input id="r2-file" type="file" accept=".json,application/json"></label>
 <button id="r2-run" type="button">مراجعة الأدلة على Ultimate r2</button><p id="r2-status" role="status">لم تُرفع أدلة إلى r2.</p>
-<ul id="r2-gates"></ul><details><summary>تفاصيل Ultimate r2 والمقارنة مع r1</summary><pre id="r2-result"></pre></details></section>
+<ul id="r2-gates"></ul><div id="r2-diagnostics" aria-live="polite"></div><details><summary>تفاصيل Ultimate r2 والمقارنة مع r1</summary><pre id="r2-result"></pre></details></section>
 <label>ملف أدلة JSON <input id="file" type="file" accept=".json,application/json"></label><button id="run">تحليل الملف</button><p id="data-mode" role="status">البيانات: لم تُحمّل؛ لا اتصال حي.</p><p id="status" role="status">اختر ملفاً؛ لا جلب تلقائي.</p><ul id="gate-summary"></ul><details><summary>تفاصيل الأدلة والقرار</summary><pre id="result"></pre></details>
 <section aria-labelledby="paper-title"><h2 id="paper-title">سجل التداول الورقي المحلي</h2><p>ارفع تقرير CLI من حساب SQLite. التقرير ملف محلي للعرض فقط، وليس حساب وسيط أو نتيجة تداول حقيقية. المحاكاة الاصطناعية لا تثبت الربحية.</p><label>تقرير ورقي JSON <input id="paper-file" type="file" accept=".json,application/json"></label><button id="paper-load">عرض السجل المحلي</button><p id="paper-status" role="status">لا يوجد حساب محمّل.</p><div id="paper-trades"></div><details><summary>تفاصيل الحساب والصفقات</summary><pre id="paper-result"></pre></details></section>
 <script>
@@ -90,6 +90,14 @@ document.getElementById('r2-run').onclick=async()=>{
   if(data.version!==2||data.contractVersion!=='ultimate-context-events-v2'||data.signal!=='WAIT'||data.executable!==false||data.networkEnabled!==false)throw Error('استجابة r2 لا تطابق عقد البحث الآمن');
   status.textContent='Ultimate r2 | WAIT | مصادر جاهزة: '+data.monitoring.readyFeeds+'/'+data.monitoring.totalFeeds+' | التنفيذ والتداول معطّلان.';
   for(const reason of data.monitoring.blocked){const item=document.createElement('li');item.textContent='سبب الحجب: '+reason;document.getElementById('r2-gates').appendChild(item);}
+  const diag=data.diagnostics||{},technical=diag.technical||{},flow=diag.orderFlow||{},risk=diag.riskPlan||{};
+  const summary=document.getElementById('r2-diagnostics');summary.replaceChildren();
+  const lines=[
+   'التحليل الفني: '+(technical.status||'غير متاح')+' — M15/H1/H4: '+Object.entries(technical.frames||{}).map(([tf,x])=>tf+' '+(x.status==='READY'?'جاهز بحثياً':x.status==='PARTIAL'?'جزئي':'غير متاح')).join(' | '),
+   'Order Flow: '+(flow.status||'غير متاح')+' — '+(flow.reason||'لا توجد بيانات مؤهلة'),
+   'إدارة المخاطر: '+(risk.status||'WAIT')+(risk.entry!==null&&risk.entry!==undefined?' — دخول بحثي '+risk.entry+' / SL '+risk.sl+' / TP '+[risk.tp1,risk.tp2,risk.tp3].join(', '):' — لا توجد مستويات مؤهلة'),
+   'كل المؤشرات وصفية فقط؛ القرار WAIT والتداول معطّل.'
+  ];for(const line of lines){const p=document.createElement('p');p.textContent=line;summary.appendChild(p);}
   document.getElementById('r2-result').textContent=JSON.stringify(data,null,2);
  }catch(e){status.textContent=e.message;}finally{button.disabled=false;}
 };

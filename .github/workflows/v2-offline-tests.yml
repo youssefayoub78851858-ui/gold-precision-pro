@@ -166,6 +166,7 @@ jobs:
         working-directory: coordinator
         run: |
           node test_v3_ultimate.js
+          node test_ultimate_diagnostics.js
           python -m unittest -v test_ultimate_http test_ultimate_replay test_ultimate_paper test_ultimate_connectors test_ultimate_walkforward test_ultimate_intake
 
       - name: Recorded BID walk-forward comparison (offline, no provider)
