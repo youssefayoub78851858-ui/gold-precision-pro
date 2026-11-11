@@ -79,6 +79,8 @@ bool ExportClosedM15()
                 DoubleToString(rates[i].low, _Digits), DoubleToString(rates[i].close, _Digits),
                 (long)rates[i].tick_volume, (long)rates[i].real_volume, (int)rates[i].spread);
    }
+   // A footer lets the local reader detect a partial file during a rewrite.
+   FileWrite(file, "#SNAPSHOT_END", observed, copied);
    FileFlush(file);
    FileClose(file);
    g_lastClosedBar = newest;

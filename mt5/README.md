@@ -29,6 +29,9 @@ The importer rejects bad symbols, timestamps, offsets, duplicates, out-of-order
 rows, forming bars, invalid OHLC, and stale snapshots. H1/H4 are aggregated from
 complete UTC-aligned groups of M15 bars; gaps are not fabricated. MT5 tick
 volume is kept distinct from exchange-wide GC volume.
+The CSV ends with a count/time footer; the importer rejects missing or
+mismatched footers, so a read taken during a file rewrite cannot be admitted as
+a complete snapshot.
 
 ## Limits that keep it research-only
 

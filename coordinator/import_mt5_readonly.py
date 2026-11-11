@@ -58,14 +58,25 @@ def normalize_snapshot(csv_text, expected_symbol, as_of_utc, max_age_minutes=20)
         raise ValueError("exact broker symbol must be supplied")
     if not isinstance(csv_text, str) or len(csv_text) > 12_000_000:
         raise ValueError("CSV unavailable or exceeds 12 MB research limit")
-    reader = csv.DictReader(io.StringIO(csv_text))
-    columns = {str(name or "").strip().lower() for name in (reader.fieldnames or [])}
+    stream = csv.DictReader(io.StringIO(csv_text))
+    columns = {str(name or "").strip().lower() for name in (stream.fieldnames or [])}
     if not REQUIRED.issubset(columns):
         raise ValueError("MT5 CSV header is incomplete")
 
     grouped, observations, offsets, seen = [], set(), set(), set()
+    footer_observed, footer_count, footer_seen = None, None, False
     previous = None
-    for line, row in enumerate(reader, start=2):
+    for line, row in enumerate(stream, start=2):
+        if footer_seen:
+            raise ValueError("data found after MT5 snapshot footer")
+        if row.get("symbol") == "#SNAPSHOT_END":
+            footer_seen = True
+            footer_observed = row.get("timeframe")
+            try:
+                footer_count = int(row.get("bar_open_server"))
+            except (TypeError, ValueError) as exc:
+                raise ValueError("invalid MT5 snapshot footer row count") from exc
+            continue
         if row.get("symbol") != expected_symbol:
             raise ValueError(f"row {line}: symbol differs from confirmed chart symbol")
         if row.get("timeframe") != "M15":
@@ -113,6 +124,10 @@ def normalize_snapshot(csv_text, expected_symbol, as_of_utc, max_age_minutes=20)
                         "spreadPoints": spread_points})
     if not grouped:
         raise ValueError("no closed M15 bars")
+    if not footer_seen:
+        raise ValueError("MT5 snapshot footer missing; file may have been read mid-write")
+    if footer_count != len(grouped) or footer_observed not in {x.isoformat().replace("+00:00", "Z") for x in observations}:
+        raise ValueError("MT5 snapshot footer does not match rows")
     if len(observations) != 1 or len(offsets) != 1:
         raise ValueError("snapshot must have one observation time and one server offset")
 
@@ -160,7 +175,7 @@ def normalize_snapshot(csv_text, expected_symbol, as_of_utc, max_age_minutes=20)
         "lastClosedM15UTC": grouped[-1]["datetime"], "lastBarCloseAgeMinutes": round(age_minutes, 3),
         "closedCounts": {"M15": len(grouped), "H1": len(h1), "H4": len(h4)},
         "incompleteUTCGroups": {"H1": incomplete_h1, "H4": incomplete_h4},
-        "quality": {"ordered": True, "duplicates": 0, "invalidOHLC": 0, "formingBarsExcluded": 0,
+        "quality": {"snapshotComplete": True, "ordered": True, "duplicates": 0, "invalidOHLC": 0, "formingBarsExcluded": 0,
                     "offsetHistoryVerified": False, "entitlementVerified": False},
         "readiness": "FRESH_LOCAL_EXPORT_RESEARCH_ONLY" if fresh and enough else "WAIT_INSUFFICIENT_OR_STALE",
         "readyForTrading": False,

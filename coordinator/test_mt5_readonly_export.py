@@ -39,6 +39,7 @@ def make_csv(count=WIDTH, omit=(), as_of=None, offset=120, symbol="XAUUSD.a", re
                      "observed_utc", "open", "high", "low", "close", "tick_volume",
                      "real_volume", "spread_points"])
     writer.writerows(rows)
+    writer.writerow(["#SNAPSHOT_END", observed.isoformat().replace("+00:00", "Z"), len(rows)])
     return out.getvalue(), final_close
 
 
@@ -55,6 +56,7 @@ class MT5ReadOnlyExport(unittest.TestCase):
         self.assertFalse(result["executable"])
         self.assertFalse(result["readyForTrading"])
         self.assertFalse(result["historicalOffsetVerified"])
+        self.assertTrue(result["quality"]["snapshotComplete"])
         self.assertIn("BROKER_DATA_RIGHTS_NOT_VERIFIED", result["alerts"])
 
     def test_unclosed_bar_and_stale_export_are_rejected_or_alerted(self):
@@ -84,9 +86,12 @@ class MT5ReadOnlyExport(unittest.TestCase):
         as_of = (close + dt.timedelta(minutes=1)).isoformat().replace("+00:00", "Z")
         with self.assertRaisesRegex(ValueError, "symbol differs"):
             normalize_snapshot(text, "XAUUSD", as_of)
-        duplicate = text + text.splitlines()[-1] + "\n"
+        lines = text.splitlines()
+        duplicate = "\n".join(lines[:-1] + [lines[-2], lines[-1]]) + "\n"
         with self.assertRaisesRegex(ValueError, "duplicate or unordered"):
             normalize_snapshot(duplicate, "XAUUSD.a", as_of)
+        with self.assertRaisesRegex(ValueError, "footer missing"):
+            normalize_snapshot("\n".join(lines[:-1]) + "\n", "XAUUSD.a", as_of)
         reversed_csv, _ = make_csv(reverse=True)
         with self.assertRaisesRegex(ValueError, "duplicate or unordered"):
             normalize_snapshot(reversed_csv, "XAUUSD.a", as_of)
@@ -109,7 +114,7 @@ class MT5ReadOnlyExport(unittest.TestCase):
         for banned in ("OrderSend", "CTrade", "WebRequest", "WebSocket", "https://"):
             self.assertNotIn(banned, source)
         for required in ("CopyRates", "PERIOD_M15, 1", "FILE_COMMON", "EventSetTimer",
-                         "tick_volume", "real_volume"):
+                         "tick_volume", "real_volume", "#SNAPSHOT_END"):
             self.assertIn(required, source)
         import json
         inventory = json.loads((root / "research/results/connector-readiness.json").read_text())
