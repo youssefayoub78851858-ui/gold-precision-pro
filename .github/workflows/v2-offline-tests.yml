@@ -114,6 +114,10 @@ jobs:
       - name: Historical signal replay future-data leakage
         working-directory: coordinator
         run: node test_historical_no_lookahead.js
+      - name: Private single-file Dukascopy M15 to complete H1/H4 importer tests (synthetic only)
+        working-directory: coordinator
+        run: python -m unittest -v test_import_dukascopy_single_m15
+
       - name: Validate historical data provenance and OHLC
         working-directory: coordinator
         run: python -m unittest -v test_validate_history
