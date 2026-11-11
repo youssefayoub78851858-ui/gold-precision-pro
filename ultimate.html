@@ -3,7 +3,7 @@
 <h1>Gold Precision Pro Ultimate</h1><p>مختبر بيانات محاكاة أو مسجلة فقط. لا اتصال بمزودي الأسعار ولا تنفيذ أوامر. النتائج ليست إثباتاً لربحية الاستراتيجية.</p>
 <section id="free-daily-context" aria-labelledby="free-daily-title">
 <h2 id="free-daily-title">عوائد السندات الأميركية الرسمية — مجاناً</h2>
-<p>مرجع يومي موثّق من تقرير H.15 الأميركي، وليس تغذية لحظية. لا يُستخدم لتأكيد صفقة M15 ولا يُفعّل التداول.</p>
+<p>يُراجع المرجع الرسمي H.15 تلقائياً عند فتح الصفحة، ثم يحتفظ بنسخة مؤقتة لمدة ساعة. ليس تغذية لحظية ولا يُستخدم لتأكيد صفقة M15.</p>
 <button id="free-context-load" type="button">عرض عوائد السندات الرسمية (يومية)</button>
 <p id="free-context-status" role="status">اضغط لعرض آخر عينة رسمية محفوظة، بدون اشتراك أو اتصال بمزود سوق.</p>
 <div id="free-context-data"></div>
@@ -106,8 +106,8 @@ document.getElementById('free-context-load').onclick=async()=>{
      d.signal!=='WAIT'||d.liveData!==false||d.readyForFiveMinuteGate!==false||
      d.providerRequests!==0||!Array.isArray(d.rates)||d.rates.length!==2)
      throw Error('استجابة غير آمنة أو غير متوافقة');
-  status.textContent='مرجع يومي محفوظ | تاريخ الرصد: '+d.observedDate+
-   ' | تاريخ النشرة: '+d.publicationDate+' | WAIT';
+  status.textContent=(d.automaticallyRefreshed===true?'تم تحديث المرجع من RSS الرسمي':'مرجع محفوظ: تعذّر التحديث التلقائي')+
+   ' | تاريخ الرصد: '+d.observedDate+' | WAIT';
   for(const rate of d.rates){
    const row=document.createElement('p');
    row.textContent=rate.series+' ('+rate.maturityYears+' سنوات): '+
@@ -117,10 +117,14 @@ document.getElementById('free-context-load').onclick=async()=>{
    container.appendChild(row);
   }
   const warning=document.createElement('p');
-  warning.textContent='هذه آخر قيم محفوظة وليست أسعار اليوم أو بيانات آخر 5 دقائق. مصدر التوقيت الأولي غير موثّق، لذلك شروط العوائد اللحظية ما زالت محجوبة.';
+  warning.textContent='قيم يومية منشورة، وليست بيانات آخر 5 دقائق. وقت الإتاحة الأولى غير مثبت؛ لذلك شروط العوائد اللحظية ما زالت محجوبة.'+
+    (d.refreshWarning?' '+d.refreshWarning:'');
   container.appendChild(warning);
  }catch(e){status.textContent=e.message;}
  finally{button.disabled=false;}
 };
+if(document.readyState==='loading'){
+ document.addEventListener('DOMContentLoaded',()=>document.getElementById('free-context-load').click(),{once:true});
+}else{document.getElementById('free-context-load').click();}
 </script>
 </html>
