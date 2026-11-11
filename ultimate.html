@@ -110,11 +110,22 @@ document.getElementById('free-context-load').onclick=async()=>{
    ' | تاريخ الرصد: '+d.observedDate+' | WAIT';
   for(const rate of d.rates){
    const row=document.createElement('p');
-   row.textContent=rate.series+' ('+rate.maturityYears+' سنوات): '+
-     Number(rate.latestYieldPct).toFixed(2)+'% — مقابل '+
-     Number(rate.previousYieldPct).toFixed(2)+'% بالتاريخ السابق، والتغيّر '+
-     (rate.changePercentagePoints>0?'+':'')+rate.changePercentagePoints.toFixed(2)+' نقطة مئوية';
+   const rateLabel=rate.series+' ('+rate.maturityYears+' سنوات): '+
+     Number(rate.latestYieldPct).toFixed(2)+'%';
+   const hasPrevious=d.previousObservedDate&&
+     typeof rate.previousYieldPct==='number'&&Number.isFinite(rate.previousYieldPct)&&
+     typeof rate.changePercentagePoints==='number'&&Number.isFinite(rate.changePercentagePoints);
+   row.textContent=hasPrevious?
+     rateLabel+' — مقابل '+Number(rate.previousYieldPct).toFixed(2)+'% بتاريخ '+d.previousObservedDate+
+     '، والتغيّر '+(rate.changePercentagePoints>0?'+':'')+
+     rate.changePercentagePoints.toFixed(2)+' نقطة مئوية':
+     rateLabel+' — قيمة اليوم السابق غير متاحة في موجز RSS الرسمي';
    container.appendChild(row);
+  }
+  if(d.previousObservationSource==='SEPARATELY_VERIFIED_STORED_H15_SNAPSHOT'){
+   const note=document.createElement('p');
+   note.textContent='مقارنة التاريخ السابق مأخوذة من مرجع H.15 محفوظ ومراجَع، وليست من موجز RSS الحالي.';
+   container.appendChild(note);
   }
   const warning=document.createElement('p');
   warning.textContent='قيم يومية منشورة، وليست بيانات آخر 5 دقائق. وقت الإتاحة الأولى غير مثبت؛ لذلك شروط العوائد اللحظية ما زالت محجوبة.'+
