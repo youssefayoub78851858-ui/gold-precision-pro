@@ -38,12 +38,16 @@ def _alerts_for(result: dict | None) -> dict[str, dict]:
         return alerts
 
     status = result.get("status")
-    if status == "WAIT_ENGINE_FAILURE":
+    if status == "WAIT_PIPELINE_UNAVAILABLE":
+        add(_alert("PIPELINE_UNAVAILABLE", "xauusd", result.get("reason", "No pipeline observation was received")))
+    elif status == "WAIT_ENGINE_FAILURE":
         add(_alert("ENGINE_UNAVAILABLE", "research", result.get("reason", "Research engine failed")))
     elif status == "WAIT_CONTEXT_MISSING":
         add(_alert("EVIDENCE_UNAVAILABLE", "research", result.get("reason", "Research evidence is missing")))
     elif status == "WAIT_SOURCE_NOT_ELIGIBLE":
         add(_alert("SOURCE_UNVERIFIED", "xauusd", result.get("reason", "Source rights are not verified")))
+    elif status == "WAIT_SYNTHETIC_QUARANTINED":
+        add(_alert("SYNTHETIC_QUARANTINED", "xauusd", result.get("reason", "Synthetic input is not real market evidence")))
 
     intake = result.get("intake") or {}
     for reason in intake.get("blockingReasons", []):
@@ -86,10 +90,39 @@ class ResearchAlertMonitor:
             id INTEGER PRIMARY KEY, alert_key TEXT NOT NULL, transition TEXT NOT NULL,
             occurred_utc TEXT NOT NULL, payload TEXT NOT NULL
           );
+          CREATE TABLE IF NOT EXISTS research_monitor_runtime(
+            id INTEGER PRIMARY KEY CHECK(id=1), last_heartbeat_utc TEXT NOT NULL
+          );
         """)
 
     def close(self):
         self.db.close()
+
+    def heartbeat_gap_seconds(self, now: dt.datetime) -> float | None:
+        """Persist this tick and return the previous heartbeat gap, if any."""
+        current = parse_utc(now.isoformat())
+        stamp = current.isoformat().replace("+00:00", "Z")
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            row = self.db.execute(
+                "SELECT last_heartbeat_utc FROM research_monitor_runtime WHERE id=1"
+            ).fetchone()
+            gap = None
+            if row is not None:
+                previous = parse_utc(row[0])
+                gap = (current - previous).total_seconds()
+                if gap < 0:
+                    raise ValueError("monitor clock moved backwards")
+            self.db.execute(
+                "INSERT INTO research_monitor_runtime(id,last_heartbeat_utc) VALUES(1,?) "
+                "ON CONFLICT(id) DO UPDATE SET last_heartbeat_utc=excluded.last_heartbeat_utc",
+                (stamp,),
+            )
+            self.db.execute("COMMIT")
+            return gap
+        except Exception:
+            self.db.execute("ROLLBACK")
+            raise
 
     def observe(self, result: dict | None, now: dt.datetime) -> dict:
         stamp = parse_utc(now.isoformat()).isoformat().replace("+00:00", "Z")
