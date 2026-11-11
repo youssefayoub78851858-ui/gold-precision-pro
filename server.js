@@ -45,6 +45,42 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, {});
   }
 
+  // Read-only view of existing derived research; never serves raw vendor candles.
+  if (req.url.split("?")[0] === "/api/v3/ultimate/recorded-review") {
+    if (req.method !== "GET") return send(res, 405, {error:"GET only"});
+    try {
+      const resultsDir=path.join(__dirname,"research","results");
+      const comparison=JSON.parse(fs.readFileSync(path.join(resultsDir,"ultimate-v2-archive-comparison.json"),"utf8"));
+      const walkforward=JSON.parse(fs.readFileSync(path.join(resultsDir,"ultimate-walkforward.json"),"utf8"));
+      if (comparison.executable!==false || comparison.networkEnabled!==false ||
+          walkforward.executable!==false || walkforward.statisticallyValidated!==false ||
+          comparison.observedM15Decisions!==4884) throw Error("Unexpected stored report contract");
+      const base=walkforward.scenarios.find(s=>s.name==="base");
+      if (!base || !Array.isArray(base.windows)) throw Error("Missing historical comparison");
+      return send(res,200,{
+        mode:"STORED_RECORDED_RESEARCH", signal:"WAIT", executable:false,
+        liveData:false, providerRequests:0, trading:"disabled",
+        note:"Read-only precomputed historical research, not current prices or independent profit validation.",
+        provenance:"Existing September/October 2026 archived BID research; provider authenticity and publication rights not independently verified.",
+        countM15:comparison.observedM15Decisions,
+        priceReady:comparison.dataCoverage.XAUUSD.readyObservations,
+        priceCoveragePct:comparison.dataCoverage.XAUUSD.coveragePct,
+        allLayersTogetherPct:comparison.jointCoveragePct,
+        missingLayers:["DXY","US02Y","US10Y","GC","orderFlow","calendar","headlines"],
+        researchCases:comparison.directionalResearchCases.map(c=>({
+          asOfUTC:c.asOfUTC, technicalLabel:c.technicalLabel,
+          executable:false, blockers:c.v2Blockers
+        })),
+        v2Windows:base.windows.filter(w=>["train","validation","test"].includes(w.window)).map(w=>({
+          window:w.window,startUTC:w.startUTC,endUTC:w.endUTC,
+          trades:w.v2.trades,netPnL:w.v2.netPnL,winRate:w.v2.winRate,
+          ultimateTrades:w.ultimate.trades
+        })),
+        warning:"V2 and Ultimate were studied on prior development archives; neither is validated for live trading."
+      });
+    }catch(error){return send(res,500,{error:"Stored historical review unavailable"});}
+  }
+
   if (req.url.split("?")[0] === "/api/v3/ultimate") {
     if (req.method !== "POST") return send(res,405,{error:"POST offline evidence JSON required"});
     const chunks=[];let size=0;
