@@ -1,0 +1,36 @@
+{
+  "kind": "OFFICIAL_DAILY_CONTEXT_SNAPSHOT",
+  "sourceName": "Board of Governors of the Federal Reserve System — H.15",
+  "sourceURL": "https://www.federalreserve.gov/releases/h15/",
+  "seriesFamily": "Treasury constant maturities / Nominal",
+  "publishedReleaseDate": "2026-11-10",
+  "latestObservedDate": "2026-11-09",
+  "previousObservedDate": "2026-11-06",
+  "snapshotReviewedDate": "2026-11-11",
+  "units": "percent per annum",
+  "data": [
+    {
+      "series": "DGS2",
+      "maturityYears": 2,
+      "previous": 4.51,
+      "latest": 4.56
+    },
+    {
+      "series": "DGS10",
+      "maturityYears": 10,
+      "previous": 4.86,
+      "latest": 4.88
+    }
+  ],
+  "observationAvailabilityTimestamp": null,
+  "timeConvention": "Federal Reserve release posted on business days at 4:15pm US Eastern; individual first-availability not independently logged",
+  "frequency": "DAILY",
+  "sourceRecord": "Official H.15 HTML release table, nominal 2-year and 10-year rows, Nov 6 and Nov 9 columns; manually transcribed from verified public page",
+  "isLive": false,
+  "isAutomaticallyUpdated": false,
+  "forDisplayOnly": true,
+  "eligibleForIntradayConfirmation": false,
+  "eligibleForUltimateTrading": false,
+  "licenseNote": "Official public government release cited; not evidence of permission to redistribute other providers' raw data.",
+  "failClosed": "If date, provenance or first-availability evidence is insufficient, keep yield gates blocked. Never rewrite timestamps or treat daily changes as a five-minute signal."
+}
