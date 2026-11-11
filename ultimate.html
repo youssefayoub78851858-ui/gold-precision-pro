@@ -1,6 +1,22 @@
 <!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Gold Precision Pro Ultimate — Offline Research</title>
 <style>body{font:18px system-ui;background:#101820;color:#eee;max-width:1000px;margin:3em auto;padding:1em}button,input{font:inherit;padding:12px;box-sizing:border-box;max-width:100%}label{display:block;margin:1em 0}pre{max-width:100%;box-sizing:border-box}@media(max-width:600px){body{margin:.5em auto;padding:.7em;font-size:16px}button{width:100%}}pre{direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;background:#192630;padding:20px}h1{color:#e4bd69}</style>
-<h1>Gold Precision Pro Ultimate</h1><p>مختبر بيانات محاكاة أو مسجلة فقط. لا اتصال بمزودي الأسعار ولا تنفيذ أوامر. النتائج ليست إثباتاً لربحية الاستراتيجية.</p>
+<h1>Gold Precision Pro Ultimate</h1><p>مختبر بحثي تجريبي. سعر XAU الفوري المرجعي مستقل عن أسعار الوسيط، وبقية اختبارات الشموع مسجّلة أو محاكاة. لا تنفيذ أوامر ولا إثبات لربحية الاستراتيجية.</p>
+<section id="spot-reference" aria-labelledby="spot-title">
+<h2 id="spot-title">الذهب XAU — سعر فوري مرجعي مجاني</h2>
+<p>من Gold API، من دون بطاقة أو مفتاح. هذا <strong>ليس سعر CFI أو GC</strong> ولا شموع مكتملة، ولا يعطي إشارة تداول.</p>
+<button id="spot-refresh" type="button">فحص سعر الذهب المرجعي الآن</button>
+<p id="spot-status" role="status">لم يتم فحص السعر بعد.</p>
+<p id="spot-price" style="font-size:1.7em;font-weight:700;color:#e4bd69"></p>
+<p id="spot-time"></p>
+<h3>جاهزية الشموع المطلوبة للتحليل</h3>
+<ul id="spot-frame-status">
+<li>M15 — لا شموع مغلقة مباشرة موثّقة</li>
+<li>H1 — لا شموع مغلقة مباشرة موثّقة</li>
+<li>H4 — لا شموع مغلقة مباشرة موثّقة</li>
+</ul>
+<p>هذه الطبقة للعرض فقط. الأرشيف التاريخي السابق موجود للأبحاث، لكن لا نعتبره تغذية حيّة. لا ربط مع MT5، ولا صفقات حقيقية.</p>
+<p>المصدر: <a href="https://gold-api.com/docs" target="_blank" rel="noopener noreferrer" style="color:#e4bd69">Gold API — التوثيق</a></p>
+</section><hr>
 <section id="macro-research" aria-labelledby="macro-title">
 <h2 id="macro-title">الأخبار الاقتصادية والتقويم الأميركي — مصادر رسمية</h2>
 <p>إعلانات الفيدرالي وجدول نشر بيانات BLS، للبحث فقط. مواعيد الأحداث ليست نتائجها، ولا يوجد تحليل مفاجأة السوق أو تنفيذ صفقات.</p>
@@ -190,5 +206,48 @@ document.getElementById('macro-refresh').onclick=async()=>{
 if(document.readyState==='loading'){
  document.addEventListener('DOMContentLoaded',()=>document.getElementById('macro-refresh').click(),{once:true});
 }else{document.getElementById('macro-refresh').click();}
+</script>
+<script>
+const spotButton=document.getElementById('spot-refresh');
+async function refreshSpotReference(){
+ const status=document.getElementById('spot-status');
+ const price=document.getElementById('spot-price');
+ const observed=document.getElementById('spot-time');
+ const frames=document.getElementById('spot-frame-status');
+ spotButton.disabled=true;status.textContent='جارٍ التحقق من سعر الذهب ووقت تحديثه...';
+ price.textContent='';observed.textContent='';
+ try{
+  const response=await fetch('/api/v3/ultimate/gold-spot-reference',{cache:'no-store',signal:AbortSignal.timeout(11000)});
+  if(!response.ok)throw Error('تعذّر الوصول لسعر الذهب المرجعي: '+response.status);
+  const d=await response.json();
+  if(d.mode!=='FREE_XAU_SPOT_REFERENCE'||d.signal!=='WAIT'||
+     d.executable!==false||d.readyForUltimateTrading!==false||d.realOHLC!==false||
+     !d.frames||!['M15','H1','H4'].every(tf=>d.frames[tf]?.status==='NOT_CONNECTED'&&d.frames[tf].readyForTrading===false))
+   throw Error('بيانات السعر لا تستوفي ضوابط وضع المراجعة');
+  if(d.dataStatus==='SPOT_REFERENCE_FRESH'&&Number.isFinite(d.price)){
+   price.textContent=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}).format(d.price)+' USD / أونصة';
+   status.textContent='السعر المرجعي متصل | المصدر: Gold API | التداول WAIT';
+  }else{
+   price.textContent='لا يوجد سعر مرجعي حديث مؤكَّد';
+   status.textContent='السعر غير متاح أو قديم | '+String(d.fetchStatus||d.dataStatus)+' | WAIT';
+  }
+  observed.textContent=d.updatedAtUTC?
+   'آخر تحديث للمصدر: '+new Date(d.updatedAtUTC).toLocaleString('ar-LB',{timeZone:'Asia/Beirut',year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'})+
+   ' (بيروت) — عمر القراءة '+d.ageSeconds+' ثانية':
+   'لا توجد قراءة حديثة معتمدة للعرض.';
+  frames.replaceChildren();
+  for(const tf of ['M15','H1','H4']){
+   const li=document.createElement('li');
+   li.textContent=tf+' — لا توجد شموع OHLC مغلقة من مصدر سوق متصل؛ تحليل هذا الإطار غير جاهز';
+   frames.appendChild(li);
+  }
+ }catch(e){status.textContent=e.message;price.textContent='لا سعر متاح';}
+ finally{spotButton.disabled=false;}
+}
+spotButton.onclick=refreshSpotReference;
+if(document.readyState==='loading'){
+ document.addEventListener('DOMContentLoaded',refreshSpotReference,{once:true});
+}else{refreshSpotReference();}
+setInterval(()=>{if(!document.hidden&&!spotButton.disabled)refreshSpotReference();},60000);
 </script>
 </html>
