@@ -33,15 +33,30 @@ function parseFeed(xml,years){
   if(prior){if(prior.pct!==row.pct)throw Error("Conflicting H15 values");continue;}
   unique.push(row);
  }
- if(unique.length<2)throw Error("Not enough official H15 observations");
- return {latest:unique[0],previous:unique[1]};
+ if(unique.length<1)throw Error("No official H15 observations");
+ // Federal Reserve per-series RSS 1.0 currently publishes one item, not a history.
+ return {latest:unique[0],previous:unique[1]||null};
 }
 function buildOfficialDailyContext(xmls,now=new Date()){
  if(!Array.isArray(xmls)||xmls.length!==2)throw Error("Missing official RSS");
  const parsed=SERIES.map((s,i)=>parseFeed(xmls[i],s.years));
  const first=parsed[0];
- if(parsed.some(x=>x.latest.date!==first.latest.date||x.previous.date!==first.previous.date))
+ if(parsed.some(x=>x.latest.date!==first.latest.date))
   throw Error("Official H15 source dates are not aligned");
+ // If the single RSS item exactly matches a separately retained verified H15 snapshot,
+ // its earlier observed values may be shown with explicit provenance.
+ // Otherwise do NOT fabricate a previous daily observation or daily change.
+ const saved=readH15DailyContext();
+ const savedRates=Object.fromEntries(saved.rates.map(x=>[x.series,x]));
+ const useStoredPrevious=first.latest.date===saved.observedDate&&
+   SERIES.every((series,i)=>savedRates[series.series]&&
+     parsed[i].latest.pct===savedRates[series.series].latestYieldPct);
+ const feedPreviousComplete=parsed.every(x=>x.previous!==null)&&
+   parsed.every(x=>x.previous.date===first.previous.date);
+ const previousObservedDate=feedPreviousComplete?first.previous.date:
+   useStoredPrevious?saved.previousObservedDate:null;
+ const previousValues=SERIES.map((series,i)=>feedPreviousComplete?parsed[i].previous.pct:
+   useStoredPrevious?savedRates[series.series].previousYieldPct:null);
  const observed=Date.parse(first.latest.date+"T00:00:00Z");
  const nowMS=now.getTime();
  if(!Number.isFinite(nowMS)||nowMS<observed||nowMS-observed>10*86400000)throw Error("Stale or future H15 observation");
@@ -58,15 +73,18 @@ function buildOfficialDailyContext(xmls,now=new Date()){
   sourceName:"Board of Governors of the Federal Reserve System — H.15",
   sourceURL:"https://www.federalreserve.gov/releases/h15/",
   sourceFeeds:SERIES.map(s=>s.url),observedDate:first.latest.date,
-  previousObservedDate:first.previous.date,
+  previousObservedDate,
+  previousObservationSource:feedPreviousComplete?"FED_RSS_HISTORY":
+    useStoredPrevious?"SEPARATELY_VERIFIED_STORED_H15_SNAPSHOT":"UNAVAILABLE",
   publicationTimestampRecorded:dates.length===2,
   publicationTimestampsUTC:parsed.map(x=>x.latest.publishedUTC),
   firstAvailabilityVerified:false,allowedRole:"MACRO_DAILY_CONTEXT_ONLY",
   readyForFiveMinuteGate:false,readyForUltimateTrading:false,
   rates:SERIES.map((s,i)=>({
    series:s.series,maturityYears:s.years,
-   latestYieldPct:parsed[i].latest.pct,previousYieldPct:parsed[i].previous.pct,
-   changePercentagePoints:Number((parsed[i].latest.pct-parsed[i].previous.pct).toFixed(3))
+   latestYieldPct:parsed[i].latest.pct,previousYieldPct:previousValues[i],
+   changePercentagePoints:previousValues[i]===null?null:
+     Number((parsed[i].latest.pct-previousValues[i]).toFixed(3))
   })),
   warning:"Official RSS yields are daily published observations, not live Treasury quotes. Publication timestamps do not prove first market availability; M15 yield confirmation stays blocked."
  };
@@ -99,7 +117,7 @@ async function readAutoDailyContext({fetchFn=fetch,nowMs=Date.now(),offline=fals
    const message=String(err&&err.message||"");
    const diagnostic=message==="H15 official HTTP unavailable"?"FED_RSS_HTTP_ERROR":
      message==="H15 response too large"?"FED_RSS_OVERSIZE":
-     message==="Not enough official H15 observations"?"FED_RSS_NO_MATCHING_OBSERVATIONS":
+     message==="No official H15 observations"?"FED_RSS_NO_MATCHING_OBSERVATIONS":
      message==="Official H15 source dates are not aligned"?"FED_RSS_SERIES_DATES_MISMATCH":
      message==="H15 RSS format invalid"?"FED_RSS_FORMAT_UNEXPECTED":
      message==="Invalid RSS publication timestamp"?"FED_RSS_PUBLICATION_DATE_INVALID":
