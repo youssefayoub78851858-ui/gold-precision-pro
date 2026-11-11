@@ -8,6 +8,28 @@ function xml(years,latest,prev,latestDate="2026-11-09",prevDate="2026-11-06"){
 async function run(){
  const a=xml(2,4.56,4.51),b=xml(10,4.88,4.86);
  assert.deepEqual(parseFeed(a,2).latest.date,"2026-11-09");
+ // The actual Federal Reserve per-series feeds are RSS 1.0 RDF and contain ONE item.
+ const rdf=(years,value,day="2026-11-09")=>'<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/"><channel><title>FRB:Data:H.15 Selected Interest Rates</title></channel><item rdf:about="https://www.federalreserve.gov/"><title>US: H15 '+value+' '+day+' FRB '+years+'-year Treasury constant maturity</title></item></rdf:RDF>';
+ const rdf2=rdf(2,4.56),rdf10=rdf(10,4.88);
+ assert.equal(parseFeed(rdf2,2).latest.pct,4.56);
+ assert.equal(parseFeed(rdf2,2).previous,null);
+ const fromSingle=buildOfficialDailyContext([rdf2,rdf10],new Date("2026-11-11T14:30:00Z"));
+ assert.equal(fromSingle.sourceStatus,"OFFICIAL_FED_RSS_REFRESHED");
+ assert.equal(fromSingle.observedDate,"2026-11-09");
+ assert.equal(fromSingle.previousObservedDate,"2026-11-06");
+ assert.equal(fromSingle.previousObservationSource,"SEPARATELY_VERIFIED_STORED_H15_SNAPSHOT");
+ assert.equal(fromSingle.rates[0].changePercentagePoints,0.05);
+ assert.equal(fromSingle.rates[1].changePercentagePoints,0.02);
+ assert.equal(fromSingle.executable,false);
+ assert.equal(fromSingle.readyForFiveMinuteGate,false);
+ const newSingle=buildOfficialDailyContext([rdf(2,4.60,"2026-11-10"),rdf(10,4.91,"2026-11-10")],new Date("2026-11-11T14:30:00Z"));
+ assert.equal(newSingle.previousObservedDate,null);
+ assert.equal(newSingle.previousObservationSource,"UNAVAILABLE");
+ assert.equal(newSingle.rates[0].previousYieldPct,null);
+ assert.equal(newSingle.rates[1].changePercentagePoints,null);
+ assert.equal(newSingle.signal,"WAIT");
+ assert.throws(()=>buildOfficialDailyContext([rdf2,rdf(10,4.90,"2026-11-10")],new Date("2026-11-11T14:30:00Z")),/not aligned/);
+
  assert.equal(parseFeed(a,2).previous.pct,4.51);
  const result=buildOfficialDailyContext([a,b],new Date("2026-11-11T14:30:00Z"));
  assert.equal(result.mode,"OFFICIAL_RECORDED_DAILY_CONTEXT");
@@ -23,7 +45,7 @@ async function run(){
  assert.throws(()=>buildOfficialDailyContext([a,xml(10,4.88,4.86,"2026-11-10")],new Date("2026-11-11T14:30:00Z")),/not aligned/);
  assert.throws(()=>buildOfficialDailyContext([a,b],new Date("2026-11-08T14:30:00Z")),/future/);
  assert.throws(()=>buildOfficialDailyContext([a,b],new Date("2026-12-10T14:30:00Z")),/Stale/);
- assert.throws(()=>parseFeed(xml(2,49,4.51),2),/Not enough/);
+ assert.throws(()=>parseFeed(xml(2,49,4.51),2),/Invalid official H15 observation/);
  assert.throws(()=>parseFeed('<rss><channel></channel></rss>',2),/format invalid/);
  const requested=[];
  const fakeFetch=async url=>{
