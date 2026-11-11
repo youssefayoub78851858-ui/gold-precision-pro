@@ -142,6 +142,10 @@ jobs:
       - name: Actual coordinator image build and standby restart (no provider)
         run: python coordinator/test_container_standby.py
 
+      - name: Free independent XAU spot reference validation and candle-blocking tests (mock only)
+        working-directory: coordinator
+        run: node test_gold_spot_reference.js
+
       - name: Official US macro RSS and BLS calendar research safety tests (mock feeds)
         working-directory: coordinator
         run: node test_official_macro_review.js
