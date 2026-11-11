@@ -1,0 +1,29 @@
+name: One-time review Gold API reference live acceptance
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths: [.github/workflows/spot-reference-live-smoke.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify real deployed review quote and deny candle/trade authority
+        run: |
+          node <<'JS'
+          const endpoint='https://gold-precision-v3-review-demo.onrender.com/api/v3/ultimate/gold-spot-reference';
+          const res=await fetch(endpoint,{signal:AbortSignal.timeout(25000)});
+          const data=await res.json();
+          const frames=data.frames||{};
+          console.log(JSON.stringify({http:res.status,mode:data.mode,signal:data.signal,
+             executable:data.executable,readyForUltimateTrading:data.readyForUltimateTrading,
+             dataStatus:data.dataStatus,fetchStatus:data.fetchStatus,
+             price:data.price,sourceTime:data.updatedAtUTC,checked:data.checkedUTC,
+             frames:Object.fromEntries(Object.entries(frames).map(([k,v])=>[k,{status:v.status,closedCandles:v.closedCandles,readyForTrading:v.readyForTrading}]))}));
+          if(!res.ok||data.mode!=='FREE_XAU_SPOT_REFERENCE'||data.signal!=='WAIT'||
+             data.executable!==false||data.realOHLC!==false||data.liveCandlesAvailable!==false||
+             data.readyForUltimateTrading!==false||!['M15','H1','H4'].every(k=>
+               frames[k]?.status==='NOT_CONNECTED'&&frames[k]?.readyForTrading===false))process.exitCode=1;
+          JS
