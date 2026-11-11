@@ -45,6 +45,22 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, {});
   }
 
+  // Government news/calendar metadata ONLY. No trading signal or market-data subscription.
+  if (req.url.split("?")[0] === "/api/v3/ultimate/official-macro") {
+    if (req.method !== "GET") return send(res,405,{error:"GET only"});
+    try{
+      const result=await require("./coordinator/official_macro_review").getOfficialMacroReview({
+        offline:process.env.OFFICIAL_MACRO_DISABLED==="1"
+      });
+      if(result.executable!==false||result.signal!=="WAIT"||result.liveData!==false)
+        throw Error("Unsafe macro research contract");
+      return send(res,200,result);
+    }catch(error){
+      return send(res,503,{error:"Official macro reference unavailable",signal:"WAIT",
+        executable:false,liveData:false});
+    }
+  }
+
   // Public official daily reference, strictly separated from five-minute trading gates.
   // No outbound provider calls, no broker credentials, no trade decisions.
   if (req.url.split("?")[0] === "/api/v3/ultimate/free-context") {
