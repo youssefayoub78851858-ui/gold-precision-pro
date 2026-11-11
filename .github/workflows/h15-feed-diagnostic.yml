@@ -1,0 +1,33 @@
+name: One-time H15 public RSS envelope diagnostics
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - .github/workflows/h15-feed-diagnostic.yml
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Read public Federal Reserve XML envelopes without saving raw market data
+        shell: bash
+        run: |
+          node <<'JS'
+          const urls=[
+           'https://www.federalreserve.gov/feeds/Data/H15_H15_RIFLGFCY02_N.B.XML',
+           'https://www.federalreserve.gov/feeds/Data/H15_H15_RIFLGFCY10_N.B.XML'
+          ];
+          for(const [index,url] of urls.entries()){
+           try{
+            const response=await fetch(url,{signal:AbortSignal.timeout(12000),headers:{'Accept':'application/rss+xml,application/xml,text/xml','User-Agent':'GoldPrecisionPro-Research-Review/1.0'}});
+            const xml=await response.text();
+            const countItems=(xml.match(/<item(?:\s[^>]*)?>/gi)||[]).length;
+            const titles=[...xml.matchAll(/<title(?:\s[^>]*)?>([\s\S]*?)<\/title>/gi)]
+              .slice(0,4).map(x=>x[1].replace(/<[^>]*>/g,'').replace(/\s+/g,' ').slice(0,180));
+            const sample=xml.slice(0,180).replace(/\s+/g,' ');
+            console.log(JSON.stringify({series:index===0?'2Y':'10Y',http:response.status,type:response.headers.get('content-type'),bytes:xml.length,items:countItems,titles,sample}));
+           }catch(e){console.log(JSON.stringify({series:index===0?'2Y':'10Y',errorName:e.name,message:String(e.message).slice(0,100)}));}
+          }
+          JS
