@@ -1,0 +1,34 @@
+name: One-time official macro feeds envelope check
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths: [.github/workflows/macro-feed-diagnostic.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Inspect public official RSS and calendar format (no content archiving)
+        shell: bash
+        run: |
+          node <<'JS'
+          const feeds=[
+            ['FedMonetaryRSS','https://www.federalreserve.gov/feeds/press_monetary.xml'],
+            ['BLSCalendarICS','https://www.bls.gov/schedule/news_release/bls.ics']
+          ];
+          for(const [name,url] of feeds){
+            try {
+              const resp=await fetch(url,{signal:AbortSignal.timeout(12000),
+                headers:{'User-Agent':'GoldPrecisionPro-Research-Review/1.0',Accept:'application/rss+xml,text/calendar,application/xml,text/xml'}});
+              const txt=await resp.text();
+              const items=(txt.match(/<item\b/gi)||[]).length;
+              const events=(txt.match(/BEGIN:VEVENT/g)||[]).length;
+              const tags=[...txt.matchAll(/<(title|pubDate|link)\b[^>]*>([\s\S]*?)<\/\1>/gi)].slice(0,9).map(m=>[m[1],m[2].replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0,120)]);
+              const vevent=txt.includes('BEGIN:VEVENT')?txt.substring(txt.indexOf('BEGIN:VEVENT'),txt.indexOf('END:VEVENT')+10).split(/\r?\n/).slice(0,20):[];
+              console.log(JSON.stringify({name,http:resp.status,type:resp.headers.get('content-type'),
+                bytes:txt.length,items,events,first:txt.substring(0,120).replace(/\s+/g,' '),tags,vevent}));
+            } catch(e){console.log(JSON.stringify({name,error:e.name,message:String(e.message).slice(0,120)}));}
+          }
+          JS
