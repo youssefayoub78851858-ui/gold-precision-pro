@@ -95,8 +95,24 @@ async function readAutoDailyContext({fetchFn=fetch,nowMs=Date.now(),offline=fals
    const result=buildOfficialDailyContext(xmls,new Date(nowMs));
    cached=result;until=nowMs+60*60*1000;
    return result;
-  }catch(_err){
-   const result=fallback("Official RSS refresh unavailable. Showing stored daily reference, not current market data.");
+  }catch(err){
+   const message=String(err&&err.message||"");
+   const diagnostic=message==="H15 official HTTP unavailable"?"FED_RSS_HTTP_ERROR":
+     message==="H15 response too large"?"FED_RSS_OVERSIZE":
+     message==="Not enough official H15 observations"?"FED_RSS_NO_MATCHING_OBSERVATIONS":
+     message==="Official H15 source dates are not aligned"?"FED_RSS_SERIES_DATES_MISMATCH":
+     message==="H15 RSS format invalid"?"FED_RSS_FORMAT_UNEXPECTED":
+     message==="Invalid RSS publication timestamp"?"FED_RSS_PUBLICATION_DATE_INVALID":
+     message==="Stale or future H15 observation"?"FED_RSS_STALE_OR_FUTURE":
+     err&&err.name==="TimeoutError"?"FED_RSS_TIMEOUT":
+     err&&err.name==="AbortError"?"FED_RSS_TIMEOUT":
+     message.startsWith("Conflicting H15")?"FED_RSS_CONFLICT":
+     message.includes("fetch")?"FED_RSS_NETWORK_FAILURE":
+     "FED_RSS_UNCLASSIFIED_FAILURE";
+   // Only a stable diagnostic code; never log provider payloads or credentials.
+   console.warn("H15 daily RSS fallback: "+diagnostic);
+   const result={...fallback("Official RSS refresh unavailable. Showing stored daily reference, not current market data."),
+     refreshDiagnosticCode:diagnostic};
    cached=result;until=nowMs+10*60*1000;
    return result;
   }finally{inflight=null;}
