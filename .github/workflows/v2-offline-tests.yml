@@ -142,6 +142,10 @@ jobs:
       - name: Actual coordinator image build and standby restart (no provider)
         run: python coordinator/test_container_standby.py
 
+      - name: Official H15 daily RSS refresh safety tests (mock feeds only)
+        working-directory: coordinator
+        run: node test_h15_official_rss.js
+
       - name: Ultimate offline evidence, risk and HTTP acceptance
         working-directory: coordinator
         run: |
