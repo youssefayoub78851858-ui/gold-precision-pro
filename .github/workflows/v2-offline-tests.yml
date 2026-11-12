@@ -237,6 +237,17 @@ jobs:
         working-directory: coordinator
         run: python -m unittest -v test_mbo_order_book
 
+      - name: Five-stage offline pre-subscription safety inventory
+        working-directory: coordinator
+        run: |
+          python -m unittest -v test_pre_subscription_preflight
+          python pre_subscription_preflight.py --output /tmp/pre-subscription-readiness.json
+      - name: Upload five-stage offline readiness report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-subscription-readiness
+          path: /tmp/pre-subscription-readiness.json
+          retention-days: 14
       - name: XAUUSD signed intake, UTC candle quality, gaps and outage backoff (offline fixtures)
         working-directory: coordinator
         run: |
