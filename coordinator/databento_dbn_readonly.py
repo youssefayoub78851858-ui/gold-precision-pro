@@ -28,6 +28,17 @@ def _native(value):
     return value
 
 
+def _native_mapping(mappings):
+    result = {}
+    for raw_symbol, intervals in (mappings or {}).items():
+        result[str(raw_symbol)] = [
+            {key: (value.isoformat() if hasattr(value, "isoformat") else _native(value))
+             for key, value in interval.items()}
+            for interval in intervals
+        ]
+    return result
+
+
 def decode_dbn_bytes(raw: bytes, *, source_name: str = "<memory>", expected_sha256: str | None = None) -> dict:
     """Decode one local DBN byte stream; malformed/incomplete streams fail closed."""
     if not isinstance(raw, bytes) or len(raw) < 8 or not raw.startswith(b"DBN"):
@@ -78,9 +89,11 @@ def decode_dbn_bytes(raw: bytes, *, source_name: str = "<memory>", expected_sha2
             "symbols": list(store.symbols or []),
             "stypeIn": str(getattr(store.stype_in, "value", store.stype_in)),
             "stypeOut": str(getattr(store.stype_out, "value", store.stype_out)),
+            "symbolMappings": _native_mapping(store.mappings),
             "startUTC": store.start.isoformat() if store.start is not None else None,
             "endUTC": store.end.isoformat() if store.end is not None else None,
             "priceEncoding": "FIXED_1E9",
+            "priceScale": PRICE_SCALE,
         },
         "rows": rows,
         "rowCount": len(rows),

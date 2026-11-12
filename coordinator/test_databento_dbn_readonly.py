@@ -25,6 +25,8 @@ class OfficialDatabentoDBN(unittest.TestCase):
                 self.assertEqual(result["source"]["schema"], expected["schema"])
                 self.assertEqual(result["source"]["dbnVersion"], 2)
                 self.assertEqual(result["source"]["symbols"], ["ESH1"])
+                self.assertEqual(result["source"]["symbolMappings"]["ESH1"][0]["symbol"], "5482")
+                self.assertEqual(result["source"]["priceScale"], 1_000_000_000)
                 self.assertEqual(result["rowCount"], expected["rows"])
                 self.assertEqual(result["source"]["byteLength"], expected["bytes"])
                 self.assertEqual(result["source"]["sha256"], expected["sha256"])
