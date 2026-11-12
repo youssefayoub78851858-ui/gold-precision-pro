@@ -81,7 +81,7 @@ class EodhdResearchStaging(unittest.TestCase):
 
     def test_crossed_quotes_disagreement_and_unclosed_cannot_pass(self):
         for mutate in ("cross_open","cross_hilo","mid","row_time","ohlc","duplicate","h1_aggregate","h4_aggregate"):
-            s=sample()
+            s=sample(48)  # includes complete H4 for aggregate tamper tests
             if mutate=="cross_open":s["askFrames"]["M15"][-1]["open"]=3890
             elif mutate=="cross_hilo":s["askFrames"]["M15"][-1]["high"]=3890
             elif mutate=="mid":s["frames"]["M15"][-1]["close"]=1000
