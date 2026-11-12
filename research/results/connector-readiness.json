@@ -116,9 +116,9 @@
     "localExporterImplemented": true,
     "terminalRunVerified": false,
     "entitlementVerified": false,
-    "historicalOffsetVerified": false,
+    "timestampBasis": "RAW_MT5_MQLRATES_EPOCH_RENDERED_AS_UTC_NO_BROKER_OFFSET",
     "status": "LOCAL_RESEARCH_CANDIDATE_NOT_RUN",
-    "note": "Desktop/VPS required; local CSV only. No upload, no order functions, no trading readiness; output is always WAIT."
+    "note": "Desktop/VPS required; local CSV only. Bar and quote epochs are retained and rendered as UTC without a broker-offset assumption. No upload, no order functions, no trading readiness; output is always WAIT."
   },
   "XAUUSD_TWELVE_DATA_CANDIDATE": {
     "vendor": "Twelve Data",
