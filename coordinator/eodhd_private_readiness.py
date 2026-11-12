@@ -12,7 +12,7 @@ import stat
 
 UTC = dt.timezone.utc
 SNAPSHOT_FILE = "eodhd-private-review.json"
-MAX_SIZE = 250_000
+MAX_SIZE = 1_500_000
 FRESH_SECONDS = 30
 
 
@@ -70,7 +70,7 @@ def read_private_status(directory, *, now=None):
             raise ValueError("Frame keys invalid")
         counts = {}
         for key in ("M15", "H1", "H4"):
-            if not isinstance(frames[key], list) or len(frames[key]) > 320:
+            if not isinstance(frames[key], list) or len(frames[key]) > {"M15": 2048, "H1": 512, "H4": 128}[key]:
                 raise ValueError("Frame count invalid")
             counts[key] = len(frames[key])
         quote = raw.get("latestQuote")

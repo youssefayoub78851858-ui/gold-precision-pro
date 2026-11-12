@@ -1,7 +1,7 @@
 'use strict';
 // EODHD XAUUSD private, fail-closed review connector. Never places orders.
 const fs=require('node:fs'),path=require('node:path');
-const WIDTH=900000,AGE=30000,FUTURE=5000,GAP=90000;
+const WIDTH=900000,AGE=30000,FUTURE=5000,GAP=90000,MAX_BARS=2048;
 const valid=x=>typeof x==='number'&&Number.isFinite(x)&&x>0;
 function aggregate(bars,n){
  const groups=new Map(),w=WIDTH*n;
@@ -48,9 +48,9 @@ class XauusdReview{
    this.bars.push(this.current.bar);
    this.bidBars.push(this.current.bidBar);
    this.askBars.push(this.current.askBar);
-   if(this.bars.length>320)this.bars.shift();
-   if(this.bidBars.length>320)this.bidBars.shift();
-   if(this.askBars.length>320)this.askBars.shift();
+   if(this.bars.length>MAX_BARS)this.bars.shift();
+   if(this.bidBars.length>MAX_BARS)this.bidBars.shift();
+   if(this.askBars.length>MAX_BARS)this.askBars.shift();
    this.current=null;
   }
   if(!this.current){
