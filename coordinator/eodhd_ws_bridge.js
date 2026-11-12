@@ -17,6 +17,7 @@ class XauusdReview{
  constructor(clock=Date.now){this.clock=clock;this.reset('NOT_CONNECTED');this.count=0;}
  reset(reason='STREAM_INTERRUPTED'){
   this.authorized=false;this.last=null;this.current=null;this.bars=[];
+  this.bidBars=[];this.askBars=[];
   this.quote=null;this.reason=reason;
  }
  receive(message){
@@ -45,15 +46,21 @@ class XauusdReview{
       this.current.last<this.current.start+WIDTH-60000){
     this.reset('INCOMPLETE_M15');return {kind:'blocked',reason:this.reason};}
    this.bars.push(this.current.bar);
+   this.bidBars.push(this.current.bidBar);
+   this.askBars.push(this.current.askBar);
    if(this.bars.length>320)this.bars.shift();
+   if(this.bidBars.length>320)this.bidBars.shift();
+   if(this.askBars.length>320)this.askBars.shift();
    this.current=null;
   }
   if(!this.current){
-   this.current={start,first:x.t,last:x.t,bar:{
-    openTime:new Date(start).toISOString(),open:mid,high:mid,low:mid,close:mid}};
+   const candle=value=>({openTime:new Date(start).toISOString(),open:value,high:value,low:value,close:value});
+   this.current={start,first:x.t,last:x.t,bar:candle(mid),bidBar:candle(x.b),askBar:candle(x.a)};
   }else{
-   const c=this.current.bar;this.current.last=x.t;
-   c.high=Math.max(c.high,mid);c.low=Math.min(c.low,mid);c.close=mid;
+   this.current.last=x.t;
+   for(const [c,value] of [[this.current.bar,mid],[this.current.bidBar,x.b],[this.current.askBar,x.a]]){
+    c.high=Math.max(c.high,value);c.low=Math.min(c.low,value);c.close=value;
+   }
   }
   this.last=x.t;this.count++;this.quote={bid:x.b,ask:x.a,timeUTC:new Date(x.t).toISOString()};
   this.reason='WAIT_INDEPENDENT_FEED_VALIDATION';
@@ -62,8 +69,11 @@ class XauusdReview{
  snapshot(){
   return {provider:'EODHD',instrument:'XAU/USD',quoteType:'INDICATIVE_MIDQUOTE_OHLC',
    mode:'REVIEW_ONLY',researchEligible:false,signal:'WAIT',executable:false,
-   readyForTrading:false,reason:this.reason,received:this.count,latestQuote:this.quote,
-   frames:{M15:this.bars.slice(),H1:aggregate(this.bars,4),H4:aggregate(this.bars,16)}};
+   readyForTrading:false,sessionVerified:false,sessionStatus:'UNVERIFIED_PROVIDER_SESSION_CALENDAR',
+   indicatorWarmupReady:false,reason:this.reason,received:this.count,latestQuote:this.quote,
+   frames:{M15:this.bars.slice(),H1:aggregate(this.bars,4),H4:aggregate(this.bars,16)},
+   bidFrames:{M15:this.bidBars.slice(),H1:aggregate(this.bidBars,4),H4:aggregate(this.bidBars,16)},
+   askFrames:{M15:this.askBars.slice(),H1:aggregate(this.askBars,4),H4:aggregate(this.askBars,16)}};
  }
 }
 function privateSave(dir,snapshot){

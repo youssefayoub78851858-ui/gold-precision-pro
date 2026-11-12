@@ -33,6 +33,29 @@ a.equal(review.snapshot().frames.M15.length,16);
 a.equal(review.snapshot().frames.H1.length,4);
 a.equal(review.snapshot().frames.H4.length,1);
 a.equal(review.snapshot().researchEligible,false);
+const barStart=Math.floor(base/900000)*900000;
+let quoteNow=barStart;const quoteReview=new XauusdReview(()=>quoteNow+1000);
+quoteReview.receive({status_code:200});
+for(const [t,bid,ask] of [[barStart+1000,4000,4001],[barStart+30000,4002,4003],
+ [barStart+60000,3999,4000],...Array.from({length:13},(_,i)=>[barStart+120000+i*60000,3999,4000])]){
+ quoteNow=t;a.equal(quoteReview.receive(quote(t,ask,bid)).kind,'quote');
+}
+// An open M15 is not exposed as closed until the next M15 tick arrives.
+a.equal(quoteReview.snapshot().bidFrames.M15.length,0);
+quoteNow=barStart+900001;a.equal(quoteReview.receive(quote(quoteNow,4002,4001)).kind,'quote');
+const split=quoteReview.snapshot();
+a.equal(split.bidFrames.M15.length,1);
+a.equal(split.askFrames.M15.length,1);
+a.deepEqual([split.bidFrames.M15[0].open,split.bidFrames.M15[0].high,
+ split.bidFrames.M15[0].low,split.bidFrames.M15[0].close],[4000,4002,3999,3999]);
+a.deepEqual([split.askFrames.M15[0].open,split.askFrames.M15[0].high,
+ split.askFrames.M15[0].low,split.askFrames.M15[0].close],[4001,4003,4000,4000]);
+a.equal(split.frames.M15[0].close,3999.5);
+a.equal(split.sessionVerified,false);
+a.equal(split.indicatorWarmupReady,false);
+a.equal(split.researchEligible,false);
+a.equal(split.signal,'WAIT');
+a.equal(split.executable,false);
 review.reset();a.equal(review.snapshot().frames.M15.length,0);
 a.equal(aggregate([],4).length,0);
 console.log('PASS: EODHD offline quote checks, complete UTC candles and WAIT');
