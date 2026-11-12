@@ -108,6 +108,26 @@ def _audit_bars(snapshot):
                     and _close(middle["close"], (bid["close"] + ask["close"]) / 2)):
                 raise ValueError("BID_ASK_MIDQUOTE_DISAGREES")
         counts[tf] = len(b)
+    # H1/H4 MUST be authentic aggregates of the same CLOSED M15 BID/ASK/MID
+    # observations. A provider snapshot cannot introduce contradictory H4
+    # geometry even if each standalone candle looks valid.
+    for family in ("frames", "bidFrames", "askFrames"):
+        indexed = {int(parse_utc(row["openTime"]).timestamp()): row
+                   for row in snapshot[family]["M15"]}
+        for tf, factor in (("H1", 4), ("H4", 16)):
+            for bar in snapshot[family][tf]:
+                start = int(parse_utc(bar["openTime"]).timestamp())
+                components = [indexed.get(start + 900 * i) for i in range(factor)]
+                if any(row is None for row in components):
+                    raise ValueError("BID_ASK_AGGREGATE_SOURCE_MISSING")
+                expected = {
+                    "open": components[0]["open"],
+                    "high": max(row["high"] for row in components),
+                    "low": min(row["low"] for row in components),
+                    "close": components[-1]["close"],
+                }
+                if any(not _close(bar[key], expected[key]) for key in expected):
+                    raise ValueError("BID_ASK_AGGREGATE_MISMATCH")
     return counts
 
 

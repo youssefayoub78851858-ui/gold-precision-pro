@@ -80,13 +80,15 @@ class EodhdResearchStaging(unittest.TestCase):
         self.check_wait(self.review(s,policy=SourcePolicy(True,True,True,True,"Reference","WRONG_PROVIDER")))
 
     def test_crossed_quotes_disagreement_and_unclosed_cannot_pass(self):
-        for mutate in ("cross_open","cross_hilo","mid","row_time","ohlc","duplicate"):
+        for mutate in ("cross_open","cross_hilo","mid","row_time","ohlc","duplicate","h1_aggregate","h4_aggregate"):
             s=sample()
             if mutate=="cross_open":s["askFrames"]["M15"][-1]["open"]=3890
             elif mutate=="cross_hilo":s["askFrames"]["M15"][-1]["high"]=3890
             elif mutate=="mid":s["frames"]["M15"][-1]["close"]=1000
             elif mutate=="row_time":s["askFrames"]["M15"][-1]["openTime"]="2026-11-12T16:00:00Z"
             elif mutate=="ohlc":s["bidFrames"]["M15"][-1]["low"]=40000
+            elif mutate=="h1_aggregate":s["bidFrames"]["H1"][-1]["high"]+=1
+            elif mutate=="h4_aggregate":s["askFrames"]["H4"][-1]["high"]+=1
             else:s["bidFrames"]["M15"][-1]["openTime"]=s["bidFrames"]["M15"][-2]["openTime"]
             result=self.review(s)
             self.check_wait(result)

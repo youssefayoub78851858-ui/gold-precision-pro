@@ -32,3 +32,7 @@ Offline tests:
 - python -m unittest -v test_eodhd_research_bridge
 - python -m unittest -v test_eodhd_private_readiness
 - node test_eodhd_ws_bridge.js
+
+Aggregation safety: H1/H4 BID, ASK and MID values must exactly match
+complete aligned M15 source groups; injected or conflicting higher-frame bars
+are quarantined before V3/r2 invocation.
