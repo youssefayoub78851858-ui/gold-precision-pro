@@ -44,6 +44,10 @@
 <p id="macro-status" role="status">لم يتم فحص المصادر بعد.</p>
 <div id="macro-calendar"></div>
 <div id="macro-headlines"></div>
+<h3>فحص موحّد للمصادر الرسمية</h3>
+<button type="button" id="official-context-check">فحص الأخبار والسندات والتغطية</button>
+<p id="official-context-status" role="status">لم يُفحص المصدر الموحّد بعد. الأخبار العالمية وGC وDXY غير موثّقة.</p>
+<ul id="official-context-items" aria-live="polite"></ul>
 <p>المصادر: <a style="color:#e4bd69" href="https://www.bls.gov/schedule/news_release/bls.ics" target="_blank" rel="noopener noreferrer">تقويم BLS</a> و <a style="color:#e4bd69" href="https://www.federalreserve.gov/feeds/press_monetary.xml" target="_blank" rel="noopener noreferrer">أخبار الفيدرالي النقدية</a>.</p>
 </section><hr>
 <section id="free-daily-context" aria-labelledby="free-daily-title">
@@ -385,5 +389,36 @@ document.getElementById('candle-source-check').onclick=checkCandleSource;
 if(document.readyState==='loading'){
  document.addEventListener('DOMContentLoaded',checkCandleSource,{once:true});
 }else{checkCandleSource();}
+</script>
+<script>
+(function(){
+ const button=document.getElementById('official-context-check');
+ const state=document.getElementById('official-context-status');
+ const list=document.getElementById('official-context-items');
+ button.addEventListener('click',async()=>{
+  button.disabled=true;state.textContent='جارٍ فحص التغطية الرسمية فقط...';list.replaceChildren();
+  try{
+   const response=await fetch('/api/v3/ultimate/official-context-stage',{cache:'no-store',signal:AbortSignal.timeout(12000)});
+   if(!response.ok)throw Error('HTTP '+response.status);
+   const data=await response.json();
+   if(data.mode!=='OFFICIAL_PARTIAL_CONTEXT_REVIEW'||data.signal!=='WAIT'||data.executable!==false||
+      data.researchEligible!==false||data.geopoliticalWorldNewsCoverage!==false||
+      data.completeUsdCalendarCoverage!==false)
+    throw Error('ردّ غير آمن من ملخّص المصادر الرسمية');
+   state.textContent='WAIT — تغطية حكومية أميركية جزئية فقط، وليست أخباراً جيوسياسية شاملة.';
+   const s=data.sourceStatus||{};
+   const rows=[
+    'الفيدرالي (الأخبار النقدية): '+(s.fed||'UNAVAILABLE'),
+    'تقويم BLS: '+(s.bls||'UNAVAILABLE'),
+    'عوائد السندات H.15: '+(s.h15||'UNAVAILABLE')+' — يومية وليست لحظية',
+    'DXY وGC وتدفّق الأوامر: UNAVAILABLE',
+    'التغطية الجيوسياسية العالمية: غير متوفرة في هذه الطبقة',
+    'الأحداث القريبة: '+(Array.isArray(data.alerts)?data.alerts.length:0)+'؛ لا يُعتبر غيابها تأكيد أمان'
+   ];
+   for(const item of rows){const li=document.createElement('li');li.textContent=item;list.appendChild(li);}
+  }catch(e){state.textContent='فحص المصادر غير متاح: '+e.message+' — WAIT';}
+  finally{button.disabled=false;}
+ });
+})();
 </script>
 </html>

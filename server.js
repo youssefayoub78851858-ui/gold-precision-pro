@@ -79,6 +79,28 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // Public official context status only; network is disabled by default.
+  // This never promotes government headlines or daily yields into a trade vote.
+  if (req.url.split("?")[0] === "/api/v3/ultimate/official-context-stage") {
+    if (req.method !== "GET") return send(res,405,{error:"GET only"});
+    try {
+      const stage=await require("./coordinator/official_context_stage").collectOfficialContext({
+        offline:process.env.OFFICIAL_CONTEXT_NETWORK_APPROVED!=="1"
+      });
+      if(stage.signal!=="WAIT"||stage.executable!==false||
+         stage.researchEligible!==false||stage.geopoliticalWorldNewsCoverage!==false||
+         stage.completeUsdCalendarCoverage!==false||stage.dxyAvailable!==false||
+         stage.gcOrderFlowAvailable!==false||
+         Object.values(stage.ultimateLayerAdmission||{}).some(Boolean))
+        throw Error("Unsafe official partial context contract");
+      return send(res,200,stage);
+    } catch (error) {
+      return send(res,503,{status:"OFFICIAL_CONTEXT_UNAVAILABLE",signal:"WAIT",
+        executable:false,researchEligible:false,
+        geopoliticalWorldNewsCoverage:false,completeUsdCalendarCoverage:false});
+    }
+  }
+
   // Government news/calendar metadata ONLY. No trading signal or market-data subscription.
   if (req.url.split("?")[0] === "/api/v3/ultimate/official-macro") {
     if (req.method !== "GET") return send(res,405,{error:"GET only"});
