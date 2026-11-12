@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gold Precision Pro — مراجعة المراقبة الخاصة</title>
+<style>
+*{box-sizing:border-box}body{font:16px system-ui,sans-serif;background:#111923;color:#f0f3f6;margin:0;padding:18px}
+main{max-width:650px;margin:auto}h1{font-size:1.45rem;color:#eac576}p{line-height:1.6}
+section{background:#202d3b;border:1px solid #465364;border-radius:14px;padding:15px;margin:15px 0}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.metric{background:#131f2b;border-radius:9px;text-align:center;padding:12px 4px}
+.metric strong{display:block;font-size:1.3rem;color:#eac576}
+input,button{font:inherit;width:100%;padding:13px;margin:6px 0;border-radius:9px}
+input{background:#121e2b;color:#fff;border:1px solid #536275}
+button{border:0;background:#eac576;color:#17202c;font-weight:700}
+button:disabled{opacity:.65}ul{line-height:1.7;overflow-wrap:anywhere}
+small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;font-size:.85rem}
+@media(max-width:400px){body{padding:10px}.grid{gap:5px}}
+</style>
+</head>
+<body>
+<main>
+<h1>Gold Precision Pro Ultimate</h1>
+<p>مراقبة الذهب — شاشة خاصة للموبايل. فحص تقني فقط، بلا صفقات أو أسعار معروضة.</p>
+<section>
+<h2>دخول خاص للقراءة فقط</h2>
+<p>هذه الوصلة تبقى معطّلة حتى الموافقة على الربط الآمن بين خدمات Render.</p>
+<label for="auth">رمز MONITOR_READONLY_TOKEN للقراءة فقط</label>
+<input id="auth" type="password" autocomplete="off" spellcheck="false" placeholder="ألصق رمز الدخول الخاص">
+<button id="refresh" type="button">فحص حالة المراقبة</button>
+<button id="clear" type="button">مسح رمز الجلسة</button>
+<p id="auth-status" role="status">لا يتم حفظ رمز الدخول على الهاتف أو على هذا الموقع.</p>
+<small>استخدم الصفحة على اتصال HTTPS فقط. رمز الدخول لا يُرسل إلى أي موقع آخر.</small>
+</section>
+<section>
+<h2>نتيجة المراقبة</h2>
+<p id="status" role="status" aria-live="polite">WAIT — لم يتم الاتصال بعد</p>
+<p id="data-status">EODHD: غير متصل أو غير مفحوص</p>
+<div class="grid" aria-label="الشموع المغلقة">
+<div class="metric">M15<strong id="m15">0</strong></div>
+<div class="metric">H1<strong id="h1">0</strong></div>
+<div class="metric">H4<strong id="h4">0</strong></div>
+</div>
+<p id="engine">المحرك: NOT_INVOKED</p>
+<p id="paper">التداول الورقي: متوقف</p>
+<h3>أسباب WAIT</h3>
+<ul id="reasons"><li>المصدر غير مؤهّل للتداول حتى يثبت عكس ذلك</li></ul>
+</section>
+<p><small>لا تعرض هذه الشاشة أسعار Bid/Ask، أو مفاتيح، أو تاريخ تداول. الأعداد مؤشرات تقنية فقط، وليست إثباتاً لجودة البيانات أو جاهزية الصفقة.</small></p>
+</main>
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+let memoryToken="";
+const labels={
+ NOT_CONNECTED:"الوصلة الخاصة غير مفعّلة",
+ BLOCKED:"ملف الحالة مرفوض أو غير آمن",
+ WAIT_STALE:"البيانات أو الملف متأخر",
+ WAIT_NO_VERIFIED_QUOTE:"لا يوجد سعر حالي متحقق منه",
+ WAIT_REVIEW_OBSERVATION_ONLY:"الملف موجود، لكن يحتاج تدقيقاً مستقلاً"
+};
+el("clear").addEventListener("click",()=>{
+ memoryToken="";el("auth").value="";el("auth-status").textContent="تم مسح رمز الجلسة من هذه الصفحة";
+});
+el("refresh").addEventListener("click",async()=>{
+ if(location.protocol!=="https:"&&!["localhost","127.0.0.1"].includes(location.hostname)){
+  el("auth-status").textContent="ممنوع إرسال رمز الدخول من صفحة بدون HTTPS";return;
+ }
+ const fresh=el("auth").value.trim();
+ if(fresh){memoryToken=fresh;el("auth").value="";}
+ if(!memoryToken){el("auth-status").textContent="أدخل رمز الدخول الخاص أولاً";return;}
+ const b=el("refresh");b.disabled=true;el("auth-status").textContent="جارٍ فحص الحالة على الخادم الخاص";
+ try{
+  const controller=new AbortController();
+  const response=await fetch("/api/v3/monitor/status",{
+   method:"GET",headers:{Authorization:"Bearer "+memoryToken},
+   cache:"no-store",credentials:"omit",redirect:"error",signal:controller.signal
+  });
+  if(response.status===401){memoryToken="";throw Error("رمز الدخول غير صحيح");}
+  if(!response.ok)throw Error("فحص الخادم غير متاح");
+  const data=await response.json();
+  if(data.status!=="WAIT_EODHD_INTAKE"||data.signal!=="WAIT"||
+     data.executable!==false||data.researchEligible!==false||
+     data.engineStatus!=="NOT_INVOKED"||data.paperRunning!==false)
+   throw Error("عُثر على استجابة غير آمنة");
+  el("status").textContent="WAIT — لا توجد صفقة قابلة للتنفيذ";
+  el("data-status").textContent="EODHD: "+(labels[data.dataStatus]||"غير مؤهّل");
+  for(const [tf,id] of [["M15","m15"],["H1","h1"],["H4","h4"]]){
+   const n=data.closedBarCounts?.[tf];
+   el(id).textContent=Number.isInteger(n)&&n>=0&&n<=3000?String(n):"0";
+  }
+  el("engine").textContent="المحرك: NOT_INVOKED — لم يتم تقييم أي صفقة";
+  el("paper").textContent="التداول الورقي: متوقف";
+  const list=el("reasons");list.replaceChildren();
+  const raw=data.intake?.blockingReasons;
+  for(const item of Array.isArray(raw)?raw.slice(0,20):[]){
+   if(typeof item!=="string"||!/^[A-Z0-9_]{3,90}$/.test(item))continue;
+   const li=document.createElement("li");li.className="reason";li.textContent=item;list.append(li);
+  }
+  if(!list.children.length){const li=document.createElement("li");li.textContent="الدليل المستقل أو مصدر السوق غير جاهز";list.append(li);}
+  el("auth-status").textContent="اكتمل فحص الحالة. الرمز محفوظ بذاكرة الصفحة مؤقتاً فقط";
+ }catch(e){el("status").textContent="WAIT — تعذّر فحص المراقبة";el("auth-status").textContent=e.message;}
+ finally{b.disabled=false;}
+});
+</script>
+</body>
+</html>

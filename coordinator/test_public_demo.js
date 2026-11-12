@@ -55,6 +55,13 @@ async function main(){
   for(const [i,match] of embeddedScripts.entries()){
    assert.doesNotThrow(()=>new vm.Script(match[1],{filename:'ultimate-inline-'+i+'.js'}));
   }
+  const view=await fetch(base+'/private-monitor');
+  assert.equal(view.status,200);
+  assert.match(await view.text(),/MONITOR_READONLY_TOKEN/);
+  const proxy=await fetch(base+'/api/v3/monitor/status',{headers:{Authorization:"Bearer "+"R".repeat(48)}});
+  assert.equal(proxy.status,503);
+  const proxied=await proxy.json();assert.equal(proxied.status,"REVIEW_MONITOR_PROXY_DISABLED");
+  assert.equal(proxied.signal,"WAIT");assert.equal(proxied.executable,false);
   const response=await fetch(base+'/api/v3/research');
   assert.equal(response.status,200);
   const result=await response.json();

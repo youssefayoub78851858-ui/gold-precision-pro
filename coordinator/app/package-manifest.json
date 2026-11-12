@@ -20,7 +20,7 @@
     "../startup_guard.py": "4f68c93c893fea82fc5796e317fb56dd3304af9bfc97f6d185f9892eb0fa76ff",
     "../handoff_guard.py": "327a2fe7ecd2911339359b49333438597259bc0448826ae774e258d3abefaa02",
     "../process_inventory.py": "6fd59f53fb2660b94849c9ff708f406e44a9e0f0d074685bfd87386bce1c9268",
-    "../entrypoint.py": "de05749f6a9a5fde7e91e050f7e518cc36e864a3db461a6e08972b9fd3f5d15f",
+    "../entrypoint.py": "05a881fcb549fde5a42a9d92e933b4eb240c22d5e032062ed71157a7f2fbeb1e",
     "../usage_probe.py": "804a26fdef54a0522e354eb689e271e816c6502214665aa756ee3c94751d8f48",
     "../acceptance_watch.py": "ff1bfc8a57c67e44564bf33a1fe341463fd95916b904baeaac95e1d4091ce274",
     "../v3_market_structure.js": "18327e51e7013c168bbf6ebaf3061044d2137810649cdbd2637ecfd558797e6b",

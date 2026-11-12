@@ -243,6 +243,9 @@ jobs:
         working-directory: coordinator
         run: python -m unittest -v test_mbo_order_book
 
+      - name: Private monitor mobile viewer proxy offline safety
+        working-directory: coordinator
+        run: node test_review_monitor_proxy.js
       - name: Private mobile monitor static security contract
         working-directory: coordinator
         run: python -m unittest -v test_private_mobile_dashboard

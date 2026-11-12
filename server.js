@@ -45,6 +45,26 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, {});
   }
 
+  // Gated viewer bridge for public REVIEW DEMO only; NEVER broker admin routes.
+  if(req.url.split("?")[0]==="/private-monitor"){
+   if(req.method!=="GET")return send(res,405,{error:"GET only"});
+   if(!DEMO_MODE)return send(res,404,{error:"Not found"});
+   res.writeHead(200,{"Content-Type":"text/html; charset=utf-8",
+    "Cache-Control":"no-store","Referrer-Policy":"no-referrer",
+    "X-Content-Type-Options":"nosniff",
+    "Content-Security-Policy":"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"});
+   return res.end(fs.readFileSync(path.join(__dirname,"private-monitor.html")));
+  }
+  if(req.url.split("?")[0]==="/api/v3/monitor/status"){
+   if(req.method!=="GET")return send(res,405,{error:"GET only"});
+   const result=await require("./coordinator/review_monitor_proxy").relay(req.headers.authorization,{
+    approved:DEMO_MODE&&process.env.PRIVATE_MONITOR_PROXY_APPROVED==="1"
+   });
+   res.writeHead(result.httpStatus,{"Content-Type":"application/json; charset=utf-8",
+    "Cache-Control":"no-store","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff"});
+   return res.end(JSON.stringify(result.body));
+  }
+
   // Read-only metadata about historic XAUUSD candle feasibility and legal prerequisites.
   // Never calls Dukascopy, stores OHLC or opens live trading.
   if (req.url.split("?")[0] === "/api/v3/ultimate/candle-source-readiness") {

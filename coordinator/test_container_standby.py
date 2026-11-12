@@ -6,7 +6,7 @@ def main():
  tag='gold-v3-standby:ci';cid=None
  subprocess.run(['docker','build','-f',str(ROOT/'Dockerfile'),'-t',tag,str(ROOT)],check=True)
  with tempfile.TemporaryDirectory() as d:
-  tmp=pathlib.Path(d);data=tmp/'data';data.mkdir();(data/'gold-live').mkdir();envfile=tmp/'runtime.env';envfile.write_text('CUTOVER_MODE=standby\nDATA_DIR=/var/data/gold-live\nBROKER_PORT=3110\nBROKER_TOKEN='+secrets.token_urlsafe(40)+'\n');envfile.chmod(0o600)
+  tmp=pathlib.Path(d);data=tmp/'data';data.mkdir();(data/'gold-live').mkdir();envfile=tmp/'runtime.env';envfile.write_text('CUTOVER_MODE=standby\nDATA_DIR=/var/data/gold-live\nBROKER_PORT=3110\nBROKER_TOKEN='+secrets.token_urlsafe(40)+'\nMONITOR_READONLY_TOKEN='+secrets.token_urlsafe(40)+'\n');envfile.chmod(0o600)
   def start():
    return subprocess.check_output(['docker','run','-d','--network=none','--memory=512m','--cpus=0.5','--env-file',str(envfile),'--mount','type=bind,src='+str(data)+',dst=/var/data',tag],text=True).strip()
   def execute(code):return subprocess.check_output(['docker','exec','-i',cid,'python3','-'],input=code,text=True)
@@ -32,6 +32,17 @@ try:
  raise AssertionError('Unauthorized access must fail')
 except urllib.error.HTTPError as error:
  assert error.code==401
+viewer=os.environ['MONITOR_READONLY_TOKEN']
+def viewer_get(path,secret):
+ r=urllib.request.Request(base+path,headers={'X-Monitor-Viewer':secret})
+ try:
+  with urllib.request.urlopen(r,timeout=2) as q:return q.status,json.load(q)
+ except urllib.error.HTTPError as e:return e.code,json.load(e)
+code,data=viewer_get('/api/v3/monitor/status',viewer)
+assert code==200 and data['status']=='WAIT_EODHD_INTAKE'
+assert data['signal']=='WAIT' and data['executable'] is False and data['paperRunning'] is False
+assert viewer_get('/health',viewer)[0]==401
+assert viewer_get('/api/v3/monitor/status','not-right-viewer-passphrase-0123456789')[0]==401
 assert 'TWELVE_DATA_API_KEY' not in os.environ
 import pathlib
 assert not list(pathlib.Path('/var/data').rglob('*.sqlite3'))

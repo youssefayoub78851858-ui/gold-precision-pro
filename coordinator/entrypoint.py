@@ -27,11 +27,15 @@ class Handler(BaseHTTPRequestHandler):
   health=authenticated and self.path=='/health'
   feed_ready=authenticated and self.path=='/api/v3/eodhd/readiness'
   monitor_ready=authenticated and self.path=='/api/v3/monitor/status'
-  status=401 if not authenticated else 200 if health or feed_ready or monitor_ready else 503
+  viewer_secret=os.environ.get('MONITOR_READONLY_TOKEN','')
+  viewer_authorized=(self.path=='/api/v3/monitor/status'
+    and len(viewer_secret)>=32 and not hmac.compare_digest(viewer_secret,token)
+    and hmac.compare_digest(self.headers.get('X-Monitor-Viewer','').encode(),viewer_secret.encode()))
+  status=401 if not (authenticated or viewer_authorized) else 200 if health or feed_ready or monitor_ready or viewer_authorized else 503
   body={'status':'standby','providerAccess':False,'paperRunning':False} if health else {'status':'error','message':'Unauthorized' if not authenticated else 'Coordinator awaiting approved cutover'}
   if authenticated and self.path=='/api/v3/research':body={'engine':'V3','signal':'WAIT','executable':False,'dataStatus':'STANDBY','reason':'Coordinator in standby; provider access disabled'}
   if feed_ready:body=read_private_status(os.environ.get('DATA_DIR','/var/data/gold-live'))
-  if monitor_ready:body=poll_private_review(os.environ.get('DATA_DIR','/var/data/gold-live'),datetime.datetime.now(datetime.timezone.utc))
+  if monitor_ready or viewer_authorized:body=poll_private_review(os.environ.get('DATA_DIR','/var/data/gold-live'),datetime.datetime.now(datetime.timezone.utc))
   data=json.dumps(body).encode();self.send_response(status);self.send_header('Content-Type','application/json');self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(data)
 server=ThreadingHTTPServer(('0.0.0.0',int(os.environ.get('BROKER_PORT','3110'))),Handler)
 signal.signal(signal.SIGTERM,lambda *_:threading.Thread(target=server.shutdown,daemon=True).start())
