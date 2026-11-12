@@ -1,0 +1,59 @@
+name: Review mobile real HTTPS read-only smoke
+on:
+  push:
+    branches:
+      - review/v2-portable-tests-20261109
+    paths:
+      - '.github/workflows/review-mobile-live-smoke.yml'
+  workflow_dispatch:
+
+jobs:
+  public-review-only:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 6
+    steps:
+      - name: Verify public review page over real HTTPS without any secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://gold-precision-v3-review-demo.onrender.com'
+          html="$(mktemp)"
+          headers="$(mktemp)"
+          curl -fsSL --retry 4 --retry-delay 5 --retry-all-errors --connect-timeout 12 --max-time 55 \
+            -D "$headers" -o "$html" "$base/private-monitor"
+          grep -q 'MONITOR_READONLY_TOKEN' "$html"
+          grep -q 'Gold Precision Pro' "$html"
+          grep -qi 'content-security-policy:.*frame-ancestors' "$headers"
+          grep -qi 'cache-control: no-store' "$headers"
+          test "$(wc -c < "$html")" -lt 30000
+          echo 'PASS: review-only mobile HTML reachable over HTTPS, CSP and no-store present'
+      - name: Confirm anonymous access is rejected without contacting paid providers
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://gold-precision-v3-review-demo.onrender.com'
+          result="$(mktemp)"
+          code="$(curl -sS --retry 4 --retry-delay 5 --retry-all-errors --connect-timeout 12 --max-time 55 \
+            -o "$result" -w '%{http_code}' "$base/api/v3/monitor/status")"
+          [ "$code" = '401' ]
+          python - "$result" <<'PY'
+          import json,sys
+          body=json.load(open(sys.argv[1]))
+          assert body['status']=='MONITOR_VIEWER_AUTH_REQUIRED',body
+          assert body['signal']=='WAIT' and body['executable'] is False
+          assert body['researchEligible'] is False and body['paperRunning'] is False
+          assert body['engineStatus']=='NOT_INVOKED'
+          assert not any(k in body for k in ('bid','ask','latestQuote','apiKey'))
+          print('PASS: public monitor rejects anonymous requests and exposes only WAIT metadata')
+          PY
+      - name: Confirm POST is not accepted on read-only endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://gold-precision-v3-review-demo.onrender.com'
+          code="$(curl -sS --connect-timeout 10 --max-time 20 -o /dev/null -w '%{http_code}' \
+            -X POST "$base/api/v3/monitor/status")"
+          [ "$code" = '405' ]
+          echo 'PASS: read-only endpoint rejects POST'
