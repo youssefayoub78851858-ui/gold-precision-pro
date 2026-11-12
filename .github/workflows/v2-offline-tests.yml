@@ -249,6 +249,9 @@ jobs:
       - name: Private mobile monitor static security contract
         working-directory: coordinator
         run: python -m unittest -v test_private_mobile_dashboard
+      - name: Private periodic watchdog audit, restart, and no-network contract
+        working-directory: coordinator
+        run: python -m unittest -v test_private_review_watchdog
       - name: Offline private EODHD status to SQLite alert and notification journal
         working-directory: coordinator
         run: python -m unittest -v test_eodhd_review_monitor

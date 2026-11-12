@@ -36,6 +36,8 @@ CHECKS = {
         ("coordinator/ultimate_paper.py", ["PaperAccount", "executable"]),
         ("coordinator/research_monitor_runner.py", ["run_continuously", "WAIT"]),
         ("coordinator/research_notification.py", ["executable"]),
+        ("coordinator/private_review_watchdog.py", ["run_until_stopped", "observe_once", "AUDIT_STALE", "WAIT"]),
+        ("coordinator/test_private_review_watchdog.py", ["test_outage_is_recorded_once_and_survives_restart"]),
     ],
     "mt5_demo": [
         ("mt5/Experts/GoldPrecisionReadOnlyExport.mq5", ["ACCOUNT_TRADE_MODE_DEMO"]),
