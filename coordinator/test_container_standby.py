@@ -24,6 +24,7 @@ code,feed=get('/api/v3/eodhd/readiness');assert code==200 and feed['status']=='N
 assert feed['closedBarCounts']=={'M15':0,'H1':0,'H4':0} and feed['priceVisible'] is False
 code,monitor=get('/api/v3/monitor/status');assert code==200 and monitor['status']=='WAIT_EODHD_INTAKE' and monitor['signal']=='WAIT' and monitor['executable'] is False and monitor['researchEligible'] is False and monitor['engineStatus']=='NOT_INVOKED' and monitor['dataStatus']=='NOT_CONNECTED'
 assert monitor['sourceRequestsMade']==0 and monitor['paperRunning'] is False
+assert monitor['audit']['status']=='AUDIT_DISABLED'
 assert 'latestQuote' not in monitor and 'bidFrames' not in monitor and 'askFrames' not in monitor
 with urllib.request.urlopen(base+'/api/v3/monitor/dashboard',timeout=2) as page:
  html=page.read();assert page.status==200 and b'api/v3/monitor/status' in html and b'autocomplete="off"' in html
@@ -67,6 +68,37 @@ for p in pathlib.Path('/proc').glob('[0-9]*/cmdline'):
     except subprocess.CalledProcessError:time.sleep(.25)
    else:raise RuntimeError('Restart readiness failed')
    execute("from pathlib import Path\nassert Path('/var/data/gold-live/standby-persistence-check').read_text()=='ok'")
+   # Start a second OFFLINE instance with the audit loop enabled, still --network=none.
+   subprocess.run(['docker','rm','-f',cid],check=True,stdout=subprocess.DEVNULL);cid=None
+   with envfile.open('a') as conf:conf.write('PRIVATE_REVIEW_AUDIT_ENABLED=1\\n')
+   cid=start()
+   audit_probe='''import os,json,sqlite3,urllib.request,pathlib
+base='http://127.0.0.1:3110'
+request=urllib.request.Request(base+'/api/v3/monitor/status',headers={'X-Monitor-Viewer':os.environ['MONITOR_READONLY_TOKEN']})
+with urllib.request.urlopen(request,timeout=2) as r:
+ result=json.load(r)
+audit=result['audit']
+assert audit['status']=='AUDIT_OK' and audit['signal']=='WAIT' and audit['executable'] is False,audit
+assert audit['externalNotificationsSent']==0 and audit['lastNotificationCode']=='WAIT_EODHD_INTAKE'
+assert 'INTAKE_BLOCKED' in audit['alertCodes']
+root=pathlib.Path('/var/data/gold-live/review-audit')
+assert (root/'alerts.sqlite3').exists() and (root/'notifications.sqlite3').exists()
+with sqlite3.connect(root/'alerts.sqlite3') as db:
+ assert db.execute('SELECT count(*) FROM research_alert_events').fetchone()[0]==1
+with sqlite3.connect(root/'notifications.sqlite3') as db:
+ assert db.execute('SELECT count(*) FROM research_notification_events').fetchone()[0]==1
+assert result['sourceRequestsMade']==0 and result['paperRunning'] is False
+'''
+   for _ in range(40):
+    try:execute(audit_probe);break
+    except subprocess.CalledProcessError:time.sleep(.25)
+   else:raise RuntimeError('Periodic audit did not start')
+   subprocess.run(['docker','restart',cid],check=True,stdout=subprocess.DEVNULL)
+   for _ in range(40):
+    try:execute(audit_probe);break
+    except subprocess.CalledProcessError:time.sleep(.25)
+   else:raise RuntimeError('Periodic audit did not survive restart')
+   print('PASS offline private periodic watchdog; persistent deduplicated WAIT after restart; zero provider calls')
    print('PASS actual Docker image; V3 imports; standby; provider disabled; no worker; 512MB/0.5CPU; bind-volume survives restart')
   finally:
    if cid:subprocess.run(['docker','rm','-f',cid],check=False,stdout=subprocess.DEVNULL)

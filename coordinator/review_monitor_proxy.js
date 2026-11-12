@@ -23,10 +23,31 @@ function sanitize(input){
  const reasons=input.intake?.blockingReasons;
  if(!Array.isArray(reasons)||reasons.length<1||reasons.length>50
     ||reasons.some(r=>typeof r!=="string"||!code.test(r)))throw Error("Unsafe reason");
+ const audit=input.audit;
+ let safeAudit=null;
+ if(audit!==undefined){
+  const statuses=new Set(["AUDIT_DISABLED","AUDIT_NOT_STARTED","AUDIT_OK",
+                          "AUDIT_STALE","AUDIT_UNAVAILABLE"]);
+  if(!audit||!statuses.has(audit.status)||audit.signal!=="WAIT"
+     ||audit.executable!==false||audit.paperRunning!==false
+     ||audit.externalNotificationsSent!==0)throw Error("Unsafe audit contract");
+  const codes=audit.alertCodes;
+  if(!Array.isArray(codes)||codes.length>20
+     ||codes.some(v=>typeof v!=="string"||!code.test(v)))throw Error("Unsafe audit codes");
+  const note=audit.lastNotificationCode,time=audit.lastObservedUTC,age=audit.ageSeconds;
+  if(note!==null&&(typeof note!=="string"||!code.test(note)))throw Error("Unsafe audit notification");
+  if(time!==null&&(typeof time!=="string"||!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$/.test(time)))
+    throw Error("Unsafe audit time");
+  if(age!==null&&(!Number.isInteger(age)||age<0||age>315360000))throw Error("Unsafe audit age");
+  safeAudit={status:audit.status,lastObservedUTC:time,ageSeconds:age,
+             alertCodes:codes,lastNotificationCode:note,signal:"WAIT",
+             executable:false,paperRunning:false,externalNotificationsSent:0};
+ }
  return {status:"WAIT_EODHD_INTAKE",dataStatus:input.dataStatus,
   signal:"WAIT",executable:false,researchEligible:false,engineStatus:"NOT_INVOKED",
   paperRunning:false,closedBarCounts:safe,
-  intake:{status:"BLOCKED",blockingReasons:[...new Set(reasons)].slice(0,20)}};
+  intake:{status:"BLOCKED",blockingReasons:[...new Set(reasons)].slice(0,20)},
+  ...(safeAudit?{audit:safeAudit}:{})};
 }
 async function relay(authorization,{approved=false,fetchFn=globalThis.fetch}={}){
  if(!approved)return deny(503,"REVIEW_MONITOR_PROXY_DISABLED");

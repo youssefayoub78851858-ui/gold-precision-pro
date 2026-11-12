@@ -31,5 +31,17 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  a.equal(wrong.httpStatus,401);
  const fault=await relay(auth,{approved:true,fetchFn:async()=>{throw Error("private secret")}});
  a.equal(fault.httpStatus,503);a.ok(!JSON.stringify(fault).includes("private secret"));
+ const withAudit=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,audit:{status:"AUDIT_OK",lastObservedUTC:"2026-11-12T21:00:00Z",
+   ageSeconds:1,alertCodes:["INTAKE_BLOCKED"],lastNotificationCode:"WAIT_EODHD_INTAKE",
+   signal:"WAIT",executable:false,paperRunning:false,externalNotificationsSent:0,price:10000}
+ })});
+ a.equal(withAudit.httpStatus,200);
+ a.equal(withAudit.body.audit.alertCodes[0],"INTAKE_BLOCKED");
+ a.ok(!JSON.stringify(withAudit).includes("10000"));
+ const tampered=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,audit:{...withAudit.body.audit,alertCodes:["<unsafe>"]}
+ })});
+ a.equal(tampered.httpStatus,503);
  console.log("PASS: public review proxy disabled by default; readonly-only relay; safe WAIT data");
 })().catch(e=>{console.error(e);process.exitCode=1});

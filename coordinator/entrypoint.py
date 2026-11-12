@@ -11,6 +11,7 @@ token=os.environ.get('BROKER_TOKEN','')
 if len(token)<32:raise SystemExit('Strong internal token required')
 from eodhd_private_readiness import read_private_status
 from eodhd_review_monitor import poll_private_review
+from private_review_watchdog import read_audit_state,run_until_stopped
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,*_):pass
  def do_GET(self):
@@ -35,9 +36,23 @@ class Handler(BaseHTTPRequestHandler):
   body={'status':'standby','providerAccess':False,'paperRunning':False} if health else {'status':'error','message':'Unauthorized' if not authenticated else 'Coordinator awaiting approved cutover'}
   if authenticated and self.path=='/api/v3/research':body={'engine':'V3','signal':'WAIT','executable':False,'dataStatus':'STANDBY','reason':'Coordinator in standby; provider access disabled'}
   if feed_ready:body=read_private_status(os.environ.get('DATA_DIR','/var/data/gold-live'))
-  if monitor_ready or viewer_authorized:body=poll_private_review(os.environ.get('DATA_DIR','/var/data/gold-live'),datetime.datetime.now(datetime.timezone.utc))
+  if monitor_ready or viewer_authorized:
+   now=datetime.datetime.now(datetime.timezone.utc)
+   body=poll_private_review(audit_root,now)
+   body['audit']=read_audit_state(audit_root,now,enabled=audit_enabled)
   data=json.dumps(body).encode();self.send_response(status);self.send_header('Content-Type','application/json');self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(data)
+audit_root=os.environ.get('DATA_DIR','/var/data/gold-live')
+audit_enabled=os.environ.get('PRIVATE_REVIEW_AUDIT_ENABLED')=='1'
+audit_stop=threading.Event()
 server=ThreadingHTTPServer(('0.0.0.0',int(os.environ.get('BROKER_PORT','3110'))),Handler)
-signal.signal(signal.SIGTERM,lambda *_:threading.Thread(target=server.shutdown,daemon=True).start())
+if audit_enabled:
+ threading.Thread(target=run_until_stopped,args=(audit_root,audit_stop),
+                  daemon=True,name='private-review-audit').start()
+def shutdown(*_):
+ audit_stop.set()
+ threading.Thread(target=server.shutdown,daemon=True).start()
+signal.signal(signal.SIGTERM,shutdown)
 try:server.serve_forever()
-finally:server.server_close()
+finally:
+ audit_stop.set()
+ server.server_close()

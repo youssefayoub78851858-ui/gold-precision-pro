@@ -25,7 +25,7 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <p>مراقبة الذهب — شاشة خاصة للموبايل. فحص تقني فقط، بلا صفقات أو أسعار معروضة.</p>
 <section>
 <h2>دخول خاص للقراءة فقط</h2>
-<p>هذه الوصلة تبقى معطّلة حتى الموافقة على الربط الآمن بين خدمات Render.</p>
+<p>هذه وصلة مراقبة للقراءة فقط عبر Render. البيانات الحقيقية ومحرك الصفقات ما زالوا معطّلين.</p>
 <label for="auth">رمز MONITOR_READONLY_TOKEN للقراءة فقط</label>
 <input id="auth" type="password" autocomplete="off" spellcheck="false" placeholder="ألصق رمز الدخول الخاص">
 <button id="refresh" type="button">فحص حالة المراقبة</button>
@@ -46,6 +46,13 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <p id="paper">التداول الورقي: متوقف</p>
 <h3>أسباب WAIT</h3>
 <ul id="reasons"><li>المصدر غير مؤهّل للتداول حتى يثبت عكس ذلك</li></ul>
+</section>
+<section id="audit-panel" aria-labelledby="audit-title">
+<h2 id="audit-title">مراقبة اتصال الذهب والتنبيهات الداخلية</h2>
+<p id="audit-state" role="status">لم يتم فحص حالة المراقبة الدورية بعد.</p>
+<p id="audit-time"></p>
+<ul id="audit-codes" aria-live="polite"></ul>
+<p><small>تنبيهات داخلية مسجّلة فقط. لا توجد رسائل Push أو أوامر تداول أو أسعار حقيقية.</small></p>
 </section>
 <p><small>لا تعرض هذه الشاشة أسعار Bid/Ask، أو مفاتيح، أو تاريخ تداول. الأعداد مؤشرات تقنية فقط، وليست إثباتاً لجودة البيانات أو جاهزية الصفقة.</small></p>
 </main>
@@ -99,6 +106,21 @@ el("refresh").addEventListener("click",async()=>{
    const li=document.createElement("li");li.className="reason";li.textContent=item;list.append(li);
   }
   if(!list.children.length){const li=document.createElement("li");li.textContent="الدليل المستقل أو مصدر السوق غير جاهز";list.append(li);}
+  const audit=data.audit;
+  const states={AUDIT_DISABLED:"المراقب الدوري متوقف",AUDIT_NOT_STARTED:"المراقب لم يسجّل أي فحص بعد",
+   AUDIT_OK:"المراقب الداخلي يعمل ويسجّل أسباب WAIT",
+   AUDIT_STALE:"المراقب الداخلي متأخر",AUDIT_UNAVAILABLE:"تعذّر قراءة سجل المراقبة"};
+  el("audit-state").textContent=audit&&states[audit.status]||"لا توجد معلومات موثّقة عن المراقبة الدورية";
+  el("audit-time").textContent=audit?.lastObservedUTC?"آخر فحص: "+audit.lastObservedUTC:"لم يُسجّل توقيت فحص";
+  const codes=el("audit-codes");codes.replaceChildren();
+  for(const item of Array.isArray(audit?.alertCodes)?audit.alertCodes:[]){
+   if(typeof item!=="string"||!/^[A-Z0-9_]{3,90}$/.test(item))continue;
+   const li=document.createElement("li");li.className="reason";li.textContent=item;codes.append(li);
+  }
+  if(audit?.lastNotificationCode){
+   const li=document.createElement("li");
+   li.className="reason";li.textContent="تنبيه داخلي: "+audit.lastNotificationCode;codes.append(li);
+  }
   el("auth-status").textContent="اكتمل فحص الحالة. الرمز محفوظ بذاكرة الصفحة مؤقتاً فقط";
  }catch(e){el("status").textContent="WAIT — تعذّر فحص المراقبة";el("auth-status").textContent=e.message;}
  finally{b.disabled=false;}
