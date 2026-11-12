@@ -16,12 +16,18 @@ CHECKS = {
         ("coordinator/eodhd_ws_bridge.js", ["EODHD_CONNECT_APPROVED", "EODHD_RIGHTS_APPROVED", "EODHD_API_TOKEN", "XAUUSD"]),
         ("coordinator/xauusd_feed_gate.py", ["SourcePolicy", "intake_payload", "expectedOpenTimes"]),
         ("coordinator/xauusd_research_pipeline.py", ["run_research_pipeline", "researchEligible"]),
+        ("coordinator/eodhd_research_bridge.py", ["run_research_pipeline", "BID_ASK_AGGREGATE_MISMATCH", "INDEPENDENT_SESSION_HISTORY_OR_CLOCK_EVIDENCE_MISSING"]),
+        ("coordinator/test_eodhd_research_bridge.py", ["test_mock_cannot_claim_live_research_without_50_h4_bars"]),
     ],
     "context_and_news": [
         ("coordinator/h15_official_rss.js", ["DGS2", "DGS10"]),
         ("coordinator/official_macro_review.js", ["FED_URL", "BLS_URL"]),
         ("coordinator/ultimate_v2_contracts.js", ["orderFlow", "headlines", "calendar", "DXY", "GC"]),
         ("coordinator/ultimate_news_impact.js", ["GEOPOLITICAL_RISK", "signal"]),
+        ("coordinator/official_context_stage.js", ["geopoliticalWorldNewsCoverage:false", "completeUsdCalendarCoverage:false", "collectOfficialContext"]),
+        ("coordinator/test_official_context_stage.js", ["assertSafe", "OFFICIAL_CONTEXT_CONTRACT_INVALID"]),
+        ("server.js", ["/api/v3/ultimate/official-context-stage", "OFFICIAL_CONTEXT_NETWORK_APPROVED"]),
+        ("ultimate.html", ["official-context-check", "official-context-status"]),
     ],
     "paper_and_monitoring": [
         ("coordinator/ultimate_paper.py", ["PaperAccount", "executable"]),
