@@ -113,7 +113,7 @@ class EodhdResearchStaging(unittest.TestCase):
         self.assertIn("INDICATOR_HISTORY_WARMUP_INSUFFICIENT",r["blockingReasons"])
 
     def test_mock_cannot_claim_live_research_without_50_h4_bars(self):
-        s=sample(800)
+        s=sample(832)  # extra complete H4 groups for off-grid start/end
         self.assertGreaterEqual(len(s["bidFrames"]["H4"]),50)
         evidence=IndependentEvidence(
             schedule_verified=True,schedule_reference="UNIT TEST ONLY",
