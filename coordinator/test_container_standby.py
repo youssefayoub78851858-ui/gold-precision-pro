@@ -101,5 +101,13 @@ assert result['sourceRequestsMade']==0 and result['paperRunning'] is False
    print('PASS offline private periodic watchdog; persistent deduplicated WAIT after restart; zero provider calls')
    print('PASS actual Docker image; V3 imports; standby; provider disabled; no worker; 512MB/0.5CPU; bind-volume survives restart')
   finally:
-   if cid:subprocess.run(['docker','rm','-f',cid],check=False,stdout=subprocess.DEVNULL)
+   if cid:
+    # The audit directory is intentionally 0700 and owned by the container
+    # root user. For CI's temporary bind mount ONLY, make its directory owned
+    # by the host runner before tempfile cleanup. Do not chmod live storage.
+    subprocess.run(['docker','exec',cid,'chown',
+                    str(os.getuid())+':'+str(os.getgid()),
+                    '/var/data/gold-live/review-audit'],
+                   check=False,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    subprocess.run(['docker','rm','-f',cid],check=False,stdout=subprocess.DEVNULL)
 if __name__=='__main__':main()
