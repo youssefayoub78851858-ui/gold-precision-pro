@@ -36,7 +36,7 @@ function sanitize(input){
      ||codes.some(v=>typeof v!=="string"||!code.test(v)))throw Error("Unsafe audit codes");
   const note=audit.lastNotificationCode,time=audit.lastObservedUTC,age=audit.ageSeconds;
   if(note!==null&&(typeof note!=="string"||!code.test(note)))throw Error("Unsafe audit notification");
-  if(time!==null&&(typeof time!=="string"||!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$/.test(time)))
+  if(time!==null&&(typeof time!=="string"||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(time)))
     throw Error("Unsafe audit time");
   if(age!==null&&(!Number.isInteger(age)||age<0||age>315360000))throw Error("Unsafe audit age");
   safeAudit={status:audit.status,lastObservedUTC:time,ageSeconds:age,

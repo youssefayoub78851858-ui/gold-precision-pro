@@ -70,7 +70,7 @@ for p in pathlib.Path('/proc').glob('[0-9]*/cmdline'):
    execute("from pathlib import Path\nassert Path('/var/data/gold-live/standby-persistence-check').read_text()=='ok'")
    # Start a second OFFLINE instance with the audit loop enabled, still --network=none.
    subprocess.run(['docker','rm','-f',cid],check=True,stdout=subprocess.DEVNULL);cid=None
-   with envfile.open('a') as conf:conf.write('PRIVATE_REVIEW_AUDIT_ENABLED=1\\n')
+   with envfile.open('a') as conf:conf.write('PRIVATE_REVIEW_AUDIT_ENABLED=1\n')
    cid=start()
    audit_probe='''import os,json,sqlite3,urllib.request,pathlib
 base='http://127.0.0.1:3110'
