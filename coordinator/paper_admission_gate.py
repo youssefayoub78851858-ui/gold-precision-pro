@@ -7,6 +7,8 @@ a verified feed, completed risk gates, and an explicit later activation.
 """
 from __future__ import annotations
 
+from paper_cost_preflight import cost_readiness
+
 ALLOWED = {
     "NOT_CONNECTED", "BLOCKED", "WAIT_STALE", "WAIT_NO_VERIFIED_QUOTE",
     "WAIT_REVIEW_OBSERVATION_ONLY",
@@ -58,4 +60,5 @@ def assess_paper_gate(monitor: object, audit: object) -> dict:
         "ledgerCreatedByGate": False,
         "simulationEvidenceIsLive": False,
         "reasonCodes": reasons,
+        "costReadiness": cost_readiness(),
     }

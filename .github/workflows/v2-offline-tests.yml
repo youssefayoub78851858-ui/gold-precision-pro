@@ -249,6 +249,9 @@ jobs:
       - name: Private mobile monitor static security contract
         working-directory: coordinator
         run: python -m unittest -v test_private_mobile_dashboard
+      - name: Synthetic broker cost arithmetic and risk block (offline only)
+        working-directory: coordinator
+        run: python -m unittest -v test_paper_cost_preflight
       - name: Paper trade admission guard and spoofed signal fail-closed (offline)
         working-directory: coordinator
         run: python -m unittest -v test_paper_admission_gate

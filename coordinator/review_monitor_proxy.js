@@ -58,9 +58,30 @@ function sanitize(input){
      ||!codes.includes("SOURCE_LICENSE_AND_HISTORY_NOT_VERIFIED")
      ||!codes.includes("RISK_AND_BROKER_COSTS_NOT_VERIFIED"))
     throw Error("Unsafe paper gate");
+  const cost=paper.costReadiness;
+  let costSafe;
+  if(cost!==undefined){
+   const checks=cost?.reasonCodes;
+   const required=["BROKER_CONTRACT_AND_LOT_SPEC_UNVERIFIED",
+     "LIVE_BID_ASK_SPREAD_EVIDENCE_MISSING",
+     "COMMISSION_AND_SLIPPAGE_EVIDENCE_MISSING",
+     "RISK_BUDGET_AND_STOP_DISTANCE_UNVERIFIED"];
+   if(cost.mode!=="BROKER_COST_EVIDENCE_REVIEW_ONLY"||cost.status!=="BLOCKED"
+      ||cost.signal!=="WAIT"||cost.executable!==false
+      ||cost.modelAvailable!==true||cost.realBrokerFeesVerified!==false
+      ||cost.realBidAskVerified!==false||cost.riskBudgetVerified!==false
+      ||cost.ordersAllowed!==false||cost.sampleTradeExecuted!==false
+      ||!Array.isArray(checks)||checks.length!==required.length
+      ||required.some(c=>!checks.includes(c)))
+      throw Error("Unsafe unverified cost model");
+   costSafe={status:"BLOCKED",signal:"WAIT",executable:false,
+    modelAvailable:true,realBrokerFeesVerified:false,realBidAskVerified:false,
+    ordersAllowed:false,reasonCodes:required};
+  }
   safePaper={mode:"PAPER_ADMISSION_REVIEW_ONLY",status:"BLOCKED",
    signal:"WAIT",executable:false,reviewOnly:true,paperRunning:false,
-   paperOrdersAllowed:false,reasonCodes:[...new Set(codes)]};
+   paperOrdersAllowed:false,reasonCodes:[...new Set(codes)],
+   ...(costSafe?{costReadiness:costSafe}:{})};
  }
  return {status:"WAIT_EODHD_INTAKE",dataStatus:input.dataStatus,
   signal:"WAIT",executable:false,researchEligible:false,engineStatus:"NOT_INVOKED",

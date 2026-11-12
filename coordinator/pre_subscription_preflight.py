@@ -35,6 +35,8 @@ CHECKS = {
     "paper_and_monitoring": [
         ("coordinator/ultimate_paper.py", ["PaperAccount", "executable"]),
         ("coordinator/paper_admission_gate.py", ["assess_paper_gate", "PAPER_LIVE_ACTIVATION_NOT_APPROVED", "RISK_AND_BROKER_COSTS_NOT_VERIFIED"]),
+        ("coordinator/paper_cost_preflight.py", ["synthetic_scenario_cost", "cost_readiness", "BROKER_CONTRACT_AND_LOT_SPEC_UNVERIFIED"]),
+        ("coordinator/test_paper_cost_preflight.py", ["test_cost_arithmetic_and_risk_ceiling_is_synthetic"]),
         ("coordinator/test_paper_admission_gate.py", ["test_forged_and_synthetic_cannot_arm_paper"]),
         ("coordinator/research_monitor_runner.py", ["run_continuously", "WAIT"]),
         ("coordinator/research_notification.py", ["executable"]),

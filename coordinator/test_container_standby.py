@@ -27,6 +27,9 @@ assert monitor['sourceRequestsMade']==0 and monitor['paperRunning'] is False
 assert monitor['paperGate']['status']=='BLOCKED' and monitor['paperGate']['signal']=='WAIT'
 assert monitor['paperGate']['paperOrdersAllowed'] is False
 assert monitor['paperGate']['ledgerCreatedByGate'] is False
+assert monitor['paperGate']['costReadiness']['status']=='BLOCKED'
+assert monitor['paperGate']['costReadiness']['realBrokerFeesVerified'] is False
+assert monitor['paperGate']['costReadiness']['ordersAllowed'] is False
 assert monitor['audit']['status']=='AUDIT_DISABLED'
 assert 'latestQuote' not in monitor and 'bidFrames' not in monitor and 'askFrames' not in monitor
 with urllib.request.urlopen(base+'/api/v3/monitor/dashboard',timeout=2) as page:

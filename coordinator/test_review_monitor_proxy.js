@@ -60,5 +60,35 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
    researchEligible:false,ledgerCreatedByGate:false,simulationEvidenceIsLive:false}
  })});
  a.equal(spoof.httpStatus,503);
+ const withCost=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,paperGate:{...gated.body.paperGate,reviewOnly:undefined,
+   researchEligible:false,ledgerCreatedByGate:false,
+   simulationEvidenceIsLive:false,costReadiness:{
+    mode:"BROKER_COST_EVIDENCE_REVIEW_ONLY",status:"BLOCKED",
+    signal:"WAIT",executable:false,modelAvailable:true,
+    realBrokerFeesVerified:false,realBidAskVerified:false,riskBudgetVerified:false,
+    ordersAllowed:false,sampleTradeExecuted:false,secretBrokerQuote:999,
+    reasonCodes:["BROKER_CONTRACT_AND_LOT_SPEC_UNVERIFIED",
+     "LIVE_BID_ASK_SPREAD_EVIDENCE_MISSING",
+     "COMMISSION_AND_SLIPPAGE_EVIDENCE_MISSING",
+     "RISK_BUDGET_AND_STOP_DISTANCE_UNVERIFIED"]}}
+ })});
+ a.equal(withCost.httpStatus,200);
+ a.equal(withCost.body.paperGate.costReadiness.status,"BLOCKED");
+ a.ok(!JSON.stringify(withCost).includes("999"));
+ const unsafeCost=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,paperGate:{...gated.body.paperGate,reviewOnly:undefined,
+   researchEligible:false,ledgerCreatedByGate:false,
+   simulationEvidenceIsLive:false,costReadiness:{
+    mode:"BROKER_COST_EVIDENCE_REVIEW_ONLY",status:"BLOCKED",
+    signal:"WAIT",executable:false,modelAvailable:true,
+    realBrokerFeesVerified:true,realBidAskVerified:false,riskBudgetVerified:false,
+    ordersAllowed:false,sampleTradeExecuted:false,
+    reasonCodes:["BROKER_CONTRACT_AND_LOT_SPEC_UNVERIFIED",
+     "LIVE_BID_ASK_SPREAD_EVIDENCE_MISSING",
+     "COMMISSION_AND_SLIPPAGE_EVIDENCE_MISSING",
+     "RISK_BUDGET_AND_STOP_DISTANCE_UNVERIFIED"]}}
+ })});
+ a.equal(unsafeCost.httpStatus,503);
  console.log("PASS: public review proxy disabled by default; readonly-only relay; safe WAIT data");
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -53,6 +53,12 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <ul id="paper-gate-reasons" aria-live="polite"></ul>
 <p><small>هذا فحص جاهزية فقط؛ لا يوجد حساب ورقي نشط أو أوامر صفقات.</small></p>
 </section>
+<section id="cost-panel" aria-labelledby="cost-title">
+<h2 id="cost-title">فحص تكاليف التداول والمخاطر</h2>
+<p id="cost-state" role="status">WAIT — يلزم توثيق السبريد والعمولة والعقد من الوسيط.</p>
+<ul id="cost-reasons"></ul>
+<p><small>الفحص لا يعرض أسعاراً أو تكاليف مفترضة للوسيط. الحاسبة الاختبارية منفصلة، ولا تفتح صفقات.</small></p>
+</section>
 <section id="audit-panel" aria-labelledby="audit-title">
 <h2 id="audit-title">مراقبة اتصال الذهب والتنبيهات الداخلية</h2>
 <p id="audit-state" role="status">لم يتم فحص حالة المراقبة الدورية بعد.</p>
@@ -135,6 +141,15 @@ el("refresh").addEventListener("click",async()=>{
   for(const reason of Array.isArray(gate?.reasonCodes)?gate.reasonCodes:[]){
    if(typeof reason!=="string"||!/^[A-Z0-9_]{3,90}$/.test(reason))continue;
    const item=document.createElement("li");item.className="reason";item.textContent=reason;gateReasons.append(item);
+  }
+  const cost=data.paperGate?.costReadiness;
+  el("cost-state").textContent=cost?.status==="BLOCKED"&&cost?.ordersAllowed===false
+   ?"BLOCKED — محرك حساب التكلفة مُجهّز، لكن تكاليف الوسيط الحقيقية غير موثقة"
+   :"WAIT — لا توجد نتيجة آمنة لفحص التكاليف";
+  const costList=el("cost-reasons");costList.replaceChildren();
+  for(const reason of Array.isArray(cost?.reasonCodes)?cost.reasonCodes:[]){
+   if(typeof reason!=="string"||!/^[A-Z0-9_]{3,90}$/.test(reason))continue;
+   const li=document.createElement("li");li.className="reason";li.textContent=reason;costList.append(li);
   }
   el("auth-status").textContent="اكتمل فحص الحالة. الرمز محفوظ بذاكرة الصفحة مؤقتاً فقط";
  }catch(e){el("status").textContent="WAIT — تعذّر فحص المراقبة";el("auth-status").textContent=e.message;}

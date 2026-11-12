@@ -29,6 +29,10 @@ class PaperAdmissionTests(unittest.TestCase):
         self.assertFalse(result["ledgerCreatedByGate"])
         self.assertFalse(result["simulationEvidenceIsLive"])
         self.assertIn("PAPER_LIVE_ACTIVATION_NOT_APPROVED", result["reasonCodes"])
+        self.assertEqual(result["costReadiness"]["status"], "BLOCKED")
+        self.assertFalse(result["costReadiness"]["ordersAllowed"])
+        self.assertFalse(result["costReadiness"]["realBrokerFeesVerified"])
+        self.assertEqual(len(result["costReadiness"]["reasonCodes"]), 4)
         self.assertNotIn("BUY", json.dumps(result))
         self.assertNotIn("SELL", json.dumps(result))
         return result
