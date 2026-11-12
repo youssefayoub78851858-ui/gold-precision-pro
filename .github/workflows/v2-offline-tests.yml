@@ -211,6 +211,11 @@ jobs:
           path: /tmp/ultimate-v2-archive-comparison.json
           retention-days: 14
 
+      - name: Install pinned Databento SDK for local DBN files only
+        run: python -m pip install -r coordinator/requirements-databento-dbntest.txt
+      - name: Native Databento DBN binary fixtures (official SDK, no vendor connections)
+        working-directory: coordinator
+        run: python -m unittest -v test_databento_dbn_readonly
       - name: Local Databento GC and official-file import tests (no vendor connections)
         working-directory: coordinator
         run: python -m unittest -v test_databento_local test_official_recorded

@@ -1,0 +1,32 @@
+{
+  "upstreamRepository": "https://github.com/databento/dbn",
+  "upstreamRevision": "a77693030595b8f29f6b4c58e63b1b1a9d899b3f",
+  "upstreamDirectory": "tests/data",
+  "license": "Apache-2.0 (upstream repository-level LICENSE; no per-file license was present)",
+  "files": {
+    "test_data.trades.dbn": {
+      "path": "upstream-a776930/test_data.trades.dbn",
+      "sha256": "6ef751abbd186b862afd9c65fd88dd54585587aa8cc3a059bc78305125efce3c",
+      "bytes": 449,
+      "schema": "trades",
+      "rows": 2,
+      "sequences": [1170380, 1170414]
+    },
+    "test_data.mbo.dbn": {
+      "path": "upstream-a776930/test_data.mbo.dbn",
+      "sha256": "31403d17bf9801842acf59bca668e6b8f19ff4b5d70dce05f0fe70d995fc70d6",
+      "bytes": 465,
+      "schema": "mbo",
+      "rows": 2,
+      "sequences": [1170352, 1170353]
+    },
+    "test_data.mbp-10.dbn": {
+      "path": "upstream-a776930/test_data.mbp-10.dbn",
+      "sha256": "c59a27672b5727fc63513a2807ddc115f8b78401c4f834c07ba7859b75758dcb",
+      "bytes": 1089,
+      "schema": "mbp-10",
+      "rows": 2,
+      "sequences": [1170352, 1170356]
+    }
+  }
+}

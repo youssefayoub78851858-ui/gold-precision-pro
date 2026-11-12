@@ -1,0 +1,3 @@
+# Local DBN decoding only; tests make no Databento API requests.
+databento==0.90.0
+databento-dbn==0.73.0
