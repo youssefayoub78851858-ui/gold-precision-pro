@@ -11,6 +11,9 @@ CHECKS = {
         ("coordinator/Dockerfile", ["entrypoint.py"]),
         ("coordinator/eodhd_private_readiness.py", ["signal", "WAIT", "executable"]),
         ("coordinator/test_container_standby.py", ["--network=none"]),
+        ("coordinator/private_mobile_dashboard.html", ["/api/v3/monitor/status", 'type="password"', "WAIT"]),
+        ("coordinator/test_private_mobile_dashboard.py", ["test_no_public_quote_or_trading_surface"]),
+        ("coordinator/entrypoint.py", ["/api/v3/monitor/dashboard", "monitor_ready=authenticated"]),
     ],
     "gold_prices": [
         ("coordinator/eodhd_ws_bridge.js", ["EODHD_CONNECT_APPROVED", "EODHD_RIGHTS_APPROVED", "EODHD_API_TOKEN", "XAUUSD"]),

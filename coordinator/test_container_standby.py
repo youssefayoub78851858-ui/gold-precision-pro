@@ -22,6 +22,16 @@ code,health=get('/health');assert code==200 and health=={'status':'standby','pro
 code,v3=get('/api/v3/research');assert code==503 and v3['signal']=='WAIT' and v3['dataStatus']=='STANDBY'
 code,feed=get('/api/v3/eodhd/readiness');assert code==200 and feed['status']=='NOT_CONNECTED' and feed['signal']=='WAIT' and feed['executable'] is False and feed['providerAccess'] is False
 assert feed['closedBarCounts']=={'M15':0,'H1':0,'H4':0} and feed['priceVisible'] is False
+code,monitor=get('/api/v3/monitor/status');assert code==200 and monitor['status']=='WAIT_EODHD_INTAKE' and monitor['signal']=='WAIT' and monitor['executable'] is False and monitor['researchEligible'] is False and monitor['engineStatus']=='NOT_INVOKED' and monitor['dataStatus']=='NOT_CONNECTED'
+assert monitor['sourceRequestsMade']==0 and monitor['paperRunning'] is False
+assert 'latestQuote' not in monitor and 'bidFrames' not in monitor and 'askFrames' not in monitor
+with urllib.request.urlopen(base+'/api/v3/monitor/dashboard',timeout=2) as page:
+ html=page.read();assert page.status==200 and b'api/v3/monitor/status' in html and b'autocomplete="off"' in html
+try:
+ urllib.request.urlopen(base+'/api/v3/monitor/status',timeout=2)
+ raise AssertionError('Unauthorized access must fail')
+except urllib.error.HTTPError as error:
+ assert error.code==401
 assert 'TWELVE_DATA_API_KEY' not in os.environ
 import pathlib
 assert not list(pathlib.Path('/var/data').rglob('*.sqlite3'))
