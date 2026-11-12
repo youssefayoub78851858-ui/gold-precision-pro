@@ -19,7 +19,7 @@ BAR_SECONDS = 900
 HOUR_BARS = 4
 FOUR_HOUR_BARS = 16
 REQUIRED = {
-    "symbol", "timeframe", "bar_open_epoch_seconds", "bar_open_utc_candidate",
+    "symbol", "account_trade_mode", "timeframe", "bar_open_epoch_seconds", "bar_open_utc_candidate",
     "quote_epoch_milliseconds", "quote_time_utc_candidate", "bid", "ask",
     "time_current_server_label", "time_gmt_epoch_seconds", "time_trade_server_label",
     "observed_utc_candidate",
@@ -76,6 +76,8 @@ def normalize_snapshot(csv_text, expected_symbol, as_of_utc, max_age_minutes=20)
             continue
         if row.get("symbol") != expected_symbol:
             raise ValueError(f"row {line}: symbol differs from confirmed chart symbol")
+        if row.get("account_trade_mode") != "DEMO":
+            raise ValueError(f"row {line}: MT5 Demo account is required")
         if row.get("timeframe") != "M15":
             raise ValueError(f"row {line}: only M15 input is accepted")
         try:

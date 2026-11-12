@@ -29,7 +29,7 @@ def make_csv(count=WIDTH, omit=(), as_of=None, symbol="XAUUSD.a", reverse=False,
         high, low = value + 1, value - 1
         if i == bad_ohlc_at:
             low = value + 2
-        rows.append([symbol, "M15", int(opened.timestamp()),
+        rows.append([symbol, "DEMO", "M15", int(opened.timestamp()),
                      opened.isoformat().replace("+00:00", "Z"), quote_epoch_ms,
                      quote_time.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
                      4000.0, 4000.2, "2026-11-01 02:15:00", int(observed.timestamp()),
@@ -39,14 +39,14 @@ def make_csv(count=WIDTH, omit=(), as_of=None, symbol="XAUUSD.a", reverse=False,
         rows.reverse()
     out = io.StringIO()
     writer = csv.writer(out)
-    writer.writerow(["symbol", "timeframe", "bar_open_epoch_seconds", "bar_open_utc_candidate",
+    writer.writerow(["symbol", "account_trade_mode", "timeframe", "bar_open_epoch_seconds", "bar_open_utc_candidate",
                      "quote_epoch_milliseconds", "quote_time_utc_candidate", "bid", "ask",
                      "time_current_server_label", "time_gmt_epoch_seconds", "time_trade_server_label",
                      "observed_utc_candidate",
                      "open", "high", "low", "close", "tick_volume",
                      "real_volume", "spread_points"])
     writer.writerows(rows)
-    writer.writerow(["#SNAPSHOT_END", observed.isoformat().replace("+00:00", "Z"), len(rows)])
+    writer.writerow(["#SNAPSHOT_END", "DEMO", observed.isoformat().replace("+00:00", "Z"), len(rows)])
     return out.getvalue(), final_close
 
 
@@ -114,6 +114,16 @@ class MT5ReadOnlyExport(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invalid OHLC"):
             normalize_snapshot(bad, "XAUUSD.a", "2026-11-01T00:16:00Z")
 
+    def test_non_demo_account_export_is_rejected(self):
+        text, _ = make_csv(count=1, as_of=BASE + dt.timedelta(minutes=16))
+        rows = list(csv.reader(io.StringIO(text)))
+        mode_index = rows[0].index("account_trade_mode")
+        rows[1][mode_index] = "REAL"
+        out = io.StringIO()
+        csv.writer(out).writerows(rows)
+        with self.assertRaisesRegex(ValueError, "Demo account is required"):
+            normalize_snapshot(out.getvalue(), "XAUUSD.a", "2026-11-01T00:16:00Z")
+
     def test_dst_fallback_candidate_times_are_quarantined_until_independent_check(self):
         text, close = make_csv(count=2, base=dt.datetime(2026, 11, 1, 5, 45, tzinfo=UTC))
         result = normalize_snapshot(text, "XAUUSD.a",
@@ -128,7 +138,7 @@ class MT5ReadOnlyExport(unittest.TestCase):
         text, close = make_csv(count=1, as_of=BASE + dt.timedelta(minutes=16))
         lines = text.splitlines()
         fields = lines[1].split(",")
-        fields[2] = str(int(fields[2]) + 3600)
+        fields[3] = str(int(fields[3]) + 3600)
         lines[1] = ",".join(fields)
         with self.assertRaisesRegex(ValueError, "does not match raw MT5 epoch"):
             normalize_snapshot("\n".join(lines) + "\n", "XAUUSD.a",
@@ -138,7 +148,7 @@ class MT5ReadOnlyExport(unittest.TestCase):
         text, close = make_csv(count=1, as_of=BASE + dt.timedelta(minutes=16))
         lines = text.splitlines()
         fields = lines[1].split(",")
-        fields[7] = "3999"  # ask below bid
+        fields[8] = "3999"  # ask below bid
         lines[1] = ",".join(fields)
         with self.assertRaisesRegex(ValueError, "ask is below bid"):
             normalize_snapshot("\n".join(lines) + "\n", "XAUUSD.a",
@@ -146,8 +156,8 @@ class MT5ReadOnlyExport(unittest.TestCase):
         stale, _ = make_csv(count=1, as_of=BASE + dt.timedelta(minutes=18))
         stale_lines = stale.splitlines()
         stale_fields = stale_lines[1].split(",")
-        stale_fields[4] = str(int(stale_fields[4]) - 120_000)
-        stale_fields[5] = dt.datetime.fromtimestamp(int(stale_fields[4]) / 1000, UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        stale_fields[5] = str(int(stale_fields[5]) - 120_000)
+        stale_fields[6] = dt.datetime.fromtimestamp(int(stale_fields[5]) / 1000, UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
         stale_lines[1] = ",".join(stale_fields)
         stale = "\n".join(stale_lines) + "\n"
         with self.assertRaisesRegex(ValueError, "Bid/Ask quote is future or stale"):
@@ -164,7 +174,8 @@ class MT5ReadOnlyExport(unittest.TestCase):
                          "bar_open_epoch_seconds", "bar_open_utc_candidate", "SymbolInfoTick",
                          "quote_epoch_milliseconds", "quote_time_utc_candidate", "quote.bid", "quote.ask",
                          "time_current_server_label", "time_gmt_epoch_seconds", "time_trade_server_label",
-                         "observed_utc_candidate"):
+                         "observed_utc_candidate", "ACCOUNT_TRADE_MODE) != ACCOUNT_TRADE_MODE_DEMO",
+                         '"DEMO"'):
             self.assertIn(required, source)
         self.assertNotIn("ServerUtcOffsetMinutes", source)
         self.assertNotIn("server_utc_offset_minutes", source)

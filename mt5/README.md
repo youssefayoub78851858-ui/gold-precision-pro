@@ -4,8 +4,10 @@ This is an offline bridge prototype for a **desktop MT5 terminal** connected to
 an already available broker symbol. It exports closed M15 bars plus one
 current Bid/Ask snapshot to
 `Common/Files/GoldPrecision/xauusd-m15.csv`; it does not transmit data, call a
-vendor API, use credentials, or place trades. MT5's mobile app cannot host this
-Expert Advisor. Keeping the terminal open on a PC or VPS is needed for repeated
+vendor API, use credentials, or place trades. It refuses to export unless the
+connected MT5 account reports `ACCOUNT_TRADE_MODE_DEMO`, and stamps that mode
+in the CSV for the importer to verify. MT5's mobile app cannot host this Expert
+Advisor. Keeping the terminal open on a PC or VPS is needed for repeated
 exports; this repository does not create or rent a VPS.
 
 ## Local use
@@ -73,6 +75,11 @@ a complete snapshot.
 
 - This EA has not been compiled in MetaEditor or run against the user's broker;
   offline tests validate its source guards and the Python importer only.
+- The existing EA is a read-only exporter, not an order executor. The MT5
+  importer currently keeps every frame out of the research engine and emits
+  `WAIT` while clock basis and data rights are unverified. Wiring an order
+  sender to the paper engine now would bypass those gates, so no demo-order EA
+  or Demo-to-paper route is enabled.
 - Broker symbol provenance, data-use rights, timestamp provenance, and
   first-availability timestamps are not authenticated by a CSV. The report
   therefore always sets `signal=WAIT`, `executable=false`, and

@@ -118,7 +118,7 @@
     "entitlementVerified": false,
     "timestampBasis": "CLOCK_BASIS_UNVERIFIED_UNTIL_INDEPENDENT_LIVE_UTC_AND_DST_DIAGNOSTIC",
     "status": "LOCAL_RESEARCH_CANDIDATE_NOT_RUN",
-    "note": "Desktop/VPS required; local CSV only. Native MQL5 raw timestamp basis is not independently verified; candidate frames are withheld and output remains CLOCK_BASIS_UNVERIFIED, WAIT, executable:false. No upload or order functions."
+    "note": "Demo account only; exporter remains local CSV and read-only. Native MQL5 raw timestamp basis is not independently verified; candidate frames are withheld and output remains CLOCK_BASIS_UNVERIFIED, WAIT, executable:false. A borrowed Windows desktop is enough for a one-off capture; Windows VPS is only needed for continuous terminal uptime. No upload or order functions."
   },
   "XAUUSD_TWELVE_DATA_CANDIDATE": {
     "vendor": "Twelve Data",

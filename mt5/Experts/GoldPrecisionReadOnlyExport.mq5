@@ -32,6 +32,11 @@ string FormatUtcCandidateMillis(long epoch_milliseconds)
 
 bool ExportClosedM15()
 {
+   if(AccountInfoInteger(ACCOUNT_TRADE_MODE) != ACCOUNT_TRADE_MODE_DEMO)
+   {
+      Print("GoldPrecision export stopped: a MetaTrader Demo account is required.");
+      return false;
+   }
    if(InpConfirmedGoldSymbol == "" || _Symbol != InpConfirmedGoldSymbol)
    {
       Print("GoldPrecision export stopped: set InpConfirmedGoldSymbol to the exact chart symbol.");
@@ -68,7 +73,7 @@ bool ExportClosedM15()
       PrintFormat("GoldPrecision export file error=%d", GetLastError());
       return false;
    }
-   FileWrite(file, "symbol", "timeframe", "bar_open_epoch_seconds", "bar_open_utc_candidate",
+   FileWrite(file, "symbol", "account_trade_mode", "timeframe", "bar_open_epoch_seconds", "bar_open_utc_candidate",
              "quote_epoch_milliseconds", "quote_time_utc_candidate", "bid", "ask",
              "time_current_server_label", "time_gmt_epoch_seconds", "time_trade_server_label",
              "observed_utc_candidate", "open", "high", "low", "close", "tick_volume", "real_volume", "spread_points");
@@ -84,7 +89,7 @@ bool ExportClosedM15()
       // preserved as tick_volume; it is not described as exchange volume.
       // Preserve raw datetime values and render candidate labels only. No UTC
       // claim is made until independent live clock/DST verification is done.
-      FileWrite(file, InpConfirmedGoldSymbol, "M15", (long)rates[i].time, FormatUtcCandidate(rates[i].time),
+      FileWrite(file, InpConfirmedGoldSymbol, "DEMO", "M15", (long)rates[i].time, FormatUtcCandidate(rates[i].time),
                 quote.time_msc, FormatUtcCandidateMillis(quote.time_msc), DoubleToString(quote.bid, _Digits),
                 DoubleToString(quote.ask, _Digits), time_current_server, (long)gmt_epoch,
                 time_trade_server, observed,
@@ -93,7 +98,7 @@ bool ExportClosedM15()
                 (long)rates[i].tick_volume, (long)rates[i].real_volume, (int)rates[i].spread);
    }
    // A footer lets the local reader detect a partial file during a rewrite.
-   FileWrite(file, "#SNAPSHOT_END", observed, copied);
+   FileWrite(file, "#SNAPSHOT_END", "DEMO", observed, copied);
    FileFlush(file);
    FileClose(file);
    g_lastClosedBar = newest;
