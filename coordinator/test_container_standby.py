@@ -20,6 +20,8 @@ def get(path):
  except urllib.error.HTTPError as e:return e.code,json.load(e)
 code,health=get('/health');assert code==200 and health=={'status':'standby','providerAccess':False,'paperRunning':False}
 code,v3=get('/api/v3/research');assert code==503 and v3['signal']=='WAIT' and v3['dataStatus']=='STANDBY'
+code,feed=get('/api/v3/eodhd/readiness');assert code==200 and feed['status']=='NOT_CONNECTED' and feed['signal']=='WAIT' and feed['executable'] is False and feed['providerAccess'] is False
+assert feed['closedBarCounts']=={'M15':0,'H1':0,'H4':0} and feed['priceVisible'] is False
 assert 'TWELVE_DATA_API_KEY' not in os.environ
 import pathlib
 assert not list(pathlib.Path('/var/data').rglob('*.sqlite3'))

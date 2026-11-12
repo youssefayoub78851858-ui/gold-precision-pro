@@ -38,6 +38,9 @@ jobs:
       - name: Offline Python tests
         working-directory: coordinator/app
         run: python -m unittest -v test_worker test_reduced
+      - name: EODHD private read-only readiness and leak protection (offline)
+        working-directory: coordinator
+        run: python -m unittest -v test_eodhd_private_readiness
       - name: EODHD XAUUSD WebSocket safety preflight (offline)
         working-directory: coordinator
         run: node test_eodhd_ws_bridge.js
