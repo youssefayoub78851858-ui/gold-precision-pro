@@ -194,9 +194,10 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === "/review" || url.pathname === "/review-ui.js" ||
       (DEMO_MODE && url.pathname === "/")) {
-    const html = url.pathname !== "/review-ui.js";
-    res.writeHead(200, {"Content-Type": html ? "text/html; charset=utf-8" : "application/javascript; charset=utf-8", "Cache-Control": "no-store"});
-    return res.end(fs.readFileSync(path.join(__dirname, html ? "index.html" : "review-ui.js")));
+    const isScript = url.pathname === "/review-ui.js";
+    const file = isScript ? "review-ui.js" : DEMO_MODE && url.pathname === "/" ? "ultimate.html" : "index.html";
+    res.writeHead(200, {"Content-Type": isScript ? "application/javascript; charset=utf-8" : "text/html; charset=utf-8", "Cache-Control": "no-store"});
+    return res.end(fs.readFileSync(path.join(__dirname, file)));
   }
 
   if (url.pathname === "/" || url.pathname === "/health") {

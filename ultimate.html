@@ -1,9 +1,22 @@
 <!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Gold Precision Pro Ultimate — Offline Research</title>
-<style>body{font:18px system-ui;background:#101820;color:#eee;max-width:1000px;margin:3em auto;padding:1em}button,input{font:inherit;padding:12px;box-sizing:border-box;max-width:100%}label{display:block;margin:1em 0}pre{max-width:100%;box-sizing:border-box}@media(max-width:600px){body{margin:.5em auto;padding:.7em;font-size:16px}button{width:100%}}pre{direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;background:#192630;padding:20px}h1{color:#e4bd69}</style>
-<h1>Gold Precision Pro Ultimate</h1><p>مختبر بحثي تجريبي. سعر XAU الفوري المرجعي مستقل عن أسعار الوسيط، وبقية اختبارات الشموع مسجّلة أو محاكاة. لا تنفيذ أوامر ولا إثبات لربحية الاستراتيجية.</p>
+<style>body{font:18px system-ui;background:#101820;color:#eee;max-width:1000px;margin:3em auto;padding:1em}button,input{font:inherit;padding:12px;box-sizing:border-box;max-width:100%}label{display:block;margin:1em 0}pre{max-width:100%;box-sizing:border-box}@media(max-width:600px){body{margin:.5em auto;padding:.7em;font-size:16px}button{width:100%}}pre{direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;background:#192630;padding:20px}h1{color:#e4bd69}.overview{border:1px solid #8d7545;border-radius:16px;padding:16px;background:#172238}.overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.overview-card{background:#202d43;border-radius:12px;padding:12px;min-width:0}.overview-card strong{display:block;color:#e4bd69;margin-top:5px;overflow-wrap:anywhere}.overview-nav{display:flex;flex-wrap:wrap;gap:8px}.overview-nav a{color:#e4bd69}.overview-status{font-size:.9em;color:#c5cedc}@media(max-width:420px){.overview-grid{grid-template-columns:1fr}}</style>
+<h1>Gold Precision Pro Ultimate</h1><p>لوحة مراجعة هاتفية — Research Only. سعر XAU المرجعي للعرض فقط؛ الشموع والمصادر الغائبة تبقى UNAVAILABLE، والقرار WAIT والتنفيذ معطّل.</p>
+<section id="review-overview" class="overview" aria-labelledby="review-overview-title">
+<h2 id="review-overview-title">ملخص حالة النظام</h2>
+<div class="overview-grid">
+<div class="overview-card">حالة النظام<strong id="overview-system">WAIT — لم يُفحص المحرك بعد</strong></div>
+<div class="overview-card">نتيجة البحث<strong id="overview-signal">WAIT</strong><span id="overview-candidate" class="overview-status">لا يوجد مرشح مؤهل</span></div>
+<div class="overview-card">وقت آخر فحص<strong id="overview-time">غير متاح</strong></div>
+<div class="overview-card">مصادر التحليل والأعطال<strong id="overview-sources">UNAVAILABLE — لا توجد شموع سوق متصلة</strong><span id="overview-fault" class="overview-status">لم تكتمل مراجعة المحرك بعد</span></div>
+<div class="overview-card">التداول الورقي<strong id="overview-paper">لا يوجد سجل محمّل</strong><span class="overview-status">محاكاة بحثية فقط؛ لا وسيط ولا تنفيذ</span></div>
+</div>
+<button type="button" id="overview-refresh">تحديث حالة البحث</button>
+<p class="overview-status">DXY وGC وOrder Flow والأخبار السياسية/الجيوسياسية: UNAVAILABLE ما لم يثبتها المحرك صراحةً. سعر XAUS لا يتحول إلى شموع أو إشارة.</p>
+<nav class="overview-nav" aria-label="انتقال سريع"><a href="#spot-reference">سعر مرجعي</a><a href="#candle-source-readiness">الشموع</a><a href="#macro-research">الأخبار</a><a href="#ultimate-r2-review">Ultimate r2</a><a href="#paper-title">التداول الورقي</a></nav>
+</section>
 <section id="spot-reference" aria-labelledby="spot-title">
 <h2 id="spot-title">الذهب XAU — سعر فوري مرجعي مجاني</h2>
-<p>من Gold API، من دون بطاقة أو مفتاح. هذا <strong>ليس سعر CFI أو GC</strong> ولا شموع مكتملة، ولا يعطي إشارة تداول.</p>
+<p>من XAUS.com وفق استخدامه المعلن للمشاريع الشخصية، من دون مفتاح. هذا <strong>سعر مرجعي وسطي إرشادي، وليس سعر CFI أو GC</strong> ولا شموع مكتملة، ولا يعطي إشارة تداول.</p>
 <button id="spot-refresh" type="button">فحص سعر الذهب المرجعي الآن</button>
 <p id="spot-status" role="status">لم يتم فحص السعر بعد.</p>
 <p id="spot-price" style="font-size:1.7em;font-weight:700;color:#e4bd69"></p>
@@ -15,7 +28,7 @@
 <li>H4 — لا شموع مغلقة مباشرة موثّقة</li>
 </ul>
 <p>هذه الطبقة للعرض فقط. الأرشيف التاريخي السابق موجود للأبحاث، لكن لا نعتبره تغذية حيّة. لا ربط مع MT5، ولا صفقات حقيقية.</p>
-<p>المصدر: <a href="https://gold-api.com/docs" target="_blank" rel="noopener noreferrer" style="color:#e4bd69">Gold API — التوثيق</a></p>
+<p>المصدر: <a href="https://xaus.com/api/" target="_blank" rel="noopener noreferrer" style="color:#e4bd69">توثيق XAUS API</a> | <a href="https://xaus.com/about/" target="_blank" rel="noopener noreferrer" style="color:#e4bd69">المصادر والمنهجية</a>. يُحتفظ بالقراءة مؤقتاً في الذاكرة 60 ثانية، بلا تخزين دائم على Render.</p>
 </section><hr>
 <section id="candle-source-readiness" aria-labelledby="candle-source-title">
 <h2 id="candle-source-title">حالة مصدر شموع XAUUSD — M15 / H1 / H4</h2>
@@ -57,6 +70,44 @@
 <label>ملف أدلة JSON <input id="file" type="file" accept=".json,application/json"></label><button id="run">تحليل الملف</button><p id="data-mode" role="status">البيانات: لم تُحمّل؛ لا اتصال حي.</p><p id="status" role="status">اختر ملفاً؛ لا جلب تلقائي.</p><ul id="gate-summary"></ul><details><summary>تفاصيل الأدلة والقرار</summary><pre id="result"></pre></details>
 <section aria-labelledby="paper-title"><h2 id="paper-title">سجل التداول الورقي المحلي</h2><p>ارفع تقرير CLI من حساب SQLite. التقرير ملف محلي للعرض فقط، وليس حساب وسيط أو نتيجة تداول حقيقية. المحاكاة الاصطناعية لا تثبت الربحية.</p><label>تقرير ورقي JSON <input id="paper-file" type="file" accept=".json,application/json"></label><button id="paper-load">عرض السجل المحلي</button><p id="paper-status" role="status">لا يوجد حساب محمّل.</p><div id="paper-trades"></div><details><summary>تفاصيل الحساب والصفقات</summary><pre id="paper-result"></pre></details></section>
 <script>
+const overviewButton=document.getElementById('overview-refresh');
+async function refreshResearchOverview(){
+ const system=document.getElementById('overview-system'),signal=document.getElementById('overview-signal');
+ const candidateLabel=document.getElementById('overview-candidate'),time=document.getElementById('overview-time');
+ const sources=document.getElementById('overview-sources'),fault=document.getElementById('overview-fault');
+ overviewButton.disabled=true;system.textContent='جارٍ التحقق من محرك البحث...';
+ try{
+  const response=await fetch('/api/v3/research',{cache:'no-store',signal:AbortSignal.timeout(45000)});
+  const data=await response.json();
+  if(data.engine!=='V3'||data.executable!==false||
+    !['FRESH','STALE','INVALID','UNAVAILABLE','MARKET_CLOSED','STANDBY'].includes(data.dataStatus))
+   throw Error('استجابة المحرك لا تطابق بوابة Research Only');
+  const raw=data.researchCandidate||data.candidate||data.signal;
+  const candidate=['BUY','SELL'].includes(raw)?raw:null;
+  const eligible=data.dataStatus==='FRESH'&&data.researchEligible===true&&data.executable===false&&candidate!==null;
+  const displayed=eligible?candidate:'WAIT';
+  signal.textContent=displayed+(eligible?' — مرشح بحثي':'');
+  candidateLabel.textContent=candidate&&!eligible?candidate+' مرشح محجوب؛ القرار WAIT':'لا يوجد مرشح مؤهل';
+  system.textContent='WAIT — '+data.dataStatus+' — التداول والتنفيذ معطّلان';
+  time.textContent=data.observedUTC||data.serverTimeUTC||'وقت الفحص غير متاح';
+  const frames=data.candles||{};
+  const frameState=['15min','1h','4h'].map((key,i)=>{
+   const labels=['M15','H1','H4'],c=frames[key];
+   return labels[i]+': '+(data.dataStatus==='FRESH'&&c&&typeof c.closeUTC==='string'?'متاح بحثياً':'UNAVAILABLE');
+  }).join(' | ');
+  sources.textContent='XAU '+frameState+' | DXY / US10Y / US02Y / GC / Order Flow: UNAVAILABLE';
+  fault.textContent=data.reason||'لا يوجد سبب حجب إضافي مُبلّغ';
+ }catch(error){
+  system.textContent='WAIT — محرك البحث غير متاح';signal.textContent='WAIT';
+  candidateLabel.textContent='لا يوجد مرشح مؤهل';sources.textContent='UNAVAILABLE — تعذّر التحقق من مصادر البيانات';
+  fault.textContent=error.message;time.textContent='وقت الفحص: '+new Date().toISOString();
+ }finally{overviewButton.disabled=false;}
+}
+overviewButton.onclick=refreshResearchOverview;
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refreshResearchOverview,{once:true});
+else refreshResearchOverview();
+</script>
+<script>
 const button=document.getElementById('run');button.onclick=async()=>{
  button.disabled=true;document.getElementById('result').textContent='';document.getElementById('gate-summary').replaceChildren();document.getElementById('data-mode').textContent='جارٍ فحص نوع البيانات؛ لا اتصال حي.';
  try{const f=document.getElementById('file').files[0];if(!f)throw Error('اختر ملف JSON');if(f.size>1048576)throw Error('الحد الأقصى 1 MiB');
@@ -74,6 +125,7 @@ document.getElementById('paper-load').onclick=async()=>{
  try{const f=document.getElementById('paper-file').files[0];if(!f||f.size>1048576)throw Error('اختر تقريراً محلياً أقل من 1 MiB');
  const data=JSON.parse(await f.text());if(data.mode!=='OFFLINE_PAPER'||data.executable!==false||!Array.isArray(data.trades)||!Number.isFinite(data.account?.balance))throw Error('تقرير ورقي غير متوافق');
  document.getElementById('paper-status').textContent='ورقي تجريبي فقط | المصدر: '+(data.dataOrigin||'غير موثّق')+' | الرصيد المحاكى: '+data.account.balance.toFixed(2)+' | الصفقات المغلقة: '+data.trades.length;
+ document.getElementById('overview-paper').textContent='سجل محلي محمّل — '+data.trades.length+' صفقات محاكاة';
  for(const trade of data.trades){const p=document.createElement('p');p.textContent=trade.side+' | دخول '+trade.entry+' | خروج '+trade.exit+' | الصافي المحاكى '+Number(trade.net).toFixed(2)+' | '+trade.reason;document.getElementById('paper-trades').appendChild(p);}
  document.getElementById('paper-result').textContent=JSON.stringify(data,null,2);
  }catch(e){document.getElementById('paper-status').textContent=e.message;}
@@ -273,7 +325,7 @@ async function refreshSpotReference(){
    throw Error('بيانات السعر لا تستوفي ضوابط وضع المراجعة');
   if(d.dataStatus==='SPOT_REFERENCE_FRESH'&&Number.isFinite(d.price)){
    price.textContent=new Intl.NumberFormat('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}).format(d.price)+' USD / أونصة';
-   status.textContent='السعر المرجعي متصل | المصدر: Gold API | التداول WAIT';
+   status.textContent='السعر المرجعي متصل | المصدر: XAUS | التداول WAIT';
   }else{
    price.textContent='لا يوجد سعر مرجعي حديث مؤكَّد';
    status.textContent='السعر غير متاح أو قديم | '+String(d.fetchStatus||d.dataStatus)+' | WAIT';

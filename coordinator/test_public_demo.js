@@ -36,10 +36,10 @@ async function main(){
   const page=await fetch(base+'/');
   assert.equal(page.status,200);
   const html=await page.text();
-  assert.match(html,/مراجعة V3/);
-  assert.match(html,/id="gold-live-price">غير متاح/);
-  assert.match(html,/id="decision-state">WAIT/);
-  assert.match(html,/لا يوجد سعر لحظي موصول/);
+  assert.match(html,/Gold Precision Pro Ultimate/);
+  assert.match(html,/id="review-overview"/);
+  assert.match(html,/id="overview-signal">WAIT/);
+  assert.match(html,/id="overview-paper"/);
   const reviewPage=await fetch(base+'/review');
   assert.equal(reviewPage.status,200);
   assert.match(await reviewPage.text(),/مراجعة V3/);
@@ -48,6 +48,8 @@ async function main(){
   assert.equal(ultimatePage.status,200);
   const ultimateHtml=await ultimatePage.text();
   assert.match(ultimateHtml,/id="recorded-review-load"/);
+  assert.match(ultimateHtml,/XAUS\.com/);
+  assert.match(ultimateHtml,/id="overview-refresh"/);
   const embeddedScripts=[...ultimateHtml.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
   assert.ok(embeddedScripts.length>=2,'Ultimate inline scripts missing');
   for(const [i,match] of embeddedScripts.entries()){
