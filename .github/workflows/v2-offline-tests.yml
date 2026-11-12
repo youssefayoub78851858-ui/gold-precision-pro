@@ -243,6 +243,9 @@ jobs:
         working-directory: coordinator
         run: python -m unittest -v test_mbo_order_book
 
+      - name: Offline private EODHD status to SQLite alert and notification journal
+        working-directory: coordinator
+        run: python -m unittest -v test_eodhd_review_monitor
       - name: Five-stage offline pre-subscription safety inventory
         working-directory: coordinator
         run: |
