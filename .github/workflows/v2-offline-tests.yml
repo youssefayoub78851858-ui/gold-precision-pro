@@ -154,6 +154,10 @@ jobs:
         working-directory: coordinator
         run: python -m unittest -v test_mt5_readonly_export
 
+      - name: MT5 raw clock and DST diagnostic safety tests (fixtures only, no broker/network)
+        working-directory: coordinator
+        run: python -m unittest -v test_mt5_clock_diagnostic
+
       - name: CFI Lebanon read-only source remains blocked until official confirmation
         working-directory: coordinator
         run: python -m unittest -v test_cfi_readonly_readiness

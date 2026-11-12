@@ -32,14 +32,17 @@ def make_csv(count=WIDTH, omit=(), as_of=None, symbol="XAUUSD.a", reverse=False,
         rows.append([symbol, "M15", int(opened.timestamp()),
                      opened.isoformat().replace("+00:00", "Z"), quote_epoch_ms,
                      quote_time.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
-                     4000.0, 4000.2,
+                     4000.0, 4000.2, "2026-11-01 02:15:00", int(observed.timestamp()),
+                     "2026-11-01 02:15:00",
                      observed.isoformat().replace("+00:00", "Z"), value, high, low, value + .2, 100, 0, 4])
     if reverse:
         rows.reverse()
     out = io.StringIO()
     writer = csv.writer(out)
-    writer.writerow(["symbol", "timeframe", "bar_open_epoch_seconds", "bar_open_utc",
-                     "quote_epoch_milliseconds", "quote_time_utc", "bid", "ask", "observed_utc",
+    writer.writerow(["symbol", "timeframe", "bar_open_epoch_seconds", "bar_open_utc_candidate",
+                     "quote_epoch_milliseconds", "quote_time_utc_candidate", "bid", "ask",
+                     "time_current_server_label", "time_gmt_epoch_seconds", "time_trade_server_label",
+                     "observed_utc_candidate",
                      "open", "high", "low", "close", "tick_volume",
                      "real_volume", "spread_points"])
     writer.writerows(rows)
@@ -53,9 +56,11 @@ class MT5ReadOnlyExport(unittest.TestCase):
         as_of = close + dt.timedelta(minutes=1)
         result = normalize_snapshot(text, "XAUUSD.a", as_of.isoformat().replace("+00:00", "Z"))
         self.assertEqual(result["closedCounts"], {"M15": 1600, "H1": 400, "H4": 100})
-        self.assertEqual(result["frames"]["H4"][0]["open"], 4000.0)
-        self.assertEqual(result["frames"]["H4"][0]["close"], 4000 + 15 / 100 + .2)
-        self.assertEqual(result["timestampBasis"], "MT5_MQLRATES_EPOCH_UTC")
+        self.assertEqual(result["candidateFrames"]["H4"][0]["open"], 4000.0)
+        self.assertEqual(result["candidateFrames"]["H4"][0]["close"], 4000 + 15 / 100 + .2)
+        self.assertEqual(result["timestampBasis"], "CLOCK_BASIS_UNVERIFIED")
+        self.assertFalse(result["clockBasisVerified"])
+        self.assertFalse(result["researchEligible"])
         self.assertFalse(result["brokerServerOffsetInferred"])
         self.assertEqual(result["quote"]["bid"], 4000.0)
         self.assertEqual(result["quote"]["ask"], 4000.2)
@@ -64,6 +69,9 @@ class MT5ReadOnlyExport(unittest.TestCase):
         self.assertFalse(result["executable"])
         self.assertFalse(result["readyForTrading"])
         self.assertTrue(result["quality"]["snapshotComplete"])
+        self.assertEqual(result["frames"], {})
+        self.assertEqual(result["readiness"], "WAIT_CLOCK_BASIS_UNVERIFIED")
+        self.assertIn("CLOCK_BASIS_UNVERIFIED", result["alerts"])
         self.assertIn("BROKER_DATA_RIGHTS_NOT_VERIFIED", result["alerts"])
 
     def test_unclosed_bar_and_stale_export_are_rejected_or_alerted(self):
@@ -81,9 +89,9 @@ class MT5ReadOnlyExport(unittest.TestCase):
     def test_incomplete_groups_are_omitted_without_filling(self):
         text, close = make_csv(count=WIDTH, omit={10})
         result = normalize_snapshot(text, "XAUUSD.a", (close + dt.timedelta(minutes=1)).isoformat().replace("+00:00", "Z"))
-        self.assertEqual(len(result["frames"]["M15"]), WIDTH - 1)
-        self.assertEqual(len(result["frames"]["H1"]), 399)
-        self.assertEqual(len(result["frames"]["H4"]), 99)
+        self.assertEqual(len(result["candidateFrames"]["M15"]), WIDTH - 1)
+        self.assertEqual(len(result["candidateFrames"]["H1"]), 399)
+        self.assertEqual(len(result["candidateFrames"]["H4"]), 99)
         self.assertGreater(result["incompleteUTCGroups"]["H1"], 0)
         self.assertGreater(result["incompleteUTCGroups"]["H4"], 0)
         self.assertIn("INCOMPLETE_H1_H4_GROUPS", result["alerts"])
@@ -106,14 +114,15 @@ class MT5ReadOnlyExport(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invalid OHLC"):
             normalize_snapshot(bad, "XAUUSD.a", "2026-11-01T00:16:00Z")
 
-    def test_dst_fallback_window_keeps_absolute_utc_epochs_without_offset_guessing(self):
+    def test_dst_fallback_candidate_times_are_quarantined_until_independent_check(self):
         text, close = make_csv(count=2, base=dt.datetime(2026, 11, 1, 5, 45, tzinfo=UTC))
         result = normalize_snapshot(text, "XAUUSD.a",
                                     (close + dt.timedelta(minutes=1)).isoformat().replace("+00:00", "Z"))
-        bars = result["frames"]["M15"]
+        bars = result["candidateFrames"]["M15"]
         self.assertEqual([bar["datetime"] for bar in bars],
                          ["2026-11-01T05:45:00Z", "2026-11-01T06:00:00Z"])
         self.assertFalse(result["brokerServerOffsetInferred"])
+        self.assertFalse(result["clockBasisVerified"])
 
     def test_csv_epoch_and_iso_utc_must_match(self):
         text, close = make_csv(count=1, as_of=BASE + dt.timedelta(minutes=16))
@@ -152,8 +161,10 @@ class MT5ReadOnlyExport(unittest.TestCase):
             self.assertNotIn(banned, source)
         for required in ("CopyRates", "PERIOD_M15, 1", "FILE_COMMON", "EventSetTimer",
                          "tick_volume", "real_volume", "#SNAPSHOT_END",
-                         "bar_open_epoch_seconds", "bar_open_utc", "SymbolInfoTick",
-                         "quote_epoch_milliseconds", "quote_time_utc", "quote.bid", "quote.ask"):
+                         "bar_open_epoch_seconds", "bar_open_utc_candidate", "SymbolInfoTick",
+                         "quote_epoch_milliseconds", "quote_time_utc_candidate", "quote.bid", "quote.ask",
+                         "time_current_server_label", "time_gmt_epoch_seconds", "time_trade_server_label",
+                         "observed_utc_candidate"):
             self.assertIn(required, source)
         self.assertNotIn("ServerUtcOffsetMinutes", source)
         self.assertNotIn("server_utc_offset_minutes", source)

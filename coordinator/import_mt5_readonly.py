@@ -1,9 +1,10 @@
 """Validate a local, read-only MT5 closed-bar snapshot for private research.
 
-No network access, broker credentials, order operations, or public upload. The
-raw MqlRates timestamp epoch is used directly. No broker UTC offset is inferred
-or applied, so a current offset cannot silently shift historical bars across
-DST changes. Output is always WAIT.
+No network access, broker credentials, order operations, or public upload.
+Native MQL5 does not document the time basis of MqlRates.time/MqlTick.time_msc
+with the same explicit UTC wording as the Python integration. The importer
+keeps candidate UTC renderings quarantined until an independent clock/DST
+diagnostic exists. Output is always WAIT.
 """
 import argparse
 import csv
@@ -18,8 +19,10 @@ BAR_SECONDS = 900
 HOUR_BARS = 4
 FOUR_HOUR_BARS = 16
 REQUIRED = {
-    "symbol", "timeframe", "bar_open_epoch_seconds", "bar_open_utc",
-    "quote_epoch_milliseconds", "quote_time_utc", "bid", "ask", "observed_utc",
+    "symbol", "timeframe", "bar_open_epoch_seconds", "bar_open_utc_candidate",
+    "quote_epoch_milliseconds", "quote_time_utc_candidate", "bid", "ask",
+    "time_current_server_label", "time_gmt_epoch_seconds", "time_trade_server_label",
+    "observed_utc_candidate",
     "open", "high", "low", "close", "tick_volume",
     "real_volume", "spread_points",
 }
@@ -57,7 +60,7 @@ def normalize_snapshot(csv_text, expected_symbol, as_of_utc, max_age_minutes=20)
     if not REQUIRED.issubset(columns):
         raise ValueError("MT5 CSV header is incomplete")
 
-    grouped, observations, seen, quotes = [], set(), set(), set()
+    grouped, observations, seen, quotes, clock_labels = [], set(), set(), set(), set()
     footer_observed, footer_count, footer_seen = None, None, False
     previous = None
     for line, row in enumerate(stream, start=2):
@@ -76,11 +79,14 @@ def normalize_snapshot(csv_text, expected_symbol, as_of_utc, max_age_minutes=20)
         if row.get("timeframe") != "M15":
             raise ValueError(f"row {line}: only M15 input is accepted")
         try:
-            observed = parse_utc(row["observed_utc"])
+            observed = parse_utc(row["observed_utc_candidate"])
             epoch_seconds = int(row["bar_open_epoch_seconds"])
-            declared_open = parse_utc(row["bar_open_utc"])
+            declared_open = parse_utc(row["bar_open_utc_candidate"])
             quote_epoch_ms = int(row["quote_epoch_milliseconds"])
-            quote_time = parse_utc(row["quote_time_utc"])
+            quote_time = parse_utc(row["quote_time_utc_candidate"])
+            time_current_server = row["time_current_server_label"].strip()
+            time_gmt_epoch = int(row["time_gmt_epoch_seconds"])
+            time_trade_server = row["time_trade_server_label"].strip()
             bid = _finite_positive(row["bid"], "bid")
             ask = _finite_positive(row["ask"], "ask")
             prices = [_finite_positive(row[k], k) for k in ("open", "high", "low", "close")]
@@ -93,12 +99,14 @@ def normalize_snapshot(csv_text, expected_symbol, as_of_utc, max_age_minutes=20)
             raise ValueError(f"row {line}: invalid bar epoch")
         opened = dt.datetime.fromtimestamp(epoch_seconds, UTC)
         if declared_open != opened:
-            raise ValueError(f"row {line}: UTC timestamp does not match raw MT5 epoch")
+            raise ValueError(f"row {line}: candidate timestamp does not match raw MT5 epoch")
         if quote_epoch_ms < 0:
             raise ValueError(f"row {line}: invalid quote epoch")
         epoch_quote_time = dt.datetime.fromtimestamp(quote_epoch_ms / 1000, UTC)
         if quote_time != epoch_quote_time:
-            raise ValueError(f"row {line}: quote UTC timestamp does not match raw MT5 epoch")
+            raise ValueError(f"row {line}: candidate quote timestamp does not match raw MT5 epoch")
+        if time_gmt_epoch < 0 or not time_current_server or not time_trade_server:
+            raise ValueError(f"row {line}: diagnostic clock fields are incomplete")
         if ask < bid:
             raise ValueError(f"row {line}: ask is below bid")
         if observed > as_of or as_of - observed > dt.timedelta(minutes=5):
@@ -107,6 +115,7 @@ def normalize_snapshot(csv_text, expected_symbol, as_of_utc, max_age_minutes=20)
             raise ValueError(f"row {line}: Bid/Ask quote is future or stale")
         observations.add(observed)
         quotes.add((quote_epoch_ms, bid, ask))
+        clock_labels.add((time_current_server, time_gmt_epoch, time_trade_server))
         if int(opened.timestamp()) % BAR_SECONDS:
             raise ValueError(f"row {line}: M15 open is not UTC aligned after offset conversion")
         if opened + dt.timedelta(seconds=BAR_SECONDS) > observed:
@@ -141,6 +150,8 @@ def normalize_snapshot(csv_text, expected_symbol, as_of_utc, max_age_minutes=20)
         raise ValueError("snapshot must have one observation time")
     if len(quotes) != 1:
         raise ValueError("snapshot must contain one consistent Bid/Ask quote")
+    if len(clock_labels) != 1:
+        raise ValueError("snapshot must contain one consistent diagnostic clock sample")
 
     def aggregate(width):
         seconds = width * BAR_SECONDS
@@ -181,29 +192,33 @@ def normalize_snapshot(csv_text, expected_symbol, as_of_utc, max_age_minutes=20)
         "symbol": expected_symbol,
         "signal": "WAIT", "executable": False, "trading": "disabled",
         "liveData": False, "networkEnabled": False, "publicRedistributionEnabled": False,
-        "timestampBasis": "MT5_MQLRATES_EPOCH_UTC",
+        "timestampBasis": "CLOCK_BASIS_UNVERIFIED",
+        "clockBasisVerified": False,
+        "researchEligible": False,
         "brokerServerOffsetInferred": False,
         "quote": {"bid": bid, "ask": ask,
                   "spread": round(ask - bid, 8),
-                  "timeUTC": quote_time.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+                  "timeUTCCandidate": quote_time.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
                   "epochMilliseconds": quote_epoch_ms,
                   "source": "MT5_MQLTICK_SNAPSHOT_NOT_INDEPENDENTLY_AUTHENTICATED"},
         "volumeSemantics": "MT5 tick volume is not exchange-wide GC volume; realVolume retained as supplied, not independently validated",
         "asOfUTC": as_of.isoformat().replace("+00:00", "Z"),
-        "observedUTC": next(iter(observations)).isoformat().replace("+00:00", "Z"),
-        "lastClosedM15UTC": grouped[-1]["datetime"], "lastBarCloseAgeMinutes": round(age_minutes, 3),
+        "observedUTCCandidate": next(iter(observations)).isoformat().replace("+00:00", "Z"),
+        "lastClosedM15UTCCandidate": grouped[-1]["datetime"], "lastBarCloseAgeMinutes": round(age_minutes, 3),
         "closedCounts": {"M15": len(grouped), "H1": len(h1), "H4": len(h4)},
         "incompleteUTCGroups": {"H1": incomplete_h1, "H4": incomplete_h4},
         "quality": {"snapshotComplete": True, "ordered": True, "duplicates": 0, "invalidOHLC": 0, "formingBarsExcluded": 0,
-                    "rawEpochsMatchedUTC": True, "brokerTimezoneUsed": False, "entitlementVerified": False},
-        "readiness": "FRESH_LOCAL_EXPORT_RESEARCH_ONLY" if fresh and enough else "WAIT_INSUFFICIENT_OR_STALE",
+                    "epochMatchesCandidateRenderingOnly": True, "timestampBasisVerified": False,
+                    "brokerTimezoneUsed": False, "entitlementVerified": False},
+        "readiness": "WAIT_CLOCK_BASIS_UNVERIFIED",
         "readyForTrading": False,
-        "alerts": ["SOURCE_PROVENANCE_NOT_AUTHENTICATED", "BROKER_DATA_RIGHTS_NOT_VERIFIED"] +
+        "alerts": ["CLOCK_BASIS_UNVERIFIED", "SOURCE_PROVENANCE_NOT_AUTHENTICATED", "BROKER_DATA_RIGHTS_NOT_VERIFIED"] +
                   ([] if fresh else ["XAU_EXPORT_STALE"]) +
                   ([] if enough else ["INSUFFICIENT_M15_H1_H4_HISTORY"]) +
                   (["INCOMPLETE_H1_H4_GROUPS"] if incomplete_h1 or incomplete_h4 else []),
-        "frames": {"M15": grouped, "H1": h1, "H4": h4},
-        "disclaimer": "Local/private research adapter only. Bar times use the raw MqlRates datetime epoch rendered as UTC; no broker offset is applied. The input file's origin and broker data rights are not authenticated. No upload or trading is performed."
+        "frames": {},
+        "candidateFrames": {"M15": grouped, "H1": h1, "H4": h4},
+        "disclaimer": "Local diagnostic only. The epoch and UTC-looking text are a serialization consistency check, not proof of UTC semantics. Candidate frames are withheld from research engines until an independently trusted live clock and DST-window check passes; broker source rights also remain unverified. No upload or trading is performed."
     }
     return output
 

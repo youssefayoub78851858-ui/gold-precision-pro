@@ -26,17 +26,43 @@ exports; this repository does not create or rent a VPS.
      --output /private/path/mt5-review.json
    ```
 
-The importer rejects bad symbols, mismatched epoch/UTC values, duplicates,
-out-of-order rows, forming bars, invalid OHLC, and stale snapshots. It consumes
-the raw `MqlRates.time` epoch as UTC and never subtracts the server's current
-offset from historical bars. This avoids silently shifting old history when a
-broker changes its DST offset. MQL5's Python integration documentation says
-bar open times from the terminal are UTC; the exporter preserves raw epoch
-seconds and the importer requires them to match the UTC string. It also stores
-the latest `MqlTick.time_msc`, Bid, and Ask snapshot once per CSV row and rejects
-stale, inverted, or inconsistent quotes. Still verify the exact broker symbol
-and exported timestamps against an independently trusted clock before broader
-research use. H1/H4 are aggregated from
+The importer rejects bad symbols, mismatched epoch/candidate-time strings,
+duplicates, out-of-order rows, forming bars, invalid OHLC, and stale snapshots.
+It deliberately treats the `MqlRates.time` and `MqlTick.time_msc` epoch values
+as unverified candidates. The Python integration docs explicitly say its
+returned bar/tick times are UTC, but native MQL5 references describe these
+fields as period/price update times without explicitly assigning UTC. Matching
+an epoch to a UTC-formatted string only proves the formatting is self-consistent;
+it does not verify the source clock basis. `TimeCurrent` is server-formed,
+`TimeGMT` depends on local OS DST configuration, and `TimeTradeServer` is
+computed by the terminal. The exporter records all three diagnostic clocks
+without using their offsets to rewrite historical timestamps. The importer
+therefore emits `CLOCK_BASIS_UNVERIFIED`, `WAIT`, and no admissible frames until
+an independent live clock/DST diagnostic is run.
+
+The offline diagnostic accepts two actual local MT5 Demo CSV captures, one on
+each side of a broker-documented DST transition, and an independent UTC time
+recorded at each capture:
+
+```sh
+python coordinator/mt5_clock_diagnostic.py \
+  --sample before_transition /private/path/before.csv "$TRUSTED_UTC_BEFORE" \
+  --sample after_transition /private/path/after.csv "$TRUSTED_UTC_AFTER" \
+  --trusted-clock-source "independent UTC clock reference" \
+  --expected-server-shift-seconds "$CFI_SIGNED_DST_SHIFT_SECONDS" \
+  --output /private/path/clock-diagnostic.json
+```
+
+Capture both files from a running Demo terminal on either side of an actual
+broker DST transition, with an actively updating quote. Record an independent
+UTC timestamp at each capture; the diagnostic checks the raw tick epoch and
+`TimeGMT()` against it, and requires the newest closed M15 epoch to equal the
+last closed quarter-hour implied by that UTC timestamp. Use the exact transition
+and signed server shift documented by CFI; the diagnostic does not assume a
+broker timezone or a one-hour shift. A unit-fixture pass only tests the
+diagnostic code. The tool has no network access and never unlocks research or
+trading by itself. H1/H4 are candidate aggregates
+from
 complete UTC-aligned groups of M15 bars; gaps are not fabricated. MT5 tick
 volume is kept distinct from exchange-wide GC volume.
 The CSV ends with a count/time footer; the importer rejects missing or
@@ -51,13 +77,20 @@ a complete snapshot.
   first-availability timestamps are not authenticated by a CSV. The report
   therefore always sets `signal=WAIT`, `executable=false`, and
   `readyForTrading=false`.
-- The CSV stores the raw timestamp epoch alongside its UTC rendering. The
-  importer checks they match and does not infer the broker timezone. Do not
-  reinterpret broker chart labels as UTC or add a fixed offset to history.
+- The importer stores candidate frames separately and leaves its admissible
+  `frames` empty until clock-basis evidence exists. A diagnostic result covers
+  only the sampled DST window; it does not authenticate the data licence,
+  broker symbol, or all historical timestamps.
 - No continuous Render upload exists. To put this feed on a phone, a future
   private transport, authenticated receiver, broker permission review, durable
   storage policy, and access controls must be completed first. Do not switch
   the demo or production service to this CSV as-is.
+- Official references: [MqlRates](https://www.mql5.com/en/docs/constants/structures/mqlrates),
+  [MqlTick](https://www.mql5.com/en/docs/constants/structures/mqltick),
+  [TimeCurrent](https://www.mql5.com/en/docs/dateandtime/timecurrent),
+  [TimeGMT](https://www.mql5.com/en/docs/dateandtime/timegmt),
+  [TimeTradeServer](https://www.mql5.com/en/docs/dateandtime/timetradeserver),
+  and the separate [Python CopyRates UTC note](https://www.mql5.com/en/docs/python_metatrader5/mt5copyratesfrom_py).
 - This is a user-local connector candidate, not a free market-data licence or a
   proven, uninterrupted market feed. It needs a desktop/VPS terminal and the
   exact market symbol supplied by the broker.
