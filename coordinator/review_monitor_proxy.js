@@ -43,11 +43,30 @@ function sanitize(input){
              alertCodes:codes,lastNotificationCode:note,signal:"WAIT",
              executable:false,paperRunning:false,externalNotificationsSent:0};
  }
+ const paper=input.paperGate;
+ let safePaper=null;
+ if(paper!==undefined){
+  const codes=paper?.reasonCodes;
+  if(paper.mode!=="PAPER_ADMISSION_REVIEW_ONLY"||paper.status!=="BLOCKED"
+     ||paper.signal!=="WAIT"||paper.executable!==false
+     ||paper.researchEligible!==false||paper.paperRunning!==false
+     ||paper.paperOrdersAllowed!==false||paper.ledgerCreatedByGate!==false
+     ||paper.simulationEvidenceIsLive!==false
+     ||!Array.isArray(codes)||codes.length<3||codes.length>12
+     ||codes.some(x=>typeof x!=="string"||!code.test(x))
+     ||!codes.includes("PAPER_LIVE_ACTIVATION_NOT_APPROVED")
+     ||!codes.includes("SOURCE_LICENSE_AND_HISTORY_NOT_VERIFIED")
+     ||!codes.includes("RISK_AND_BROKER_COSTS_NOT_VERIFIED"))
+    throw Error("Unsafe paper gate");
+  safePaper={mode:"PAPER_ADMISSION_REVIEW_ONLY",status:"BLOCKED",
+   signal:"WAIT",executable:false,reviewOnly:true,paperRunning:false,
+   paperOrdersAllowed:false,reasonCodes:[...new Set(codes)]};
+ }
  return {status:"WAIT_EODHD_INTAKE",dataStatus:input.dataStatus,
   signal:"WAIT",executable:false,researchEligible:false,engineStatus:"NOT_INVOKED",
   paperRunning:false,closedBarCounts:safe,
   intake:{status:"BLOCKED",blockingReasons:[...new Set(reasons)].slice(0,20)},
-  ...(safeAudit?{audit:safeAudit}:{})};
+  ...(safeAudit?{audit:safeAudit}:{}),...(safePaper?{paperGate:safePaper}:{})};
 }
 async function relay(authorization,{approved=false,fetchFn=globalThis.fetch}={}){
  if(!approved)return deny(503,"REVIEW_MONITOR_PROXY_DISABLED");

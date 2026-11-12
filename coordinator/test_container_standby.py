@@ -24,6 +24,9 @@ code,feed=get('/api/v3/eodhd/readiness');assert code==200 and feed['status']=='N
 assert feed['closedBarCounts']=={'M15':0,'H1':0,'H4':0} and feed['priceVisible'] is False
 code,monitor=get('/api/v3/monitor/status');assert code==200 and monitor['status']=='WAIT_EODHD_INTAKE' and monitor['signal']=='WAIT' and monitor['executable'] is False and monitor['researchEligible'] is False and monitor['engineStatus']=='NOT_INVOKED' and monitor['dataStatus']=='NOT_CONNECTED'
 assert monitor['sourceRequestsMade']==0 and monitor['paperRunning'] is False
+assert monitor['paperGate']['status']=='BLOCKED' and monitor['paperGate']['signal']=='WAIT'
+assert monitor['paperGate']['paperOrdersAllowed'] is False
+assert monitor['paperGate']['ledgerCreatedByGate'] is False
 assert monitor['audit']['status']=='AUDIT_DISABLED'
 assert 'latestQuote' not in monitor and 'bidFrames' not in monitor and 'askFrames' not in monitor
 with urllib.request.urlopen(base+'/api/v3/monitor/dashboard',timeout=2) as page:
@@ -88,6 +91,8 @@ with sqlite3.connect(root/'alerts.sqlite3') as db:
 with sqlite3.connect(root/'notifications.sqlite3') as db:
  assert db.execute('SELECT count(*) FROM research_notification_events').fetchone()[0]==1
 assert result['sourceRequestsMade']==0 and result['paperRunning'] is False
+assert result['paperGate']['paperOrdersAllowed'] is False
+assert result['paperGate']['status']=='BLOCKED'
 '''
    for _ in range(40):
     try:execute(audit_probe);break

@@ -46,6 +46,12 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <h3>أسباب WAIT</h3>
 <ul id="reasons"><li>المصدر غير مؤهّل للتداول حتى يثبت عكس ذلك</li></ul>
 </section>
+<section id="paper-gate-panel" aria-labelledby="paper-gate-title">
+<h2 id="paper-gate-title">جاهزية التداول الورقي وإدارة المخاطر</h2>
+<p id="paper-gate-state" role="status">التداول الورقي محجوب حتى التحقق من المصادر وإدارة المخاطر.</p>
+<ul id="paper-gate-reasons" aria-live="polite"></ul>
+<p><small>هذا فحص جاهزية فقط؛ لا يوجد حساب ورقي نشط أو أوامر صفقات.</small></p>
+</section>
 <section id="audit-panel" aria-labelledby="audit-title">
 <h2 id="audit-title">مراقبة اتصال الذهب والتنبيهات الداخلية</h2>
 <p id="audit-state" role="status">لم يتم فحص حالة المراقبة الدورية بعد.</p>
@@ -119,6 +125,15 @@ el("refresh").addEventListener("click",async()=>{
   if(audit?.lastNotificationCode){
    const li=document.createElement("li");
    li.className="reason";li.textContent="تنبيه داخلي: "+audit.lastNotificationCode;codes.append(li);
+  }
+  const gate=data.paperGate;
+  el("paper-gate-state").textContent=gate?.status==="BLOCKED"&&gate?.paperOrdersAllowed===false
+    ?"BLOCKED — لا تداول ورقي، ولا تشغيل صفقات حتى تكتمل الشروط"
+    :"WAIT — تعذّر التحقق من بوابة التداول الورقي";
+  const gateReasons=el("paper-gate-reasons");gateReasons.replaceChildren();
+  for(const reason of Array.isArray(gate?.reasonCodes)?gate.reasonCodes:[]){
+   if(typeof reason!=="string"||!/^[A-Z0-9_]{3,90}$/.test(reason))continue;
+   const item=document.createElement("li");item.className="reason";item.textContent=reason;gateReasons.append(item);
   }
   el("auth-status").textContent="اكتمل فحص الحالة. الرمز محفوظ بذاكرة الصفحة مؤقتاً فقط";
  }catch(e){el("status").textContent="WAIT — تعذّر فحص المراقبة";el("auth-status").textContent=e.message;}

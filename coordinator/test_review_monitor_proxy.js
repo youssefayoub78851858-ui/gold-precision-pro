@@ -43,5 +43,22 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
   ...expected,audit:{...withAudit.body.audit,alertCodes:["<unsafe>"]}
  })});
  a.equal(tampered.httpStatus,503);
+ const gated=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,paperGate:{mode:"PAPER_ADMISSION_REVIEW_ONLY",
+   status:"BLOCKED",signal:"WAIT",executable:false,
+   researchEligible:false,paperRunning:false,paperOrdersAllowed:false,
+   ledgerCreatedByGate:false,simulationEvidenceIsLive:false,
+   reasonCodes:["PAPER_LIVE_ACTIVATION_NOT_APPROVED",
+    "SOURCE_LICENSE_AND_HISTORY_NOT_VERIFIED","RISK_AND_BROKER_COSTS_NOT_VERIFIED"],
+   sensitivePrice:5555}
+ })});
+ a.equal(gated.httpStatus,200);
+ a.equal(gated.body.paperGate.paperOrdersAllowed,false);
+ a.ok(!JSON.stringify(gated).includes("5555"));
+ const spoof=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,paperGate:{...gated.body.paperGate,paperOrdersAllowed:true,
+   researchEligible:false,ledgerCreatedByGate:false,simulationEvidenceIsLive:false}
+ })});
+ a.equal(spoof.httpStatus,503);
  console.log("PASS: public review proxy disabled by default; readonly-only relay; safe WAIT data");
 })().catch(e=>{console.error(e);process.exitCode=1});
