@@ -223,6 +223,9 @@ jobs:
       - name: Databento GC MBO and MBP normalized fixture preflight (synthetic only)
         working-directory: coordinator
         run: python -m unittest -v test_databento_gc_book_preflight
+      - name: Offline MBO order-book reconstruction state machine (synthetic only)
+        working-directory: coordinator
+        run: python -m unittest -v test_mbo_order_book
 
       - name: XAUUSD signed intake, UTC candle quality, gaps and outage backoff (offline fixtures)
         working-directory: coordinator
