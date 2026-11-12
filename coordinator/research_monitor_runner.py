@@ -10,6 +10,7 @@ import datetime as dt
 from typing import Callable
 
 from research_monitor import ResearchAlertMonitor
+from research_notification import ResearchNotificationJournal
 from xauusd_feed_gate import parse_utc, retry_delay_seconds
 
 
@@ -17,7 +18,8 @@ class ResearchMonitorRunner:
     def __init__(self, monitor: ResearchAlertMonitor, poll: Callable[[], dict | None],
                  clock: Callable[[], dt.datetime], *, interval_seconds: int = 15,
                  heartbeat_misses: int = 2, retry_base_seconds: int = 5,
-                 retry_max_seconds: int = 300):
+                 retry_max_seconds: int = 300,
+                 notification_journal: ResearchNotificationJournal | None = None):
         if interval_seconds < 1 or heartbeat_misses < 1:
             raise ValueError("positive monitor interval and heartbeat threshold required")
         self.monitor = monitor
@@ -27,6 +29,7 @@ class ResearchMonitorRunner:
         self.heartbeat_timeout_seconds = interval_seconds * heartbeat_misses
         self.retry_base_seconds = retry_base_seconds
         self.retry_max_seconds = retry_max_seconds
+        self.notification_journal = notification_journal
         self.failure_count = 0
 
     def tick(self) -> dict:
@@ -63,10 +66,15 @@ class ResearchMonitorRunner:
             delay = self.interval_seconds
 
         observed = self.monitor.observe(result, now)
-        return {"observedUTC": now.isoformat().replace("+00:00", "Z"),
+        notifications = (self.notification_journal.observe(result, now)
+                         if self.notification_journal is not None else None)
+        output = {"observedUTC": now.isoformat().replace("+00:00", "Z"),
                 "result": result, "alerts": observed,
                 "failureCount": self.failure_count, "nextDelaySeconds": delay,
                 "signal": "WAIT", "executable": False}
+        if notifications is not None:
+            output["notifications"] = notifications
+        return output
 
     @staticmethod
     def _quarantine(result: dict | None) -> tuple[dict, bool]:
@@ -105,3 +113,22 @@ class ResearchMonitorRunner:
             if index + 1 < cycles:
                 sleep(result["nextDelaySeconds"])
         return results
+
+    def run_continuously(self, sleep: Callable[[float], None],
+                         stop_requested: Callable[[], bool]):
+        """Yield each DRY_RUN observation until the host requests a stop.
+
+        Sleep and shutdown are injected so a service wrapper can use an
+        interruptible Event.wait while tests advance simulated time. Results
+        are yielded one at a time; a 24/7 caller does not accumulate an
+        unbounded in-memory history. The host remains responsible for process
+        supervision and persistent storage.
+        """
+        if not callable(sleep) or not callable(stop_requested):
+            raise TypeError("continuous runner requires injected sleep and stop callbacks")
+        while not stop_requested():
+            result = self.tick()
+            result["mode"] = "DRY_RUN"
+            yield result
+            if not stop_requested():
+                sleep(result["nextDelaySeconds"])
