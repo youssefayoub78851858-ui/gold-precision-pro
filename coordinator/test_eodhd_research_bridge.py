@@ -119,13 +119,15 @@ class EodhdResearchStaging(unittest.TestCase):
         # Recalculate affected H1/H4 aggregates so this tests actual intake,
         # not just an earlier failure on aggregate mismatch.
         from eodhd_research_bridge import _audit_bars
-        s = sample(16)
+        # 20 closed M15 bars from 12:00 to 17:00 UTC contain one
+        # fully aligned H4 block; 16 from 13:00 would contain none.
+        s = sample(20)
         row = s["frames"]["M15"][0]
         row["high"] -= 0.1
         row["low"] += 0.1
         s["frames"]["H1"][0]["low"] = min(x["low"] for x in s["frames"]["M15"][:4])
         s["frames"]["H4"][0]["low"] = min(x["low"] for x in s["frames"]["M15"][:16])
-        self.assertEqual(_audit_bars(s), {"M15": 16, "H1": 4, "H4": 1})
+        self.assertEqual(_audit_bars(s), {"M15": 20, "H1": 5, "H4": 1})
         result = self.review(s)
         self.check_wait(result)
         self.assertNotIn("BID_ASK_MIDQUOTE_EXTREMA_IMPOSSIBLE",
