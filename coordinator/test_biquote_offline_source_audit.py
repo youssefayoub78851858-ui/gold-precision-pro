@@ -45,7 +45,9 @@ def make_samples():
     }
     quote = {"symbol": "XAUUSD", "bid": 3907.1, "ask": 3907.3,
              "timestamp": iso(NOW - dt.timedelta(seconds=1)),
-             "stale": False, "source": "MOCK_SYNTHETIC_ONLY"}
+             "stale": False, "marketState": "open",
+             "mid": 3907.2, "spread": 0.2,
+             "source": "MOCK_SYNTHETIC_ONLY"}
     return quote, feeds
 
 
@@ -117,6 +119,30 @@ class BiquoteOfflineAuditTests(unittest.TestCase):
         q["bid"] = True
         r = self.run_audit(q, feeds)
         self.assertIn("INVALID_OR_CROSSED_BID_ASK", r["blockingReasons"])
+
+    def test_closed_market_and_missing_stale_flags_rejected(self):
+        q, feeds = make_samples()
+        q["marketState"] = "closed"
+        r = self.run_audit(q, feeds)
+        self.assert_safe(r)
+        self.assertIn("MARKET_NOT_CONFIRMED_OPEN", r["blockingReasons"])
+        q, feeds = make_samples()
+        del q["stale"]
+        r = self.run_audit(q, feeds)
+        self.assert_safe(r)
+        self.assertIn("PROVIDER_STALE_FLAG_MISSING_OR_TRUE", r["blockingReasons"])
+
+    def test_inconsistent_midquote_and_spread_rejected(self):
+        q, feeds = make_samples()
+        q["mid"] += 1
+        r = self.run_audit(q, feeds)
+        self.assert_safe(r)
+        self.assertIn("MIDQUOTE_DISAGREES_WITH_BID_ASK", r["blockingReasons"])
+        q, feeds = make_samples()
+        q["spread"] += 1
+        r = self.run_audit(q, feeds)
+        self.assert_safe(r)
+        self.assertIn("SPREAD_DISAGREES_WITH_BID_ASK", r["blockingReasons"])
 
     def test_malformed_ohlc_and_time_rejected(self):
         q, feeds = make_samples()
