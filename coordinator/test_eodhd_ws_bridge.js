@@ -83,6 +83,15 @@ try{
  fs.symlinkSync(outside,saved);
  a.throws(()=>privateSave(secure,payload),/Unsafe private snapshot destination/);
  a.equal(fs.readFileSync(outside,'utf8'),'untouched');
+ // A previous process can leave an orphan named with a reused PID.
+ // Its presence must not lock the snapshot writer after restart.
+ fs.unlinkSync(saved);
+ const orphan=saved+'.tmp-'+process.pid;
+ fs.writeFileSync(orphan,'orphaned private temp',{mode:0o600});
+ privateSave(secure,{signal:'WAIT',reason:'RESTART_SAFE'});
+ a.deepEqual(JSON.parse(fs.readFileSync(saved,'utf8')),
+              {signal:'WAIT',reason:'RESTART_SAFE'});
+ a.equal(fs.readFileSync(orphan,'utf8'),'orphaned private temp');
 }finally{fs.rmSync(scratch,{recursive:true,force:true});}
 
 console.log('PASS: EODHD offline quote checks, private snapshot isolation and WAIT');

@@ -1,6 +1,6 @@
 'use strict';
 // EODHD XAUUSD private, fail-closed review connector. Never places orders.
-const fs=require('node:fs'),path=require('node:path');
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const WIDTH=900000,AGE=30000,FUTURE=5000,GAP=90000,MAX_BARS=2048;
 const valid=x=>typeof x==='number'&&Number.isFinite(x)&&x>0;
 function aggregate(bars,n){
@@ -83,7 +83,7 @@ function privateSave(dir,snapshot){
  if(!info.isDirectory()||(info.mode&0o077)!==0||
     (typeof process.getuid==='function'&&info.uid!==process.getuid()))
   throw Error('Unsafe private snapshot directory');
- const dst=path.join(dir,'eodhd-private-review.json'),tmp=dst+'.tmp-'+process.pid;
+ const dst=path.join(dir,'eodhd-private-review.json'),tmp=dst+'.tmp-'+process.pid+'-'+crypto.randomBytes(12).toString('hex');
  // Existing snapshots must remain private; never replace attacker-controlled links.
  try{
   const previous=fs.lstatSync(dst);
