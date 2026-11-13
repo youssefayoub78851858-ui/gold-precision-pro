@@ -108,7 +108,12 @@ class PrivateReviewMonitorTests(unittest.TestCase):
         with patch("eodhd_review_monitor._read_private_snapshot",
                    side_effect=OSError("file replaced during read")):
             blocked = poll_private_review(self.root, NOW)
-        self.assert_safe(blocked)
+        self.assertEqual(blocked["signal"], "WAIT")
+        self.assertFalse(blocked["executable"])
+        self.assertFalse(blocked["researchEligible"])
+        self.assertFalse(blocked["paperRunning"])
+        self.assertEqual(blocked["sourceRequestsMade"], 0)
+        self.assertNotIn("latestQuote", json.dumps(blocked))
         self.assertEqual(blocked["dataStatus"], "BLOCKED")
         self.assertIn("EODHD_PRIVATE_SNAPSHOT_READ_REJECTED",
                       blocked["intake"]["blockingReasons"])
