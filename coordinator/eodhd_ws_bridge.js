@@ -15,10 +15,17 @@ function aggregate(bars,n){
 }
 class XauusdReview{
  constructor(clock=Date.now){this.clock=clock;this.reset('NOT_CONNECTED');this.count=0;}
- reset(reason='STREAM_INTERRUPTED'){
-  this.authorized=false;this.last=null;this.current=null;this.bars=[];
-  this.bidBars=[];this.askBars=[];
+ reset(reason='STREAM_INTERRUPTED',preserveClosed=false){
+  this.authorized=false;this.last=null;this.current=null;
+  if(!preserveClosed){this.bars=[];this.bidBars=[];this.askBars=[];}
   this.quote=null;this.reason=reason;
+ }
+ restoreClosed(history){
+  // CLOSED bars only: never import a quote, auth flag, or open M15 candle.
+  this.reset('WAIT_RESTORED_HISTORY_UNVERIFIED');
+  this.bars=history.frames.M15.map(x=>({...x}));
+  this.bidBars=history.bidFrames.M15.map(x=>({...x}));
+  this.askBars=history.askFrames.M15.map(x=>({...x}));
  }
  receive(message){
   let x;try{x=typeof message==='string'?JSON.parse(message):message;}catch{
@@ -94,6 +101,90 @@ function privateSave(dir,snapshot){
  try{fs.writeFileSync(tmp,JSON.stringify(snapshot)+'\n',{mode:0o600,flag:'wx'});fs.renameSync(tmp,dst);}
  finally{try{fs.unlinkSync(tmp);}catch{}}
 }
+
+/**
+ * Secure cold recovery of CLOSED history, never provider authorization or a
+ * fresh quote. The existing private snapshot is the only persistence source.
+ * Recompute H1/H4 from M15 to reject forged/mismatched aggregates.
+ */
+function privateLoadClosed(dir,now=Date.now()){
+ if(!Number.isFinite(now)||now<=0)throw Error('Invalid independent clock');
+ let folder;
+ try{folder=fs.lstatSync(dir);}
+ catch(e){if(e.code==='ENOENT')return null;throw e;}
+ if(!folder.isDirectory()||(folder.mode&0o077)!==0||
+    (typeof process.getuid==='function'&&folder.uid!==process.getuid()))
+  throw Error('Unsafe closed history directory');
+ const filename=path.join(dir,'eodhd-private-review.json');
+ let fd;
+ try{fd=fs.openSync(filename,fs.constants.O_RDONLY|(fs.constants.O_NOFOLLOW||0));}
+ catch(e){if(e.code==='ENOENT')return null;throw e;}
+ let raw;
+ try{
+  const st=fs.fstatSync(fd);
+  if(!st.isFile()||(st.mode&0o077)!==0||st.size<2||st.size>1500000||
+     (typeof process.getuid==='function'&&st.uid!==process.getuid()))
+   throw Error('Unsafe closed history file');
+  raw=JSON.parse(fs.readFileSync(fd,'utf8'));
+ }finally{fs.closeSync(fd);}
+ if(!raw||raw.provider!=='EODHD'||raw.instrument!=='XAU/USD'||
+    raw.mode!=='REVIEW_ONLY'||raw.quoteType!=='INDICATIVE_MIDQUOTE_OHLC'||
+    raw.signal!=='WAIT'||raw.executable!==false||
+    raw.researchEligible!==false||raw.readyForTrading!==false)
+  throw Error('Closed history identity rejected');
+ const names=['frames','bidFrames','askFrames'];
+ for(const name of names){
+  const group=raw[name];
+  if(!group||typeof group!=='object'||Array.isArray(group)||
+     Object.keys(group).sort().join(',')!=='H1,H4,M15'||
+     !Array.isArray(group.M15)||group.M15.length>MAX_BARS||
+     !Array.isArray(group.H1)||group.H1.length>512||
+     !Array.isArray(group.H4)||group.H4.length>128)
+   throw Error('Invalid closed history frames');
+ }
+ const [mid,bid,ask]=names.map(name=>raw[name].M15),len=mid.length;
+ if(bid.length!==len||ask.length!==len)throw Error('Closed history length mismatch');
+ let previous=-1;
+ for(let i=0;i<len;i++){
+  const rows=[mid[i],bid[i],ask[i]];
+  if(rows.some(row=>!row||typeof row!=='object'||Array.isArray(row)||
+      Object.keys(row).sort().join(',')!=='close,high,low,open,openTime'))
+   throw Error('Closed history bar format rejected');
+  const stamp=rows[0].openTime,time=Date.parse(stamp);
+  if(typeof stamp!=='string'||!Number.isSafeInteger(time)||time<0||
+     new Date(time).toISOString()!==stamp||time%WIDTH!==0||
+     time<=previous||time+WIDTH>now||
+     rows.some(row=>row.openTime!==stamp))
+   throw Error('Closed history clock or ordering invalid');
+  previous=time;
+  for(const row of rows){
+   if(!['open','high','low','close'].every(k=>valid(row[k]))||
+      row.high<Math.max(row.open,row.close,row.low)||
+      row.low>Math.min(row.open,row.close,row.high))
+    throw Error('Closed history OHLC rejected');
+  }
+  for(const key of ['open','high','low','close'])
+   if(bid[i][key]>ask[i][key])throw Error('Closed history crossed');
+  const close=(x,y)=>Math.abs(x-y)<=Math.max(1e-7,Math.abs(x)*1e-9);
+  if(!close(mid[i].open,(bid[i].open+ask[i].open)/2)||
+     !close(mid[i].close,(bid[i].close+ask[i].close)/2)||
+     mid[i].high<bid[i].high||mid[i].high>ask[i].high||
+     mid[i].low<bid[i].low||mid[i].low>ask[i].low)
+   throw Error('Closed history midquote mismatch');
+ }
+ for(const family of names)
+  for(const [interval,n] of [['H1',4],['H4',16]]){
+   const expected=aggregate(raw[family].M15,n),stored=raw[family][interval];
+   if(stored.length!==expected.length)throw Error('Closed aggregate count mismatch');
+   for(let i=0;i<expected.length;i++)
+    if(Object.keys(expected[i]).some(key=>stored[i]?.[key]!==expected[i][key])||
+       Object.keys(stored[i]).sort().join(',')!=='close,high,low,open,openTime')
+     throw Error('Closed aggregate mismatch');
+  }
+ // Only copy OHLC; never return latestQuote or untrusted status flags.
+ const copy=rows=>rows.map(({openTime,open,high,low,close})=>({openTime,open,high,low,close}));
+ return {frames:{M15:copy(mid)},bidFrames:{M15:copy(bid)},askFrames:{M15:copy(ask)}};
+}
 function run(){
  if(process.env.EODHD_CONNECT_APPROVED!=='1'||
     process.env.EODHD_RIGHTS_APPROVED!=='1'||
@@ -103,12 +194,14 @@ function run(){
  if(!token||token==='demo'||token.length<12)throw Error('Paid EODHD token not configured');
  if(typeof WebSocket!=='function')throw Error('WebSocket requires Node 22+');
  const review=new XauusdReview(),dir=process.env.DATA_DIR||'/var/data/gold-live';
+ try{const closed=privateLoadClosed(dir);if(closed)review.restoreClosed(closed);}
+ catch{review.reset('CLOSED_HISTORY_REJECTED');}
  let tries=0,socket,halted=false,lastSaved=0;
  const stop=()=>{halted=true;if(socket)socket.close();};
  process.on('SIGTERM',stop);process.on('SIGINT',stop);
  function connect(){
   if(halted)return;
-  review.reset('CONNECTING');
+  review.reset('CONNECTING',true);
   socket=new WebSocket('wss://ws.eodhistoricaldata.com/ws/forex?api_token='+encodeURIComponent(token));
   socket.addEventListener('open',()=>{tries=0;socket.send(JSON.stringify({action:'subscribe',symbols:'XAUUSD'}));});
   socket.addEventListener('message',e=>{
@@ -125,7 +218,7 @@ function run(){
   });
   let already=false;
   const disconnect=()=>{
-   if(already||halted)return;already=true;review.reset('DISCONNECTED');
+   if(already||halted)return;already=true;review.reset('DISCONNECTED',true);
    try{privateSave(dir,review.snapshot());}catch{}
    setTimeout(connect,Math.min(300000,5000*Math.pow(2,Math.min(tries++,6))));
   };
@@ -134,4 +227,4 @@ function run(){
  connect();
 }
 if(require.main===module)run();
-module.exports={XauusdReview,aggregate,privateSave,run};
+module.exports={XauusdReview,aggregate,privateSave,privateLoadClosed,run};
