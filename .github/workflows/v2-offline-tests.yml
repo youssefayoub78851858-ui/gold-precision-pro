@@ -64,6 +64,9 @@ jobs:
         run: |
           python -m unittest -v test_fxcm_free_source_feasibility
           python fxcm_free_source_feasibility.py --output /tmp/fxcm-pre-subscription-feasibility.json
+      - name: BiQuote free XAUUSD source provenance, BidAsk and closed OHLC audit (offline only)
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_offline_source_audit
       - name: Opt-in EODHD worker process gate and isolated lifecycle (offline)
         working-directory: coordinator
         run: python -m unittest -v test_private_eodhd_worker
