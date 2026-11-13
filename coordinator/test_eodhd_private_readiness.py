@@ -92,6 +92,23 @@ class PrivateReadiness(unittest.TestCase):
         self.write(override={"latestQuote": None})
         self.assertEqual(self.check()["status"], "WAIT_NO_VERIFIED_QUOTE")
 
+    def test_fresh_timestamp_without_valid_bid_ask_never_counts_as_recovery(self):
+        stamp = (NOW - dt.timedelta(seconds=2)).isoformat()
+        for prices in (
+            {"timeUTC": stamp},
+            {"timeUTC": stamp, "bid": 4001.2},
+            {"timeUTC": stamp, "bid": 4002.0, "ask": 4001.0},
+            {"timeUTC": stamp, "bid": 0, "ask": 4001.0},
+            {"timeUTC": stamp, "bid": True, "ask": 4001.0},
+            {"timeUTC": stamp, "bid": float("nan"), "ask": 4001.0},
+            {"timeUTC": stamp, "bid": 4001.0, "ask": float("inf")},
+        ):
+            with self.subTest(prices=prices):
+                self.write(override={"latestQuote": prices})
+                result = self.check()
+                self.assertEqual(result["status"], "BLOCKED")
+                self.assertEqual(result["closedBarCounts"], {"M15": 0, "H1": 0, "H4": 0})
+
     def test_never_accesses_network(self):
         with patch("socket.socket", side_effect=AssertionError("network forbidden")):
             self.assertEqual(self.check()["status"], "NOT_CONNECTED")

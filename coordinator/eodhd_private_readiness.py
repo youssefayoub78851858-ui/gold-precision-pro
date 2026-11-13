@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import math
 import pathlib
 import stat
 
@@ -80,6 +81,14 @@ def read_private_status(directory, *, now=None):
             return out
         if not isinstance(quote, dict):
             raise ValueError("Malformed latest quote")
+        # A recent timestamp alone is NOT evidence of an actual bid/ask quote.
+        # Reject incomplete, crossed, non-finite or non-positive quote values
+        # before a recovery observation can be counted.
+        bid, ask = quote.get("bid"), quote.get("ask")
+        if (any(not isinstance(x, (int, float)) or isinstance(x, bool)
+                or not math.isfinite(x) or x <= 0 for x in (bid, ask))
+                or ask < bid):
+            raise ValueError("Invalid latest bid/ask quote")
         stamp = _utc_time(quote.get("timeUTC"))
         age = (now - stamp).total_seconds()
         file_age = now.timestamp() - st.st_mtime
