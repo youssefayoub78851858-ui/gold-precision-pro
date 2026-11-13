@@ -71,7 +71,7 @@ class EodhdResearchStaging(unittest.TestCase):
         self.assertEqual(result["closedBarCounts"]["M15"],16)
         diag = result["warmupDiagnostic"]
         self.assertEqual(diag["minimumClosedBars"], {"M15":50,"H1":50,"H4":50})
-        self.assertEqual(diag["missingToMinimum"], {"M15":34,"H1":46,"H4":49})
+        self.assertEqual(diag["missingToMinimum"], {"M15":34,"H1":46,"H4":50})
         self.assertFalse(diag["countMinimumsMet"])
         self.assertFalse(diag["independentCalendarVerifiedByDiagnostic"])
         self.assertFalse(diag["readyForTrading"])
@@ -106,15 +106,24 @@ class EodhdResearchStaging(unittest.TestCase):
         base = sample(832)
         self.assertGreater(len(base["bidFrames"]["H4"]),50)
         for timeframe in ("H1","H4"):
-            for removed_family in ("frames","bidFrames","askFrames"):
-                with self.subTest(timeframe=timeframe, family=removed_family):
-                    s = copy.deepcopy(base)
-                    s[removed_family][timeframe].pop(0)
-                    self.assertGreaterEqual(len(s["bidFrames"]["H4"]),50)
-                    result = self.review(s)
-                    self.check_wait(result)
-                    self.assertIn("BID_ASK_AGGREGATE_COMPLETENESS_MISMATCH",
-                                  result["blockingReasons"])
+            with self.subTest(timeframe=timeframe):
+                s = copy.deepcopy(base)
+                # Keep the MID/BID/ASK arrays equally long so the *new*
+                # completeness check, not the old length check, is exercised.
+                for family in ("frames","bidFrames","askFrames"):
+                    s[family][timeframe].pop(0)
+                self.assertGreaterEqual(len(s["bidFrames"]["H4"]),50)
+                result = self.review(s)
+                self.check_wait(result)
+                self.assertIn("BID_ASK_AGGREGATE_COMPLETENESS_MISMATCH",
+                              result["blockingReasons"])
+        # Removing from one side alone is separately rejected by length gate.
+        side_missing = copy.deepcopy(base)
+        side_missing["bidFrames"]["H4"].pop(0)
+        result = self.review(side_missing)
+        self.check_wait(result)
+        self.assertIn("BID_ASK_FRAME_LENGTH_MISMATCH",
+                      result["blockingReasons"])
 
     def test_warmup_count_alone_never_authorizes_research(self):
         s = sample(832)
