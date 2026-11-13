@@ -420,3 +420,31 @@ jobs:
           name: fxcm-forexconnect-linux-archive-probe
           path: ${{ runner.temp }}/fxcm-forexconnect-linux-archive.json
           if-no-files-found: error
+
+  fxcm-forexconnect-bookworm-static-abi:
+    name: FXCM SDK static ELF linkage on Debian Bookworm (no provider code execution)
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    container:
+      image: node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9
+    permissions:
+      contents: read
+    steps:
+      - name: Install read-only ELF inspection tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 binutils ca-certificates git
+      - uses: actions/checkout@v4
+      - name: Inspect official archive without loading any FXCM code
+        env:
+          ABI_REPORT_PATH: ${{ runner.temp }}/fxcm-bookworm-static-abi.json
+        run: |
+          python3 coordinator/fxcm_linux_static_abi_probe.py --self-test
+          python3 coordinator/fxcm_linux_static_abi_probe.py --output "$ABI_REPORT_PATH"
+      - name: Upload static ABI report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fxcm-bookworm-static-abi
+          path: ${{ runner.temp }}/fxcm-bookworm-static-abi.json
+          if-no-files-found: error
