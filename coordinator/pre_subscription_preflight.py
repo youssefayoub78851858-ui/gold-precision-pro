@@ -28,6 +28,8 @@ CHECKS = {
         ("coordinator/test_eodhd_bootstrap_preflight.py", ["test_50_h4_counts_are_not_license_or_session_proof"]),
         ("coordinator/eodhd_historical_1m_intake.py", ["HISTORICAL_PRICE_BASIS_AND_STREAM_BID_ASK_PARITY_UNVERIFIED", "mayMergeWithLiveBidAsk", "WAIT"]),
         ("coordinator/test_eodhd_historical_1m_intake.py", ["test_50_complete_h4_is_only_geometric_warmup"]),
+        ("coordinator/eodhd_historical_raw_adapter.py", ["RAW_HISTORY_TIMESTAMP_DATETIME_CONFLICT", "mayMergeWithLiveBidAsk", "WAIT"]),
+        ("coordinator/test_eodhd_historical_raw_adapter.py", ["test_conflicting_timestamps_rejected"]),
     ],
     "context_and_news": [
         ("coordinator/h15_official_rss.js", ["DGS2", "DGS10"]),

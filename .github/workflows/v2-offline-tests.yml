@@ -53,6 +53,9 @@ jobs:
       - name: Quarantined historical XAUUSD 1-minute intake and complete H4 audit (offline)
         working-directory: coordinator
         run: python -m unittest -v test_eodhd_historical_1m_intake
+      - name: Raw EODHD XAUUSD REST one-minute UTC parity preflight (offline)
+        working-directory: coordinator
+        run: python -m unittest -v test_eodhd_historical_raw_adapter
       - name: Opt-in EODHD worker process gate and isolated lifecycle (offline)
         working-directory: coordinator
         run: python -m unittest -v test_private_eodhd_worker
