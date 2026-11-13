@@ -86,9 +86,13 @@ with urllib.request.urlopen(request,timeout=2) as r:
 audit=result['audit']
 assert audit['status']=='AUDIT_OK' and audit['signal']=='WAIT' and audit['executable'] is False,audit
 assert audit['externalNotificationsSent']==0 and audit['lastNotificationCode']=='WAIT_EODHD_INTAKE'
+assert audit['recovery']['state']=='SOURCE_ABSENT'
+assert audit['recovery']['paperOrdersAllowed'] is False
+assert audit['recovery']['sourceVerified'] is False
 assert 'INTAKE_BLOCKED' in audit['alertCodes']
 root=pathlib.Path('/var/data/gold-live/review-audit')
 assert (root/'alerts.sqlite3').exists() and (root/'notifications.sqlite3').exists()
+assert (root/'source-recovery.sqlite3').exists()
 with sqlite3.connect(root/'alerts.sqlite3') as db:
  assert db.execute('SELECT count(*) FROM research_alert_events').fetchone()[0]==1
 with sqlite3.connect(root/'notifications.sqlite3') as db:

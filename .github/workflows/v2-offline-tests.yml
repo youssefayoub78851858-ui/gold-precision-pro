@@ -255,6 +255,9 @@ jobs:
       - name: Paper trade admission guard and spoofed signal fail-closed (offline)
         working-directory: coordinator
         run: python -m unittest -v test_paper_admission_gate
+      - name: Private EODHD recovery debounce, restart, and fail-closed audit (offline)
+        working-directory: coordinator
+        run: python -m unittest -v test_private_feed_recovery
       - name: Private periodic watchdog audit, restart, and no-network contract
         working-directory: coordinator
         run: python -m unittest -v test_private_review_watchdog

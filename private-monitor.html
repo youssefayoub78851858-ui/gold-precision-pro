@@ -63,6 +63,10 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <h2 id="audit-title">مراقبة اتصال الذهب والتنبيهات الداخلية</h2>
 <p id="audit-state" role="status">لم يتم فحص حالة المراقبة الدورية بعد.</p>
 <p id="audit-time"></p>
+<h3>فحص انقطاع البيانات وعودتها</h3>
+<p id="recovery-state" role="status">لم يتم فحص التعافي بعد.</p>
+<p id="recovery-observations"></p>
+<p><small>استمرار تحديث ملف خاص لا يثبت أنه مصدر أسعار حي أو مرخّص، ولا يسمح بصفقات ورقية.</small></p>
 <ul id="audit-codes" aria-live="polite"></ul>
 <p><small>تنبيهات داخلية مسجّلة فقط. لا توجد رسائل Push أو أوامر تداول أو أسعار حقيقية.</small></p>
 </section>
@@ -133,6 +137,22 @@ el("refresh").addEventListener("click",async()=>{
    const li=document.createElement("li");
    li.className="reason";li.textContent="تنبيه داخلي: "+audit.lastNotificationCode;codes.append(li);
   }
+  const recovery=audit?.recovery;
+  const recoveryStates={
+   RECOVERY_DISABLED:"فحص التعافي متوقف",
+   RECOVERY_NOT_STARTED:"لم يبدأ فحص التعافي بعد",
+   RECOVERY_UNAVAILABLE:"سجلّ التعافي غير متاح — WAIT",
+   RECOVERY_STALE:"تأخّر سجلّ التعافي — WAIT",
+   SOURCE_ABSENT:"مصدر الذهب غير متصل — WAIT",
+   SOURCE_REJECTED:"ملف الأسعار مرفوض — WAIT",
+   SOURCE_INTERRUPTED:"البيانات انقطعت أو تأخرت — WAIT",
+   OBSERVATION_SEEN_UNVERIFIED:"ظهرت ملاحظات جديدة لكن ما زالت غير موثوقة",
+   OBSERVATION_REPEATED_UNVERIFIED:"ملاحظات متكررة على ملف خاص فقط، الترخيص والمصدر غير مثبتين"
+  };
+  el("recovery-state").textContent=recoveryStates[recovery?.state]||"لا يمكن تأكيد حالة تعافي البيانات";
+  el("recovery-observations").textContent=
+    Number.isInteger(recovery?.consecutiveObservations)?"الملاحظات المتتالية: "+
+      recovery.consecutiveObservations+" / 3 — التداول الورقي محجوب":"لا توجد ملاحظات قابلة للتدقيق";
   const gate=data.paperGate;
   el("paper-gate-state").textContent=gate?.status==="BLOCKED"&&gate?.paperOrdersAllowed===false
     ?"BLOCKED — لا تداول ورقي، ولا تشغيل صفقات حتى تكتمل الشروط"

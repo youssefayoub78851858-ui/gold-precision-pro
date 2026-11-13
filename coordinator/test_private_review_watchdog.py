@@ -33,6 +33,7 @@ class ReviewWatchdogTests(unittest.TestCase):
             first = audit_once(self.root, NOW)
             again = audit_once(self.root, NOW + dt.timedelta(seconds=10))
         self.assertEqual(first["status"], "AUDIT_OK")
+        self.assertEqual(first["recovery"]["state"], "SOURCE_ABSENT")
         self.assertEqual(first["signal"], "WAIT")
         self.assertIs(first["executable"], False)
         self.assertFalse(first["paperRunning"])
@@ -40,7 +41,7 @@ class ReviewWatchdogTests(unittest.TestCase):
         self.assertIn("INTAKE_BLOCKED", first["alertCodes"])
         self.assertEqual(first["lastNotificationCode"], "WAIT_EODHD_INTAKE")
         self.assertEqual(again["status"], "AUDIT_OK")
-        self.assertEqual(len(list((self.root / FOLDER).glob("*.sqlite3"))), 2)
+        self.assertEqual(len(list((self.root / FOLDER).glob("*.sqlite3"))), 3)
         with sqlite3.connect(self.root / FOLDER / ALERT_DB) as db:
             self.assertEqual(db.execute("SELECT count(*) FROM research_alert_events").fetchone()[0], 1)
         with sqlite3.connect(self.root / FOLDER / NOTICE_DB) as db:

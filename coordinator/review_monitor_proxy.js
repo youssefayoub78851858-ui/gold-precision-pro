@@ -39,9 +39,30 @@ function sanitize(input){
   if(time!==null&&(typeof time!=="string"||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(time)))
     throw Error("Unsafe audit time");
   if(age!==null&&(!Number.isInteger(age)||age<0||age>315360000))throw Error("Unsafe audit age");
+  let recovery=null;
+  if(audit.recovery!==undefined){
+   const r=audit.recovery;
+   const states=new Set(["RECOVERY_DISABLED","RECOVERY_NOT_STARTED","RECOVERY_UNAVAILABLE",
+    "RECOVERY_STALE","SOURCE_ABSENT","SOURCE_REJECTED","SOURCE_INTERRUPTED",
+    "OBSERVATION_SEEN_UNVERIFIED","OBSERVATION_REPEATED_UNVERIFIED"]);
+   const validTime=r?.lastObservedUTC===null||(
+    typeof r?.lastObservedUTC==="string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(r.lastObservedUTC));
+   if(!r||!states.has(r.state)||!validTime||
+      !Number.isInteger(r.consecutiveObservations)||r.consecutiveObservations<0||
+      r.consecutiveObservations>3||r.requiredObservations!==3||
+      !Number.isInteger(r.transitionCount)||r.transitionCount<0||r.transitionCount>1000000||
+      r.sourceVerified!==false||r.paperOrdersAllowed!==false||
+      r.signal!=="WAIT"||r.executable!==false)throw Error("Unsafe recovery audit");
+   recovery={state:r.state,consecutiveObservations:r.consecutiveObservations,
+    requiredObservations:3,lastObservedUTC:r.lastObservedUTC,
+    transitionCount:r.transitionCount,sourceVerified:false,
+    paperOrdersAllowed:false,signal:"WAIT",executable:false};
+  }
   safeAudit={status:audit.status,lastObservedUTC:time,ageSeconds:age,
              alertCodes:codes,lastNotificationCode:note,signal:"WAIT",
-             executable:false,paperRunning:false,externalNotificationsSent:0};
+             executable:false,paperRunning:false,externalNotificationsSent:0,
+             ...(recovery?{recovery}:{})};
  }
  const paper=input.paperGate;
  let safePaper=null;

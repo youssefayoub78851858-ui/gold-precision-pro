@@ -16,12 +16,14 @@ import stat
 
 from eodhd_review_monitor import observe_once
 from research_monitor import ResearchAlertMonitor
+from private_feed_recovery import observe_recovery,read_recovery,disabled_recovery
 from xauusd_feed_gate import parse_utc
 
 UTC = dt.timezone.utc
 FOLDER = "review-audit"
 ALERT_DB = "alerts.sqlite3"
 NOTICE_DB = "notifications.sqlite3"
+RECOVERY_DB = "source-recovery.sqlite3"
 INTERVAL_SECONDS = 60
 CODES = re.compile(r"[A-Z0-9_]{3,90}\Z")
 VALID_STATES = {"AUDIT_DISABLED", "AUDIT_NOT_STARTED", "AUDIT_OK",
@@ -69,7 +71,8 @@ def disabled_state() -> dict:
             "ageSeconds": None, "alertCodes": [],
             "lastNotificationCode": None, "signal": "WAIT",
             "executable": False, "paperRunning": False,
-            "externalNotificationsSent": 0}
+            "externalNotificationsSent": 0,
+            "recovery": disabled_recovery()}
 
 
 def audit_once(data_dir, now: dt.datetime | None = None) -> dict:
@@ -85,6 +88,8 @@ def audit_once(data_dir, now: dt.datetime | None = None) -> dict:
             or observed["result"]["engineStatus"] != "NOT_INVOKED"
             or observed["notifications"]["current"]["signal"] != "WAIT"):
         raise RuntimeError("Research-only audit contract blocked")
+    # Record only the local WAIT observation; never claim genuine feed recovery.
+    observe_recovery(directory / RECOVERY_DB, observed["result"], instant)
     # Persist the previous-cycle interval for a watchdog heartbeat.
     monitor = ResearchAlertMonitor(alerts)
     try:
@@ -93,7 +98,7 @@ def audit_once(data_dir, now: dt.datetime | None = None) -> dict:
         monitor.close()
     # SQLite DB is stored in a private 0700 folder and kept 0600.
     for file in directory.iterdir():
-        if file.name.startswith((ALERT_DB, NOTICE_DB)) and file.is_file() and not file.is_symlink():
+        if file.name.startswith((ALERT_DB, NOTICE_DB, RECOVERY_DB)) and file.is_file() and not file.is_symlink():
             file.chmod(0o600)
     return read_audit_state(data_dir, instant, enabled=True)
 
@@ -105,7 +110,9 @@ def read_audit_state(data_dir, now: dt.datetime | None = None, *, enabled=False)
     instant = parse_utc((now or dt.datetime.now(UTC)).isoformat())
     base = _folder(data_dir, create=False)
     if base is None:
-        return {**disabled_state(), "status": "AUDIT_NOT_STARTED"}
+        return {**disabled_state(), "status": "AUDIT_NOT_STARTED",
+                "recovery": read_recovery(base / RECOVERY_DB, instant) if base else
+                {**disabled_recovery(), "state": "RECOVERY_NOT_STARTED"}}
     try:
         with _db_readonly(base / ALERT_DB) as db:
             heartbeat = db.execute(
@@ -144,9 +151,11 @@ def read_audit_state(data_dir, now: dt.datetime | None = None, *, enabled=False)
                 "ageSeconds": delta, "alertCodes": safe_codes,
                 "lastNotificationCode": notice_code,
                 "signal": "WAIT", "executable": False, "paperRunning": False,
-                "externalNotificationsSent": 0}
+                "externalNotificationsSent": 0,
+                "recovery": read_recovery(base / RECOVERY_DB, instant)}
     except (OSError, ValueError, TypeError, sqlite3.Error, IndexError, AttributeError):
-        return {**disabled_state(), "status": "AUDIT_UNAVAILABLE"}
+        return {**disabled_state(), "status": "AUDIT_UNAVAILABLE",
+                "recovery": {**disabled_recovery(), "state": "RECOVERY_UNAVAILABLE"}}
 
 
 def run_until_stopped(data_dir, stop, *, seconds=INTERVAL_SECONDS, clock=None) -> None:

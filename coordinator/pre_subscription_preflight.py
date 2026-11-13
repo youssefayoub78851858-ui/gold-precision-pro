@@ -41,6 +41,8 @@ CHECKS = {
         ("coordinator/research_monitor_runner.py", ["run_continuously", "WAIT"]),
         ("coordinator/research_notification.py", ["executable"]),
         ("coordinator/private_review_watchdog.py", ["run_until_stopped", "observe_once", "AUDIT_STALE", "WAIT"]),
+        ("coordinator/private_feed_recovery.py", ["observe_recovery", "OBSERVATION_REPEATED_UNVERIFIED", "paperOrdersAllowed"]),
+        ("coordinator/test_private_feed_recovery.py", ["test_loss_then_three_separate_observations_then_interrupt"]),
         ("coordinator/test_private_review_watchdog.py", ["test_outage_is_recorded_once_and_survives_restart"]),
     ],
     "mt5_demo": [

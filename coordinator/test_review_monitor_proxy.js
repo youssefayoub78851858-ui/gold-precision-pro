@@ -90,5 +90,22 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
      "RISK_BUDGET_AND_STOP_DISTANCE_UNVERIFIED"]}}
  })});
  a.equal(unsafeCost.httpStatus,503);
+ const recovery=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,audit:{status:"AUDIT_OK",lastObservedUTC:"2026-11-12T21:00:00Z",
+   ageSeconds:10,alertCodes:["INTAKE_BLOCKED"],lastNotificationCode:"WAIT_EODHD_INTAKE",
+   signal:"WAIT",executable:false,paperRunning:false,externalNotificationsSent:0,
+   recovery:{state:"OBSERVATION_REPEATED_UNVERIFIED",consecutiveObservations:3,
+    requiredObservations:3,lastObservedUTC:"2026-11-12T21:00:00Z",transitionCount:2,
+    sourceVerified:false,paperOrdersAllowed:false,signal:"WAIT",executable:false,
+    bid:999999,apiKey:"do-not-expose"}}
+ })});
+ a.equal(recovery.httpStatus,200);a.equal(recovery.body.audit.recovery.paperOrdersAllowed,false);
+ a.ok(!JSON.stringify(recovery).includes("999999"));
+ a.ok(!JSON.stringify(recovery).includes("do-not-expose"));
+ const unsaferecovery=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,audit:{...recovery.body.audit,recovery:{
+   ...recovery.body.audit.recovery,paperOrdersAllowed:true}}
+ })});
+ a.equal(unsaferecovery.httpStatus,503);
  console.log("PASS: public review proxy disabled by default; readonly-only relay; safe WAIT data");
 })().catch(e=>{console.error(e);process.exitCode=1});
