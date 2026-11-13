@@ -1,6 +1,7 @@
 'use strict';
 const a=require('node:assert/strict');
-const {XauusdReview,aggregate}=require('./eodhd_ws_bridge');
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const {XauusdReview,aggregate,privateSave}=require('./eodhd_ws_bridge');
 const base=1794493813003,quote=(t,ask=3903.04,bid=3902.46)=>({s:'XAUUSD',a:ask,b:bid,t});
 let now=base,review=new XauusdReview(()=>now+1000);
 a.equal(review.receive(quote(base)).reason,'AUTHORIZATION_MISSING');
@@ -58,4 +59,30 @@ a.equal(split.signal,'WAIT');
 a.equal(split.executable,false);
 review.reset();a.equal(review.snapshot().frames.M15.length,0);
 a.equal(aggregate([],4).length,0);
-console.log('PASS: EODHD offline quote checks, complete UTC candles and WAIT');
+// Private snapshots must not escape through inherited permissions or links.
+const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'gold-eodhd-private-'));
+try{
+ const secure=path.join(scratch,'secure'),payload={signal:'WAIT',executable:false};
+ privateSave(secure,payload);
+ const saved=path.join(secure,'eodhd-private-review.json');
+ a.equal(fs.statSync(secure).mode&0o777,0o700);
+ a.equal(fs.statSync(saved).mode&0o777,0o600);
+ a.deepEqual(JSON.parse(fs.readFileSync(saved,'utf8')),payload);
+ fs.chmodSync(secure,0o755);
+ a.throws(()=>privateSave(secure,payload),/Unsafe private snapshot directory/);
+ fs.chmodSync(secure,0o700);
+ const alias=path.join(scratch,'alias');
+ fs.symlinkSync(secure,alias,'dir');
+ a.throws(()=>privateSave(alias,payload),/Unsafe private snapshot directory/);
+ fs.chmodSync(saved,0o644);
+ a.throws(()=>privateSave(secure,payload),/Unsafe private snapshot destination/);
+ fs.chmodSync(saved,0o600);
+ const outside=path.join(scratch,'outside.txt');
+ fs.writeFileSync(outside,'untouched');
+ fs.unlinkSync(saved);
+ fs.symlinkSync(outside,saved);
+ a.throws(()=>privateSave(secure,payload),/Unsafe private snapshot destination/);
+ a.equal(fs.readFileSync(outside,'utf8'),'untouched');
+}finally{fs.rmSync(scratch,{recursive:true,force:true});}
+
+console.log('PASS: EODHD offline quote checks, private snapshot isolation and WAIT');

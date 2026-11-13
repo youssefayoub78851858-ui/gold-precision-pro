@@ -78,7 +78,19 @@ class XauusdReview{
 }
 function privateSave(dir,snapshot){
  fs.mkdirSync(dir,{recursive:true,mode:0o700});
+ // Do not follow a symlink or reuse a shared/wrong-owner directory.
+ const info=fs.lstatSync(dir);
+ if(!info.isDirectory()||(info.mode&0o077)!==0||
+    (typeof process.getuid==='function'&&info.uid!==process.getuid()))
+  throw Error('Unsafe private snapshot directory');
  const dst=path.join(dir,'eodhd-private-review.json'),tmp=dst+'.tmp-'+process.pid;
+ // Existing snapshots must remain private; never replace attacker-controlled links.
+ try{
+  const previous=fs.lstatSync(dst);
+  if(!previous.isFile()||(previous.mode&0o077)!==0||
+     (typeof process.getuid==='function'&&previous.uid!==process.getuid()))
+   throw Error('Unsafe private snapshot destination');
+ }catch(error){if(error.code!=='ENOENT')throw error;}
  try{fs.writeFileSync(tmp,JSON.stringify(snapshot)+'\n',{mode:0o600,flag:'wx'});fs.renameSync(tmp,dst);}
  finally{try{fs.unlinkSync(tmp);}catch{}}
 }
