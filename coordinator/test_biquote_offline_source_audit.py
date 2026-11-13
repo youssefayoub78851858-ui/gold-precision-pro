@@ -91,7 +91,7 @@ class BiquoteOfflineAuditTests(unittest.TestCase):
         self.assert_safe(r)
         self.assertEqual(r["closedBarCounts"]["M15"], 799)
         self.assertFalse(r["ohlcStructuralChecksPassed"])
-        self.assertIn("CROSS_TIMEFRAME_OHLC_MISMATCH", r["blockingReasons"])
+        self.assertIn("PARTIAL_CROSS_TIMEFRAME_COVERAGE", r["blockingReasons"])
 
     def test_open_bar_in_middle_rejected(self):
         q, feeds = make_samples()
