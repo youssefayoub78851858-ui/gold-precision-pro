@@ -476,3 +476,31 @@ jobs:
           name: fxcm-headers-and-java-metadata
           path: ${{ runner.temp }}/fxcm-headers-and-jars.json
           if-no-files-found: error
+
+  fxcm-forexconnect-cpp-symbol-link:
+    name: FXCM C++ SDK symbol link-only on Bookworm (never execute)
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    container:
+      image: node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9
+    permissions:
+      contents: read
+    steps:
+      - name: Install compiler and readelf only in isolated container
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 g++ binutils ca-certificates git
+      - uses: actions/checkout@v4
+      - name: Compile and link C++ symbol without executing it
+        env:
+          LINK_REPORT_PATH: ${{ runner.temp }}/fxcm-symbol-link-report.json
+        run: |
+          python3 coordinator/fxcm_cpp_link_only_probe.py --self-test
+          python3 coordinator/fxcm_cpp_link_only_probe.py --output "$LINK_REPORT_PATH"
+      - name: Upload link-only result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fxcm-cpp-link-only-probe
+          path: ${{ runner.temp }}/fxcm-symbol-link-report.json
+          if-no-files-found: error
