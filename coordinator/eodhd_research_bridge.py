@@ -42,6 +42,21 @@ class IndependentEvidence:
                 and set(self.expected_open_times) == set(INTERVALS))
 
 
+def _warmup_diagnostic(counts=None):
+    """Count-only inventory. No snapshot can assert licensed/session-ready data."""
+    raw = counts or {}
+    missing = {tf: max(0, minimum - raw.get(tf, 0))
+               for tf, minimum in MIN_WARMUP_BARS.items()}
+    return {
+        "minimumClosedBars": dict(MIN_WARMUP_BARS),
+        "unverifiedClosedBarCounts": {tf: raw.get(tf, 0) for tf in INTERVALS},
+        "missingToMinimum": missing,
+        "countMinimumsMet": all(value == 0 for value in missing.values()),
+        "independentCalendarVerifiedByDiagnostic": False,
+        "readyForTrading": False,
+    }
+
+
 def _blocked(reasons, counts=None, intake=None):
     return {
         "status": "WAIT_EODHD_INTAKE",
@@ -52,6 +67,7 @@ def _blocked(reasons, counts=None, intake=None):
         "bidAskValidated": not any(x.startswith("BID_ASK_") for x in reasons),
         "blockingReasons": list(dict.fromkeys(reasons)),
         "closedBarCounts": counts or {"M15": 0, "H1": 0, "H4": 0},
+        "warmupDiagnostic": _warmup_diagnostic(counts),
         "intake": intake,
     }
 
@@ -115,17 +131,33 @@ def _audit_bars(snapshot):
         indexed = {int(parse_utc(row["openTime"]).timestamp()): row
                    for row in snapshot[family]["M15"]}
         for tf, factor in (("H1", 4), ("H4", 16)):
-            for bar in snapshot[family][tf]:
-                start = int(parse_utc(bar["openTime"]).timestamp())
+            # Validate BOTH directions: every supplied aggregate must be
+            # supported by closed M15, and every complete M15 group MUST
+            # be represented. Counting 50 H4 candles is not enough when an
+            # H4 bar has been silently omitted from a longer archive.
+            width = 900 * factor
+            expected_by_open = {}
+            for opened in indexed:
+                start = opened // width * width
+                if start in expected_by_open:
+                    continue
                 components = [indexed.get(start + 900 * i) for i in range(factor)]
                 if any(row is None for row in components):
-                    raise ValueError("BID_ASK_AGGREGATE_SOURCE_MISSING")
-                expected = {
+                    continue  # Partial group, NEVER fabricate a closed H1/H4.
+                expected_by_open[start] = {
                     "open": components[0]["open"],
                     "high": max(row["high"] for row in components),
                     "low": min(row["low"] for row in components),
                     "close": components[-1]["close"],
                 }
+            supplied = snapshot[family][tf]
+            supplied_opens = {int(parse_utc(bar["openTime"]).timestamp())
+                              for bar in supplied}
+            if supplied_opens != set(expected_by_open):
+                raise ValueError("BID_ASK_AGGREGATE_COMPLETENESS_MISMATCH")
+            for bar in supplied:
+                start = int(parse_utc(bar["openTime"]).timestamp())
+                expected = expected_by_open[start]
                 if any(not _close(bar[key], expected[key]) for key in expected):
                     raise ValueError("BID_ASK_AGGREGATE_MISMATCH")
     return counts
@@ -211,6 +243,7 @@ def review_eodhd_snapshot(snapshot: dict, as_of: dt.datetime, *,
         "engineStatus": result.get("engines", {}).get("v3", "UNKNOWN"),
         "paperStatus": "NOT_CONNECTED_TO_BROKER",
         "closedBarCounts": counts,
+        "warmupDiagnostic": _warmup_diagnostic(counts),
         "blockingReasons": result.get("intake", {}).get("blockingReasons", []),
         "sourceRequestsMade": 0, "providerConnectionStarted": False,
         "dataConvention": "INDICATIVE_EODHD_BID_OHLC_RESEARCH_ONLY",

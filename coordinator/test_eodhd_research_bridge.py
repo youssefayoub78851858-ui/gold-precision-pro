@@ -69,6 +69,12 @@ class EodhdResearchStaging(unittest.TestCase):
         self.assertIn("RESEARCH_EVALUATION_NOT_APPROVED",result["blockingReasons"])
         self.assertIn("INDICATOR_HISTORY_WARMUP_INSUFFICIENT",result["blockingReasons"])
         self.assertEqual(result["closedBarCounts"]["M15"],16)
+        diag = result["warmupDiagnostic"]
+        self.assertEqual(diag["minimumClosedBars"], {"M15":50,"H1":50,"H4":50})
+        self.assertEqual(diag["missingToMinimum"], {"M15":34,"H1":46,"H4":49})
+        self.assertFalse(diag["countMinimumsMet"])
+        self.assertFalse(diag["independentCalendarVerifiedByDiagnostic"])
+        self.assertFalse(diag["readyForTrading"])
 
     def test_partial_rights_or_fake_snapshot_flags_do_not_enable(self):
         s=sample()
@@ -93,6 +99,34 @@ class EodhdResearchStaging(unittest.TestCase):
             result=self.review(s)
             self.check_wait(result)
             self.assertTrue(any(v.startswith("BID_ASK_") for v in result["blockingReasons"]),mutate)
+
+    def test_missing_aggregate_must_fail_even_with_fifty_h4_remaining(self):
+        # 832 x M15 contains 51 complete H4 groups. Removing one still
+        # leaves >=50 H4; a simple candle-count warmup check would miss it.
+        base = sample(832)
+        self.assertGreater(len(base["bidFrames"]["H4"]),50)
+        for timeframe in ("H1","H4"):
+            for removed_family in ("frames","bidFrames","askFrames"):
+                with self.subTest(timeframe=timeframe, family=removed_family):
+                    s = copy.deepcopy(base)
+                    s[removed_family][timeframe].pop(0)
+                    self.assertGreaterEqual(len(s["bidFrames"]["H4"]),50)
+                    result = self.review(s)
+                    self.check_wait(result)
+                    self.assertIn("BID_ASK_AGGREGATE_COMPLETENESS_MISMATCH",
+                                  result["blockingReasons"])
+
+    def test_warmup_count_alone_never_authorizes_research(self):
+        s = sample(832)
+        result = self.review(s)
+        self.check_wait(result)
+        diag = result["warmupDiagnostic"]
+        self.assertTrue(diag["countMinimumsMet"])
+        self.assertEqual(diag["missingToMinimum"], {"M15":0,"H1":0,"H4":0})
+        self.assertFalse(diag["independentCalendarVerifiedByDiagnostic"])
+        self.assertFalse(diag["readyForTrading"])
+        self.assertIn("INDEPENDENT_SESSION_HISTORY_OR_CLOCK_EVIDENCE_MISSING",
+                      result["blockingReasons"])
 
     def test_stale_quote_and_future_clock_are_blocking(self):
         for age in (31,-20):
