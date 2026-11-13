@@ -76,13 +76,16 @@ def inspect():
                 raise ValueError("TOO_MANY_ARCHIVE_ENTRIES")
             for m in members:
                 p=pathlib.PurePosixPath(m.name)
-                if p.is_absolute() or ".." in p.parts or m.issym() or m.islnk():
+                if p.is_absolute() or ".." in p.parts:
                     raise ValueError("UNSAFE_ARCHIVE_ENTRY")
                 if m.size>MAX_MEMBER:
                     raise ValueError("ARCHIVE_MEMBER_TOO_LARGE")
             candidates=[m for m in members if m.isfile() and
                         re.search(r"\.so(?:\.[A-Za-z0-9._-]+)?$", m.name)]
-            internal={pathlib.PurePosixPath(m.name).name for m in candidates}
+            internal={pathlib.PurePosixPath(m.name).name for m in members if
+                      (m.isfile() or m.issym() or m.islnk()) and
+                      re.search(r"\.so(?:\.[A-Za-z0-9._-]+)?$", m.name)}
+            result["linksNotExtracted"]=sum(m.issym() or m.islnk() for m in members)
             installed=installed_sonames()
             inspected=[];missing=set();glibc_requirements=set()
             with tempfile.TemporaryDirectory(prefix="fxcm-static-abi-") as tmp:
