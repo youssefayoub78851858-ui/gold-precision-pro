@@ -57,6 +57,7 @@ a.equal(split.indicatorWarmupReady,false);
 a.equal(split.researchEligible,false);
 a.equal(split.signal,'WAIT');
 a.equal(split.executable,false);
+const historySnapshot=review.snapshot();
 review.reset();a.equal(review.snapshot().frames.M15.length,0);
 a.equal(aggregate([],4).length,0);
 // Private snapshots must not escape through inherited permissions or links.
@@ -65,7 +66,7 @@ try{
  const secure=path.join(scratch,'secure'),payload={signal:'WAIT',executable:false};
  a.equal(privateLoadClosed(path.join(scratch,'missing'),now),null);
  // Persist a real-looking CLOSED sample already produced by the offline test.
- privateSave(secure,review.snapshot());
+ privateSave(secure,historySnapshot);
  const cold=privateLoadClosed(secure,now);
  a.equal(cold.frames.M15.length,16);
  const reloaded=new XauusdReview(()=>now+1000);
@@ -87,13 +88,13 @@ try{
  corrupt.bidFrames.M15[0].high+=10000;
  privateSave(secure,corrupt);
  a.throws(()=>privateLoadClosed(secure,now),/closed history/i);
- privateSave(secure,review.snapshot());
+ privateSave(secure,historySnapshot);
  const badFuture=JSON.parse(fs.readFileSync(path.join(secure,'eodhd-private-review.json'),'utf8'));
  badFuture.frames.M15.at(-1).openTime=new Date(now+900000).toISOString();
  privateSave(secure,badFuture);
  a.throws(()=>privateLoadClosed(secure,now),/closed history/i);
- privateSave(secure,review.snapshot());
- const badSource={...review.snapshot(),instrument:'SILVER/USD'};
+ privateSave(secure,historySnapshot);
+ const badSource={...historySnapshot,instrument:'SILVER/USD'};
  privateSave(secure,badSource);
  a.throws(()=>privateLoadClosed(secure,now),/Closed history identity/);
  privateSave(secure,payload);
