@@ -95,12 +95,23 @@ class PrivateReviewMonitorTests(unittest.TestCase):
         self.write(broken)
         x = poll_private_review(self.root, NOW)
         self.assertIn("BID_ASK_CROSSED", x["intake"]["blockingReasons"])
+        self.assertEqual(x["dataStatus"], "BLOCKED")
         self.assertEqual(x["signal"], "WAIT")
         self.assertFalse(x["executable"])
         self.path.write_text("{invalid")
         self.path.chmod(0o600)
         os.utime(self.path, (NOW.timestamp()-1, NOW.timestamp()-1))
         self.assertEqual(poll_private_review(self.root, NOW)["dataStatus"], "BLOCKED")
+
+    def test_snapshot_changed_between_safe_checks_cannot_count_as_recovered(self):
+        self.write()
+        with patch("eodhd_review_monitor._read_private_snapshot",
+                   side_effect=OSError("file replaced during read")):
+            blocked = poll_private_review(self.root, NOW)
+        self.assert_safe(blocked)
+        self.assertEqual(blocked["dataStatus"], "BLOCKED")
+        self.assertIn("EODHD_PRIVATE_SNAPSHOT_READ_REJECTED",
+                      blocked["intake"]["blockingReasons"])
 
     def test_unsafe_source_claims_do_not_propagate(self):
         snap = sample()

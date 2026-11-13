@@ -27,6 +27,16 @@ STATUS_CODES = {
     "WAIT_STALE": "EODHD_PRIVATE_QUOTE_OR_SNAPSHOT_STALE",
     "WAIT_NO_VERIFIED_QUOTE": "EODHD_PRIVATE_QUOTE_MISSING",
 }
+# These blockers mean the snapshot can be structurally inspected but is NOT
+# independently licensed/verified. Every other staging reason must interrupt
+# the recovery counter, including malformed BID/ASK frames and quote geometry.
+EVIDENCE_ONLY_GATES = frozenset({
+    "SOURCE_RIGHTS_OR_PROVIDER_APPROVAL_MISSING",
+    "INDEPENDENT_SESSION_HISTORY_OR_CLOCK_EVIDENCE_MISSING",
+    "INDICATOR_HISTORY_WARMUP_INSUFFICIENT",
+    "RESEARCH_EVALUATION_NOT_APPROVED",
+    "SEPARATE_RESEARCH_CONTEXT_MISSING",
+})
 
 
 def _read_private_snapshot(directory, now):
@@ -69,18 +79,28 @@ def poll_private_review(directory, as_of: dt.datetime) -> dict:
             # Do NOT pass a SourcePolicy, IndependentEvidence or engine approval.
             # The staging bridge must refuse the research engine by design.
             staged = review_eodhd_snapshot(snapshot, now)
-            if (staged.get("signal") != "WAIT" or staged.get("executable") is not False
+            if (staged.get("status") != "WAIT_EODHD_INTAKE"
+                    or staged.get("signal") != "WAIT" or staged.get("executable") is not False
                     or staged.get("researchEligible") is not False
                     or staged.get("engineStatus") != "NOT_INVOKED"
-                    or staged.get("providerConnectionStarted") is not False):
+                    or staged.get("providerConnectionStarted") is not False
+                    or staged.get("sourceRequestsMade") != 0):
                 raise ValueError("EODHD_STAGING_CONTRACT_INVALID")
-            for item in staged.get("blockingReasons", []):
-                code = item if isinstance(item, str) and ALLOWED_REASON.fullmatch(item) else "EODHD_PRIVATE_REVIEW_REJECTED"
-                if code not in codes:
-                    codes.append(code)
-            if not codes:
-                codes.append("EODHD_PRIVATE_REVIEW_EVIDENCE_NOT_VERIFIED")
+            reasons = staged.get("blockingReasons")
+            if (not isinstance(reasons, list) or not reasons
+                    or any(not isinstance(item, str) or not ALLOWED_REASON.fullmatch(item)
+                           for item in reasons)):
+                raise ValueError("EODHD_STAGING_REASONS_INVALID")
+            for item in reasons:
+                if item not in codes:
+                    codes.append(item)
+            # Repeated observations only count if the closed BID/ASK candles
+            # and quote passed the stage integrity checks. Missing independent
+            # licensing or research authorization NEVER enables trades.
+            if any(item not in EVIDENCE_ONLY_GATES for item in reasons):
+                data_status = "BLOCKED"
         except (OSError, UnicodeError, ValueError, TypeError, json.JSONDecodeError):
+            data_status = "BLOCKED"
             codes = ["EODHD_PRIVATE_SNAPSHOT_READ_REJECTED"]
     return {
         "status": "WAIT_EODHD_INTAKE",

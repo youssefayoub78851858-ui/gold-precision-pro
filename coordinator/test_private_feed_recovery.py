@@ -87,6 +87,29 @@ class RecoveryTests(unittest.TestCase):
         self.safe(forged)
         self.assertNotIn("PRIVATE-TOKEN", json.dumps(forged))
 
+    def test_corrupt_bid_ask_snapshot_resets_recovery_streak(self):
+        path = self.root / "eodhd-private-review.json"
+        with patch.object(socket, "socket", side_effect=AssertionError("no network")):
+            for index, expected_count in ((1, 1), (2, 0), (3, 1), (4, 2), (5, 3)):
+                instant = NOW + dt.timedelta(seconds=60 * index)
+                snapshot = sample(16)
+                snapshot["latestQuote"]["timeUTC"] = instant.isoformat()
+                if index == 2:
+                    # Fresh timestamp but impossible/crossed BID/ASK candle.
+                    snapshot["bidFrames"]["M15"][-1]["high"] += 100000
+                path.write_text(json.dumps(snapshot))
+                path.chmod(0o600)
+                os.utime(path, (instant.timestamp() - 1, instant.timestamp() - 1))
+                result = audit_once(self.root, instant)
+                self.safe(result["recovery"])
+                self.assertEqual(result["recovery"]["consecutiveObservations"],
+                                 expected_count, index)
+                if index == 2:
+                    self.assertEqual(result["recovery"]["state"], "SOURCE_REJECTED")
+                if index == 5:
+                    self.assertEqual(result["recovery"]["state"],
+                                     "OBSERVATION_REPEATED_UNVERIFIED")
+
     def test_symlink_is_refused_and_corrupt_state_fails_closed(self):
         self.db.symlink_to(self.root / "other")
         with self.assertRaises(ValueError):
