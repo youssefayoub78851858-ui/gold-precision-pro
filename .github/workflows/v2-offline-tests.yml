@@ -47,6 +47,9 @@ jobs:
       - name: EODHD XAUUSD WebSocket safety preflight (offline)
         working-directory: coordinator
         run: node test_eodhd_ws_bridge.js
+      - name: Opt-in EODHD worker process gate and isolated lifecycle (offline)
+        working-directory: coordinator
+        run: python -m unittest -v test_private_eodhd_worker
       - name: Shared broker quota, cache and duplicate request tests (mock provider only)
         working-directory: coordinator
         run: python -m unittest -v test_broker_quota_offline

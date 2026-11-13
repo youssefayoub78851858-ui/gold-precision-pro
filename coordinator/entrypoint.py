@@ -13,6 +13,7 @@ from eodhd_private_readiness import read_private_status
 from eodhd_review_monitor import poll_private_review
 from private_review_watchdog import read_audit_state,run_until_stopped
 from paper_admission_gate import assess_paper_gate
+from private_eodhd_worker import launch_review_worker,stop_review_worker
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,*_):pass
  def do_GET(self):
@@ -50,6 +51,13 @@ server=ThreadingHTTPServer(('0.0.0.0',int(os.environ.get('BROKER_PORT','3110')))
 if audit_enabled:
  threading.Thread(target=run_until_stopped,args=(audit_root,audit_stop),
                   daemon=True,name='private-review-audit').start()
+# Explicitly disabled unless private review worker, source rights, connection and
+# credentials are approved. Never auto-connect because a token already exists.
+try:
+ eodhd_worker=launch_review_worker(audit_root,mode=mode)
+except (OSError,ValueError) as error:
+ eodhd_worker=None
+ print('EODHD private review worker blocked by local preflight',flush=True)
 def shutdown(*_):
  audit_stop.set()
  threading.Thread(target=server.shutdown,daemon=True).start()
@@ -57,4 +65,5 @@ signal.signal(signal.SIGTERM,shutdown)
 try:server.serve_forever()
 finally:
  audit_stop.set()
+ stop_review_worker(eodhd_worker)
  server.server_close()

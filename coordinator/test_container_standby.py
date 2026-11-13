@@ -56,7 +56,7 @@ assert not list(pathlib.Path('/var/data').rglob('*.sqlite3'))
 for p in pathlib.Path('/proc').glob('[0-9]*/cmdline'):
  try:cmd=p.read_bytes()
  except OSError:continue
- assert not any(x in cmd for x in [b'broker_process.py',b'worker.py',b'supervise.py']),cmd
+ assert not any(x in cmd for x in [b'broker_process.py',b'worker.py',b'supervise.py',b'eodhd_ws_bridge.js']),cmd
 '''
   try:
    cid=start()

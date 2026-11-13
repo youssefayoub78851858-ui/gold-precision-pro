@@ -8,7 +8,8 @@ ROOT = Path(__file__).resolve().parent.parent
 CHECKS = {
     "review_runtime": [
         ("coordinator/entrypoint.py", ["CUTOVER_MODE", "standby", "BROKER_TOKEN"]),
-        ("coordinator/Dockerfile", ["entrypoint.py"]),
+        ("coordinator/Dockerfile", ["entrypoint.py", "private_eodhd_worker.py"]),
+        ("coordinator/entrypoint.py", ["launch_review_worker", "stop_review_worker"]),
         ("coordinator/eodhd_private_readiness.py", ["signal", "WAIT", "executable"]),
         ("coordinator/test_container_standby.py", ["--network=none"]),
         ("coordinator/private_mobile_dashboard.html", ["/api/v3/monitor/status", 'type="password"', "WAIT"]),
@@ -17,6 +18,7 @@ CHECKS = {
     ],
     "gold_prices": [
         ("coordinator/eodhd_ws_bridge.js", ["EODHD_CONNECT_APPROVED", "EODHD_RIGHTS_APPROVED", "EODHD_API_TOKEN", "XAUUSD"]),
+        ("coordinator/private_eodhd_worker.py", ["PRIVATE_EODHD_REVIEW_WORKER_ENABLED", "EODHD_CONNECT_APPROVED", "EODHD_RIGHTS_APPROVED", "EODHD_API_TOKEN", "standby"]),
         ("coordinator/xauusd_feed_gate.py", ["SourcePolicy", "intake_payload", "expectedOpenTimes"]),
         ("coordinator/xauusd_research_pipeline.py", ["run_research_pipeline", "researchEligible"]),
         ("coordinator/eodhd_research_bridge.py", ["run_research_pipeline", "BID_ASK_AGGREGATE_MISMATCH", "INDEPENDENT_SESSION_HISTORY_OR_CLOCK_EVIDENCE_MISSING"]),
