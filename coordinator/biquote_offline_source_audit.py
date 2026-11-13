@@ -103,8 +103,10 @@ def _compare_aggregates(m15, higher, width):
     count = width // 900
     for start, actual in higher.items():
         members = [m15.get(start + k * 900) for k in range(count)]
+        if all(member is None for member in members):
+            continue  # Higher-frame history may extend beyond the M15 window.
         if any(member is None for member in members):
-            continue  # Missing inputs are not fabricated or counted as parity.
+            raise ValueError("PARTIAL_CROSS_TIMEFRAME_COVERAGE")
         expected = {
             "open": members[0]["open"],
             "high": max(m["high"] for m in members),
