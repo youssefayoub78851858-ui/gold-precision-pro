@@ -30,6 +30,8 @@ CHECKS = {
         ("coordinator/test_eodhd_historical_1m_intake.py", ["test_50_complete_h4_is_only_geometric_warmup"]),
         ("coordinator/eodhd_historical_raw_adapter.py", ["RAW_HISTORY_TIMESTAMP_DATETIME_CONFLICT", "mayMergeWithLiveBidAsk", "WAIT"]),
         ("coordinator/test_eodhd_historical_raw_adapter.py", ["test_conflicting_timestamps_rejected"]),
+        ("coordinator/eodhd_history_stream_overlap.py", ["NUMERICAL_OVERLAP_OBSERVED_BUT_BASIS_NOT_AUTHORIZED", "mayMergeHistoricalAndStreamBars", "WAIT"]),
+        ("coordinator/test_eodhd_history_stream_overlap.py", ["test_perfect_bid_match_is_not_licence_or_research_authorization"]),
     ],
     "context_and_news": [
         ("coordinator/h15_official_rss.js", ["DGS2", "DGS10"]),
