@@ -1,7 +1,7 @@
 'use strict';
 const a=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {XauusdReview,aggregate,privateSave,privateLoadClosed,coldStartReview}=require('./eodhd_ws_bridge');
+const {XauusdReview,aggregate,closedHistoryGaps,privateSave,privateLoadClosed,coldStartReview}=require('./eodhd_ws_bridge');
 const base=1794493813003,quote=(t,ask=3903.04,bid=3902.46)=>({s:'XAUUSD',a:ask,b:bid,t});
 let now=base,review=new XauusdReview(()=>now+1000);
 a.equal(review.receive(quote(base)).reason,'AUTHORIZATION_MISSING');
@@ -58,6 +58,43 @@ a.equal(split.researchEligible,false);
 a.equal(split.signal,'WAIT');
 a.equal(split.executable,false);
 const historySnapshot=review.snapshot();
+// The 16 closed candles are history, not permission to trade or to interpolate
+// a missing tick interval. Every interruption discards the open M15 and quote.
+for(const [kind,stamp] of [['gap',now+GAP_TEST],['outOfOrder',now],['stale',now-100000]]){
+ const saved=new XauusdReview(()=>now+1000);
+ saved.restoreClosed({frames:historySnapshot.frames,
+                      bidFrames:historySnapshot.bidFrames,
+                      askFrames:historySnapshot.askFrames});
+ saved.receive({status_code:200});
+ const accepted=now+1000;
+ if(kind==='gap'){
+  saved.receive(quote(accepted));
+  a.equal(saved.receive(quote(accepted+100000)).reason,'TICK_GAP_OR_ORDER');
+ }else if(kind==='outOfOrder'){
+  saved.receive(quote(accepted));
+  a.equal(saved.receive(quote(accepted)).reason,'TICK_GAP_OR_ORDER');
+ }else{
+  a.equal(saved.receive(quote(stamp)).reason,'STALE_OR_FUTURE');
+ }
+ const held=saved.snapshot();
+ a.equal(held.frames.M15.length,16);
+ a.equal(held.bidFrames.M15.length,16);
+ a.equal(held.askFrames.M15.length,16);
+ a.equal(held.latestQuote,null);
+ a.equal(held.signal,'WAIT');
+ a.equal(held.executable,false);
+ a.equal(held.researchEligible,false);
+ a.equal(held.closedHistoryGaps.independentlyVerifiedSessionCalendar,false);
+}
+// Missing M15 slots can be a weekend/session closure: count, do not fill them.
+const h0={openTime:new Date(start).toISOString()};
+const h1={openTime:new Date(start+900000).toISOString()};
+const h2={openTime:new Date(start+3600000).toISOString()};
+a.deepEqual(closedHistoryGaps([h0,h1,h2]),{
+ unverifiedM15Discontinuities:1,largestUnverifiedGapMinutes:45,
+ longestContiguousClosedM15:2,independentlyVerifiedSessionCalendar:false
+});
+a.equal(aggregate([h0,h2],4).length,0);
 review.reset();a.equal(review.snapshot().frames.M15.length,0);
 a.equal(aggregate([],4).length,0);
 // Private snapshots must not escape through inherited permissions or links.

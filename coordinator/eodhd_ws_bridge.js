@@ -43,15 +43,20 @@ class XauusdReview{
    this.reset('INVALID_QUOTE');return {kind:'blocked',reason:this.reason};}
   const now=this.clock();
   if(!Number.isFinite(now)||now-x.t>AGE||x.t>now+FUTURE){
-   this.reset('STALE_OR_FUTURE');return {kind:'blocked',reason:this.reason};}
+   // A stale tick invalidates the current quote and unfinished candle,
+   // not the already closed, separately auditable historical candles.
+   this.reset('STALE_OR_FUTURE',true);return {kind:'blocked',reason:this.reason};}
   if(this.last!==null&&(x.t<=this.last||x.t-this.last>GAP)){
-   this.reset('TICK_GAP_OR_ORDER');return {kind:'blocked',reason:this.reason};}
+   // Never bridge an unverified tick gap or reuse the open candle.
+   this.reset('TICK_GAP_OR_ORDER',true);return {kind:'blocked',reason:this.reason};}
   const start=Math.floor(x.t/WIDTH)*WIDTH,mid=(x.a+x.b)/2;
   if(this.current&&this.current.start!==start){
    if(start!==this.current.start+WIDTH||
       this.current.first>this.current.start+60000||
       this.current.last<this.current.start+WIDTH-60000){
-    this.reset('INCOMPLETE_M15');return {kind:'blocked',reason:this.reason};}
+    // Discard only the incomplete M15; older closed bars remain historical,
+    // never fresh or independently session-verified.
+    this.reset('INCOMPLETE_M15',true);return {kind:'blocked',reason:this.reason};}
    this.bars.push(this.current.bar);
    this.bidBars.push(this.current.bidBar);
    this.askBars.push(this.current.askBar);
@@ -78,10 +83,29 @@ class XauusdReview{
    mode:'REVIEW_ONLY',researchEligible:false,signal:'WAIT',executable:false,
    readyForTrading:false,sessionVerified:false,sessionStatus:'UNVERIFIED_PROVIDER_SESSION_CALENDAR',
    indicatorWarmupReady:false,reason:this.reason,received:this.count,latestQuote:this.quote,
+   closedHistoryGaps:closedHistoryGaps(this.bars),
    frames:{M15:this.bars.slice(),H1:aggregate(this.bars,4),H4:aggregate(this.bars,16)},
    bidFrames:{M15:this.bidBars.slice(),H1:aggregate(this.bidBars,4),H4:aggregate(this.bidBars,16)},
    askFrames:{M15:this.askBars.slice(),H1:aggregate(this.askBars,4),H4:aggregate(this.askBars,16)}};
  }
+}
+// Gap statistics are diagnostic only. Without an independent UTC session
+// calendar a missing 15-minute slot may be a scheduled market closure.
+function closedHistoryGaps(bars){
+ let gapCount=0,largestGapMinutes=0,longestContiguous=bars.length?1:0,run=bars.length?1:0;
+ for(let i=1;i<bars.length;i++){
+  const delta=Date.parse(bars[i].openTime)-Date.parse(bars[i-1].openTime);
+  if(delta!==WIDTH){
+   gapCount++;
+   largestGapMinutes=Math.max(largestGapMinutes,delta/60000);
+   run=1;
+  }else run++;
+  longestContiguous=Math.max(longestContiguous,run);
+ }
+ return {unverifiedM15Discontinuities:gapCount,
+  largestUnverifiedGapMinutes:largestGapMinutes,
+  longestContiguousClosedM15:longestContiguous,
+  independentlyVerifiedSessionCalendar:false};
 }
 function privateSave(dir,snapshot){
  fs.mkdirSync(dir,{recursive:true,mode:0o700});
@@ -234,4 +258,4 @@ function run(){
  connect();
 }
 if(require.main===module)run();
-module.exports={XauusdReview,aggregate,privateSave,privateLoadClosed,coldStartReview,run};
+module.exports={XauusdReview,aggregate,closedHistoryGaps,privateSave,privateLoadClosed,coldStartReview,run};
