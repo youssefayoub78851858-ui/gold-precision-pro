@@ -185,6 +185,14 @@ function privateLoadClosed(dir,now=Date.now()){
  const copy=rows=>rows.map(({openTime,open,high,low,close})=>({openTime,open,high,low,close}));
  return {frames:{M15:copy(mid)},bidFrames:{M15:copy(bid)},askFrames:{M15:copy(ask)}};
 }
+// Clear any previously fresh quote BEFORE opening a WebSocket. A quick
+// restart must never let the monitor count yesterday's/last-process's tick
+// as a new observation. Storage failure aborts the worker before networking.
+function coldStartReview(review,dir,now=Date.now()){
+ try{const closed=privateLoadClosed(dir,now);if(closed)review.restoreClosed(closed);}
+ catch{review.reset('CLOSED_HISTORY_REJECTED');}
+ privateSave(dir,review.snapshot());
+}
 function run(){
  if(process.env.EODHD_CONNECT_APPROVED!=='1'||
     process.env.EODHD_RIGHTS_APPROVED!=='1'||
@@ -194,8 +202,7 @@ function run(){
  if(!token||token==='demo'||token.length<12)throw Error('Paid EODHD token not configured');
  if(typeof WebSocket!=='function')throw Error('WebSocket requires Node 22+');
  const review=new XauusdReview(),dir=process.env.DATA_DIR||'/var/data/gold-live';
- try{const closed=privateLoadClosed(dir);if(closed)review.restoreClosed(closed);}
- catch{review.reset('CLOSED_HISTORY_REJECTED');}
+ coldStartReview(review,dir);
  let tries=0,socket,halted=false,lastSaved=0;
  const stop=()=>{halted=true;if(socket)socket.close();};
  process.on('SIGTERM',stop);process.on('SIGINT',stop);
@@ -227,4 +234,4 @@ function run(){
  connect();
 }
 if(require.main===module)run();
-module.exports={XauusdReview,aggregate,privateSave,privateLoadClosed,run};
+module.exports={XauusdReview,aggregate,privateSave,privateLoadClosed,coldStartReview,run};

@@ -1,7 +1,7 @@
 'use strict';
 const a=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {XauusdReview,aggregate,privateSave,privateLoadClosed}=require('./eodhd_ws_bridge');
+const {XauusdReview,aggregate,privateSave,privateLoadClosed,coldStartReview}=require('./eodhd_ws_bridge');
 const base=1794493813003,quote=(t,ask=3903.04,bid=3902.46)=>({s:'XAUUSD',a:ask,b:bid,t});
 let now=base,review=new XauusdReview(()=>now+1000);
 a.equal(review.receive(quote(base)).reason,'AUTHORIZATION_MISSING');
@@ -70,7 +70,9 @@ try{
  const cold=privateLoadClosed(secure,now);
  a.equal(cold.frames.M15.length,16);
  const reloaded=new XauusdReview(()=>now+1000);
- reloaded.restoreClosed(cold);
+ coldStartReview(reloaded,secure,now);
+ // The old quote is gone on disk before any fresh WebSocket authorization.
+ a.equal(JSON.parse(fs.readFileSync(path.join(secure,'eodhd-private-review.json'),'utf8')).latestQuote,null);
  a.equal(reloaded.snapshot().frames.M15.length,16);
  a.equal(reloaded.snapshot().frames.H4.length,1);
  a.equal(reloaded.snapshot().latestQuote,null);
@@ -97,6 +99,10 @@ try{
  const badSource={...historySnapshot,instrument:'SILVER/USD'};
  privateSave(secure,badSource);
  a.throws(()=>privateLoadClosed(secure,now),/Closed history identity/);
+ const discarded=new XauusdReview(()=>now+1000);
+ coldStartReview(discarded,secure,now);
+ a.equal(discarded.snapshot().frames.M15.length,0);
+ a.equal(discarded.snapshot().latestQuote,null);
  privateSave(secure,payload);
  const saved=path.join(secure,'eodhd-private-review.json');
  a.equal(fs.statSync(secure).mode&0o777,0o700);
@@ -105,6 +111,8 @@ try{
  fs.chmodSync(secure,0o755);
  a.throws(()=>privateSave(secure,payload),/Unsafe private snapshot directory/);
  a.throws(()=>privateLoadClosed(secure,now),/Unsafe closed history directory/);
+ a.throws(()=>coldStartReview(new XauusdReview(()=>now),secure,now),
+          /Unsafe private snapshot directory/);
  fs.chmodSync(secure,0o700);
  const alias=path.join(scratch,'alias');
  fs.symlinkSync(secure,alias,'dir');
