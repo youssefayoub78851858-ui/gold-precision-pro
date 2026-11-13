@@ -48,6 +48,7 @@ class RecoveryTests(unittest.TestCase):
             self.assertEqual(a["state"], "SOURCE_ABSENT")
             one = observe_recovery(self.db, fake(), NOW + dt.timedelta(seconds=60))
             self.assertEqual(one["consecutiveObservations"], 1)
+            self.assertEqual(self.db.stat().st_mode & 0o777, 0o600)
             repeat = observe_recovery(self.db, fake(), NOW + dt.timedelta(seconds=60))
             self.assertEqual(repeat, one)
             two = observe_recovery(self.db, fake(), NOW + dt.timedelta(seconds=120))

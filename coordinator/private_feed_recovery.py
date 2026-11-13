@@ -135,6 +135,18 @@ def observe_recovery(database: str | pathlib.Path, result: object,
             raise
     finally:
         db.close()
+        # SQLite default file mode may inherit permissive process umask.
+        # Tighten the recovery DB and sidecar files even when called standalone,
+        # not just when the private watchdog manages its 0700 directory.
+        for suffix in ("", "-wal", "-shm"):
+            candidate = path.with_name(path.name + suffix)
+            try:
+                info = candidate.lstat()
+                if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid():
+                    raise ValueError("Unsafe recovery SQLite file")
+                candidate.chmod(0o600)
+            except FileNotFoundError:
+                continue
 
 
 def _summary(state, streak, last, count) -> dict:
