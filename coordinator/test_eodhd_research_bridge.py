@@ -114,15 +114,22 @@ class EodhdResearchStaging(unittest.TestCase):
                                  ["BID_ASK_MIDQUOTE_EXTREMA_IMPOSSIBLE"])
 
     def test_mid_extrema_need_not_equal_average_bid_ask_extrema(self):
-        # Extreme BID and ASK occur at different instants, so MID high and
-        # low are bounded but not necessarily their extrema arithmetic mean.
+        # Extreme BID and ASK occur at different instants. A legitimate MID
+        # extreme may differ from the average of their independent extrema.
+        # Recalculate affected H1/H4 aggregates so this tests actual intake,
+        # not just an earlier failure on aggregate mismatch.
+        from eodhd_research_bridge import _audit_bars
         s = sample(16)
         row = s["frames"]["M15"][0]
-        row["high"] = row["high"] - 0.1
-        row["low"] = row["low"] + 0.1
-        self.check_wait(self.review(s))
+        row["high"] -= 0.1
+        row["low"] += 0.1
+        s["frames"]["H1"][0]["low"] = min(x["low"] for x in s["frames"]["M15"][:4])
+        s["frames"]["H4"][0]["low"] = min(x["low"] for x in s["frames"]["M15"][:16])
+        self.assertEqual(_audit_bars(s), {"M15": 16, "H1": 4, "H4": 1})
+        result = self.review(s)
+        self.check_wait(result)
         self.assertNotIn("BID_ASK_MIDQUOTE_EXTREMA_IMPOSSIBLE",
-                         self.review(s)["blockingReasons"])
+                         result["blockingReasons"])
 
     def test_subsecond_closed_bar_open_rejected_without_timestamp_truncation(self):
         s = sample(16)
