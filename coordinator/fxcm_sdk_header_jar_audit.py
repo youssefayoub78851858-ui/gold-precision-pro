@@ -118,7 +118,7 @@ def examine():
                     chosen=next((m for m in candidates if m.name.endswith("/ForexConnect.h")),candidates[0])
                     result["compiledHeader"]=chosen.name
                     snippet=root/"fxcm_header_only.cpp"
-                    snippet.write_text('#include "'+chosen.name+'"\nint sdk_headers_only(){return 0;}\n',
+                    snippet.write_text('#include <string>\n#include "'+chosen.name+'"\nint sdk_headers_only(){return 0;}\n',
                                        encoding="utf-8")
                     paths=sorted({str(root/pathlib.PurePosixPath(m.name).parent) for m in headers})
                     compile_cmd=["g++","-std=c++17","-fsyntax-only",
