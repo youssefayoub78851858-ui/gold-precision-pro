@@ -67,6 +67,9 @@ jobs:
       - name: BiQuote free XAUUSD source provenance, BidAsk and closed OHLC audit (offline only)
         working-directory: coordinator
         run: python -m unittest -v test_biquote_offline_source_audit
+      - name: BiQuote shared intake and paper admission standby bridge (offline only)
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_research_bridge
       - name: Opt-in EODHD worker process gate and isolated lifecycle (offline)
         working-directory: coordinator
         run: python -m unittest -v test_private_eodhd_worker

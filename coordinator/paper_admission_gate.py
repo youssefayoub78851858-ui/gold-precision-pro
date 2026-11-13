@@ -62,3 +62,28 @@ def assess_paper_gate(monitor: object, audit: object) -> dict:
         "reasonCodes": reasons,
         "costReadiness": cost_readiness(),
     }
+
+
+def assess_biquote_paper_gate(source_audit: object, research_intake: object) -> dict:
+    """Fail-closed BiQuote paper-trading admission. Never constructs a ledger."""
+    audit = source_audit if isinstance(source_audit, dict) else {}
+    intake = research_intake if isinstance(research_intake, dict) else {}
+    reasons = [
+        "PAPER_ACTIVATION_NOT_APPROVED",
+        "BIQUOTE_SOURCE_AND_UNDERLYING_RIGHTS_UNVERIFIED",
+        "BIQUOTE_HISTORICAL_BID_ASK_BASIS_UNVERIFIED",
+        "INDEPENDENT_SESSION_AND_BROKER_PARITY_UNVERIFIED",
+        "BROKER_COST_AND_RISK_APPROVAL_MISSING",
+    ]
+    if audit.get("ohlcStructuralChecksPassed") is not True:
+        reasons.append("BIQUOTE_STRUCTURAL_AUDIT_FAILED")
+    if intake.get("status") != "ADMISSIBLE_FOR_RESEARCH_ONLY":
+        reasons.append("RESEARCH_INTAKE_BLOCKED")
+    return {
+        "mode": "PAPER_ADMISSION_REVIEW_ONLY", "provider": "BiQuote",
+        "status": "BLOCKED", "signal": "WAIT", "executable": False,
+        "researchEligible": False, "paperOrdersAllowed": False,
+        "paperRunning": False, "ledgerCreatedByGate": False,
+        "sourceRequestsMade": 0, "reasonCodes": reasons,
+        "costReadiness": cost_readiness(),
+    }
