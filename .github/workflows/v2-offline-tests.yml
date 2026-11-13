@@ -448,3 +448,31 @@ jobs:
           name: fxcm-bookworm-static-abi
           path: ${{ runner.temp }}/fxcm-bookworm-static-abi.json
           if-no-files-found: error
+
+  fxcm-sdk-header-jar-audit:
+    name: FXCM C++ headers and Java JAR ABI metadata (no SDK execution)
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    container:
+      image: node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9
+    permissions:
+      contents: read
+    steps:
+      - name: Install C++ compiler and Python archive tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 g++ ca-certificates git
+      - uses: actions/checkout@v4
+      - name: C++ compile-only and Java metadata inspection
+        env:
+          FXCM_REPORT: ${{ runner.temp }}/fxcm-headers-and-jars.json
+        run: |
+          python3 coordinator/fxcm_sdk_header_jar_audit.py --selftest
+          python3 coordinator/fxcm_sdk_header_jar_audit.py --output "$FXCM_REPORT"
+      - name: Upload isolated SDK compilation and Java report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fxcm-headers-and-java-metadata
+          path: ${{ runner.temp }}/fxcm-headers-and-jars.json
+          if-no-files-found: error
