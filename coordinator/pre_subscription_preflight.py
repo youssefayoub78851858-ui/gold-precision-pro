@@ -32,6 +32,8 @@ CHECKS = {
         ("coordinator/test_eodhd_historical_raw_adapter.py", ["test_conflicting_timestamps_rejected"]),
         ("coordinator/eodhd_history_stream_overlap.py", ["NUMERICAL_OVERLAP_OBSERVED_BUT_BASIS_NOT_AUTHORIZED", "mayMergeHistoricalAndStreamBars", "WAIT"]),
         ("coordinator/test_eodhd_history_stream_overlap.py", ["test_perfect_bid_match_is_not_licence_or_research_authorization"]),
+        ("coordinator/fxcm_free_source_feasibility.py", ["NO_GO_UNTIL_PROVEN", "publishedLinuxWheelMatchesCurrentPython", "WAIT"]),
+        ("coordinator/test_fxcm_free_source_feasibility.py", ["test_current_python311_has_no_verified_public_compatible_linux_wheel"]),
     ],
     "context_and_news": [
         ("coordinator/h15_official_rss.js", ["DGS2", "DGS10"]),

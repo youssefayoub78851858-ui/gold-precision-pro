@@ -59,6 +59,11 @@ jobs:
       - name: EODHD REST vs streamed BID MID ASK UTC overlap and no-merge audit (offline)
         working-directory: coordinator
         run: python -m unittest -v test_eodhd_history_stream_overlap
+      - name: FXCM demo historical BID ASK source free feasibility and SDK Python ABI gate (offline)
+        working-directory: coordinator
+        run: |
+          python -m unittest -v test_fxcm_free_source_feasibility
+          python fxcm_free_source_feasibility.py --output /tmp/fxcm-pre-subscription-feasibility.json
       - name: Opt-in EODHD worker process gate and isolated lifecycle (offline)
         working-directory: coordinator
         run: python -m unittest -v test_private_eodhd_worker
@@ -295,6 +300,7 @@ jobs:
           path: |
             /tmp/pre-subscription-readiness.json
             /tmp/eodhd-bootstrap-readiness.json
+            /tmp/fxcm-pre-subscription-feasibility.json
           retention-days: 14
       - name: XAUUSD signed intake, UTC candle quality, gaps and outage backoff (offline fixtures)
         working-directory: coordinator
