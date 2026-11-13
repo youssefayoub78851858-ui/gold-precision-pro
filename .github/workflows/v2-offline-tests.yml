@@ -320,3 +320,28 @@ jobs:
           python -m unittest -v test_research_monitor_runner
           python -m unittest -v test_research_watchdog
           python -m unittest -v test_massive_xauusd_fixture_adapter
+
+  fxcm-fclite-package-probe:
+    name: FXCM FCLite package retrieval smoke (Linux, scripts disabled)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Public npm package install in isolated directory, no SDK execution
+        env:
+          GITHUB_OUTPUT_DIR: ${{ runner.temp }}/fxcm-fclite-probe.json
+        run: |
+          node --check coordinator/fxcm_fclite_registry_probe.js
+          node coordinator/fxcm_fclite_registry_probe.js
+      - name: Save package metadata and network outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fxcm-fclite-package-probe
+          path: ${{ runner.temp }}/fxcm-fclite-probe.json
+          if-no-files-found: error
