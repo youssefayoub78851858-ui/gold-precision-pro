@@ -137,8 +137,21 @@ def audit_biquote_sample(quote, frame_envelopes, *, now):
             bid, ask = quote.get("bid"), quote.get("ask")
             if not _price(bid) or not _price(ask) or ask < bid:
                 raise ValueError("INVALID_OR_CROSSED_BID_ASK")
-            if quote.get("stale") is True:
-                raise ValueError("PROVIDER_REPORTS_STALE_QUOTE")
+            if type(quote.get("stale")) is not bool or quote["stale"]:
+                raise ValueError("PROVIDER_STALE_FLAG_MISSING_OR_TRUE")
+            if quote.get("marketState") != "open":
+                raise ValueError("MARKET_NOT_CONFIRMED_OPEN")
+            mid = quote.get("mid")
+            spread = quote.get("spread")
+            if mid is not None and (
+                    not _price(mid) or not math.isclose(
+                        mid, (bid + ask) / 2, rel_tol=1e-8, abs_tol=1e-5)):
+                raise ValueError("MIDQUOTE_DISAGREES_WITH_BID_ASK")
+            if spread is not None and (
+                    type(spread) not in (int, float) or not math.isfinite(spread)
+                    or not math.isclose(
+                        spread, ask - bid, rel_tol=1e-7, abs_tol=1e-5)):
+                raise ValueError("SPREAD_DISAGREES_WITH_BID_ASK")
             tick_time = _utc(quote.get("timestamp"))
             quote_age = round((now - tick_time).total_seconds(), 3)
             if quote_age < -5 or quote_age > MAX_QUOTE_AGE_SECONDS:
