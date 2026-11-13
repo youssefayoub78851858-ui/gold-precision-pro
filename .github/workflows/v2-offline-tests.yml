@@ -181,6 +181,9 @@ jobs:
       - name: Official free Fed BLS H15 partial-context staging (offline, no market vote)
         working-directory: coordinator
         run: node test_official_context_stage.js
+      - name: Official vs market-data source rights and coverage inventory (offline)
+        working-directory: coordinator
+        run: node test_official_source_inventory.js
       - name: Official US macro RSS and BLS calendar research safety tests (mock feeds)
         working-directory: coordinator
         run: node test_official_macro_review.js

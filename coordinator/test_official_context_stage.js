@@ -31,6 +31,10 @@ function assertSafe(x){
  assert.equal(x.completeUsdCalendarCoverage,false);
  assert.equal(x.xauPrice,null);
  assert.ok(Object.values(x.ultimateLayerAdmission).every(v=>v===false));
+ assert.equal(x.sourceInventory.signal,"WAIT");
+ assert.equal(x.sourceInventory.executable,false);
+ assert.equal(x.sourceInventory.completeUltimateStackVerified,false);
+ assert.ok(x.sourceInventory.sources.every(s=>s.ultimateLayerAdmitted===false));
 }
 (async()=>{
  const r=stageOfficialContext(macro(),daily(),now);

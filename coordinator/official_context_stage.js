@@ -3,6 +3,7 @@
 // Fed monetary RSS, BLS calendar and H.15 are NOT comprehensive news/real-time DXY.
 const {getOfficialMacroReview}=require("./official_macro_review");
 const {readAutoDailyContext}=require("./h15_official_rss");
+const {inventoryForOfficialContext}=require("./official_source_inventory");
 const iso=x=>typeof x==="string"&&Number.isFinite(Date.parse(x))&&/Z$/.test(x);
 function stageOfficialContext(macro,h15,asOfUTC){
  const now=Date.parse(asOfUTC);
@@ -17,7 +18,7 @@ function stageOfficialContext(macro,h15,asOfUTC){
   ultimateLayerAdmission:{US02Y:false,US10Y:false,calendar:false,headlines:false,DXY:false,GC:false,orderFlow:false},
   alerts:[],headlines:[],calendar:[],rates:[],
   sourceStatus:{fed:"UNAVAILABLE",bls:"UNAVAILABLE",h15:"UNAVAILABLE"},
-  blockingReasons:[],
+  sourceInventory:inventoryForOfficialContext({}),blockingReasons:[],
  };
  if(!macro||typeof macro!=="object"||macro.mode!=="OFFICIAL_MACRO_REVIEW"||
     macro.signal!=="WAIT"||macro.executable!==false||
@@ -75,7 +76,7 @@ function stageOfficialContext(macro,h15,asOfUTC){
                frequency:"DAILY_NOT_INTRADAY",intradayVote:false});
   }
  }
- return {...base,sourceStatus:{fed:fed?"OFFICIAL_PARTIAL_ONLY":"UNAVAILABLE",
+ const result={...base,sourceStatus:{fed:fed?"OFFICIAL_PARTIAL_ONLY":"UNAVAILABLE",
     bls:bls?"OFFICIAL_PARTIAL_ONLY":"UNAVAILABLE",
     h15:verifiedH15?"DAILY_REFERENCE_ONLY":"UNAVAILABLE"},
     calendar:events,headlines,rates,alerts,
@@ -83,6 +84,7 @@ function stageOfficialContext(macro,h15,asOfUTC){
     blockingReasons:[...reasons,"WORLD_NEWS_AND_COMPLETE_CALENDAR_NOT_VERIFIED",
                      "INTRADAY_DXY_GC_AND_ORDER_FLOW_NOT_AVAILABLE"],
     note:"Government sources are partial context, not world geopolitical coverage, a surprise model or intraday trading authority"};
+ return {...result,sourceInventory:inventoryForOfficialContext(result)};
 }
 async function collectOfficialContext({nowMs=Date.now(),offline=true,fetchFn}={}){
  if(!Number.isFinite(nowMs))throw Error("Invalid clock");
