@@ -5,7 +5,7 @@ const fs=require('node:fs');
 const os=require('node:os');
 const path=require('node:path');
 const cp=require('node:child_process');
-const PACKAGE='@gehtsoft/forex-connect-lite-node';
+const PACKAGE=process.env.FXCM_PROBE_PACKAGE==='browser'?'@gehtsoft/forex-connect-lite':'@gehtsoft/forex-connect-lite-node';
 const REGISTRY='https://www.myget.org/F/gehtsoft-public/npm/';
 function probe(){
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'fxcm-fclite-public-npm-'));
@@ -18,7 +18,7 @@ function probe(){
  const result=cp.spawnSync('npm',['install',PACKAGE,'--ignore-scripts','--no-audit',
   '--no-fund','--no-save','--fetch-retries=0','--fetch-timeout=12000'],{
   cwd:root,env:safeEnv,encoding:'utf8',timeout:45000,maxBuffer:512*1024,stdio:'pipe'});
- const pkgFile=path.join(root,'node_modules','@gehtsoft','forex-connect-lite-node','package.json');
+ const pkgFile=path.join(root,'node_modules','@gehtsoft',PACKAGE.split('/')[1],'package.json');
  let metadata=null;
  if(fs.existsSync(pkgFile)){
   const pkg=JSON.parse(fs.readFileSync(pkgFile,'utf8'));
@@ -31,6 +31,7 @@ function probe(){
   status:success?'INSTALLED_NO_SCRIPTS':'BLOCKED_NOT_VERIFIED',
   packageFetchedAndUnpacked:success,sdkModuleLoaded:false,installScriptsExecuted:false,
   fxcmAccountUsed:false,fxcmMarketRequests:0,tradeOrders:0,paidCharges:0,
+  note:'Downloaded package is only probed for metadata; it is not imported or used for FXCM login',
   metadata,exitCode:result.status,timeout:result.error?.code==='ETIMEDOUT',
   errorCode:result.error?.code||null,errorSummary:success?null:stderr.slice(-700)};
  const output=process.env.GITHUB_OUTPUT_DIR||path.join(root,'fxcm-package-probe.json');

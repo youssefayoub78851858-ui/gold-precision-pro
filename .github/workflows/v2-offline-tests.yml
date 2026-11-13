@@ -345,3 +345,29 @@ jobs:
           name: fxcm-fclite-package-probe
           path: ${{ runner.temp }}/fxcm-fclite-probe.json
           if-no-files-found: error
+
+  fxcm-fclite-browser-package-probe:
+    name: FXCM alternative documented FCLite npm package (no execution)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check documented parent package (no credentials, scripts disabled)
+        env:
+          FXCM_PROBE_PACKAGE: browser
+          GITHUB_OUTPUT_DIR: ${{ runner.temp }}/fxcm-fclite-alternative-probe.json
+        run: |
+          node --check coordinator/fxcm_fclite_registry_probe.js
+          node coordinator/fxcm_fclite_registry_probe.js
+      - name: Save alternate package metadata and availability
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fxcm-fclite-alternate-package-probe
+          path: ${{ runner.temp }}/fxcm-fclite-alternative-probe.json
+          if-no-files-found: error
