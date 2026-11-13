@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from eodhd_bootstrap_preflight import bootstrap_plan
 
 ROOT = Path(__file__).resolve().parent.parent
 CHECKS = {
@@ -23,6 +24,8 @@ CHECKS = {
         ("coordinator/xauusd_research_pipeline.py", ["run_research_pipeline", "researchEligible"]),
         ("coordinator/eodhd_research_bridge.py", ["run_research_pipeline", "BID_ASK_AGGREGATE_MISMATCH", "INDEPENDENT_SESSION_HISTORY_OR_CLOCK_EVIDENCE_MISSING"]),
         ("coordinator/test_eodhd_research_bridge.py", ["test_mock_cannot_claim_live_research_without_50_h4_bars"]),
+        ("coordinator/eodhd_bootstrap_preflight.py", ["minimumClosedM15For50CompleteH4", "mayMergeHistoricalAndStreamBars", "WAIT"]),
+        ("coordinator/test_eodhd_bootstrap_preflight.py", ["test_50_h4_counts_are_not_license_or_session_proof"]),
     ],
     "context_and_news": [
         ("coordinator/h15_official_rss.js", ["DGS2", "DGS10"]),
@@ -104,6 +107,7 @@ def build_report(root: Path = ROOT) -> dict:
         "liveTradingAuthorized": False, "sourceLicensesVerified": False,
         "signal": "WAIT", "executable": False,
         "preSubscriptionStaticChecksPassed": not any(checks.values()),
+        "eodhdFirstDayBootstrapPlan": bootstrap_plan(),
         "warning": "Code presence and passing offline tests do not prove live entitlements, deployment, execution readiness or profit",
         "stages": stages,
         "mobileFlow": {

@@ -15,6 +15,9 @@ class PreSubscriptionAudit(unittest.TestCase):
         self.assertEqual(r["payments"], 0)
         self.assertEqual(r["networkCalls"], 0)
         self.assertEqual(r["secretReads"], 0)
+        self.assertEqual(r["eodhdFirstDayBootstrapPlan"]["signal"], "WAIT")
+        self.assertEqual(r["eodhdFirstDayBootstrapPlan"]["historyMath"]["minimumClosedM15For50CompleteH4"], 800)
+        self.assertFalse(r["eodhdFirstDayBootstrapPlan"]["sourceCompatibility"]["mayMergeHistoricalAndStreamBars"])
         self.assertTrue(all(s["status"].startswith("AWAITING") for s in r["stages"]))
         for key in ("liveDataValidated", "liveResearchReady", "paperTradingLiveReady",
                     "mt5DemoExecutionReady", "liveTradingAuthorized", "sourceLicensesVerified"):

@@ -47,6 +47,9 @@ jobs:
       - name: EODHD XAUUSD WebSocket safety preflight (offline)
         working-directory: coordinator
         run: node test_eodhd_ws_bridge.js
+      - name: First-day XAUUSD historical warmup and bid-ask parity preflight (offline)
+        working-directory: coordinator
+        run: python -m unittest -v test_eodhd_bootstrap_preflight
       - name: Opt-in EODHD worker process gate and isolated lifecycle (offline)
         working-directory: coordinator
         run: python -m unittest -v test_private_eodhd_worker
@@ -275,11 +278,14 @@ jobs:
         run: |
           python -m unittest -v test_pre_subscription_preflight
           python pre_subscription_preflight.py --output /tmp/pre-subscription-readiness.json
+          python eodhd_bootstrap_preflight.py --output /tmp/eodhd-bootstrap-readiness.json
       - name: Upload five-stage offline readiness report
         uses: actions/upload-artifact@v4
         with:
           name: pre-subscription-readiness
-          path: /tmp/pre-subscription-readiness.json
+          path: |
+            /tmp/pre-subscription-readiness.json
+            /tmp/eodhd-bootstrap-readiness.json
           retention-days: 14
       - name: XAUUSD signed intake, UTC candle quality, gaps and outage backoff (offline fixtures)
         working-directory: coordinator
