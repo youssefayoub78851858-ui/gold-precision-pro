@@ -1,7 +1,7 @@
 'use strict';
 // Pure mocks of documented FCLite methods: never import/install SDK or call FXCM.
 const assert=require('node:assert/strict');
-const {auditFcliteHistory}=require('./fxcm_fclite_history_audit');
+const {auditFcliteHistory,stageFcliteBundle}=require('./fxcm_fclite_history_audit');
 const fixed={asOfUTC:'2026-11-13T16:00:00Z'};
 function fixture(changes={}){
  const rows={Open:4000,High:4002,Low:3998,Close:4001};
