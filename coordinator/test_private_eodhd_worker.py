@@ -94,9 +94,8 @@ class ReviewWorkerTests(unittest.TestCase):
                 if key == "EODHD_API_TOKEN":
                     raise AssertionError("Token should not be inspected when disabled")
                 return super().get(key, default)
-        # The key may still be consulted in a pure preflight; it is never logged
-        # or used for networking. Missing opt-in prevents any process creation.
-        env = {**self.env, ENABLE_FLAG: "0"}
+        # A disabled worker must not inspect the credential at all.
+        env = ForbiddenAccess({**self.env, ENABLE_FLAG: "0"})
         self.assertIsNone(launch_review_worker(
             self.data, mode="standby", env=env, spawn=self.fake_spawn))
         self.assertFalse(self.data.exists())

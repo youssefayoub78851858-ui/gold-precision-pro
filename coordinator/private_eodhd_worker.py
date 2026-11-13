@@ -16,18 +16,17 @@ ENABLE_FLAG = "PRIVATE_EODHD_REVIEW_WORKER_ENABLED"
 
 def worker_enabled(env: dict, *, mode: str) -> bool:
     """Fail closed by default, even if an old token or licence flag exists."""
+    # Do not even inspect the credential unless every independent gate is on.
+    if not (mode == "standby"
+            and env.get("CUTOVER_MODE", "standby") == "standby"
+            and env.get(ENABLE_FLAG) == "1"
+            and env.get("EODHD_CONNECT_APPROVED") == "1"
+            and env.get("EODHD_RIGHTS_APPROVED") == "1"):
+        return False
     token = env.get("EODHD_API_TOKEN", "")
-    return (
-        mode == "standby"
-        and env.get("CUTOVER_MODE", "standby") == "standby"
-        and env.get(ENABLE_FLAG) == "1"
-        and env.get("EODHD_CONNECT_APPROVED") == "1"
-        and env.get("EODHD_RIGHTS_APPROVED") == "1"
-        and isinstance(token, str)
-        and 12 <= len(token) <= 256
-        and token.strip() == token
-        and token.lower() not in ("demo", "your_api_token")
-    )
+    return (isinstance(token, str) and 12 <= len(token) <= 256
+            and token.strip() == token
+            and token.lower() not in ("demo", "your_api_token"))
 
 
 def launch_review_worker(data_dir, *, mode: str, env=None, spawn=None):
