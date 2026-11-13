@@ -60,21 +60,23 @@ a.equal(split.executable,false);
 const historySnapshot=review.snapshot();
 // The 16 closed candles are history, not permission to trade or to interpolate
 // a missing tick interval. Every interruption discards the open M15 and quote.
-for(const [kind,stamp] of [['gap',now+GAP_TEST],['outOfOrder',now],['stale',now-100000]]){
- const saved=new XauusdReview(()=>now+1000);
+for(const kind of ['gap','outOfOrder','stale']){
+ let probeNow=now+2000;
+ const saved=new XauusdReview(()=>probeNow);
  saved.restoreClosed({frames:historySnapshot.frames,
                       bidFrames:historySnapshot.bidFrames,
                       askFrames:historySnapshot.askFrames});
  saved.receive({status_code:200});
  const accepted=now+1000;
  if(kind==='gap'){
-  saved.receive(quote(accepted));
+  a.equal(saved.receive(quote(accepted)).kind,'quote');
+  probeNow=accepted+100001;
   a.equal(saved.receive(quote(accepted+100000)).reason,'TICK_GAP_OR_ORDER');
  }else if(kind==='outOfOrder'){
-  saved.receive(quote(accepted));
+  a.equal(saved.receive(quote(accepted)).kind,'quote');
   a.equal(saved.receive(quote(accepted)).reason,'TICK_GAP_OR_ORDER');
  }else{
-  a.equal(saved.receive(quote(stamp)).reason,'STALE_OR_FUTURE');
+  a.equal(saved.receive(quote(accepted-100000)).reason,'STALE_OR_FUTURE');
  }
  const held=saved.snapshot();
  a.equal(held.frames.M15.length,16);
