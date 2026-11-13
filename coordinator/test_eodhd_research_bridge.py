@@ -100,6 +100,40 @@ class EodhdResearchStaging(unittest.TestCase):
             self.check_wait(result)
             self.assertTrue(any(v.startswith("BID_ASK_") for v in result["blockingReasons"]),mutate)
 
+    def test_impossible_midquote_high_low_block_before_research(self):
+        # The OHLC row itself remains valid. Its MID high/low are impossible
+        # relative to the paired BID and ASK highs/lows, so reject at intake.
+        for field, offset in (("high", 3), ("low", -3)):
+            with self.subTest(field=field):
+                s = sample(16)
+                row = s["frames"]["M15"][0]
+                row[field] = row["open"] + offset
+                result = self.review(s)
+                self.check_wait(result)
+                self.assertEqual(result["blockingReasons"],
+                                 ["BID_ASK_MIDQUOTE_EXTREMA_IMPOSSIBLE"])
+
+    def test_mid_extrema_need_not_equal_average_bid_ask_extrema(self):
+        # Extreme BID and ASK occur at different instants, so MID high and
+        # low are bounded but not necessarily their extrema arithmetic mean.
+        s = sample(16)
+        row = s["frames"]["M15"][0]
+        row["high"] = row["high"] - 0.1
+        row["low"] = row["low"] + 0.1
+        self.check_wait(self.review(s))
+        self.assertNotIn("BID_ASK_MIDQUOTE_EXTREMA_IMPOSSIBLE",
+                         self.review(s)["blockingReasons"])
+
+    def test_subsecond_closed_bar_open_rejected_without_timestamp_truncation(self):
+        s = sample(16)
+        for family in ("frames", "bidFrames", "askFrames"):
+            s[family]["M15"][0]["openTime"] = (
+                s[family]["M15"][0]["openTime"].replace(":00Z", ":00.500Z"))
+        result = self.review(s)
+        self.check_wait(result)
+        self.assertEqual(result["blockingReasons"],
+                         ["BID_ASK_UNALIGNED_OR_UNORDERED"])
+
     def test_missing_aggregate_must_fail_even_with_fifty_h4_remaining(self):
         # 832 x M15 contains 51 complete H4 groups. Removing one still
         # leaves >=50 H4; a simple candle-count warmup check would miss it.

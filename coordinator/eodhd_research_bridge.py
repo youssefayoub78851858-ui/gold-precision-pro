@@ -80,6 +80,32 @@ def _close(a, b):
     return abs(a - b) <= max(1e-7, abs(a) * 1e-9, abs(b) * 1e-9)
 
 
+def _mid_extremes_consistent(middle, bid, ask):
+    """Necessary bounds for midquote extrema from synchronized bid/ask ticks.
+
+    BID and ASK extrema need not occur on the same tick, so averaging the two
+    independent highs (or lows) is NOT the true midquote high (or low).
+    However, a valid mid high must lie between:
+      max((bid_high + ask_low)/2, (ask_high + bid_low)/2)
+      and (bid_high + ask_high)/2.
+    Mid low lies between (bid_low + ask_low)/2 and
+      min((bid_low + ask_high)/2, (ask_low + bid_high)/2).
+    Reject impossible extrema without falsely insisting highs align in time.
+    """
+    high_min = max((bid["high"] + ask["low"]) / 2,
+                   (ask["high"] + bid["low"]) / 2)
+    high_max = (bid["high"] + ask["high"]) / 2
+    low_min = (bid["low"] + ask["low"]) / 2
+    low_max = min((bid["low"] + ask["high"]) / 2,
+                  (ask["low"] + bid["high"]) / 2)
+    high = middle["high"]
+    low = middle["low"]
+    return (high >= high_min or _close(high, high_min)) and (
+        high <= high_max or _close(high, high_max)) and (
+        low >= low_min or _close(low, low_min)) and (
+        low <= low_max or _close(low, low_max))
+
+
 def _audit_bars(snapshot):
     frames = snapshot.get("frames")
     bids = snapshot.get("bidFrames")
@@ -107,7 +133,9 @@ def _audit_bars(snapshot):
             except (ValueError, TypeError):
                 raise ValueError("BID_ASK_INVALID_UTC") from None
             stamp = int(start.timestamp())
-            if stamp % width or prior is not None and stamp <= prior:
+            # Never silently truncate sub-second or unclosed provider timestamps.
+            if (start.microsecond or stamp % width or
+                    prior is not None and stamp <= prior):
                 raise ValueError("BID_ASK_UNALIGNED_OR_UNORDERED")
             prior = stamp
             if any(not all(_price(row.get(k)) for k in ("open", "high", "low", "close"))
@@ -123,6 +151,8 @@ def _audit_bars(snapshot):
             if not (_close(middle["open"], (bid["open"] + ask["open"]) / 2)
                     and _close(middle["close"], (bid["close"] + ask["close"]) / 2)):
                 raise ValueError("BID_ASK_MIDQUOTE_DISAGREES")
+            if not _mid_extremes_consistent(middle, bid, ask):
+                raise ValueError("BID_ASK_MIDQUOTE_EXTREMA_IMPOSSIBLE")
         counts[tf] = len(b)
     # H1/H4 MUST be authentic aggregates of the same CLOSED M15 BID/ASK/MID
     # observations. A provider snapshot cannot introduce contradictory H4
