@@ -119,6 +119,34 @@ class XauUsdFeedGateTests(unittest.TestCase):
         result = intake_payload(data, NOW, SourcePolicy())
         self.assertIn("INGEST_TIMESTAMP_INVALID", result["blockingReasons"])
 
+    def test_recorded_source_cannot_self_certify_session_gaps(self):
+        # All data below are fabricated; passing this fixture never proves a vendor feed.
+        data = payload()
+        data["mode"] = "recorded"
+        policy = SourcePolicy(True, True, True, True, "UNIT TEST RIGHTS ONLY", "UNIT_TEST_FIXTURE")
+        blocked = intake_payload(data, NOW, policy)
+        self.assertEqual(blocked["status"], "BLOCKED")
+        self.assertIn("INDEPENDENT_SESSION_SCHEDULE_UNVERIFIED", blocked["blockingReasons"])
+        self.assertFalse(blocked["researchEligible"])
+
+        independent = {tf: list(f["expectedOpenTimes"]) for tf, f in data["frames"].items()}
+        checked = SourcePolicy(True, True, True, True, "UNIT TEST RIGHTS ONLY", "UNIT_TEST_FIXTURE",
+                               "INDEPENDENT UNIT TEST CALENDAR", independent)
+        accepted = intake_payload(data, NOW, checked)
+        self.assertEqual(accepted["status"], "ADMISSIBLE_FOR_RESEARCH_ONLY")
+        self.assertEqual(accepted["signal"], "WAIT")
+        self.assertFalse(accepted["executable"])
+
+        # The packet now omits a historical bar AND removes it from its own declared
+        # schedule, a previously unobservable gap. The independent calendar catches it.
+        independent["15min"].insert(0, timestamp(NOW.replace(minute=0) -
+                                                  dt.timedelta(minutes=30)))
+        mismatch = intake_payload(data, NOW, checked)
+        self.assertEqual(mismatch["status"], "BLOCKED")
+        self.assertIn("15MIN_INDEPENDENT_SCHEDULE_MISMATCH", mismatch["blockingReasons"])
+        self.assertFalse(mismatch["researchEligible"])
+        self.assertEqual(mismatch["frames"], {})
+
     def test_signed_envelope_timestamp_hmac_and_nonce_replay(self):
         body, headers = signed(payload())
         guard = ReplayGuard()
