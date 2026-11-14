@@ -8,6 +8,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <thread>
+#include <chrono>
 struct Side{double open,high,low,close;};
 struct Bar{std::string t;Side bid,ask;};
 static std::string when(int m){
@@ -60,6 +62,10 @@ static std::string frame(const std::vector<Bar>& bars){
 }
 int main(int argc,char** argv){
  std::string option=argc==2?argv[1]:"--fixture";
+ if(option=="--fixture-hang"){std::this_thread::sleep_for(std::chrono::seconds(3));return 0;}
+ if(option=="--fixture-large"){std::cout<<std::string(240000,'x');return 0;}
+ if(option=="--fixture-malformed"){std::cout<<"{invalid-json\n";return 0;}
+ if(option=="--fixture-exit"){std::cout<<"{}\n";return 7;}
  constexpr std::array<const char*,7> options={"--fixture","--fixture-crossed",
   "--fixture-stale","--fixture-missing-h1","--fixture-unclosed",
   "--fixture-gap","--fixture-forged-rights"};
