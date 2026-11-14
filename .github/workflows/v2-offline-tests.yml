@@ -77,7 +77,7 @@ jobs:
         run: python -m unittest -v test_fxcm_native_pipeline_bridge
       - name: FXCM synthetic C++ to existing research bridge (no FXCM SDK)
         working-directory: coordinator
-        run: python -m unittest -v test_fxcm_cpp_bridge_e2e
+        run: python -m unittest -v test_fxcm_cpp_bridge_e2e test_fxcm_cpp_offline_supervisor
       - name: BiQuote free XAUUSD source provenance, BidAsk and closed OHLC audit (offline only)
         working-directory: coordinator
         run: python -m unittest -v test_biquote_offline_source_audit
