@@ -15,6 +15,9 @@ class UltimateHTTP(unittest.TestCase):
             sock.bind(('127.0.0.1', 0))
             port = sock.getsockname()[1]
         env = {**os.environ, 'PORT': str(port), 'DEMO_MODE': 'standby', 'H15_OFFICIAL_RSS_DISABLED': '1', 'OFFICIAL_MACRO_DISABLED': '1', 'GOLD_SPOT_REFERENCE_DISABLED': '1'}
+        env.update(RENDER='true',RENDER_GIT_COMMIT='1234567890abcdef1234567890abcdef12345678',
+                   RENDER_GIT_BRANCH='review/v2-portable-tests-20261109',
+                   RENDER_SERVICE_NAME='gold-precision-v3-review-demo')
         proc = subprocess.Popen(['node', str(Path(__file__).resolve().parent.parent / 'server.js')], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         base = f'http://127.0.0.1:{port}'
         def request(path, payload=None):
@@ -36,6 +39,19 @@ class UltimateHTTP(unittest.TestCase):
             self.assertIn(b'free-context-load', request('/ultimate')[1])
             self.assertIn(b'spot-refresh', request('/ultimate')[1])
             self.assertIn(b'candle-source-check', request('/ultimate')[1])
+            self.assertIn(b'review-build-identity', request('/ultimate')[1])
+            self.assertIn(b'review-build-check', request('/ultimate')[1])
+            bc,bb=request('/api/v3/review/version')
+            self.assertEqual(bc,200)
+            version=json.loads(bb)
+            self.assertEqual(version['mode'],'DEMO_STANDBY')
+            self.assertEqual(version['status'],'REVIEW_REVISION_VERIFIED')
+            self.assertTrue(version['deploymentIdentityVerified'])
+            self.assertEqual(version['buildCommit'],'1234567890abcdef1234567890abcdef12345678')
+            self.assertFalse(version['executable'])
+            self.assertFalse(version['providerAccess'])
+            self.assertEqual(version['marketRequests'],0)
+            self.assertEqual(request('/api/v3/review/version',b'{}')[0],405)
             self.assertIn(b'fxcm-public-readiness', request('/ultimate')[1])
             self.assertIn(b'fxcm-public-refresh', request('/ultimate')[1])
             fxcm_code, fxcm_raw=request('/api/v3/ultimate/fxcm-readiness')

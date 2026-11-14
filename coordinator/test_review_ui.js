@@ -18,6 +18,10 @@ async function check(status,body,reject=false){
  const standby=await check(503,{engine:'V3',signal:'WAIT',executable:false,dataStatus:'STANDBY',reason:'Provider disabled',observedUTC:'2026-11-10T09:00:05.000Z'});assert.equal(standby['gold-live-price'].textContent,'غير متاح');assert.match(standby['gold-price-source'].textContent,/Standby/);
  const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');assert.ok(!html.includes('gold-precision-pro.onrender.com'));assert.ok(html.includes('review-ui.js'));assert.ok(html.includes('gold-price-updated'));assert.ok(html.includes('gold-price-checked'));assert.ok(!fs.readFileSync(require('node:path').join(__dirname,'../review-ui.js'),'utf8').includes('setInterval'));
  const ultimate=fs.readFileSync(require('node:path').join(__dirname,'../ultimate.html'),'utf8');assert.ok(ultimate.includes('id="r2-alert-status"'));assert.ok(ultimate.includes('id="r2-alerts"'));assert.ok(ultimate.includes('alerts.delivery'));assert.ok(ultimate.includes('لا يوجد إشعار فوري أو بريد'));
+ assert.ok(ultimate.includes('id="review-build-identity"'));
+ assert.ok(ultimate.includes('id="review-build-check"'));
+ assert.ok(ultimate.includes('/api/v3/review/version'));
+ assert.ok(ultimate.includes('رقم التحديث المنشور'));
  assert.ok(ultimate.includes('id="fxcm-public-readiness"'));
  assert.ok(ultimate.includes('id="fxcm-public-refresh"'));
  assert.ok(ultimate.includes('/api/v3/ultimate/fxcm-readiness'));

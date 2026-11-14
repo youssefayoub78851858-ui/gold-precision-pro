@@ -65,6 +65,13 @@ const server = http.createServer(async (req, res) => {
    return res.end(JSON.stringify(result.body));
   }
 
+  // Exact build identity from Render-provided metadata; unavailable is not guessed.
+  if(req.url.split("?")[0]==="/api/v3/review/version"){
+    if(!DEMO_MODE)return send(res,404,{error:"Not found"});
+    if(req.method!=="GET")return send(res,405,{error:"GET only",signal:"WAIT",executable:false});
+    return send(res,200,require("./coordinator/review_deploy_identity").inspect());
+  }
+
   // Public REVIEW-DEMO FXCM readiness: facts only; no market or private-coordinator connection.
   if(req.url.split("?")[0]==="/api/v3/ultimate/fxcm-readiness"){
     if(req.method!=="GET")return send(res,405,{error:"GET only",signal:"WAIT",executable:false});

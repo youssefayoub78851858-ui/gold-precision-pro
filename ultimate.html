@@ -14,6 +14,13 @@
 <p class="overview-status">DXY وGC وOrder Flow والأخبار السياسية/الجيوسياسية: UNAVAILABLE ما لم يثبتها المحرك صراحةً. سعر XAUS لا يتحول إلى شموع أو إشارة.</p>
 <nav class="overview-nav" aria-label="انتقال سريع"><a href="#spot-reference">سعر مرجعي</a><a href="#candle-source-readiness">الشموع</a><a href="#macro-research">الأخبار</a><a href="#ultimate-r2-review">Ultimate r2</a><a href="#paper-title">التداول الورقي</a></nav>
 </section>
+<section id="review-build-identity" class="overview" aria-labelledby="review-build-title">
+<h2 id="review-build-title">نسخة النظام المنشورة على Render</h2>
+<p id="review-build-state" role="status" aria-live="polite">لم يتم التأكد بعد من رقم النسخة.</p>
+<p id="review-build-hash" class="overview-status">رقم التحديث: غير متاح</p>
+<button type="button" id="review-build-check">فحص رقم النسخة المنشورة</button>
+<p class="overview-status">الرقم يأتي من الخادم نفسه، وليس من ذاكرة الهاتف أو آخر تحديث على GitHub. لا يلزم إدخال رمز أو الاتصال بسوق الذهب.</p>
+</section><hr>
 <section id="fxcm-public-readiness" class="overview" aria-labelledby="fxcm-public-title">
 <h2 id="fxcm-public-title">FXCM — حالة مصدر الذهب على الموبايل</h2>
 <p id="fxcm-public-state" role="status">WAIT — لا توجد بيانات FXCM حقيقية متصلة أو مرخصة بعد.</p>
@@ -478,6 +485,39 @@ if(document.readyState==='loading'){
    const item=document.createElement('li');item.textContent='المصدر غير متحقق منه أو الخدمة غير متاحة';list.appendChild(item);
   }finally{button.disabled=false;}
  });
+})();
+</script>
+<script>
+(function(){
+ const button=document.getElementById('review-build-check');
+ const state=document.getElementById('review-build-state');
+ const hash=document.getElementById('review-build-hash');
+ async function checkVersion(){
+  button.disabled=true;state.textContent='يتم فحص نسخة Render الحالية...';
+  hash.textContent='رقم التحديث: غير متاح';
+  try{
+   const result=await fetch('/api/v3/review/version',{
+     cache:'no-store',credentials:'omit',redirect:'error',signal:AbortSignal.timeout(9000)});
+   if(!result.ok)throw Error('VERSION_ROUTE_UNAVAILABLE');
+   const v=await result.json();
+   if(v.mode!=='DEMO_STANDBY'||v.signal!=='WAIT'||v.executable!==false||
+      v.providerAccess!==false||v.marketRequests!==0||
+      v.tradingEnabled!==false||v.licensedFXCM!==false||
+      v.service!=='gold-precision-v3-review-demo')throw Error('UNSAFE_BUILD_STATUS');
+   if(v.status==='REVIEW_REVISION_VERIFIED'&&v.deploymentIdentityVerified===true&&
+      v.branch==='review/v2-portable-tests-20261109'&&
+      /^[a-f0-9]{40}$/.test(v.buildCommit)&&v.buildShort===v.buildCommit.slice(0,8)){
+     state.textContent='نسخة المراجعة تعمل على Render — وليست نسخة الإنتاج';
+     hash.textContent='رقم التحديث المنشور: '+v.buildShort;
+   }else{
+     state.textContent='WAIT — لا يمكن التأكد من رقم النسخة المنشورة';
+   }
+  }catch(_err){
+   state.textContent='WAIT — تعذّر التحقق من النسخة المنشورة';
+  }finally{button.disabled=false;}
+ }
+ button.addEventListener('click',checkVersion);
+ window.addEventListener('pageshow',checkVersion);
 })();
 </script>
 </html>

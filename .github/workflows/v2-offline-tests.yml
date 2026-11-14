@@ -191,6 +191,7 @@ jobs:
         run: |
           python -m unittest -v test_v3_connection
           node test_review_ui.js
+          node test_review_deploy_identity.js
           node test_public_demo.js
       - name: Actual coordinator image build and standby restart (no provider)
         run: python coordinator/test_container_standby.py
