@@ -48,7 +48,8 @@ function signOfflineCandleGet({accountId,tf,fromUTC,toUTC,apiKey,privateKey,time
  const payload={api_key:apiKey,idempotency_key:'',timestamp:timestampMs,
   sign_version:1,method:'GET',path,body_hash:'47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU'};
  const data=Buffer.from(JSON.stringify(payload),'utf8');
- const key=crypto.createPrivateKey(privateKey);
+ const key=privateKey instanceof crypto.KeyObject
+  ?privateKey:crypto.createPrivateKey(privateKey);
  if(key.asymmetricKeyType!=='ed25519')throw Error('ED25519_SIGNING_KEY_REQUIRED');
  const signature=crypto.sign(null,data,key).toString('base64url');
  const headers={'EXN-API-KEY':apiKey,'EXN-IDEMPOTENCY-KEY':'',
