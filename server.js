@@ -130,6 +130,18 @@ const server = http.createServer(async (req, res) => {
     return send(res,200,result);
   }
 
+  // Official Treasury daily context only; never a market trade or DXY feed.
+  if(req.url.split("?")[0]==="/api/v3/ultimate/treasury-daily-context"){
+    if(!DEMO_MODE)return send(res,503,{status:"STANDBY_ONLY",signal:"WAIT",executable:false});
+    if(req.method!=="GET")return send(res,405,{signal:"WAIT",executable:false,error:"GET only"});
+    const allowed=process.env.TREASURY_DAILY_PUBLIC_FETCH_APPROVED==="1";
+    const out=await require("./coordinator/treasury_daily_curve").getTreasuryDaily({offline:!allowed});
+    if(out.signal!=="WAIT"||out.executable!==false||out.researchEligible!==false||
+       out.eligibleForIntradayConfirmation!==false||out.pointInTimeBacktestEligible!==false)
+      return send(res,503,{status:"TREASURY_REVIEW_REJECTED",signal:"WAIT",executable:false});
+    return send(res,200,out);
+  }
+
   // Public REVIEW-DEMO FXCM readiness: facts only; no market or private-coordinator connection.
   if(req.url.split("?")[0]==="/api/v3/ultimate/fxcm-readiness"){
     if(req.method!=="GET")return send(res,405,{error:"GET only",signal:"WAIT",executable:false});

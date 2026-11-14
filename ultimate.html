@@ -97,6 +97,43 @@
  });
 })();
 </script>
+<section id="treasury-daily-context" class="overview" aria-labelledby="treasury-daily-title">
+<h2 id="treasury-daily-title">US02Y / US10Y — تاريخ يومي مجاني من الخزانة الأميركية</h2>
+<p id="treasury-daily-status" role="status">WAIT — بيانات يومية فقط، وليست عوائد مباشرة على فواصل M15.</p>
+<div class="overview-grid">
+<div class="overview-card">عائد السنتين<strong id="treasury-daily-2y">غير متصل</strong></div>
+<div class="overview-card">عائد العشر سنوات<strong id="treasury-daily-10y">غير متصل</strong></div>
+<div class="overview-card">تاريخ الرصد<strong id="treasury-daily-date">غير متصل</strong></div>
+</div>
+<button id="treasury-daily-refresh" type="button">فحص الخزانة اليومي المجاني</button>
+<p class="overview-status">المصدر رسمي بلا اشتراك؛ الاتصال التلقائي على Render معطّل حتى يُصرَّح به. استُخدم للفحص عبر GitHub Actions فقط. لا يحوَّل إلى إشارة تداول.</p>
+</section><hr>
+<script>
+(function(){
+ const button=document.getElementById('treasury-daily-refresh');
+ const status=document.getElementById('treasury-daily-status');
+ const two=document.getElementById('treasury-daily-2y'),ten=document.getElementById('treasury-daily-10y'),date=document.getElementById('treasury-daily-date');
+ button.addEventListener('click',async()=>{
+  button.disabled=true;two.textContent=ten.textContent=date.textContent='غير متصل';
+  try{
+   const r=await fetch('/api/v3/ultimate/treasury-daily-context',{cache:'no-store',credentials:'omit',redirect:'error',signal:AbortSignal.timeout(12000)});
+   if(!r.ok)throw Error('Not available');
+   const d=await r.json();
+   if(d.mode!=='OFFICIAL_TREASURY_2Y10Y_DAILY'||d.signal!=='WAIT'||d.executable!==false||
+      d.researchEligible!==false||d.eligibleForIntradayConfirmation!==false||
+      d.pointInTimeBacktestEligible!==false)throw Error('Unsafe feed');
+   if(d.status==='DAILY_REFERENCE_ONLY'){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d.observedDate)||!Number.isFinite(d.twoYearYieldPct)||!Number.isFinite(d.tenYearYieldPct))throw Error('Bad data');
+    two.textContent=d.twoYearYieldPct.toFixed(2)+'%';
+    ten.textContent=d.tenYearYieldPct.toFixed(2)+'%';
+    date.textContent=d.observedDate;
+    status.textContent='WAIT — مرجع عوائد يومي رسمي فقط؛ لا يعطي BUY أو SELL';
+   }else status.textContent='WAIT — المصدر غير مفعّل أو غير متاح في هذه النسخة';
+  }catch{status.textContent='WAIT — تعذّر فحص المصدر اليومي';}
+  finally{button.disabled=false;}
+ });
+})();
+</script>
 <section id="fxcm-public-readiness" class="overview" aria-labelledby="fxcm-public-title">
 <h2 id="fxcm-public-title">FXCM — حالة مصدر الذهب على الموبايل</h2>
 <p id="fxcm-public-state" role="status">WAIT — لا توجد بيانات FXCM حقيقية متصلة أو مرخصة بعد.</p>

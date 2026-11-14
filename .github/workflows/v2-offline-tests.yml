@@ -234,6 +234,9 @@ jobs:
       - name: Official free Fed BLS H15 partial-context staging (offline, no market vote)
         working-directory: coordinator
         run: node test_official_context_stage.js
+      - name: Free official US Treasury 2Y/10Y monthly history safe daily context (offline)
+        working-directory: coordinator
+        run: node test_treasury_daily_curve.js
       - name: CFTC free weekly gold positioning context, never intraday order flow (offline)
         working-directory: coordinator
         run: node test_cftc_gold_cot_context.js
