@@ -47,8 +47,17 @@ const server = http.createServer(async (req, res) => {
 
   // Mobile paper lab is REVIEW DEMO ONLY; all quotes are user-local / synthetic.
   const paperPath=req.url.split("?")[0];
-  const paperFiles={"/paper-terminal":"paper-terminal.html",
-    "/paper-terminal-core.js":"paper-terminal-core.js",
+  // Old paper URL is only a compatibility entry; the one mobile UI lives
+  // at /ultimate (single DOM with the existing paper runtime, no iframe).
+  if(paperPath==="/paper-terminal"){
+    if(!DEMO_MODE)return send(res,404,{error:"Not found"});
+    if(req.method!=="GET")return send(res,405,{error:"GET only",signal:"WAIT",executable:false});
+    res.writeHead(302,{"Location":"/ultimate#unified-mobile-trading",
+      "Cache-Control":"no-store","Referrer-Policy":"no-referrer",
+      "X-Content-Type-Options":"nosniff"});
+    return res.end();
+  }
+  const paperFiles={"/paper-terminal-core.js":"paper-terminal-core.js",
     "/paper-terminal-ui.js":"paper-terminal-ui.js"};
   if(Object.prototype.hasOwnProperty.call(paperFiles,paperPath)){
     if(!DEMO_MODE)return send(res,404,{error:"Not found"});

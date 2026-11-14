@@ -34,6 +34,15 @@ class UltimateHTTP(unittest.TestCase):
                     break
                 except OSError:
                     time.sleep(.03)
+            # Old bookmarks must land in the same integrated mobile UI.
+            class NoRedirect(urllib.request.HTTPRedirectHandler):
+                def redirect_request(self, req, fp, code, msg, headers, newurl):
+                    return None
+            redirect_only = urllib.request.build_opener(NoRedirect)
+            with self.assertRaises(urllib.error.HTTPError) as redirect:
+                redirect_only.open(base+'/paper-terminal', timeout=5)
+            self.assertEqual(redirect.exception.code, 302)
+            self.assertEqual(redirect.exception.headers.get('Location'),'/ultimate#unified-mobile-trading')
             pc,ph=request('/paper-terminal')
             self.assertEqual(pc,200)
             self.assertIn(b'Gold Precision Pro Ultimate',ph)
