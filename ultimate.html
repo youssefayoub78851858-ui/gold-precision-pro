@@ -22,6 +22,42 @@
 <button type="button" id="review-build-check">فحص رقم النسخة المنشورة</button>
 <p class="overview-status">الرقم يأتي من الخادم نفسه، وليس من ذاكرة الهاتف أو آخر تحديث على GitHub. لا يلزم إدخال رمز أو الاتصال بسوق الذهب.</p>
 </section><hr>
+<section id="gold-api-prepurchase" class="overview" aria-labelledby="gold-api-prepurchase-title">
+<h2 id="gold-api-prepurchase-title">Gold API Premium — فحص الشموع قبل أي دفع</h2>
+<p id="gold-api-prepurchase-status" role="status">WAIT — السعر الفوري المجاني ليس شموع تداول BID/ASK حقيقية.</p>
+<div class="overview-grid">
+<div class="overview-card">تكلفة Premium<strong>$10 / شهر</strong></div>
+<div class="overview-card">فحص الشموع والتاريخ<strong>غير مؤكد — لا يوجد مفتاح أو اتصال</strong></div>
+</div>
+<button type="button" id="gold-api-prepurchase-refresh">فحص شروط المصدر (من دون طلب بيانات)</button>
+<p class="overview-status" id="gold-api-prepurchase-reasons">OHLC لمدى زمني واحد لا يثبت سلسلة M15/H1/H4، ولا يؤكد مصدر BID/ASK أو صلاحية الاستخدام داخل المحرك.</p>
+</section><hr>
+<script>
+(function(){
+ const button=document.getElementById('gold-api-prepurchase-refresh');
+ const status=document.getElementById('gold-api-prepurchase-status');
+ const reasons=document.getElementById('gold-api-prepurchase-reasons');
+ button.addEventListener('click',async()=>{
+  button.disabled=true;
+  status.textContent='WAIT — جارٍ فحص معلومات الجاهزية المخزنة، من دون بيانات سوق';
+  try{
+   const response=await fetch('/api/v3/ultimate/gold-api-readiness',{cache:'no-store',credentials:'omit',redirect:'error',signal:AbortSignal.timeout(9000)});
+   if(!response.ok)throw Error('Unavailable');
+   const data=await response.json();
+   if(data.mode!=='GOLD_API_PREMIUM_PREPURCHASE_ONLY'||data.signal!=='WAIT'||
+      data.executable!==false||data.researchEligible!==false||
+      data.providerRequestsMade!==0||data.premiumKeyConfigured!==false||
+      data.liveOHLCVerified!==false||data.monthlyUsd!==10)throw Error('Unsafe response');
+   status.textContent='WAIT — Gold API Premium لم يُختبر ببيانات شموع مرخّصة ومكتملة';
+   reasons.textContent='المصدر مجاني للسعر المرجعي فقط. شراء Premium لا يضمن وحده شموع M15/H1/H4 ولا بيانات BID/ASK أو إمكانية محاكاة التكلفة.';
+  }catch{
+   status.textContent='WAIT — فحص Gold API غير متاح في هذه النسخة';
+   reasons.textContent='لا توجد إشارة أو صفقة؛ يجب التحقق من الترخيص والشموع قبل أي تفعيل.';
+  }finally{button.disabled=false;}
+ });
+})();
+</script>
+
 <section id="fxcm-public-readiness" class="overview" aria-labelledby="fxcm-public-title">
 <h2 id="fxcm-public-title">FXCM — حالة مصدر الذهب على الموبايل</h2>
 <p id="fxcm-public-state" role="status">WAIT — لا توجد بيانات FXCM حقيقية متصلة أو مرخصة بعد.</p>

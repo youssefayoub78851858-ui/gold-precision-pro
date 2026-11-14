@@ -106,6 +106,17 @@ const server = http.createServer(async (req, res) => {
     return send(res,200,require("./coordinator/review_deploy_identity").inspect());
   }
 
+  // Gold API Premium pre-purchase readiness only: never fetch or expose a key.
+  if(req.url.split("?")[0]==="/api/v3/ultimate/gold-api-readiness"){
+    if(req.method!=="GET")return send(res,405,{signal:"WAIT",executable:false,error:"GET only"});
+    if(!DEMO_MODE)return send(res,503,{signal:"WAIT",executable:false,status:"STANDBY_ONLY"});
+    const out=require("./coordinator/gold_api_ohlc_review").staticStatus();
+    if(out.signal!=="WAIT"||out.executable!==false||out.researchEligible!==false||
+       out.premiumKeyConfigured!==false||out.providerRequestsMade!==0)
+      return send(res,503,{signal:"WAIT",executable:false,status:"GOLD_API_REVIEW_REJECTED"});
+    return send(res,200,out);
+  }
+
   // Public REVIEW-DEMO FXCM readiness: facts only; no market or private-coordinator connection.
   if(req.url.split("?")[0]==="/api/v3/ultimate/fxcm-readiness"){
     if(req.method!=="GET")return send(res,405,{error:"GET only",signal:"WAIT",executable:false});

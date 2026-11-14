@@ -224,6 +224,9 @@ jobs:
         working-directory: coordinator
         run: python -m unittest -v test_cfi_readonly_readiness
 
+      - name: Gold API Premium single-range OHLC independent-session auditor (offline, no key)
+        working-directory: coordinator
+        run: node test_gold_api_ohlc_review.js
       - name: Free independent XAU spot reference validation and candle-blocking tests (mock only)
         working-directory: coordinator
         run: node test_gold_spot_reference.js
