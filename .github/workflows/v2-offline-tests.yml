@@ -72,6 +72,9 @@ jobs:
         run: |
           node --check fxcm_native_offline_boundary.js
           node test_fxcm_native_offline_boundary.js
+      - name: FXCM native metadata-only into shared research pipeline (offline fail-closed)
+        working-directory: coordinator
+        run: python -m unittest -v test_fxcm_native_pipeline_bridge
       - name: BiQuote free XAUUSD source provenance, BidAsk and closed OHLC audit (offline only)
         working-directory: coordinator
         run: python -m unittest -v test_biquote_offline_source_audit
