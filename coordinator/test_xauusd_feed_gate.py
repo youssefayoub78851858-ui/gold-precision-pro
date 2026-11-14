@@ -123,6 +123,7 @@ class XauUsdFeedGateTests(unittest.TestCase):
         # All data below are fabricated; passing this fixture never proves a vendor feed.
         data = payload()
         data["mode"] = "recorded"
+        data["priceBasis"] = "BID"
         policy = SourcePolicy(True, True, True, True, "UNIT TEST RIGHTS ONLY", "UNIT_TEST_FIXTURE")
         blocked = intake_payload(data, NOW, policy)
         self.assertEqual(blocked["status"], "BLOCKED")
@@ -131,11 +132,17 @@ class XauUsdFeedGateTests(unittest.TestCase):
 
         independent = {tf: list(f["expectedOpenTimes"]) for tf, f in data["frames"].items()}
         checked = SourcePolicy(True, True, True, True, "UNIT TEST RIGHTS ONLY", "UNIT_TEST_FIXTURE",
-                               "INDEPENDENT UNIT TEST CALENDAR", independent)
+                               "INDEPENDENT UNIT TEST CALENDAR", independent,
+                               expected_price_basis="BID", price_basis_reference="UNIT QUOTE AUDIT")
         accepted = intake_payload(data, NOW, checked)
         self.assertEqual(accepted["status"], "ADMISSIBLE_FOR_RESEARCH_ONLY")
         self.assertEqual(accepted["signal"], "WAIT")
         self.assertFalse(accepted["executable"])
+
+        mislabeled = dict(data, priceBasis="MID")
+        wrong_basis = intake_payload(mislabeled, NOW, checked)
+        self.assertIn("BID_QUOTE_BASIS_UNVERIFIED", wrong_basis["blockingReasons"])
+        self.assertFalse(wrong_basis["researchEligible"])
 
         # The packet now omits a historical bar AND removes it from its own declared
         # schedule, a previously unobservable gap. The independent calendar catches it.
