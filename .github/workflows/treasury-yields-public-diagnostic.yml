@@ -1,0 +1,26 @@
+name: One-time free US Treasury 2Y/10Y historical XML HTTP diagnostic
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths: [.github/workflows/treasury-yields-public-diagnostic.yml]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: One official monthly request, metadata only; no keys or orders
+        shell: bash
+        run: |
+          node --input-type=module <<'JS'
+          const url='https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages/xml?data=daily_treasury_yield_curve&field_tdr_date_value_month=202611';
+          try {
+            const res=await fetch(url,{headers:{Accept:'application/xml,text/xml','User-Agent':'GoldPrecisionPro-Official-OneTime-Research/1.0'},redirect:'error',signal:AbortSignal.timeout(12000)});
+            const body=await res.text();
+            const first=body.match(/<entry[\\s\\S]*?<\\/entry>/i)?.[0]||'';
+            const fields=[...new Set([...first.matchAll(/<d:([A-Za-z0-9_]+)/g)].map(x=>x[1]))];
+            const prices=Object.fromEntries([...first.matchAll(/<d:(NEW_DATE|BC_2YEAR|BC_10YEAR)(?:\\s[^>]*)?>([^<]+)/g)].map(x=>[x[1],x[2]]));
+            console.log('US_TREASURY_HTTP '+JSON.stringify({http:res.status,contentType:res.headers.get('content-type'),bytes:body.length,entries:(body.match(/<entry(?:\\s[^>]*)?>/gi)||[]).length,firstEntryFields:fields,firstEntrySample:prices,xmlPrefix:body.slice(0,380),requestCount:1,hasCredentials:false,ordersSent:0,signal:'WAIT',executable:false}));
+          }catch(e){console.log('US_TREASURY_HTTP '+JSON.stringify({errorName:e.name,message:String(e.message).slice(0,130),signal:'WAIT',executable:false}));process.exitCode=1;}
+          JS
