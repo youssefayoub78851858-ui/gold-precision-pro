@@ -17,6 +17,25 @@ function aggregate(bars,n){
 // can accept the TCP/WebSocket handshake and disconnect without ANY quote.
 // Reset the retry penalty only after >60s of accepted, timestamped XAUUSD data.
 const RETRY_BASE_MS=5000,RETRY_CAP_MS=300000,HEALTHY_STREAM_MS=60000;
+// If a TCP/WebSocket stays open but stops delivering quotes, it is NOT a
+// healthy market connection. Reconnect after silence without treating a
+// weekend/holiday as proof of a candle boundary.
+const SOCKET_IDLE_MS=180000,SOCKET_CHECK_MS=30000;
+class FeedLiveness {
+ constructor(startMs){
+  if(!Number.isFinite(startMs)||startMs<0)throw Error('Invalid independent clock');
+  this.startedAt=startMs;this.lastAcceptedAt=null;
+ }
+ acceptedQuote(nowMs){
+  const min=this.lastAcceptedAt??this.startedAt;
+  if(!Number.isFinite(nowMs)||nowMs<min)return false;
+  this.lastAcceptedAt=nowMs;return true;
+ }
+ expired(nowMs){
+  const previous=this.lastAcceptedAt??this.startedAt;
+  return !Number.isFinite(nowMs)||nowMs<previous||nowMs-previous>=SOCKET_IDLE_MS;
+ }
+}
 class ReconnectBackoff {
  constructor(){this.failures=0;this.firstQuoteAt=null;}
  opened(){this.firstQuoteAt=null;}
@@ -247,19 +266,29 @@ function run(){
  const review=new XauusdReview(),dir=process.env.DATA_DIR||'/var/data/gold-live';
  coldStartReview(review,dir);
  const retry=new ReconnectBackoff();
- let socket,halted=false,lastSaved=0;
- const stop=()=>{halted=true;if(socket)socket.close();};
+ let socket,halted=false,lastSaved=0,watchdog=null;
+ const clearWatchdog=()=>{if(watchdog!==null){clearInterval(watchdog);watchdog=null;}};
+ const stop=()=>{halted=true;clearWatchdog();if(socket)socket.close();};
  process.on('SIGTERM',stop);process.on('SIGINT',stop);
  function connect(){
   if(halted)return;
   review.reset('CONNECTING',true);
+  const liveness=new FeedLiveness(Date.now());
+  let already=false;
   socket=new WebSocket('wss://ws.eodhistoricaldata.com/ws/forex?api_token='+encodeURIComponent(token));
   socket.addEventListener('open',()=>{retry.opened();socket.send(JSON.stringify({action:'subscribe',symbols:'XAUUSD'}));});
   socket.addEventListener('message',e=>{
+   if(already||halted)return;
    const r=review.receive(String(e.data));
-   if(r.kind==='quote')retry.acceptedQuote(Date.now());
+   if(r.kind==='quote'){
+    const receivedAt=Date.now();
+    retry.acceptedQuote(receivedAt);
+    liveness.acceptedQuote(receivedAt);
+   }
    if(r.kind==='blocked'){
-    if(['PROVIDER_STATUS_403','PROVIDER_STATUS_422','PROVIDER_STATUS_401'].includes(r.reason))halted=true;
+    if(['PROVIDER_STATUS_403','PROVIDER_STATUS_422','PROVIDER_STATUS_401'].includes(r.reason)){
+     halted=true;clearWatchdog();
+    }
     try{privateSave(dir,review.snapshot());}catch{}
     console.error('EODHD quote intake blocked: '+r.reason);socket.close();return;
    }
@@ -268,15 +297,27 @@ function run(){
     catch{review.reset('STORAGE_FAILED');socket.close();}
    }
   });
-  let already=false;
-  const disconnect=()=>{
-   if(already||halted)return;already=true;review.reset('DISCONNECTED',true);
+  const disconnect=(reason='DISCONNECTED')=>{
+   if(already||halted)return;
+   already=true;clearWatchdog();
+   review.reset(typeof reason==='string'?reason:'DISCONNECTED',true);
    try{privateSave(dir,review.snapshot());}catch{}
    setTimeout(connect,retry.disconnected());
   };
-  socket.addEventListener('close',disconnect);socket.addEventListener('error',disconnect);
+  socket.addEventListener('close',()=>disconnect());
+  socket.addEventListener('error',()=>disconnect());
+  watchdog=setInterval(()=>{
+   if(halted){clearWatchdog();return;}
+   if(liveness.expired(Date.now())){
+    // Some half-open sockets never emit close. Schedule the retry ourselves.
+    // Closed BID/ASK history remains on disk; unfinished M15 is discarded.
+    disconnect('STREAM_IDLE_TIMEOUT');
+    try{socket.close();}catch{}
+   }
+  },SOCKET_CHECK_MS);
+  watchdog.unref?.();
  }
  connect();
 }
 if(require.main===module)run();
-module.exports={ReconnectBackoff,XauusdReview,aggregate,closedHistoryGaps,privateSave,privateLoadClosed,coldStartReview,run};
+module.exports={FeedLiveness,ReconnectBackoff,XauusdReview,aggregate,closedHistoryGaps,privateSave,privateLoadClosed,coldStartReview,run};

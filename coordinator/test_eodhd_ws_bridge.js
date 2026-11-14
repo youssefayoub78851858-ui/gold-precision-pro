@@ -1,7 +1,7 @@
 'use strict';
 const a=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {ReconnectBackoff,XauusdReview,aggregate,closedHistoryGaps,privateSave,privateLoadClosed,coldStartReview}=require('./eodhd_ws_bridge');
+const {FeedLiveness,ReconnectBackoff,XauusdReview,aggregate,closedHistoryGaps,privateSave,privateLoadClosed,coldStartReview}=require('./eodhd_ws_bridge');
 const base=1794493813003,quote=(t,ask=3903.04,bid=3902.46)=>({s:'XAUUSD',a:ask,b:bid,t});
 let now=base,review=new XauusdReview(()=>now+1000);
 a.equal(review.receive(quote(base)).reason,'AUTHORIZATION_MISSING');
@@ -119,6 +119,19 @@ a.equal(retry.disconnected(),5000);
 retry.opened(); // after a quick reconnect, ONE accepted quote is not enough
 retry.acceptedQuote(stableAt+3600000);
 a.equal(retry.disconnected(),10000);
+
+// Half-open sockets must be considered offline after 3 minutes without
+// an accepted tick; no heartbeat/handshake/status can fake tick freshness.
+const live=new FeedLiveness(100000);
+a.equal(live.expired(279999),false);
+a.equal(live.expired(280000),true);
+a.equal(live.acceptedQuote(129999),true);
+a.equal(live.expired(309998),false);
+a.equal(live.expired(309999),true);
+a.equal(live.acceptedQuote(129998),false); // backwards clock cannot refresh
+a.equal(live.expired(129998),true); // fail closed when independent clock moves back
+a.equal(new FeedLiveness(0).expired(180000),true);
+a.throws(()=>new FeedLiveness(NaN),/clock/);
 
 // Closed authentic history must survive a market shutdown. Do not interpolate
 // any missing Saturday/Sunday M15/H1/H4 bars, and never reuse Friday's quote.
