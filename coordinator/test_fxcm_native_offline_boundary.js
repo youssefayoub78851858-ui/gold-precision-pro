@@ -44,6 +44,8 @@ const cases=[
  ['PARTIAL_M15_COVERAGE',p=>{p.frames.M15.splice(2,1);}],
  ['ALL_THREE_FRAMES_REQUIRED',p=>{delete p.frames.H4;}],
  ['STALE_PACKET',p=>{p.receivedUTC='2026-11-13T10:00:00Z';}],
+ ['STALE_LATEST_CLOSED_CANDLE',p=>{p.frames.M15=p.frames.M15.slice(0,4);}],
+ ['MISSING_HIGHER_TIMEFRAME_BAR',p=>{p.frames.H1.splice(1,1);}],
 ];
 for(const [reason,mutate] of cases){let p=make();mutate(p);check(p,reason);}
 let forged=make();forged.eulaSigned=true;forged.sourceApproved=true;forged.signal='BUY';

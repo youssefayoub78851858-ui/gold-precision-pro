@@ -1,6 +1,6 @@
 'use strict';
 // Pure offline FXCM native data-intake contract. Never imports or runs a vendor SDK.
-const W={M15:900000,H1:3600000,H4:14400000},SIDE=['bid','ask'],OHLC=['open','high','low','close'];
+const W={M15:900000,H1:3600000,H4:14400000},AGE={M15:1200000,H1:4500000,H4:18000000},SIDE=['bid','ask'],OHLC=['open','high','low','close'];
 const blockers=['FXCM_CLOUD_EULA_UNVERIFIED','FXCM_DEMO_READ_ONLY_ACCESS_UNVERIFIED','FXCM_NATIVE_SDK_AND_UTC_CLOCK_UNVERIFIED','FXCM_LIVE_VS_HISTORICAL_BID_ASK_UNVERIFIED','PAPER_AND_REAL_TRADING_DISABLED'];
 function utc(x){
  if(typeof x!=='string'||!/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(x))throw Error('UTC_Z_REQUIRED');
@@ -30,6 +30,7 @@ function frame(rows,tf,now){
   for(const k of OHLC)if(sides.ask[k]<sides.bid[k])throw Error('CROSSED_BID_ASK');
   indexed.set(t,sides);prev=t;
  }
+ if(now-(prev+W[tf])>AGE[tf])throw Error('STALE_LATEST_CLOSED_CANDLE');
  return {indexed,count:rows.length,gaps};
 }
 function overlap(m15,higher,tf){
@@ -45,6 +46,16 @@ function overlap(m15,higher,tf){
    for(const k of OHLC)if(Math.abs(aggregate[k]-v[side][k])>0.00001)throw Error('BID_ASK_TIMEFRAME_MISMATCH');
   }
   compared++;
+ }
+ const completeStarts=new Set();
+ for(const stamp of m15.indexed.keys()){
+  const start=Math.floor(stamp/W[tf])*W[tf];
+  if(completeStarts.has(start))continue;
+  const full=Array.from({length:count},(_,i)=>m15.indexed.has(start+i*W.M15)).every(Boolean);
+  if(full){
+   completeStarts.add(start);
+   if(!higher.indexed.has(start))throw Error('MISSING_HIGHER_TIMEFRAME_BAR');
+  }
  }
  return compared;
 }
@@ -62,6 +73,7 @@ function assess(packet,asOfUTC){
   overlaps.H1=overlap(f.M15,f.H1,'H1');
   overlaps.H4=overlap(f.M15,f.H4,'H4');
   if(!overlaps.H1||!overlaps.H4)throw Error('NO_COMPLETE_TIMEFRAME_OVERLAP');
+  if(Object.values(gaps).some(n=>n>0))throw Error('UNVERIFIED_SESSION_GAP');
  }catch(e){errors.push(e.message||'INVALID_FXCM_RECORD');}
  return {provider:'FXCM',adapter:'NATIVE_CPP_JSON_OFFLINE_ONLY',
   status:errors.length?'BLOCKED_INVALID_RECORD':'WAIT_UNVERIFIED_LIVE_SOURCE',
