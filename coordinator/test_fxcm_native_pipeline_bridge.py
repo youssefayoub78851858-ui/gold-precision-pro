@@ -66,7 +66,8 @@ class NativeBridgeTests(unittest.TestCase):
         self.assertTrue(x["structuralAuditPassed"])
     def test_crossed_market_never_arrives_at_engines(self):
         p=fixture()
-        p["frames"]["M15"][0]["ask"]["open"]=0.01
+        for key in ("open", "high", "low", "close"):
+            p["frames"]["M15"][0]["ask"][key] = p["frames"]["M15"][0]["bid"][key] - 0.1
         x=review_fxcm_native_standby(p,NOW)
         self.assert_safe(x)
         self.assertFalse(x["structuralAuditPassed"])
