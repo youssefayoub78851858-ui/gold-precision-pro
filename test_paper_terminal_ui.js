@@ -14,7 +14,7 @@ function makeNode(id){
  };
  nodes.set(id,node);return node;
 }
-for(const id of ['chart','paper-message','research-output','file-input','sample','next','levels','export-journal','inspect','paper-buy','paper-sell','paper-close','reset','trade-rows','replay-bidask','replay-time','source-kind','live-badge','live-decision','live-price','live-time','chart-note','position-status','stat-balance','stat-net','stat-count','stat-win','stat-dd','stat-pf','bias-m15','bias-h1','bias-h4','stop','tp1','tp2','tp3','active-tf-label'])makeNode(id);
+for(const id of ['chart','paper-message','research-output','file-input','sample','next','levels','export-journal','inspect','paper-buy','paper-sell','paper-close','reset','trade-rows','replay-bidask','replay-time','source-kind','live-badge','live-decision','live-price','live-time','chart-note','position-status','stat-balance','stat-net','stat-count','stat-win','stat-dd','stat-pf','bias-m15','bias-h1','bias-h4','stop','tp1','tp2','tp3','active-tf-label','stop-selftest','stop-selftest-result'])makeNode(id);
 for(const tf of ['M15','H1','H4']){let n=makeNode('tab-'+tf);n.dataset.tf=tf;tabs.push(n)}
 const storage=new Map(),window={devicePixelRatio:1,confirm:()=>true,addEventListener(){}},
  document={getElementById:makeNode,querySelectorAll:()=>tabs,createElement:(tag)=>({tag,textContent:'',appendChild(){},click(){}})};
@@ -24,6 +24,11 @@ const context={window,document,localStorage:{getItem:k=>storage.get(k)||null,set
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,'paper-terminal-core.js'),'utf8'),context,{timeout:1500});
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,'paper-terminal-ui.js'),'utf8'),context,{timeout:1500});
 assert.equal(makeNode('live-decision').textContent,'WAIT');assert.equal(makeNode('live-price').textContent,'غير متصل');
+const emptyBefore=storage.size;
+makeNode('stop-selftest').trigger();
+assert.match(makeNode('stop-selftest-result').textContent,/نجح اختبار SL/);
+assert.equal(storage.size,emptyBefore,'self test must not save an account');
+
 assert.equal(makeNode('sample').disabled,false);
 makeNode('sample').trigger();
 assert.match(makeNode('source-kind').textContent,/اصطناعي/);
@@ -38,6 +43,11 @@ makeNode('next').trigger();
 makeNode('paper-close').trigger();
 assert.equal(makeNode('stat-count').textContent,'1');
 assert(storage.has('gold-paper-terminal-offline-v1'));
+const savedPaper=storage.get('gold-paper-terminal-offline-v1');
+makeNode('stop-selftest').trigger();
+assert.match(makeNode('stop-selftest-result').textContent,/سجلك الحالي لم يتغيّر/);
+assert.equal(storage.get('gold-paper-terminal-offline-v1'),savedPaper);
+
 const expected=JSON.parse(storage.get('gold-paper-terminal-offline-v1'));
 assert.equal(expected.trades.length,1);
 assert.equal(expected.dataset.dataOrigin,'SYNTHETIC_TEST_ONLY');

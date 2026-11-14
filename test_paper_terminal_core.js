@@ -53,3 +53,19 @@ assert.equal(conservative.trades.at(-1).reason,'STOP_FIRST_BOTH_TOUCHED');
 assert(conservative.trades.at(-1).exit<=pos.stop-1.5);
 assert(conservative.trades.at(-1).net<0);
 console.log('PASS conservative gap fill and stop-first when SL and TP are hit in the same M15 bar');
+
+// Deterministic independent stop-loss scenarios; no provider, no future market feed.
+const standalone=c.stopLossSelfTest();
+assert.equal(standalone.signal,'WAIT');
+assert.equal(standalone.executable,false);
+assert.equal(standalone.liveData,false);
+assert.equal(standalone.providerRequests,0);
+assert.equal(standalone.ordersSent,0);
+assert.equal(standalone.existingPaperJournalChanged,false);
+assert.deepEqual(standalone.cases.map(x=>x.reason),['STOP','STOP','STOP_FIRST_BOTH_TOUCHED']);
+assert.deepEqual(standalone.cases.map(x=>x.side),['BUY','SELL','BUY']);
+assert(standalone.cases.every(x=>x.net<0&&x.lossIncludesCosts));
+assert(standalone.cases[0].exit<standalone.cases[0].stop);
+assert(standalone.cases[1].exit>standalone.cases[1].stop);
+assert.deepEqual(standalone,c.stopLossSelfTest());
+console.log('PASS deterministic independent stop-only BUY/SELL, stop-first, adverse gap and fee tests');

@@ -128,5 +128,44 @@ function sample(){
   }
   return validate({symbol:'XAUUSD',source:'GENERATED_OFFLINE_DETERMINISTIC_TEST',dataOrigin:'SYNTHETIC_TEST_ONLY',bars});
 }
-return {MS,COSTS,validate,group,defaultSession,checkedSession,quote,open,close,advance,stats,sample};
+// Deliberate OFFLINE unit-simulation. Never imports actual recorded market candles.
+// Reuse actual paper open -> advance -> close accounting, without touching a user session.
+function stopLossSelfTest(){
+ function scenario(side,simultaneous=false){
+  const session=defaultSession(sample()),q=quote(session);
+  const isBuy=side==='BUY',entry=isBuy?q.ask+COSTS.slippage:q.bid-COSTS.slippage;
+  const stop=clamp(entry+(isBuy?-2:2));
+  const tp=[1,2,4].map(n=>clamp(entry+(isBuy?n:-n)));
+  const position=open(session,side,stop,tp);
+  const next=session.dataset.bars[session.cursor+1];
+  const gap=clamp(stop+(isBuy?-.65:.65));
+  const spread=.36;
+  if(isBuy){
+   next.bid={
+    open:gap,high:simultaneous?clamp(position.tp[2]+.5):clamp(gap+.2),
+    low:clamp(gap-.4),close:clamp(gap-.1)};
+   next.ask=Object.fromEntries(Object.entries(next.bid).map(([k,v])=>[k,clamp(v+spread)]));
+  }else{
+   next.ask={
+    open:gap,high:clamp(gap+.4),
+    low:simultaneous?clamp(position.tp[2]-.5):clamp(gap-.2),
+    close:clamp(gap+.1)};
+   next.bid=Object.fromEntries(Object.entries(next.ask).map(([k,v])=>[k,clamp(v-spread)]));
+  }
+  validate(session.dataset); // The deliberate bar must still be valid two-sided OHLC.
+  advance(session);
+  const trade=session.trades[0];
+  const expected=simultaneous?'STOP_FIRST_BOTH_TOUCHED':'STOP';
+  must(session.position===null&&session.trades.length===1&&trade?.reason===expected,'STOP_LOSS_SELF_TEST_NOT_CLOSED');
+  must(trade.net<0&&stats(session).closed===1,'STOP_LOSS_SELF_TEST_BAD_ACCOUNTING');
+  must(isBuy?trade.exit<trade.stop:trade.exit>trade.stop,'ADVERSE_GAP_NOT_CHARGED');
+  return {side,reason:trade.reason,entry:trade.entry,stop:trade.stop,
+    exit:trade.exit,net:trade.net,closedUTC:trade.closedUTC,lossIncludesCosts:true};
+ }
+ const cases=[scenario('BUY'),scenario('SELL'),scenario('BUY',true)];
+ return {mode:'SYNTHETIC_STOP_LOSS_SELF_TEST',origin:'SYNTHETIC_TEST_ONLY',
+   signal:'WAIT',executable:false,liveData:false,providerRequests:0,ordersSent:0,
+   realTrades:false,existingPaperJournalChanged:false,cases};
+}
+return {MS,COSTS,validate,group,defaultSession,checkedSession,quote,open,close,advance,stats,sample,stopLossSelfTest};
 });

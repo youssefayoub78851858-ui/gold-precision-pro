@@ -74,6 +74,89 @@ function paperTrade(side){
  try{if(!state)throw Error('لا توجد بيانات محلية');C.open(state,side,field('stop'),[field('tp1'),field('tp2'),field('tp3')]);persist();render();msg('تم فتح صفقة '+side+' ورقية محلية — ليست أمراً لدى وسيط.');}
  catch(err){msg('لم تُفتح الصفقة: '+err.message);}
 }
+$('stop-selftest').addEventListener('click',()=>{
+ try{
+  const before=state?JSON.stringify(state):null;
+  const result=C.stopLossSelfTest();
+  if(result.signal!=='WAIT'||result.executable!==false||result.liveData!==false||
+    result.providerRequests!==0||result.ordersSent!==0||
+    result.existingPaperJournalChanged!==false||result.cases.length!==3||
+    result.cases.some(x=>x.net>=0||!x.reason.startsWith('STOP')))throw Error('SELF_TEST_REJECTED');
+  if(before!==(state?JSON.stringify(state):null))throw Error('USER_PAPER_SESSION_CHANGED');
+  $('stop-selftest-result').textContent='نجح اختبار SL الاصطناعي: BUY وSELL وفجوة سعرية مع لمس SL وTP معاً (SL أولاً). الخسائر التجريبية: '+
+    result.cases.map(x=>x.side+' '+x.reason+' '+fmt(x.net)+'
+$('paper-sell').addEventListener('click',()=>paperTrade('SELL'));
+$('paper-close').addEventListener('click',()=>{
+ try{C.close(state);persist();render();msg('أُغلقت الصفقة الورقية عند سعر إعادة الشمعة.');}catch(e){msg(e.message);}
+});
+$('next').addEventListener('click',()=>{
+ try{C.advance(state);persist();render();msg('انتقلت لشمعة M15 مغلقة جديدة. سعر مباشر: غير متاح.');}
+ catch(e){msg(e.message);}
+});
+$('levels').addEventListener('click',()=>{
+ if(!state||state.position)return;
+ const q=C.quote(state),bidRows=state.dataset.bars.slice(Math.max(0,state.cursor-13),state.cursor+1).map(x=>x.bid);
+ const radius=Math.max(.7,bidRows.reduce((a,x)=>a+x.high-x.low,0)/Math.max(1,bidRows.length));
+ // These are an illustration for a BUY paper scenario, NOT an engine signal.
+ $('stop').value=fmt(q.ask-radius*1.6);
+ $('tp1').value=fmt(q.ask+radius);
+ $('tp2').value=fmt(q.ask+2*radius);
+ $('tp3').value=fmt(q.ask+3*radius);
+ msg('تم تعبئة مستويات BUY ورقية تجريبية فقط. يمكنك تعديلها أو تجربة SELL بمستويات معاكسة. ليست توصية.');
+});
+$('sample').addEventListener('click',()=>{
+ if(state?.position&&!window.confirm('لديك صفقة ورقية مفتوحة. بدء عينة جديدة يمحو جلسة المحاكاة الحالية. هل تريد المتابعة؟'))return;
+ initialize(C.sample());msg('تم تحميل 512 شمعة اصطناعية مغلقة؛ يمكنك تحريك الإعادة وفتح صفقات ورقية.');
+});
+$('file-input').addEventListener('change',async()=>{
+ try{const f=$('file-input').files?.[0];if(!f)return;if(f.size>950000)throw Error('ملف كبير، الحد 950KB');
+  const payload=JSON.parse(await f.text());if(payload.dataOrigin!=='RECORDED_UNVERIFIED')throw Error('للتسجيل التاريخي استخدم dataOrigin=RECORDED_UNVERIFIED؛ لا يمكن ادعاء بيانات حية');
+  if(state?.position&&!window.confirm('هذا يمحو جلسة محاكاة بها صفقة مفتوحة. هل تتابع؟'))return;
+  initialize(payload);msg('ملف مسجّل محلياً؛ حقوق المصدر ومصداقيته غير محققتين. القرار الحي WAIT.');
+ }catch(err){msg('لم يُقبل الملف: '+err.message);}
+});
+for(const button of document.querySelectorAll('button[data-tf]'))button.addEventListener('click',()=>{tf=button.dataset.tf;$('active-tf-label').textContent=tf;document.querySelectorAll('button[data-tf]').forEach(b=>b.classList.toggle('active',b===button));draw();});
+$('inspect').addEventListener('click',async()=>{
+ if(!state||state.dataset.dataOrigin!=='SYNTHETIC_TEST_ONLY')return;
+ const button=$('inspect');button.disabled=true;$('research-output').textContent='جاري فحص بيانات الاختبار فقط بمحرك V3...';
+ try{
+  const payload={...state.dataset,bars:state.dataset.bars.slice(0,state.cursor+1)};
+  const response=await fetch('/api/v3/paper/inspect',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(10000)});
+  if(!response.ok)throw Error('خادم التحليل غير متوفر أو النسخة غير منشورة');
+  const r=await response.json();
+  if(r.mode!=='OFFLINE_SYNTHETIC_REPLAY'||r.signal!=='WAIT'||r.executable!==false||r.researchEligible!==false||r.connectedRealMarketData!==false||r.providerRequests!==0||r.ordersSent!==0)throw Error('رد محرك غير آمن');
+  analysis=r;
+  for(const x of ['M15','H1','H4'])$('bias-'+x.toLowerCase()).textContent=r.structure?.[x]?.bias||'غير متاح';
+  const obs=(r.structure?.M15||{}),ind=r.indicators||{};
+  $('research-output').textContent='قرار V3: WAIT (المصادر الخارجية ناقصة)\n'+
+   'EMA20: '+fmt(ind.ema20)+' · EMA50: '+fmt(ind.ema50)+' · RSI14: '+fmt(ind.rsi14)+' · ATR14: '+fmt(ind.atr14)+'\n'+
+   'BOS صعود/هبوط: '+(obs.bosUp?'نعم':'لا')+'/'+(obs.bosDown?'نعم':'لا')+
+   ' · CHoCH: '+(obs.chochUp||obs.chochDown?'مرصود':'غير مرصود')+
+   ' · Liquidity sweep: '+(obs.sweepHigh||obs.sweepLow?'مرصود':'غير مرصود')+
+   ' · FVG: '+(obs.fvgBull||obs.fvgBear?'مرصود':'غير مرصود')+'\n'+
+   'VWAP وOrder Block: غير موثّقين.\n'+
+   'المصادر المفقودة: '+r.blocked.join('، ')+'\nتحليل تاريخي/اصطناعي فقط، لا توصية قابلة للتنفيذ.';
+ }catch(e){$('research-output').textContent='WAIT — تعذّر الفحص: '+e.message;}
+ finally{button.disabled=false;}
+});
+$('export-journal').addEventListener('click',()=>{
+ if(!state)return;
+ const exportData={mode:'LOCAL_PAPER_REPLAY',liveData:false,executable:false,source:state.dataset.source,dataOrigin:state.dataset.dataOrigin,
+  costs:C.COSTS,cursor:state.cursor,stats:C.stats(state),position:state.position,trades:state.trades,
+  note:'Private offline paper test only; no trading broker or verified returns.'};
+ const blob=new Blob([JSON.stringify(exportData,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='gold-paper-journal.json';a.click();URL.revokeObjectURL(url);
+});
+$('reset').addEventListener('click',()=>{if(!window.confirm('مسح كل بيانات وجلسة التداول الورقي المحفوظة في هذا المتصفح؟'))return;state=null;analysis=null;try{localStorage.removeItem(KEY);}catch(_){ }render();msg('تم مسح جلسة المحاكاة المحلية.');});
+window.addEventListener('resize',draw,{passive:true});
+try{const saved=localStorage.getItem(KEY);if(saved&&saved.length<1100000){state=C.checkedSession(JSON.parse(saved));msg('تمت استعادة جلسة ورقية محلية سابقة، وليست أسعار حية.');}}catch(_){state=null;msg('جلسة المتصفح السابقة غير صالحة؛ ابدأ عينة جديدة.');}
+render();
+})();
+).join(' · ')+
+    ' — سجلك الحالي لم يتغيّر. القرار الحقيقي WAIT.';
+ }catch(err){
+  $('stop-selftest-result').textContent='فشل اختبار SL: '+err.message+' — لا توجد أوامر حقيقية.';
+ }
+});
 $('paper-buy').addEventListener('click',()=>paperTrade('BUY'));
 $('paper-sell').addEventListener('click',()=>paperTrade('SELL'));
 $('paper-close').addEventListener('click',()=>{
