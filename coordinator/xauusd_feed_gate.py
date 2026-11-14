@@ -49,6 +49,9 @@ class SourcePolicy:
     # Independently checked UTC exchange/session openings, never copied from the packet.
     independent_schedule_reference: str = ""
     independent_expected_open_times: dict | None = None
+    # The paper/replay accounting is BID-based; MID/ASK cannot be silently substituted.
+    expected_price_basis: str = ""
+    price_basis_reference: str = ""
 
     @property
     def authorized(self) -> bool:
@@ -193,6 +196,12 @@ def intake_payload(payload: dict, now: dt.datetime, policy: SourcePolicy) -> dic
     except (TypeError, ValueError):
         now_utc = parse_utc(now.isoformat())
         reasons.append("INGEST_TIMESTAMP_INVALID")
+    if mode in {"live", "recorded"}:
+        if (policy.expected_price_basis != "BID"
+                or not isinstance(policy.price_basis_reference, str)
+                or not policy.price_basis_reference.strip()
+                or payload.get("priceBasis") != "BID"):
+            reasons.append("BID_QUOTE_BASIS_UNVERIFIED")
     frames = payload.get("frames")
     validated = {}
     # A provider packet must not be able to certify its own missing-bar schedule.
