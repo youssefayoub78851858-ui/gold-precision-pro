@@ -1,0 +1,57 @@
+name: One-time public official free-context HTTP and parser audit
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths: [.github/workflows/free-official-context-http-review.yml]
+permissions:
+  contents: read
+jobs:
+  public-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Read official free public envelopes ONCE without accounts or trading
+        run: |
+          node <<'JS'
+          'use strict';
+          const {SERIES,parseFeed}=require('./coordinator/h15_official_rss');
+          const {FED_URL,BLS_URL,parseFedPolicyRss,parseBlsCalendar}=require('./coordinator/official_macro_review');
+          const {DATASET,FIELDS,reviewCFTC}=require('./coordinator/cftc_gold_cot_context');
+          const now=new Date();
+          const cot=new URL(DATASET);
+          cot.searchParams.set('$select',FIELDS.join(','));
+          cot.searchParams.set('$where',"cftc_contract_market_code='088691'");
+          cot.searchParams.set('$order','report_date_as_yyyy_mm_dd DESC');
+          cot.searchParams.set('$limit','2');
+          const probes=[
+           {id:'H15_DGS2',url:SERIES[0].url,parse:b=>parseFeed(b,2).latest},
+           {id:'H15_DGS10',url:SERIES[1].url,parse:b=>parseFeed(b,10).latest},
+           {id:'FED_POLICY_RSS',url:FED_URL,parse:b=>({count:parseFedPolicyRss(b,now).length})},
+           {id:'BLS_CALENDAR',url:BLS_URL,parse:b=>({count:parseBlsCalendar(b,now).length})},
+           {id:'CFTC_GOLD_COT',url:cot.toString(),parse:b=>{
+             const x=reviewCFTC(JSON.parse(b),now.toISOString());
+             return {status:x.status,observationDate:x.observationDate??null,reasonCode:x.reasonCode??null,
+               managedMoneyNetContracts:x.managedMoneyNetContracts??null,signal:x.signal,
+               executable:x.executable,orderFlowAvailable:x.orderFlowAvailable};
+           }}
+          ];
+          for(const probe of probes){
+           const report={source:probe.id,requestCount:1,accountUsed:false,paidKeyUsed:false,
+             signal:'WAIT',executionAllowed:false,cloudLicenseNotInferred:true};
+           try{
+            const res=await fetch(probe.url,{headers:{Accept:'application/json,application/xml,text/xml,text/calendar','User-Agent':'GoldPrecisionPro-OneTime-Public-Audit/1.0'},signal:AbortSignal.timeout(11000),redirect:'error'});
+            report.httpStatus=res.status;report.type=res.headers.get('content-type');
+            const body=await res.text();
+            report.bodyBytes=body.length;
+            if(res.ok&&body.length<500000){
+             try{report.parsed=probe.parse(body)}catch(e){report.parseError=String(e.message).slice(0,120);}
+            }else report.parseError='HTTP_OR_OVERSIZE';
+           }catch(e){report.networkError=e.name;report.httpStatus=null;}
+           console.log('OFFICIAL_PUBLIC_RESULT '+JSON.stringify(report));
+          }
+          console.log('OFFICIAL_PUBLIC_DONE no credentials, subscriptions, orders, persistent polling or broker calls');
+          JS
