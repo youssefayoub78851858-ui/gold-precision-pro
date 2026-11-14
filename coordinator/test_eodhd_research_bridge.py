@@ -207,6 +207,7 @@ class EodhdResearchStaging(unittest.TestCase):
             schedule_verified=True,schedule_reference="UNIT TEST ONLY",
             history_verified=True,history_reference="UNIT TEST ONLY",
             clock_verified=True,clock_reference="UNIT TEST ONLY",
+            bid_basis_verified=True,bid_basis_reference="UNIT QUOTE BASIS ONLY",
             expected_open_times={tf:[x["openTime"] for x in s["bidFrames"][tf]]
                                  for tf in ("M15","H1","H4")})
         p=SourcePolicy(True,True,True,True,"TEST ONLY","EODHD")
@@ -222,6 +223,12 @@ class EodhdResearchStaging(unittest.TestCase):
         self.assertFalse(result["executable"])
         self.assertEqual(result["dataConvention"],"INDICATIVE_EODHD_BID_OHLC_RESEARCH_ONLY")
         passed=evaluate.call_args.args[0]
+        scoped_policy = evaluate.call_args.args[2]
+        self.assertEqual(passed["priceBasis"], "BID")
+        self.assertEqual(scoped_policy.expected_price_basis, "BID")
+        self.assertEqual(scoped_policy.price_basis_reference, "UNIT QUOTE BASIS ONLY")
+        self.assertEqual(scoped_policy.independent_schedule_reference, "UNIT TEST ONLY")
+        self.assertEqual(set(scoped_policy.independent_expected_open_times), {"15min", "1h", "4h"})
         self.assertEqual(passed["frames"]["15min"]["candles"][-1]["close"],
                          s["bidFrames"]["M15"][-1]["close"])
         self.assertNotEqual(passed["frames"]["15min"]["candles"][-1]["close"],
