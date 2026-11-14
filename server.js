@@ -117,6 +117,19 @@ const server = http.createServer(async (req, res) => {
     return send(res,200,out);
   }
 
+  // Public CFTC futures positioning: optional one-time read-only weekly context.
+  // Disabled by default; zero trade capability, no exchange GC quotes or DOM.
+  if(req.url.split("?")[0]==="/api/v3/ultimate/cftc-weekly-context"){
+    if(!DEMO_MODE)return send(res,503,{status:"STANDBY_ONLY",signal:"WAIT",executable:false});
+    if(req.method!=="GET")return send(res,405,{status:"GET_ONLY",signal:"WAIT",executable:false});
+    const allowed=process.env.CFTC_WEEKLY_PUBLIC_FETCH_APPROVED==="1";
+    const result=await require("./coordinator/cftc_gold_cot_context").getCFTCGoldWeekly({offline:!allowed});
+    if(result.signal!=="WAIT"||result.executable!==false||result.researchEligible!==false||
+       result.orderFlowAvailable!==false||result.gcMarketDataAvailable!==false)
+      return send(res,503,{status:"REJECTED_WEEKLY_DATA_CONTRACT",signal:"WAIT",executable:false});
+    return send(res,200,result);
+  }
+
   // Public REVIEW-DEMO FXCM readiness: facts only; no market or private-coordinator connection.
   if(req.url.split("?")[0]==="/api/v3/ultimate/fxcm-readiness"){
     if(req.method!=="GET")return send(res,405,{error:"GET only",signal:"WAIT",executable:false});

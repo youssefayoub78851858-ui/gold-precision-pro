@@ -58,6 +58,45 @@
 })();
 </script>
 
+<section id="cftc-weekly-context" class="overview" aria-labelledby="cftc-weekly-title">
+<h2 id="cftc-weekly-title">CFTC — تمركز المستثمرين بالذهب (مجاني وأسبوعي)</h2>
+<p id="cftc-weekly-status" role="status">WAIT — هذا تقرير تمركز أسبوعي، وليس بيانات GC المباشرة أو Order Flow.</p>
+<div class="overview-grid">
+<div class="overview-card">تاريخ التقرير<strong id="cftc-weekly-date">غير محمّل</strong></div>
+<div class="overview-card">صافي مراكز Managed Money<strong id="cftc-weekly-net">غير محمّل</strong></div>
+</div>
+<button type="button" id="cftc-weekly-refresh">فحص تقرير CFTC المجاني</button>
+<p class="overview-status">مصدر عام رسمي بلا مفتاح. فحصه على هذه الخدمة مغلق افتراضياً، ولا يتفعّل إلا بإذن منفصل للنشر الخاص. التأخير أسبوعي ولا يدخل قرار التداول الفوري.</p>
+</section><hr>
+<script>
+(function(){
+ const b=document.getElementById('cftc-weekly-refresh');
+ const status=document.getElementById('cftc-weekly-status');
+ const date=document.getElementById('cftc-weekly-date');
+ const net=document.getElementById('cftc-weekly-net');
+ b.addEventListener('click',async()=>{
+  b.disabled=true;date.textContent='غير محمّل';net.textContent='غير محمّل';
+  status.textContent='WAIT — جارٍ فحص مصدر CFTC الأسبوعي';
+  try{
+   const r=await fetch('/api/v3/ultimate/cftc-weekly-context',{cache:'no-store',credentials:'omit',redirect:'error',signal:AbortSignal.timeout(10000)});
+   if(!r.ok)throw Error('UNAVAILABLE');
+   const d=await r.json();
+   if(d.mode!=='CFTC_GOLD_WEEKLY_CONTEXT'||d.signal!=='WAIT'||
+      d.executable!==false||d.researchEligible!==false||
+      d.orderFlowAvailable!==false||d.gcMarketDataAvailable!==false)
+    throw Error('SOURCE_UNVERIFIED');
+   if(d.status==='WEEKLY_REFERENCE_ONLY'){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d.observationDate)||
+       !Number.isSafeInteger(d.managedMoneyNetContracts))throw Error('INVALID_CFTC_REPORT');
+    date.textContent=d.observationDate;
+    net.textContent=d.managedMoneyNetContracts.toLocaleString('en-US')+' عقد';
+    status.textContent='WAIT — تقرير تمركز أسبوعي فقط، لا يعطي دخولاً أو خروجاً';
+   }else status.textContent='WAIT — مصدر CFTC غير متصل على هذه النسخة';
+  }catch{status.textContent='WAIT — فحص CFTC غير متاح؛ لا إشارات تداول';}
+  finally{b.disabled=false;}
+ });
+})();
+</script>
 <section id="fxcm-public-readiness" class="overview" aria-labelledby="fxcm-public-title">
 <h2 id="fxcm-public-title">FXCM — حالة مصدر الذهب على الموبايل</h2>
 <p id="fxcm-public-state" role="status">WAIT — لا توجد بيانات FXCM حقيقية متصلة أو مرخصة بعد.</p>
