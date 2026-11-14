@@ -67,6 +67,11 @@ jobs:
       - name: FXCM FCLite Node getter-shape audit (offline mock only)
         working-directory: coordinator
         run: node test_fxcm_fclite_history_audit.js
+      - name: FXCM native bid-ask candidate JSON boundary (offline only, wait)
+        working-directory: coordinator
+        run: |
+          node --check fxcm_native_offline_boundary.js
+          node test_fxcm_native_offline_boundary.js
       - name: BiQuote free XAUUSD source provenance, BidAsk and closed OHLC audit (offline only)
         working-directory: coordinator
         run: python -m unittest -v test_biquote_offline_source_audit
