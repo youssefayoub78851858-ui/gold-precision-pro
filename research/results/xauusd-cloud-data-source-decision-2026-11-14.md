@@ -12,7 +12,7 @@ validation. All engine signals remain WAIT and executable:false.
 
 ## Ranked providers based on public documentation
 
-1. FXCM ForexConnect — first low-cost verification candidate.
+1. FXCM ForexConnect — technically prepared, but not an accessible primary candidate for Lebanon registration.
    The official provider states the SDK is free, supports Linux, live feed and
    history, and uses demo or live Trading Station credentials; official
    FXCM GitHub says EULA signature is required before use.
@@ -26,7 +26,7 @@ validation. All engine signals remain WAIT and executable:false.
    https://www.fxcm.com/markets/algorithmic-trading/market-data/
    https://github.com/fxcm/ForexConnectAPI
 
-2. Exness Trader API — technical alternative, NOT proven deposit-free.
+2. Exness Trader API — technical alternative; currently unavailable on the Lebanon registration path.
    Official docs support hostable REST/WebSocket market data, historical
    Bid/Ask candle requests and Trading read access. It requires Exness
    account eligibility and identity/address verification. Regional
@@ -41,13 +41,16 @@ validation. All engine signals remain WAIT and executable:false.
    https://www.exness-api.com/trading/guides/code-examples
    https://www.exness-api.com/reference/trading/get-candle-history
 
-3. EODHD EOD + Intraday All World Extended — paid fallback, $29.99/month
+3. EODHD EOD + Intraday All World Extended — primary paid forward-collection candidate, $29.99/month
    listed for personal plans, including Forex WebSocket and intraday data.
-   Do not assume live Bid/Ask WebSocket snapshots match historical intraday
-   OHLC price basis or sessions. The independent historical-quote parity
-   prerequisite is not established and must be proven before using REST
-   candles to warm a real-time research engine. Avoid purchase solely
-   because WebSocket has XAUUSD. No paid token request has been made.
+   Provider support confirmed XAUUSD live Bid/Ask WebSocket, and private
+   single-user Render research/storage rights. Historical 1-minute intraday
+   XAUUSD.FOREX OHLC is updated the following day, has an unspecified price
+   basis, and is NOT from the same feed; no separate historical Bid/Ask archive.
+   Therefore it cannot warm the live Bid/Ask research engine as if comparable.
+   Collect authentic, continuously observed closed BID/ASK M15/H1/H4 bars
+   forward only after explicit subscription, source and private deployment
+   approval. No paid token request has been made.
    Docs:
    https://eodhd.com/pricing
    https://eodhd.com/help/plans
@@ -65,12 +68,32 @@ validation. All engine signals remain WAIT and executable:false.
    https://help.oanda.com/us/en/faqs/api-user-guide.htm
    https://developer.oanda.com/rest-live-v20/introduction/
 
-## Hard decision
-**FXCM free Demo is the first candidate to resolve with written provider
-confirmation.** At this point no suitable feed is actually authorized and
-working end-to-end. The next real activation hinge is a reply resolving
-cloud usage/EULA, trading-disabled Demo security, timestamp/quote basis,
-XAUUSD Bid/Ask history and no-deposit availability.
+## Hard decision — updated after keyless real HTTP/JSON tests
+**For an independent private Render stream, EODHD $29.99/mo is the lowest-priced
+candidate in this comparison whose provider has explicitly confirmed XAUUSD live
+BID/ASK streaming and the intended private research/storage rights.** It is NOT
+yet a validated continuously connected feed, nor sufficient for a complete
+historical BID/ASK backtest from day one. A trial subscription would require
+prior user approval and a separate approved private deployment.
+
+Gold API Premium is cheaper at **$10/mo**, but its /ohlc endpoint returns ONE
+OHLC summary per arbitrary range, not native ready-made M15/H1/H4 historical
+series; /history minute/hour groupings return min/max/avg, not full OHLC.
+Unknown closed-bar finalization, session calendar, true quote basis, Bid/Ask
+parity and historical availability make it **not purchase-ready** for this
+BID/ASK paper engine. Gold API free public price is display-only.
+
+Actual public one-shot GitHub Actions 43613079168:
+GET Gold API /symbols => HTTP 200 JSON, /price/XAU => HTTP 200 JSON.
+No-key Gold API /ohlc/XAU and /history => HTTP 401 JSON
+{"error":"No x-api-key header."}. EODHD demo-token XAUUSD intraday
+=> HTTP 403 Forbidden (text/html); no licensed XAUUSD OHLC obtained.
+No payment, account, trade, secret or Render deployment.
+
+The submitted FXCM and Exness account registration paths both reject
+Lebanon residence. Do not request a different country of residence.
+All strategies remain WAIT/executable:false until source validation,
+data continuity, independent UTC session rules and risk controls pass.
 
 Do not pay EODHD, Exness or Twelve Data yet. Do not assume paid activation
 would provide every remaining macro/order-flow/news layer or validate the
@@ -79,3 +102,10 @@ be used for updates; do not duplicate prior vendor inquiries needlessly.
 
 No source credentials, private provider-email bodies, broker data, payments,
 real SDK session, or provider requests are in this document.
+
+
+### Additional official Gold API references (reviewed 2026-11-14)
+- https://gold-api.com/llms.txt
+- https://gold-api.com/pricing
+- https://gold-api.com/terms
+- Actual HTTP probe: https://github.com/youssefayoub78851858-ui/gold-precision-pro/actions/runs/43613079168
