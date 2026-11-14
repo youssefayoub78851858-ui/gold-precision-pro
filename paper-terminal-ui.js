@@ -79,12 +79,18 @@ $('stop-selftest').addEventListener('click',()=>{
   const before=state?JSON.stringify(state):null;
   const result=C.stopLossSelfTest();
   if(result.signal!=='WAIT'||result.executable!==false||result.liveData!==false||
-    result.providerRequests!==0||result.ordersSent!==0||
-    result.existingPaperJournalChanged!==false||result.cases.length!==3||
-    result.cases.some(x=>x.net>=0||!x.reason.startsWith('STOP')))throw Error('SELF_TEST_REJECTED');
+    result.providerRequests!==0||result.ordersSent!==0||result.existingPaperJournalChanged!==false||
+    result.cases.length!==3||result.cases.some(x=>x.net>=0||!x.reason.startsWith('STOP')))
+    throw Error('SELF_TEST_REJECTED');
   if(before!==(state?JSON.stringify(state):null))throw Error('USER_PAPER_SESSION_CHANGED');
+  const details=result.cases.map(x=>[x.side,x.reason,fmt(x.net),'USD'].join(' ')).join(' | ');
   $('stop-selftest-result').textContent='نجح اختبار SL الاصطناعي: BUY وSELL وفجوة سعرية مع لمس SL وTP معاً (SL أولاً). الخسائر التجريبية: '+
-    result.cases.map(x=>x.side+' '+x.reason+' '+fmt(x.net)+'
+    details+' — سجلك الحالي لم يتغيّر. القرار الحقيقي WAIT.';
+ }catch(err){
+  $('stop-selftest-result').textContent='فشل اختبار SL: '+err.message+' — لا توجد أوامر حقيقية.';
+ }
+});
+$('paper-buy').addEventListener('click',()=>paperTrade('BUY'));
 $('paper-sell').addEventListener('click',()=>paperTrade('SELL'));
 $('paper-close').addEventListener('click',()=>{
  try{C.close(state);persist();render();msg('أُغلقت الصفقة الورقية عند سعر إعادة الشمعة.');}catch(e){msg(e.message);}
