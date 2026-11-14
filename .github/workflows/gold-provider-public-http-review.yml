@@ -1,0 +1,54 @@
+name: One-time real HTTP public gold provider pre-purchase probe
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths: [.github/workflows/gold-provider-public-http-review.yml]
+permissions:
+  contents: read
+jobs:
+  verify-public-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Probe exact public endpoints once each with no credentials or account
+        shell: bash
+        run: |
+          node <<'JS'
+          'use strict';
+          // Fixed public URLs only. No key, account, order, login or recurring poll.
+          const end=Math.floor(Date.now()/1000)-900;
+          const start=end-900;
+          const probes=[
+            ['gold-symbols','https://api.gold-api.com/symbols'],
+            ['gold-spot-XAU','https://api.gold-api.com/price/XAU'],
+            ['gold-ohlc-no-key','https://api.gold-api.com/ohlc/XAU?startTimestamp='+start+'&endTimestamp='+end],
+            ['gold-minute-history-no-key','https://api.gold-api.com/history?symbol=XAU&startTimestamp='+start+'&endTimestamp='+end+'&groupBy=minute'],
+            ['eodhd-demo-XAUUSD-one-minute','https://eodhd.com/api/intraday/XAUUSD.FOREX?api_token=demo&interval=1m&fmt=json']
+          ];
+          const safe=(v)=>typeof v==='string'?v.slice(0,180):null;
+          for(const [name,url] of probes){
+            try{
+              const response=await fetch(url,{headers:{Accept:'application/json','User-Agent':'GoldPrecisionPro-NonTrading-Public-Probe/1.0'},signal:AbortSignal.timeout(12000)});
+              const body=(await response.text()).slice(0,3000);
+              let parsed;try{parsed=JSON.parse(body)}catch{}
+              const obj=parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{};
+              const report={
+                probe:name,httpStatus:response.status,contentType:response.headers.get('content-type'),
+                cacheControl:response.headers.get('cache-control'),serverDate:response.headers.get('date'),
+                jsonParsed:parsed!==undefined,jsonType:Array.isArray(parsed)?'array':typeof parsed,
+                keys:Array.isArray(parsed)?[]:Object.keys(obj).slice(0,22),
+                count:Array.isArray(parsed)?parsed.length:null,
+                exampleItem:Array.isArray(parsed)?parsed[0]??null:null,
+                symbol:obj.symbol??null,price:obj.price??null,updatedAt:obj.updatedAt??null,
+                errorCode:obj.code??obj.error?.code??null,
+                message:safe(obj.message??obj.error?.message??(typeof obj.error==='string'?obj.error:null)),
+                unparsedSample:parsed===undefined?body.slice(0,150):null,
+                requestPurpose:'PREPURCHASE_ONLY',accountUsed:false,credentialsUsed:false
+              };
+              console.log('PUBLIC_HTTP_RESULT '+JSON.stringify(report));
+            }catch(error){
+              console.log('PUBLIC_HTTP_RESULT '+JSON.stringify({probe:name,httpStatus:null,errorName:error.name,errorMessage:safe(error.message),credentialsUsed:false}));
+            }
+          }
+          console.log('PROBE_DONE: one shot; zero paid accounts, keys, transactions, market orders or deployments');
+          JS
