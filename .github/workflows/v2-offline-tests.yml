@@ -67,6 +67,11 @@ jobs:
       - name: FXCM FCLite Node getter-shape audit (offline mock only)
         working-directory: coordinator
         run: node test_fxcm_fclite_history_audit.js
+      - name: Exness read-only GET signature and candle intake (offline, no account)
+        working-directory: coordinator
+        run: |
+          node --check exness_readonly_offline.js
+          node test_exness_readonly_offline.js
       - name: FXCM native bid-ask candidate JSON boundary (offline only, wait)
         working-directory: coordinator
         run: |
