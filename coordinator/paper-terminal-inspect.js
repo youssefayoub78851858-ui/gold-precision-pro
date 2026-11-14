@@ -8,7 +8,7 @@ function ema(values,period){if(values.length<period)return null;let x=values.sli
 function rsi(closes,period=14){if(closes.length<=period)return null;let gains=0,losses=0;for(let i=1;i<=period;i++){let d=closes[i]-closes[i-1];gains+=Math.max(d,0);losses+=Math.max(-d,0);}gains/=period;losses/=period;for(let i=period+1;i<closes.length;i++){let d=closes[i]-closes[i-1];gains=(gains*(period-1)+Math.max(d,0))/period;losses=(losses*(period-1)+Math.max(-d,0))/period;}return number(losses?100-100/(1+gains/losses):100);}
 function atr(rows,period=14){if(rows.length<period+1)return null;let sum=0;for(let i=rows.length-period;i<rows.length;i++){const a=rows[i],prior=rows[i-1];sum+=Math.max(a.high-a.low,Math.abs(a.high-prior.close),Math.abs(a.low-prior.close));}return number(sum/period);}
 function inspect(payload){
- if(!payload||payload.dataOrigin!=='SYNTHETIC_TEST_ONLY'||payload.symbol!=='XAUUSD'||payload.researchApproved===true)
+ if(!payload||payload.dataOrigin!=='SYNTHETIC_TEST_ONLY'||payload.symbol!=='XAUUSD'||payload.source!=='GENERATED_OFFLINE_DETERMINISTIC_TEST'||payload.researchApproved===true)
   throw Error('ONLY_SYNTHETIC_OFFLINE_REPLAY_ACCEPTED');
  const dataset=paper.validate(payload);
  const asOfUTC=new Date(Date.parse(dataset.bars.at(-1).time)+paper.MS.M15).toISOString();
