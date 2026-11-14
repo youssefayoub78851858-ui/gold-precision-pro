@@ -196,6 +196,7 @@ jobs:
           node --check paper-terminal-core.js
           node --check paper-terminal-ui.js
           node test_paper_terminal_core.js
+          node test_paper_terminal_ui.js
           node coordinator/test_paper_terminal_inspect.js
       - name: V3 review API and UI connection acceptance (offline)
         working-directory: coordinator
