@@ -16,7 +16,7 @@ jobs:
           node-version: '20'
       - name: Read official free public envelopes ONCE without accounts or trading
         run: |
-          node <<'JS'
+          node --input-type=commonjs <<'JS'
           'use strict';
           const {SERIES,parseFeed}=require('./coordinator/h15_official_rss');
           const {FED_URL,BLS_URL,parseFedPolicyRss,parseBlsCalendar}=require('./coordinator/official_macro_review');
