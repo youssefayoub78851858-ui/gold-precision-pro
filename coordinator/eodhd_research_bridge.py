@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import datetime as dt
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from xauusd_feed_gate import SourcePolicy, parse_utc, validate_frame
 from xauusd_research_pipeline import run_research_pipeline
@@ -30,14 +30,18 @@ class IndependentEvidence:
     history_reference: str = ""
     clock_verified: bool = False
     clock_reference: str = ""
+    bid_basis_verified: bool = False
+    bid_basis_reference: str = ""
     # Expected UTC candle opens for all three frames from a verified market calendar.
     expected_open_times: dict | None = None
 
     @property
     def complete(self):
         return (self.schedule_verified and self.history_verified and self.clock_verified
+                and self.bid_basis_verified
                 and all(isinstance(v, str) and v.strip() for v in
-                        (self.schedule_reference, self.history_reference, self.clock_reference))
+                        (self.schedule_reference, self.history_reference, self.clock_reference,
+                         self.bid_basis_reference))
                 and isinstance(self.expected_open_times, dict)
                 and set(self.expected_open_times) == set(INTERVALS))
 
@@ -256,12 +260,24 @@ def review_eodhd_snapshot(snapshot: dict, as_of: dt.datetime, *,
             return _blocked(["INDEPENDENT_SESSION_OR_CLOSED_CANDLES_REJECTED:" + str(error)], counts)
     if "spread" not in context or "risk" not in context:
         return _blocked(["BROKER_SPREAD_OR_RISK_CONTEXT_MISSING"], counts)
+    # Scope the independent calendar and BID basis to this review call only.
+    # Never take verification from snapshot provider fields.
+    source_policy = replace(
+        policy,
+        independent_schedule_reference=evidence.schedule_reference,
+        independent_expected_open_times={
+            interval: evidence.expected_open_times[tf] for tf, interval in INTERVALS.items()
+        },
+        expected_price_basis="BID",
+        price_basis_reference=evidence.bid_basis_reference,
+    )
     payload = {
         "provider": "EODHD", "instrument": "XAU/USD", "mode": "live",
+        "priceBasis": "BID",
         "receivedUTC": now.isoformat().replace("+00:00", "Z"),
         "frames": frames,
     }
-    result = run_research_pipeline(payload, now, policy, context)
+    result = run_research_pipeline(payload, now, source_policy, context)
     if result.get("signal") != "WAIT" or result.get("executable") is not False:
         return _blocked(["RESEARCH_ENGINE_CONTRACT_VIOLATION"], counts)
     # No auto-trading, even when a research-only candidate exists.
