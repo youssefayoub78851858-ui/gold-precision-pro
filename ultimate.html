@@ -1,7 +1,104 @@
 <!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Gold Precision Pro Ultimate — Offline Research</title>
 <style>body{font:18px system-ui;background:#101820;color:#eee;max-width:1000px;margin:3em auto;padding:1em}button,input{font:inherit;padding:12px;box-sizing:border-box;max-width:100%}label{display:block;margin:1em 0}pre{max-width:100%;box-sizing:border-box}@media(max-width:600px){body{margin:.5em auto;padding:.7em;font-size:16px}button{width:100%}}pre{direction:ltr;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;background:#192630;padding:20px}h1{color:#e4bd69}.overview{border:1px solid #8d7545;border-radius:16px;padding:16px;background:#172238}.overview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.overview-card{background:#202d43;border-radius:12px;padding:12px;min-width:0}.overview-card strong{display:block;color:#e4bd69;margin-top:5px;overflow-wrap:anywhere}.overview-nav{display:flex;flex-wrap:wrap;gap:8px}.overview-nav a{color:#e4bd69}.overview-status{font-size:.9em;color:#c5cedc}@media(max-width:420px){.overview-grid{grid-template-columns:1fr}}</style>
-<h1>Gold Precision Pro Ultimate</h1><p>لوحة مراجعة هاتفية — Research Only. سعر XAU المرجعي للعرض فقط؛ الشموع والمصادر الغائبة تبقى UNAVAILABLE، والقرار WAIT والتنفيذ معطّل.</p>
-<p><a href="/paper-terminal" style="color:#f0d18a;font-weight:700">فتح شاشة تداول ورقي XAUUSD للموبايل — اختبار محلي فقط</a></p>
+<style id="unified-mobile-style">
+.unified-mobile-nav{position:sticky;top:0;z-index:20;background:#101820f2;border:1px solid #62728b;border-radius:14px;padding:9px;margin:10px 0 14px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;box-shadow:0 3px 16px #0007}
+.unified-mobile-nav a{display:flex;align-items:center;justify-content:center;text-align:center;min-height:43px;padding:7px 4px;border-radius:10px;background:#253950;border:1px solid #52647a;color:#ffe4a2;font-size:.84rem;text-decoration:none;font-weight:700}
+.unified-mobile-nav a:focus-visible,#unified-mobile-trading button:focus-visible{outline:3px solid #f7da8f;outline-offset:2px}
+.unified-mobile-nav a:hover{background:#36516e}
+.unified-intro{font-size:.9rem;line-height:1.6;color:#bfccdf}
+#unified-mobile-trading{border:1px solid #647891;border-radius:18px;background:#0b1423;color:#e6eaf1;scroll-margin-top:85px;margin-bottom:20px;overflow:clip}
+#unified-mobile-trading .heading h2{font-size:1.3rem;color:#f0cf85;margin:4px 0}
+#review-overview,#macro-research,#paper-statistics{scroll-margin-top:90px}
+@media(max-width:520px){.unified-mobile-nav a{font-size:.72rem;padding:7px 2px}.unified-mobile-nav{gap:4px;padding:6px}}
+#unified-mobile-trading{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#e6eaf1;background:#0b1423;font-size:15px;color-scheme:dark}
+#unified-mobile-trading, #unified-mobile-trading *{box-sizing:border-box}
+#unified-mobile-trading{margin:0}
+#unified-mobile-trading main{max-width:1080px;margin:auto;padding:14px 12px 65px}
+#unified-mobile-trading .heading{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+#unified-mobile-trading .heading h2{font-size:1.3rem;color:#f0cf85;margin:4px 0}
+#unified-mobile-trading .hint{color:#a9b7ce;font-size:.84rem;line-height:1.7;margin:4px 0 11px}
+#unified-mobile-trading .small{font-size:.82rem;color:#b5bfd0}
+#unified-mobile-trading .flag{display:inline-block;border:1px solid #815c28;border-radius:99px;background:#382c1d;color:#ffdb90;padding:6px 12px;font-weight:750;font-size:.82rem}
+#unified-mobile-trading .card{background:#172439;border:1px solid #33445b;border-radius:16px;padding:14px;margin:11px 0;box-shadow:0 5px 19px #060f1d48}
+#unified-mobile-trading .card h2{margin:0 0 12px;font-size:1rem;color:#f0d18a}
+#unified-mobile-trading .metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#unified-mobile-trading .metric{background:#202f46;padding:12px 9px;border-radius:11px;min-width:0}
+#unified-mobile-trading .metric label{display:block;font-size:.7rem;color:#a8bad2;margin-bottom:4px}
+#unified-mobile-trading .metric strong{display:block;color:#f4d18c;overflow-wrap:anywhere;font-size:1rem;font-variant-numeric:tabular-nums}
+#unified-mobile-trading .metric .wait{color:#ffe2a2}
+#unified-mobile-trading .bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#unified-mobile-trading .bar>*{flex:1}
+#unified-mobile-trading .chart-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+#unified-mobile-trading .tabs{display:flex;gap:6px;direction:ltr}
+#unified-mobile-trading .tabs button{flex:1;min-width:58px}
+#unified-mobile-trading button,#unified-mobile-trading input,#unified-mobile-trading select{font:inherit;border-radius:9px;min-height:42px;max-width:100%}
+#unified-mobile-trading button{border:1px solid #52627b;background:#263952;color:#f1f4fa;padding:8px 12px;cursor:pointer;font-weight:680}
+#unified-mobile-trading button.primary{background:#dfbd75;color:#132039;border-color:#f2d48f}
+#unified-mobile-trading button.buy{background:#174a43;border-color:#328c7c;color:#d6fff2}
+#unified-mobile-trading button.sell{background:#63313e;border-color:#a55c70;color:#ffe3e8}
+#unified-mobile-trading button:disabled{opacity:.43;cursor:not-allowed}
+#unified-mobile-trading .tabs button.active{background:#e5c07b;color:#182334}
+#unified-mobile-trading .danger{color:#ffc0c9}
+#unified-mobile-trading .statusline{min-height:24px;color:#e9c886;font-size:.82rem}
+#unified-mobile-trading #chart{display:block;width:100%;height:308px;background:#0d1a2c;border:1px solid #2b4059;border-radius:12px;touch-action:pan-y}
+#unified-mobile-trading input{border:1px solid #53617a;background:#101d30;color:#f5f7fa;padding:9px;width:100%;outline-offset:2px}
+#unified-mobile-trading input[type=file]{font-size:.78rem}
+#unified-mobile-trading .fields{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+#unified-mobile-trading .fields label{font-size:.76rem;color:#bfccdc}
+#unified-mobile-trading .fields input{margin-top:4px;min-width:0;font-size:.9rem}
+#unified-mobile-trading .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#unified-mobile-trading .inline-stat{font-variant-numeric:tabular-nums;color:#e9c886;font-weight:700}
+#unified-mobile-trading ul{margin:5px 0;padding-inline-start:23px;color:#bdcbe0;font-size:.87rem;line-height:1.85}
+#unified-mobile-trading table{border-collapse:collapse;width:100%;font-size:.75rem}
+#unified-mobile-trading td,#unified-mobile-trading th{border-bottom:1px solid #34435a;padding:9px 5px;text-align:right;white-space:nowrap}
+#unified-mobile-trading th{color:#a7b9d1}
+#unified-mobile-trading .scroll{overflow-x:auto}
+#unified-mobile-trading #research-output{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65;color:#bdd1e4;font-size:.85rem}
+#unified-mobile-trading .footer{color:#a0b3cc;font-size:.75rem;line-height:1.7;margin:18px 4px}
+#unified-mobile-trading .pill{border-radius:99px;background:#293950;padding:5px 8px;font-size:.72rem;color:#c8d5e5}
+#unified-mobile-trading a{color:#e2c17c}
+@media(max-width:700px){
+#unified-mobile-trading .fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+#unified-mobile-trading .metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+#unified-mobile-trading .cols{grid-template-columns:1fr}
+#unified-mobile-trading .heading h2{font-size:1.13rem}
+#unified-mobile-trading main{padding:10px 9px 58px}
+#unified-mobile-trading .card{padding:11px;margin:9px 0}
+#unified-mobile-trading #chart{height:250px}
+#unified-mobile-trading button{padding:9px 7px;font-size:.88rem}
+}
+</style>
+<h1>Gold Precision Pro Ultimate</h1>
+<p class="unified-intro">شاشة واحدة للشارت والتحليل والتداول الورقي. <strong>القرار الحقيقي WAIT</strong> حتى تتصل بيانات سوق مرخّصة؛ كل الصفقات هنا محاكاة محلية.</p>
+<nav class="unified-mobile-nav" aria-label="أقسام نظام الذهب الموحد">
+<a href="#unified-mobile-trading">الشارت</a><a href="#paper-actions">الصفقات</a><a href="#paper-statistics">السجل</a><a href="#review-overview">التحليل والأخبار</a>
+</nav>
+<section id="unified-mobile-trading" aria-labelledby="unified-trading-title" data-mode="REVIEW_PAPER_ONLY"><main>
+<header class="heading"><div><h2 id="unified-trading-title">شارت الذهب والتداول الورقي</h2><p class="hint">XAUUSD — M15 / H1 / H4 · لا صفقات حقيقية</p></div><span id="live-badge" class="flag">WAIT · بلا بيانات حية</span></header>
+<p class="hint"><strong>تنبيه:</strong> كل فتح وإغلاق هنا محاكاة ورقية محليّة على شموع مُسجّلة أو اختبار اصطناعي. ليست توصية BUY/SELL حية، ولا يوجد اتصال وسيط.</p>
+<section class="card" id="paper-overview"><div class="metric-grid">
+<div class="metric"><label>قرار النظام الحقيقي</label><strong id="live-decision" class="wait">WAIT</strong></div>
+<div class="metric"><label>السعر الحي</label><strong id="live-price">غير متصل</strong></div>
+<div class="metric"><label>آخر تحديث حي</label><strong id="live-time">غير متاح</strong></div>
+<div class="metric"><label>مصدر الشارت</label><strong id="source-kind">لا توجد شموع</strong></div>
+<div class="metric"><label>Bid / Ask عند شمعة الإعادة</label><strong id="replay-bidask">— / —</strong></div>
+<div class="metric"><label>آخر إغلاق مُسجّل UTC</label><strong id="replay-time">—</strong></div></div></section>
+<section class="card" id="paper-chart"><div class="chart-top"><h2>شارت XAUUSD · <span id="active-tf-label">M15</span></h2><div class="tabs" role="group" aria-label="الفاصل الزمني"><button type="button" data-tf="M15" class="active">M15</button><button type="button" data-tf="H1">H1</button><button type="button" data-tf="H4">H4</button></div></div>
+<canvas id="chart" role="img" aria-label="شارت شموع مغلقة تاريخية أو اصطناعية، وليس شارت مباشر"></canvas><p class="small" id="chart-note">حمّل ملفاً محلياً أو افتح العينة الاصطناعية لتجربة الشارت. لن تظهر أسعار حية.</p>
+<div class="bar"><button type="button" id="sample" class="primary">تشغيل عيّنة اختبار</button><button type="button" id="next" disabled>الشمعة التالية ←</button><button type="button" id="levels" disabled>مستويات ورقية تجريبية</button></div>
+<div class="bar" style="margin-top:8px"><label class="small" for="file-input" style="flex:2">استيراد ملف XAUUSD Bid/Ask مسجّل (JSON) <input id="file-input" type="file" accept=".json,application/json"></label><button id="export-journal" type="button" disabled>تصدير السجل JSON</button></div><p class="statusline" id="paper-message" role="status" aria-live="polite">بانتظار اختيار بيانات محلية.</p></section>
+<section class="card" id="paper-analysis"><h2>التحليل الفني والبيانات الخارجية</h2><div class="metric-grid"><div class="metric"><label>قرار BUY / SELL / WAIT</label><strong>WAIT</strong></div><div class="metric"><label>H4 اتجاه</label><strong id="bias-h4">غير متاح</strong></div><div class="metric"><label>H1 اتجاه</label><strong id="bias-h1">غير متاح</strong></div><div class="metric"><label>M15 تأكيد</label><strong id="bias-m15">غير متاح</strong></div></div>
+<div class="bar" style="margin-top:11px"><button id="inspect" type="button" disabled>تحليل البحث V3 على عينة اصطناعية</button><span class="small">يستخدم محرك المشروع الحالي؛ يبقى WAIT دائماً</span></div><p id="research-output">DXY، US02Y، US10Y، GC، الأخبار وOrder Flow: غير متصلة أو غير مرخصة. لا يتم اختلاق بدائل.</p></section>
+<section class="card" id="paper-actions"><h2>تجربة صفقات ورقية يدوية فقط</h2><p class="hint">المستويات تدخلها إنت للتدريب، ولا تأتي من توصية الذكاء الاصطناعي. الحساب الافتراضي 10,000$، حجم 0.01، الانزلاق 0.05$ على كل طرف، وعمولة 7$ لكل لوت ذهاباً وإياباً؛ السبريد من فرق Bid/Ask في العينة.</p>
+<div class="fields"><label>وقف الخسارة SL<input id="stop" inputmode="decimal" type="number" step="0.01" placeholder="SL"></label><label>هدف TP1<input id="tp1" inputmode="decimal" type="number" step="0.01" placeholder="TP1"></label><label>هدف TP2<input id="tp2" inputmode="decimal" type="number" step="0.01" placeholder="TP2"></label><label>هدف TP3<input id="tp3" inputmode="decimal" type="number" step="0.01" placeholder="TP3"></label></div>
+<div class="bar" style="margin-top:11px"><button id="paper-buy" class="buy" type="button" disabled>فتح BUY ورقي</button><button id="paper-sell" class="sell" type="button" disabled>فتح SELL ورقي</button><button id="paper-close" type="button" disabled>إغلاق الصفقة ورقياً</button></div>
+<p class="statusline" id="position-status">لا توجد صفقة مفتوحة.</p><p class="small">إغلاق الشمعة التالية يحاكي إصابة SL أو TP3، وSL أولاً عند لمس الاثنين. TP1 وTP2 علامات مراقبة وليستا إغلاقاً جزئياً تلقائياً.</p></section>
+<div class="bar" style="margin-top:14px"><button id="stop-selftest" type="button">اختبار وقف الخسارة SL تلقائياً — عيّنة اصطناعية</button></div><p id="stop-selftest-result" class="statusline" role="status" aria-live="polite">تجربة مستقلة لا تغيّر صفقاتك المسجلة: BUY وSELL وفجوة سعرية ولمس الهدف والوقف معاً.</p>
+<section class="card" id="paper-statistics"><h2>إحصائيات التداول الورقي (ليست أداءً حقيقياً)</h2><div class="metric-grid"><div class="metric"><label>رصيد محاكاة</label><strong id="stat-balance">$10,000.00</strong></div><div class="metric"><label>صافي الربح/الخسارة</label><strong id="stat-net">$0.00</strong></div><div class="metric"><label>صفقات مغلقة</label><strong id="stat-count">0</strong></div><div class="metric"><label>نسبة الربح</label><strong id="stat-win">0%</strong></div><div class="metric"><label>أقصى تراجع للرصيد المغلق</label><strong id="stat-dd">0%</strong></div><div class="metric"><label>معامل الربح</label><strong id="stat-pf">—</strong></div></div>
+<div class="scroll" style="margin-top:12px"><table><thead><tr><th>الاتجاه</th><th>الدخول</th><th>الخروج</th><th>الصافي $</th><th>السبب</th><th>الإغلاق UTC</th></tr></thead><tbody id="trade-rows"><tr><td colspan="6">لا توجد صفقات بعد</td></tr></tbody></table></div>
+<button id="reset" type="button" style="margin-top:12px">مسح جلسة المحاكاة المحلية</button></section>
+<p class="footer">الجلسة والصفقات تُحفظ في متصفح الجهاز محلياً فقط، وقد تُفقد عند حذف بيانات المتصفح. تصدير السجل يحفظ نسخة خاصة بك. لا نرسل سجل الصفقات إلى Render أو إلى وسيط. <a href="#review-overview">الانتقال إلى تحليل النظام والأخبار</a>.</p>
+</main></section>
 <section id="review-overview" class="overview" aria-labelledby="review-overview-title">
 <h2 id="review-overview-title">ملخص حالة النظام</h2>
 <div class="overview-grid">
@@ -633,4 +730,6 @@ if(document.readyState==='loading'){
  window.addEventListener('pageshow',checkVersion);
 })();
 </script>
+<script src="/paper-terminal-core.js" defer></script>
+<script src="/paper-terminal-ui.js" defer></script>
 </html>

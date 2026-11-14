@@ -48,7 +48,16 @@ class UltimateHTTP(unittest.TestCase):
             self.assertEqual(request('/api/v3/paper/inspect')[0],405)
             self.assertEqual(request('/api/v3/paper/inspect',b'{}')[0],400)
             self.assertEqual(request('/api/v3/paper/inspect',b' '*(520000+1))[0],413)
-            self.assertIn(b'href="/paper-terminal"',request('/ultimate')[1])
+            unified_code, unified_html = request('/ultimate')
+            self.assertEqual(unified_code, 200)
+            for marker in (b'id="unified-mobile-trading"',b'id="unified-trading-title"',
+                           b'id="paper-chart"',b'id="paper-actions"',
+                           b'id="paper-statistics"',b'id="review-overview"',
+                           b'id="macro-research"',b'paper-terminal-core.js',
+                           b'paper-terminal-ui.js',b'href="#paper-actions"'):
+                self.assertIn(marker, unified_html)
+            self.assertNotIn(b'<iframe', unified_html.lower())
+            self.assertNotIn(b'href="/paper-terminal"', unified_html)
             self.assertIn(b'Gold Precision Pro Ultimate', request('/ultimate')[1])
             self.assertIn(b'recorded-review-load', request('/ultimate')[1])
             self.assertIn(b'free-context-load', request('/ultimate')[1])

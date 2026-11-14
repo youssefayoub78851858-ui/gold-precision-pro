@@ -191,6 +191,8 @@ jobs:
         working-directory: coordinator
         run: node test_v3_trade_plan.js
 
+      - name: Unified mobile chart, paper trades and research in one UI (offline)
+        run: node test_unified_mobile.js
       - name: Mobile paper terminal, order simulation and existing V3 research isolation (offline)
         run: |
           node --check paper-terminal-core.js
