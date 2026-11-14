@@ -14,6 +14,19 @@
 <p class="overview-status">DXY وGC وOrder Flow والأخبار السياسية/الجيوسياسية: UNAVAILABLE ما لم يثبتها المحرك صراحةً. سعر XAUS لا يتحول إلى شموع أو إشارة.</p>
 <nav class="overview-nav" aria-label="انتقال سريع"><a href="#spot-reference">سعر مرجعي</a><a href="#candle-source-readiness">الشموع</a><a href="#macro-research">الأخبار</a><a href="#ultimate-r2-review">Ultimate r2</a><a href="#paper-title">التداول الورقي</a></nav>
 </section>
+<section id="fxcm-public-readiness" class="overview" aria-labelledby="fxcm-public-title">
+<h2 id="fxcm-public-title">FXCM — حالة مصدر الذهب على الموبايل</h2>
+<p id="fxcm-public-state" role="status">WAIT — لا توجد بيانات FXCM حقيقية متصلة أو مرخصة بعد.</p>
+<p class="overview-status">هذا فحص جاهزية فقط: نجاح اختبارات C++ وLinux لا يعني الاتصال بحساب FXCM. لا دخول بكلمات مرور ولا تنفيذ صفقات.</p>
+<div class="overview-grid">
+<div class="overview-card">شموع الذهب M15 / H1 / H4<strong id="fxcm-public-frames">غير متصلة — 0 / 0 / 0</strong></div>
+<div class="overview-card">التوصية والتداول<strong>WAIT — التنفيذ والتداول الورقي متوقفان</strong></div>
+</div>
+<button id="fxcm-public-refresh" type="button">فحص حالة FXCM</button>
+<h3>الأمور الناقصة قبل الاتصال</h3>
+<ul id="fxcm-public-reasons"><li>اتفاقية FXCM وحقوق التشغيل على Render</li><li>صلاحيات Demo للقراءة فقط وتحقق شموع Bid/Ask الحقيقية</li></ul>
+<p class="overview-status">ما في أسعار مخفية أو اصطناعية معروضة بهذه البطاقة؛ وما في اتصال بمزوّد بيانات عند فتحها.</p>
+</section><hr>
 <section id="spot-reference" aria-labelledby="spot-title">
 <h2 id="spot-title">الذهب XAU — سعر فوري مرجعي مجاني</h2>
 <p>من XAUS.com وفق استخدامه المعلن للمشاريع الشخصية، من دون مفتاح. هذا <strong>سعر مرجعي وسطي إرشادي، وليس سعر CFI أو GC</strong> ولا شموع مكتملة، ولا يعطي إشارة تداول.</p>
@@ -418,6 +431,52 @@ if(document.readyState==='loading'){
    for(const item of rows){const li=document.createElement('li');li.textContent=item;list.appendChild(li);}
   }catch(e){state.textContent='فحص المصادر غير متاح: '+e.message+' — WAIT';}
   finally{button.disabled=false;}
+ });
+})();
+</script>
+<script>
+(function(){
+ const button=document.getElementById('fxcm-public-refresh');
+ const status=document.getElementById('fxcm-public-state');
+ const list=document.getElementById('fxcm-public-reasons');
+ const frames=document.getElementById('fxcm-public-frames');
+ const labels={
+ FXCM_EULA_AND_CLOUD_RIGHTS_UNVERIFIED:'اتفاقية FXCM وحقوق استخدام البيانات على Render لم تُحسم',
+ FXCM_DEMO_READ_ONLY_ENTITLEMENT_UNVERIFIED:'صلاحية Demo للقراءة فقط ومنع أوامر التداول غير مؤكدة',
+ FXCM_REAL_XAUUSD_BID_ASK_NOT_CONNECTED:'بيانات XAU/USD الحقيقية Bid/Ask ليست متصلة',
+ FXCM_UTC_SESSION_AND_HISTORY_PARITY_UNVERIFIED:'توقيت الجلسات وتطابق التاريخي مع الأسعار الحية غير مثبتين'
+ };
+ button.addEventListener('click',async()=>{
+  button.disabled=true;
+  status.textContent='WAIT — يجري فحص الجاهزية فقط، بلا جلب أسعار';
+  list.replaceChildren();
+  frames.textContent='غير متصلة — 0 / 0 / 0';
+  try{
+   const response=await fetch('/api/v3/ultimate/fxcm-readiness',{
+    cache:'no-store',credentials:'omit',redirect:'error',signal:AbortSignal.timeout(9000)});
+   if(!response.ok)throw Error('لم يمكن الوصول إلى حالة FXCM');
+   const data=await response.json();
+   if(data.provider!=='FXCM'||data.mode!=='OFFLINE_PREPARATION_ONLY'||
+      data.status!=='WAIT_FXCM_NOT_CONNECTED'||data.signal!=='WAIT'||
+      data.executable!==false||data.researchEligible!==false||
+      data.paperOrdersAllowed!==false||data.sdkLoaded!==false||
+      data.sourceRequestsMade!==0||data.credentialsRead!==0||
+      data.livePricesAvailable!==false||data.licenseVerified!==false||
+      data.accountPermissionsVerified!==false||
+      !['M15','H1','H4'].every(tf=>data.validatedClosedBarCounts?.[tf]===0))
+    throw Error('تم رفض حالة FXCM غير الموثوقة');
+   status.textContent='WAIT — FXCM غير متصل، البيانات الحقيقية غير متوفرة';
+   if(!Array.isArray(data.blockingReasons))throw Error('الأسباب غير متوفرة');
+   for(const reason of data.blockingReasons.slice(0,8)){
+     if(!Object.prototype.hasOwnProperty.call(labels,reason))continue;
+     const item=document.createElement('li');item.textContent=labels[reason];list.appendChild(item);
+   }
+   if(!list.children.length)throw Error('لا توجد أسباب موثوقة');
+  }catch(e){
+   status.textContent='WAIT — تعذّر التأكد من جاهزية FXCM';
+   list.replaceChildren();
+   const item=document.createElement('li');item.textContent='المصدر غير متحقق منه أو الخدمة غير متاحة';list.appendChild(item);
+  }finally{button.disabled=false;}
  });
 })();
 </script>

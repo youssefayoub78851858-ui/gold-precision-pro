@@ -65,6 +65,19 @@ const server = http.createServer(async (req, res) => {
    return res.end(JSON.stringify(result.body));
   }
 
+  // Public REVIEW-DEMO FXCM readiness: facts only; no market or private-coordinator connection.
+  if(req.url.split("?")[0]==="/api/v3/ultimate/fxcm-readiness"){
+    if(req.method!=="GET")return send(res,405,{error:"GET only",signal:"WAIT",executable:false});
+    if(!DEMO_MODE)return send(res,503,{status:"STANDBY_ONLY",signal:"WAIT",executable:false});
+    const result=require("./coordinator/fxcm_public_readiness").readOnlyStatus();
+    if(result.mode!=="OFFLINE_PREPARATION_ONLY"||result.signal!=="WAIT"||
+       result.executable!==false||result.researchEligible!==false||
+       result.paperOrdersAllowed!==false||result.sourceRequestsMade!==0||
+       result.livePricesAvailable!==false||result.licenseVerified!==false)
+      return send(res,503,{status:"FXCM_REVIEW_STATUS_REJECTED",signal:"WAIT",executable:false});
+    return send(res,200,result);
+  }
+
   // Read-only metadata about historic XAUUSD candle feasibility and legal prerequisites.
   // Never calls Dukascopy, stores OHLC or opens live trading.
   if (req.url.split("?")[0] === "/api/v3/ultimate/candle-source-readiness") {
