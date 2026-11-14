@@ -46,6 +46,9 @@ class SourcePolicy:
     entitlement_verified: bool = False
     rights_reference: str = ""
     expected_provider: str = ""
+    # Independently checked UTC exchange/session openings, never copied from the packet.
+    independent_schedule_reference: str = ""
+    independent_expected_open_times: dict | None = None
 
     @property
     def authorized(self) -> bool:
@@ -192,6 +195,26 @@ def intake_payload(payload: dict, now: dt.datetime, policy: SourcePolicy) -> dic
         reasons.append("INGEST_TIMESTAMP_INVALID")
     frames = payload.get("frames")
     validated = {}
+    # A provider packet must not be able to certify its own missing-bar schedule.
+    # A second, operator-reviewed schedule is mandatory for every real feed.
+    independent = policy.independent_expected_open_times
+    if mode in {"live", "recorded"}:
+        if (not isinstance(policy.independent_schedule_reference, str)
+                or not policy.independent_schedule_reference.strip()
+                or not isinstance(independent, dict)
+                or set(independent) != set(INTERVALS)):
+            reasons.append("INDEPENDENT_SESSION_SCHEDULE_UNVERIFIED")
+        else:
+            for interval in INTERVALS:
+                try:
+                    trusted = [parse_utc(t) for t in independent[interval]]
+                    declared = [parse_utc(t) for t in frames[interval]["expectedOpenTimes"]]
+                    if not trusted or trusted != sorted(set(trusted)):
+                        raise ValueError("independent schedule invalid")
+                    if trusted != declared:
+                        raise ValueError("packet schedule differs from independent session evidence")
+                except (ValueError, TypeError, KeyError, AttributeError):
+                    reasons.append(f"{interval.upper()}_INDEPENDENT_SCHEDULE_MISMATCH")
     if not isinstance(frames, dict) or set(frames) != set(INTERVALS):
         reasons.append("M15_H1_H4_REQUIRED")
     else:
