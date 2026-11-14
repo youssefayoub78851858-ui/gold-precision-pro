@@ -13,6 +13,25 @@ function aggregate(bars,n){
    high:Math.max(...g.map(x=>x.high)),low:Math.min(...g.map(x=>x.low)),
    close:g.at(-1).close}]);
 }
+// A socket opening is not a healthy feed. During weekend closure a provider
+// can accept the TCP/WebSocket handshake and disconnect without ANY quote.
+// Reset the retry penalty only after >60s of accepted, timestamped XAUUSD data.
+const RETRY_BASE_MS=5000,RETRY_CAP_MS=300000,HEALTHY_STREAM_MS=60000;
+class ReconnectBackoff {
+ constructor(){this.failures=0;this.firstQuoteAt=null;}
+ opened(){this.firstQuoteAt=null;}
+ acceptedQuote(nowMs){
+  if(!Number.isFinite(nowMs)||nowMs<0)return;
+  if(this.firstQuoteAt===null||nowMs<this.firstQuoteAt)this.firstQuoteAt=nowMs;
+  else if(nowMs-this.firstQuoteAt>=HEALTHY_STREAM_MS)this.failures=0;
+ }
+ disconnected(){
+  this.firstQuoteAt=null;
+  const delay=Math.min(RETRY_CAP_MS,RETRY_BASE_MS*Math.pow(2,Math.min(this.failures,6)));
+  this.failures=Math.min(this.failures+1,7);
+  return delay;
+ }
+}
 class XauusdReview{
  constructor(clock=Date.now){this.clock=clock;this.reset('NOT_CONNECTED');this.count=0;}
  reset(reason='STREAM_INTERRUPTED',preserveClosed=false){
@@ -227,16 +246,18 @@ function run(){
  if(typeof WebSocket!=='function')throw Error('WebSocket requires Node 22+');
  const review=new XauusdReview(),dir=process.env.DATA_DIR||'/var/data/gold-live';
  coldStartReview(review,dir);
- let tries=0,socket,halted=false,lastSaved=0;
+ const retry=new ReconnectBackoff();
+ let socket,halted=false,lastSaved=0;
  const stop=()=>{halted=true;if(socket)socket.close();};
  process.on('SIGTERM',stop);process.on('SIGINT',stop);
  function connect(){
   if(halted)return;
   review.reset('CONNECTING',true);
   socket=new WebSocket('wss://ws.eodhistoricaldata.com/ws/forex?api_token='+encodeURIComponent(token));
-  socket.addEventListener('open',()=>{tries=0;socket.send(JSON.stringify({action:'subscribe',symbols:'XAUUSD'}));});
+  socket.addEventListener('open',()=>{retry.opened();socket.send(JSON.stringify({action:'subscribe',symbols:'XAUUSD'}));});
   socket.addEventListener('message',e=>{
    const r=review.receive(String(e.data));
+   if(r.kind==='quote')retry.acceptedQuote(Date.now());
    if(r.kind==='blocked'){
     if(['PROVIDER_STATUS_403','PROVIDER_STATUS_422','PROVIDER_STATUS_401'].includes(r.reason))halted=true;
     try{privateSave(dir,review.snapshot());}catch{}
@@ -251,11 +272,11 @@ function run(){
   const disconnect=()=>{
    if(already||halted)return;already=true;review.reset('DISCONNECTED',true);
    try{privateSave(dir,review.snapshot());}catch{}
-   setTimeout(connect,Math.min(300000,5000*Math.pow(2,Math.min(tries++,6))));
+   setTimeout(connect,retry.disconnected());
   };
   socket.addEventListener('close',disconnect);socket.addEventListener('error',disconnect);
  }
  connect();
 }
 if(require.main===module)run();
-module.exports={XauusdReview,aggregate,closedHistoryGaps,privateSave,privateLoadClosed,coldStartReview,run};
+module.exports={ReconnectBackoff,XauusdReview,aggregate,closedHistoryGaps,privateSave,privateLoadClosed,coldStartReview,run};

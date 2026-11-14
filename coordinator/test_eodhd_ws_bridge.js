@@ -1,7 +1,7 @@
 'use strict';
 const a=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {XauusdReview,aggregate,closedHistoryGaps,privateSave,privateLoadClosed,coldStartReview}=require('./eodhd_ws_bridge');
+const {ReconnectBackoff,XauusdReview,aggregate,closedHistoryGaps,privateSave,privateLoadClosed,coldStartReview}=require('./eodhd_ws_bridge');
 const base=1794493813003,quote=(t,ask=3903.04,bid=3902.46)=>({s:'XAUUSD',a:ask,b:bid,t});
 let now=base,review=new XauusdReview(()=>now+1000);
 a.equal(review.receive(quote(base)).reason,'AUTHORIZATION_MISSING');
@@ -99,6 +99,60 @@ a.deepEqual(closedHistoryGaps([h0,h1,h2]),{
 a.equal(aggregate([h0,h2],4).length,0);
 review.reset();a.equal(review.snapshot().frames.M15.length,0);
 a.equal(aggregate([],4).length,0);
+// WEEKEND / REOPEN REGRESSION: no-price sockets must back off, not spin
+// every five seconds just because the WebSocket handshake succeeded.
+const retry=new ReconnectBackoff();
+const delays=[5000,10000,20000,40000,80000,160000,300000,300000];
+for(const d of delays){
+ retry.opened(); // handshake or status=200 is NOT proof of a healthy quote feed
+ a.equal(retry.disconnected(),d);
+}
+retry.opened();
+const stableAt=Date.parse('2026-11-13T21:00:00Z');
+retry.acceptedQuote(stableAt);
+retry.acceptedQuote(stableAt+59000); // too short to reset backoff
+a.equal(retry.disconnected(),300000);
+retry.opened();
+retry.acceptedQuote(stableAt);
+retry.acceptedQuote(stableAt+60000); // sustained accepted XAUUSD stream
+a.equal(retry.disconnected(),5000);
+retry.opened(); // after a quick reconnect, ONE accepted quote is not enough
+retry.acceptedQuote(stableAt+3600000);
+a.equal(retry.disconnected(),10000);
+
+// Closed authentic history must survive a market shutdown. Do not interpolate
+// any missing Saturday/Sunday M15/H1/H4 bars, and never reuse Friday's quote.
+let weekendNow=Date.parse('2026-11-13T21:59:50Z');
+const weekend=new XauusdReview(()=>weekendNow+1000);
+weekend.restoreClosed({frames:historySnapshot.frames,bidFrames:historySnapshot.bidFrames,askFrames:historySnapshot.askFrames});
+a.equal(weekend.receive({status_code:200}).kind,'authorized');
+a.equal(weekend.receive(quote(weekendNow)).kind,'quote');
+a.equal(weekend.snapshot().frames.M15.length,16);
+weekend.reset('WEEKEND_DISCONNECTED',true);
+a.equal(weekend.snapshot().latestQuote,null);
+a.equal(weekend.authorized,false);
+weekendNow=Date.parse('2026-11-15T22:00:10Z');
+a.equal(weekend.receive(quote(weekendNow)).reason,'AUTHORIZATION_MISSING');
+a.equal(weekend.receive({status_code:200}).kind,'authorized');
+a.equal(weekend.receive(quote(weekendNow)).kind,'quote');
+const reopening=weekend.snapshot();
+a.equal(reopening.frames.M15.length,16);
+a.equal(reopening.frames.H1.length,4);
+a.equal(reopening.frames.H4.length,1);
+a.equal(reopening.bidFrames.M15.length,16);
+a.equal(reopening.askFrames.M15.length,16);
+a.equal(reopening.closedHistoryGaps.independentlyVerifiedSessionCalendar,false);
+a.equal(reopening.indicatorWarmupReady,false);
+a.equal(reopening.sessionVerified,false);
+a.equal(reopening.researchEligible,false);
+a.equal(reopening.signal,'WAIT');
+a.equal(reopening.executable,false);
+// An unverified/late first quote cannot finalize a synthetic weekend M15.
+weekendNow=Date.parse('2026-11-15T22:16:00Z');
+a.equal(weekend.receive(quote(weekendNow)).reason,'TICK_GAP_OR_ORDER');
+a.equal(weekend.snapshot().frames.M15.length,16);
+a.equal(weekend.snapshot().latestQuote,null);
+
 // Private snapshots must not escape through inherited permissions or links.
 const scratch=fs.mkdtempSync(path.join(os.tmpdir(),'gold-eodhd-private-'));
 try{
