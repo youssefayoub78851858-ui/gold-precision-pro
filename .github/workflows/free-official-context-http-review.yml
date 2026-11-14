@@ -39,6 +39,7 @@ jobs:
                executable:x.executable,orderFlowAvailable:x.orderFlowAvailable};
            }}
           ];
+          (async()=>{
           for(const probe of probes){
            const report={source:probe.id,requestCount:1,accountUsed:false,paidKeyUsed:false,
              signal:'WAIT',executionAllowed:false,cloudLicenseNotInferred:true};
@@ -54,4 +55,5 @@ jobs:
            console.log('OFFICIAL_PUBLIC_RESULT '+JSON.stringify(report));
           }
           console.log('OFFICIAL_PUBLIC_DONE no credentials, subscriptions, orders, persistent polling or broker calls');
+          })().catch(e=>{console.error('PUBLIC_AUDIT_FATAL',e.name);process.exitCode=1;});
           JS
