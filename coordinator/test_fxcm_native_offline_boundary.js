@@ -34,7 +34,7 @@ assert.deepEqual(ok.frameCounts,{M15:16,H1:4,H4:1});
 const cases=[
  ['WRONG_PROVIDER_SOURCE_OR_INSTRUMENT',p=>{p.provider='CFI';}],
  ['SEPARATE_BID_ASK_REQUIRED',p=>{delete p.frames.M15[0].ask;}],
- ['CROSSED_BID_ASK',p=>{p.frames.M15[0].ask.open=1;}],
+ ['CROSSED_BID_ASK',p=>{for(const k of ['open','high','low','close'])p.frames.M15[0].ask[k]=p.frames.M15[0].bid[k]-.1;}],
  ['INVALID_PRICE',p=>{p.frames.M15[0].bid.high=NaN;}],
  ['INVALID_OHLC',p=>{p.frames.M15[0].bid.high=1;}],
  ['UTC_Z_REQUIRED',p=>{p.frames.M15[0].openTime='2026-11-13T12:00:00+00:00';}],
