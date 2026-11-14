@@ -191,6 +191,12 @@ jobs:
         working-directory: coordinator
         run: node test_v3_trade_plan.js
 
+      - name: Mobile paper terminal, order simulation and existing V3 research isolation (offline)
+        run: |
+          node --check paper-terminal-core.js
+          node --check paper-terminal-ui.js
+          node test_paper_terminal_core.js
+          node coordinator/test_paper_terminal_inspect.js
       - name: V3 review API and UI connection acceptance (offline)
         working-directory: coordinator
         run: |

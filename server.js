@@ -45,6 +45,40 @@ const server = http.createServer(async (req, res) => {
     return send(res, 200, {});
   }
 
+  // Mobile paper lab is REVIEW DEMO ONLY; all quotes are user-local / synthetic.
+  const paperPath=req.url.split("?")[0];
+  const paperFiles={"/paper-terminal":"paper-terminal.html",
+    "/paper-terminal-core.js":"paper-terminal-core.js",
+    "/paper-terminal-ui.js":"paper-terminal-ui.js"};
+  if(Object.prototype.hasOwnProperty.call(paperFiles,paperPath)){
+    if(!DEMO_MODE)return send(res,404,{error:"Not found"});
+    if(req.method!=="GET")return send(res,405,{error:"GET only",signal:"WAIT",executable:false});
+    const isJS=paperPath.endsWith(".js");
+    res.writeHead(200,{"Content-Type":isJS?"application/javascript; charset=utf-8":"text/html; charset=utf-8",
+      "Cache-Control":"no-store","X-Content-Type-Options":"nosniff",
+      "Referrer-Policy":"no-referrer","X-Frame-Options":"DENY",
+      "Content-Security-Policy":"default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"});
+    return res.end(fs.readFileSync(path.join(__dirname,paperFiles[paperPath])));
+  }
+  if(paperPath==="/api/v3/paper/inspect"){
+    if(!DEMO_MODE)return send(res,404,{error:"Not found"});
+    if(req.method!=="POST")return send(res,405,{error:"POST only",signal:"WAIT",executable:false});
+    const chunks=[];let count=0;
+    try{
+      for await(const chunk of req){
+        count+=chunk.length;
+        if(count>520000)return send(res,413,{signal:"WAIT",executable:false,error:"Offline fixture too large"});
+        chunks.push(chunk);
+      }
+      const payload=JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      const report=require("./coordinator/paper-terminal-inspect").inspect(payload);
+      if(report.signal!=="WAIT"||report.executable!==false||report.researchEligible!==false||
+        report.connectedRealMarketData!==false||report.providerRequests!==0||
+        report.ordersSent!==0||report.tradePlanExecutable!==false)throw Error("Unsafe research result");
+      return send(res,200,report);
+    }catch(_error){return send(res,400,{signal:"WAIT",executable:false,error:"Invalid offline synthetic replay"});}
+  }
+
   // Gated viewer bridge for public REVIEW DEMO only; NEVER broker admin routes.
   if(req.url.split("?")[0]==="/private-monitor"){
    if(req.method!=="GET")return send(res,405,{error:"GET only"});
