@@ -291,7 +291,7 @@ jobs:
         run: node test_review_monitor_proxy.js
       - name: Private mobile monitor static security contract
         working-directory: coordinator
-        run: python -m unittest -v test_private_mobile_dashboard
+        run: python -m unittest -v test_private_mobile_dashboard test_fxcm_mobile_readiness
       - name: Synthetic broker cost arithmetic and risk block (offline only)
         working-directory: coordinator
         run: python -m unittest -v test_paper_cost_preflight

@@ -46,6 +46,16 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <h3>أسباب WAIT</h3>
 <ul id="reasons"><li>المصدر غير مؤهّل للتداول حتى يثبت عكس ذلك</li></ul>
 </section>
+<section id="fxcm-review-panel" aria-labelledby="fxcm-review-title">
+<h2 id="fxcm-review-title">FXCM — جاهزية مصدر الذهب</h2>
+<p id="fxcm-review-state" role="status">WAIT — مصدر FXCM غير متصل، ولا توجد بيانات سوق حقيقية.</p>
+<p><small>هذا قسم تجهيز وترخيص فقط، وليس مراقبة أسعار FXCM مباشرة. اختبارات C++ وLinux لا تثبت وجود مصدر حي.</small></p>
+<h3>شو بعد ناقص؟</h3>
+<ul id="fxcm-review-reasons" aria-live="polite">
+<li>تأكيد اتفاقية FXCM وحقوق التشغيل على Render</li>
+<li>التحقق من صلاحية Demo للقراءة فقط وبيانات Bid/Ask</li>
+</ul>
+</section>
 <section id="paper-gate-panel" aria-labelledby="paper-gate-title">
 <h2 id="paper-gate-title">جاهزية التداول الورقي وإدارة المخاطر</h2>
 <p id="paper-gate-state" role="status">التداول الورقي محجوب حتى التحقق من المصادر وإدارة المخاطر.</p>
@@ -121,6 +131,35 @@ el("refresh").addEventListener("click",async()=>{
    const li=document.createElement("li");li.className="reason";li.textContent=item;list.append(li);
   }
   if(!list.children.length){const li=document.createElement("li");li.textContent="الدليل المستقل أو مصدر السوق غير جاهز";list.append(li);}
+  const fxcm=data.fxcmReview;
+  const safeFxcm=fxcm?.provider==="FXCM"&&fxcm?.mode==="OFFLINE_PREPARATION_ONLY"
+    &&fxcm?.status==="WAIT_FXCM_NOT_CONNECTED"&&fxcm?.signal==="WAIT"
+    &&fxcm?.executable===false&&fxcm?.researchEligible===false
+    &&fxcm?.paperOrdersAllowed===false&&fxcm?.sourceRequestsMade===0
+    &&fxcm?.sdkLoaded===false&&fxcm?.livePricesAvailable===false
+    &&fxcm?.licenseVerified===false&&fxcm?.accountPermissionsVerified===false;
+  el("fxcm-review-state").textContent=safeFxcm
+    ?"WAIT — FXCM غير متصل؛ لا توجد بيانات ذهب حقيقية ولا تداول"
+    :"WAIT — لم يتم التحقق من حالة تجهيز FXCM";
+  const fxcmReasons=el("fxcm-review-reasons");fxcmReasons.replaceChildren();
+  const fxcmLabels={
+    FXCM_EULA_AND_CLOUD_RIGHTS_UNVERIFIED:"اتفاقية FXCM وحقوق تشغيل البيانات على Render لم تتأكد",
+    FXCM_DEMO_READ_ONLY_ENTITLEMENT_UNVERIFIED:"صلاحية Demo للقراءة فقط ومنع إرسال الصفقات لم تتأكد",
+    FXCM_REAL_XAUUSD_BID_ASK_NOT_CONNECTED:"الشموع الحقيقية Bid/Ask للذهب ليست متصلة",
+    FXCM_UTC_SESSION_AND_HISTORY_PARITY_UNVERIFIED:"توقيت الجلسات وتطابق الشموع التاريخية مع الأسعار الحية غير مثبتين"
+  };
+  if(safeFxcm&&Array.isArray(fxcm.blockingReasons)){
+    for(const code of fxcm.blockingReasons.slice(0,10)){
+      if(!Object.hasOwn(fxcmLabels,code))continue;
+      const li=document.createElement("li");li.textContent=fxcmLabels[code];
+      fxcmReasons.append(li);
+    }
+  }
+  if(!fxcmReasons.children.length){
+    const li=document.createElement("li");
+    li.textContent="المصدر غير مفعل أو حالة الترخيص غير متاحة — يبقى WAIT";
+    fxcmReasons.append(li);
+  }
   const audit=data.audit;
   const states={AUDIT_DISABLED:"المراقب الدوري متوقف",AUDIT_NOT_STARTED:"المراقب لم يسجّل أي فحص بعد",
    AUDIT_OK:"المراقب الداخلي يعمل ويسجّل أسباب WAIT",
@@ -171,7 +210,11 @@ el("refresh").addEventListener("click",async()=>{
    const li=document.createElement("li");li.className="reason";li.textContent=reason;costList.append(li);
   }
   el("auth-status").textContent="اكتمل فحص الحالة. الرمز محفوظ بذاكرة الصفحة مؤقتاً فقط";
- }catch(e){el("status").textContent="WAIT — تعذّر فحص المراقبة";el("auth-status").textContent=e.message;}
+ }catch(e){el("status").textContent="WAIT — تعذّر فحص المراقبة";
+  el("fxcm-review-state").textContent="WAIT — تعذّر التحقق من حالة FXCM";
+  const reasons=el("fxcm-review-reasons");reasons.replaceChildren();
+  const li=document.createElement("li");li.textContent="مصدر FXCM غير موثوق أو غير متصل";reasons.append(li);
+  el("auth-status").textContent=e.message;}
  finally{b.disabled=false;}
 });
 </script>

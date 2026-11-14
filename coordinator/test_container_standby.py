@@ -24,6 +24,15 @@ code,feed=get('/api/v3/eodhd/readiness');assert code==200 and feed['status']=='N
 assert feed['closedBarCounts']=={'M15':0,'H1':0,'H4':0} and feed['priceVisible'] is False
 code,monitor=get('/api/v3/monitor/status');assert code==200 and monitor['status']=='WAIT_EODHD_INTAKE' and monitor['signal']=='WAIT' and monitor['executable'] is False and monitor['researchEligible'] is False and monitor['engineStatus']=='NOT_INVOKED' and monitor['dataStatus']=='NOT_CONNECTED'
 assert monitor['sourceRequestsMade']==0 and monitor['paperRunning'] is False
+fxcm=monitor['fxcmReview']
+assert fxcm['provider']=='FXCM' and fxcm['mode']=='OFFLINE_PREPARATION_ONLY'
+assert fxcm['status']=='WAIT_FXCM_NOT_CONNECTED' and fxcm['signal']=='WAIT'
+assert fxcm['executable'] is False and fxcm['researchEligible'] is False
+assert fxcm['paperOrdersAllowed'] is False and fxcm['providerAccessStarted'] is False
+assert fxcm['sdkLoaded'] is False and fxcm['livePricesAvailable'] is False
+assert fxcm['sourceRequestsMade']==0 and fxcm['validatedClosedBarCounts']=={'M15':0,'H1':0,'H4':0}
+assert len(fxcm['blockingReasons'])==4 and 'FXCM_EULA_AND_CLOUD_RIGHTS_UNVERIFIED' in fxcm['blockingReasons']
+assert not any(k in fxcm for k in ('bid','ask','price','apiKey','token'))
 assert monitor['paperGate']['status']=='BLOCKED' and monitor['paperGate']['signal']=='WAIT'
 assert monitor['paperGate']['paperOrdersAllowed'] is False
 assert monitor['paperGate']['ledgerCreatedByGate'] is False
@@ -48,6 +57,7 @@ def viewer_get(path,secret):
 code,data=viewer_get('/api/v3/monitor/status',viewer)
 assert code==200 and data['status']=='WAIT_EODHD_INTAKE'
 assert data['signal']=='WAIT' and data['executable'] is False and data['paperRunning'] is False
+assert data['fxcmReview']['status']=='WAIT_FXCM_NOT_CONNECTED'
 assert viewer_get('/health',viewer)[0]==401
 assert viewer_get('/api/v3/monitor/status','not-right-viewer-passphrase-0123456789')[0]==401
 assert 'TWELVE_DATA_API_KEY' not in os.environ

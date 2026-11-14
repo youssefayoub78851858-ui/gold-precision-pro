@@ -13,6 +13,7 @@ from eodhd_private_readiness import read_private_status
 from eodhd_review_monitor import poll_private_review
 from private_review_watchdog import read_audit_state,run_until_stopped
 from paper_admission_gate import assess_paper_gate
+from fxcm_mobile_readiness import read_fxcm_review_status
 from private_eodhd_worker import launch_review_worker,stop_review_worker
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,*_):pass
@@ -43,6 +44,7 @@ class Handler(BaseHTTPRequestHandler):
    body=poll_private_review(audit_root,now)
    body['audit']=read_audit_state(audit_root,now,enabled=audit_enabled)
    body['paperGate']=assess_paper_gate(body,body['audit'])
+   body['fxcmReview']=read_fxcm_review_status()
   data=json.dumps(body).encode();self.send_response(status);self.send_header('Content-Type','application/json');self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(data)
 audit_root=os.environ.get('DATA_DIR','/var/data/gold-live')
 audit_enabled=os.environ.get('PRIVATE_REVIEW_AUDIT_ENABLED')=='1'

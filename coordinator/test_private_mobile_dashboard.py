@@ -33,6 +33,15 @@ class PrivateMobileDashboardTests(unittest.TestCase):
 
     def test_no_hidden_live_activation(self):
         self.assertIn("memoryToken",HTML)
+        self.assertIn('id="fxcm-review-panel"',HTML)
+        self.assertIn('id="fxcm-review-state"',HTML)
+        self.assertIn('id="fxcm-review-reasons"',HTML)
+        self.assertIn('data.fxcmReview',HTML)
+        self.assertIn('fxcm?.livePricesAvailable===false',HTML)
+        self.assertIn('fxcm?.licenseVerified===false',HTML)
+        self.assertIn('fxcmReasons.replaceChildren()',HTML)
+        self.assertIn('FXCM_EULA_AND_CLOUD_RIGHTS_UNVERIFIED',HTML)
+        self.assertIn("read_fxcm_review_status()",ENTRY)
         self.assertIn('el("auth").value=""',HTML)
         self.assertIn('el("clear").addEventListener',HTML)
         self.assertIn('engineStatus',HTML)
