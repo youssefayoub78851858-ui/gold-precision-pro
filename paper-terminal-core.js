@@ -103,7 +103,7 @@ function advance(s){
     const b=s.dataset.bars[s.cursor],buy=p.side==='BUY';
     const hitStop=buy?b.bid.low<=p.stop:b.ask.high>=p.stop;
     const hitTarget=buy?b.bid.high>=p.tp[2]:b.ask.low<=p.tp[2];
-    if(hitStop)close(s,hitTarget?'STOP_FIRST_BOTH_TOUCHED':'STOP',p.stop);
+    if(hitStop)close(s,hitTarget?'STOP_FIRST_BOTH_TOUCHED':'STOP',buy?Math.min(p.stop,b.bid.open):Math.max(p.stop,b.ask.open));
     else if(hitTarget)close(s,'TP3',p.tp[2]);
   }
   return s;

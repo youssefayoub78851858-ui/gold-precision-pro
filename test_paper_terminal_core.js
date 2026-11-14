@@ -39,3 +39,17 @@ const back=c.checkedSession(JSON.parse(JSON.stringify(state)));assert.equal(back
 // Cannot consume futures without explicit replay advance.
 assert.equal(back.cursor,64);
 console.log('PASS paper terminal core: M15/H1/H4, closed BID/ASK, manual paper, costs, stats, replay, fail closed');
+// Conservative stop-first and adverse gap fill in a synthetic-only next candle.
+const conservative=c.defaultSession(c.sample());
+const p0=c.quote(conservative);
+const pos=c.open(conservative,'BUY',p0.ask-3,[p0.ask+.8,p0.ask+1.5,p0.ask+2]);
+const next=conservative.dataset.bars[conservative.cursor+1];
+next.bid.open=pos.stop-1.5;next.bid.low=pos.stop-2;
+next.bid.high=pos.tp[2]+1; // stop and target are both reachable; STOP must win.
+next.ask.open=next.bid.open+.36;next.ask.low=next.bid.low+.36;next.ask.high=next.bid.high+.36;
+c.advance(conservative);
+assert.equal(conservative.position,null);
+assert.equal(conservative.trades.at(-1).reason,'STOP_FIRST_BOTH_TOUCHED');
+assert(conservative.trades.at(-1).exit<=pos.stop-1.5);
+assert(conservative.trades.at(-1).net<0);
+console.log('PASS conservative gap fill and stop-first when SL and TP are hit in the same M15 bar');
