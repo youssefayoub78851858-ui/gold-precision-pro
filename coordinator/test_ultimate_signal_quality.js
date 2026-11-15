@@ -52,8 +52,7 @@ assert.equal(diagnostic(source,'2026-11-10T12:00:00+00:00',tradePlan,risk,layers
 assert.equal(diagnostic(source,'2026-11-10T20:00:00Z',tradePlan,risk,layers).status,'INSUFFICIENT_EVIDENCE');
 const gap=frames();gap.H1.splice(20,1);
 assert.equal(diagnostic(gap,ASOF,tradePlan,risk,layers).status,'RESEARCH_DIAGNOSTIC_ONLY');
-// Existing checkFrame audits timeliness/closing, but not missing intermediate bars.
-// Do not misstate a full continuous-session audit in the quality diagnosis.
+assert(diagnostic(gap,ASOF,tradePlan,risk,layers).warnings.includes('H1_GAP_REQUIRES_BROKER_SESSION_CALENDAR'));
 const existing=require('./fixtures/ultimate-synthetic.json');
 const original=evaluate(existing);
 assert.equal(original.signal,'WAIT');assert.equal(original.executable,false);
