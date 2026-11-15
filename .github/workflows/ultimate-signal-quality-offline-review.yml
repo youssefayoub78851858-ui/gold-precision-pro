@@ -1,0 +1,25 @@
+name: Ultimate signal-quality offline diagnostics
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - coordinator/ultimate_signal_quality.js
+      - coordinator/test_ultimate_signal_quality.js
+      - coordinator/v3_ultimate.js
+      - .github/workflows/ultimate-signal-quality-offline-review.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signal-quality-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Offline no-lookahead signal quality and risk gate diagnostics
+        run: node coordinator/test_ultimate_signal_quality.js
+      - name: Existing V3 Ultimate contract safety regression
+        run: node coordinator/test_v3_ultimate.js
