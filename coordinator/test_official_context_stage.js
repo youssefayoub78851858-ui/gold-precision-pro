@@ -52,6 +52,24 @@ function assertSafe(x){
  assert.equal(stale.calendar.length,0);
  assert.equal(stale.headlines.length,0);
  assert.ok(stale.blockingReasons.includes("BLS_CALENDAR_UNAVAILABLE_OR_STALE"));
+ // Reject a source snapshot checked 30 seconds AFTER the decision time.
+ const futureCheck=stageOfficialContext({...macro(),checkedUTC:"2026-11-12T17:00:30.000Z"},daily(),now);
+ assertSafe(futureCheck);
+ assert.equal(futureCheck.calendar.length,0);
+ assert.equal(futureCheck.headlines.length,0);
+ assert.ok(futureCheck.blockingReasons.includes("FED_MONETARY_RSS_UNAVAILABLE_OR_STALE"));
+ assert.ok(futureCheck.blockingReasons.includes("BLS_CALENDAR_UNAVAILABLE_OR_STALE"));
+ // Do not admit a headline that arrived after its source check, even if
+ // it became available before the later research decision.
+ const beforeArrival=macro();
+ beforeArrival.checkedUTC="2026-11-12T16:59:00.000Z";
+ beforeArrival.headlineReview.items[0].availableUTC="2026-11-12T16:59:30.000Z";
+ const impossible=stageOfficialContext(beforeArrival,daily(),now);
+ assertSafe(impossible);
+ assert.equal(impossible.headlines.length,0);
+ assert.equal(impossible.calendar.length,2);
+ // Date.parse can normalize invalid calendar dates; our UTC parser must not.
+ assert.throws(()=>stageOfficialContext(macro(),daily(),"2026-02-30T17:00:00.000Z"),/Explicit UTC/);
  const unavailable=stageOfficialContext(macro(),{...daily(),sourceStatus:"STORED_FALLBACK"},now);
  assertSafe(unavailable);
  assert.equal(unavailable.rates.length,0);

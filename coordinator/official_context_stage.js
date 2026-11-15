@@ -4,7 +4,11 @@
 const {getOfficialMacroReview}=require("./official_macro_review");
 const {readAutoDailyContext}=require("./h15_official_rss");
 const {inventoryForOfficialContext}=require("./official_source_inventory");
-const iso=x=>typeof x==="string"&&Number.isFinite(Date.parse(x))&&/Z$/.test(x);
+const iso=x=>{
+ if(typeof x!=="string"||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(x))return false;
+ const t=Date.parse(x);
+ return Number.isFinite(t)&&new Date(t).toISOString().slice(0,19)===x.slice(0,19);
+};
 function stageOfficialContext(macro,h15,asOfUTC){
  const now=Date.parse(asOfUTC);
  if(!iso(asOfUTC)||!Number.isFinite(now))throw Error("Explicit UTC asOf required");
@@ -25,7 +29,9 @@ function stageOfficialContext(macro,h15,asOfUTC){
     !h15||typeof h15!=="object"||h15.signal!=="WAIT"||h15.executable!==false)
   return {...base,blockingReasons:["OFFICIAL_CONTEXT_CONTRACT_INVALID"]};
  const checked=macro.checkedUTC;
- const fresh=iso(checked)&&Date.parse(checked)<=now+60000&&now-Date.parse(checked)<=30*60000;
+ const checkedMs=iso(checked)?Date.parse(checked):NaN;
+ // Fail closed: even one second of future source-check time is look-ahead.
+ const fresh=Number.isFinite(checkedMs)&&checkedMs<=now&&now-checkedMs<=30*60000;
  const fed=fresh&&macro.feeds?.fed==="OFFICIAL_REFRESHED";
  const bls=fresh&&macro.feeds?.bls==="OFFICIAL_REFRESHED";
  const verifiedH15=h15.mode==="OFFICIAL_RECORDED_DAILY_CONTEXT"&&
@@ -58,7 +64,8 @@ function stageOfficialContext(macro,h15,asOfUTC){
   const seen=new Set();
   for(const x of macro.headlineReview.items.slice(0,20)){
    if(!x||!iso(x.publishedUTC)||!iso(x.availableUTC)||
-      Date.parse(x.availableUTC)>now||Date.parse(x.publishedUTC)>Date.parse(x.availableUTC)||
+      Date.parse(x.availableUTC)>now||Date.parse(x.availableUTC)>checkedMs||
+      Date.parse(x.publishedUTC)>Date.parse(x.availableUTC)||
       typeof x.id!=="string"||seen.has(x.id))continue;
    seen.add(x.id);
    headlines.push({id:x.id,publishedUTC:x.publishedUTC,
