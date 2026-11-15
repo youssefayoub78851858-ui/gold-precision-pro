@@ -7,6 +7,18 @@ independent trading calendar, real-time availability or paper admissibility.
 from __future__ import annotations
 
 import math
+import datetime as dt
+
+
+def canonical_utc_stamp(value):
+    """Same UTC instant may serialize as Z or .000Z; never coerce local clocks."""
+    if not isinstance(value, str) or not value.endswith('Z'):
+        return None
+    try:
+        instant = dt.datetime.fromisoformat(value[:-1] + '+00:00')
+    except ValueError:
+        return None
+    return instant if instant.utcoffset() == dt.timedelta(0) else None
 
 
 def compare_synthetic_history_and_stream(historical: object, streamed: object) -> dict:
@@ -52,7 +64,9 @@ def compare_synthetic_history_and_stream(historical: object, streamed: object) -
                 mismatches.append(basis + "_" + timeframe + "_COUNT_MISMATCH")
                 continue
             for i, (a, b) in enumerate(zip(old, live)):
-                if not isinstance(a, dict) or not isinstance(b, dict) or a.get("openTime") != b.get("openTime"):
+                if (not isinstance(a, dict) or not isinstance(b, dict) or
+                        canonical_utc_stamp(a.get("openTime")) is None or
+                        canonical_utc_stamp(a.get("openTime")) != canonical_utc_stamp(b.get("openTime"))):
                     mismatches.append(basis + "_" + timeframe + "_UTC_MISMATCH")
                     break
                 for field in ("open", "high", "low", "close"):
