@@ -40,8 +40,12 @@ const gap=structuredClone(base);
 gap.frames.M15[26].datetime='2026-11-10T10:46:00Z';
 a(review(gap).shadowVeto.blockers.includes('M15_CLOSED_FRAME_INVALID'));
 const wrong=structuredClone(base);
+wrong.frames.H4.at(-1).low=89;
 wrong.frames.H4.at(-1).close=90;
-a(review(wrong).shadowVeto.blockers.includes('H4_DIRECTION_NOT_CONFIRMED'));
+// Mutating the H4 directional breakout removes the frozen candidate itself.
+// The shadow must not invent a BUY/SELL just to claim a trend-veto success.
+a(review(wrong).shadowVeto.blockers.includes('NO_ADMISSIBLE_FROZEN_V3_CANDIDATE'));
+a.equal(review(wrong).shadowVeto.hypotheticalFilterPass,false);
 const after=structuredClone(base);
 after.frames.M15.at(-1).datetime=base.asOfUTC;
 a(review(after).shadowVeto.blockers.includes('M15_CLOSED_FRAME_INVALID'));
