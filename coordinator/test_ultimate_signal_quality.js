@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict');
 const {diagnostic,THRESHOLDS}=require('./ultimate_signal_quality');
 const {evaluate}=require('./v3_ultimate');
+const {review}=require('./ultimate_signal_quality_report');
 const ASOF='2026-11-10T12:00:00Z';
 const now=Date.parse(ASOF);
 function frames(behavior='TREND'){
@@ -56,7 +57,13 @@ assert(diagnostic(gap,ASOF,tradePlan,risk,layers).warnings.includes('H1_GAP_REQU
 const existing=require('./fixtures/ultimate-synthetic.json');
 const original=evaluate(existing);
 assert.equal(original.signal,'WAIT');assert.equal(original.executable,false);
-assert.equal(original.qualityDiagnostics?.signal,'WAIT');
-assert.equal(original.qualityDiagnostics?.effectOnCandidate,'NONE');
-assert.equal(original.qualityDiagnostics?.empiricalWinProbability,null);
+const qualityReview=review(existing);
+assert.equal(qualityReview.sourceResearchCandidate,original.researchCandidate);
+assert.equal(qualityReview.signal,'WAIT');
+assert.equal(qualityReview.executable,false);
+assert.equal(qualityReview.strategyChanged,false);
+assert.equal(qualityReview.qualityDiagnostics.signal,'WAIT');
+assert.equal(qualityReview.qualityDiagnostics.effectOnCandidate,'NONE');
+assert.equal(qualityReview.qualityDiagnostics.empiricalWinProbability,null);
+assert.equal(qualityReview.providerRequestsMade,0);
 console.log('PASS signal quality: trending/choppy, shock, net costs, news, UTC, forming/stale, pure WAIT, V3 integration');
