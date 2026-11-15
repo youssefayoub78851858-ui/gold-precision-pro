@@ -296,6 +296,9 @@ jobs:
             /tmp/ultimate-walkforward.json
           retention-days: 14
 
+      - name: Frozen paired baseline vs quality filter audit regression (offline, no provider)
+        working-directory: coordinator
+        run: node test_ultimate_filter_pairwise_audit.js
       - name: V3 independent shadow veto and Binance isolation (offline, no orders)
         working-directory: coordinator
         run: node test_ultimate_shadow_admission.js

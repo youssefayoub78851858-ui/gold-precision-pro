@@ -41,3 +41,39 @@ using the same months used for final testing. They are hypotheses.
 ## No actions performed
 No provider requests, credentials, external storage, publication, Render deployment,
 real trading or paper orders are initiated by these files.
+
+## Added implementation — paired candidate-universe offline audit
+
+- `coordinator/ultimate_shadow_admission.js`: independent *non-voting*
+  research veto checking closed/time-aligned M15/H1/H4, prior confirmed
+  BOS/pivot, excessive breakout extension, baseline news/market
+  readiness, London/NY DST reference windows, GC tape contract and
+  explicit Binance XAUUSDT quarantine. **Never** affects frozen V3
+  BUY/SELL/WAIT, paper admission, or broker orders.
+- `coordinator/ultimate_filter_pairwise_audit.js`: fixed prospective
+  paired accounting on an entire baseline candidate universe, with
+  pre-frozen rules, SHA256 manifest, chronological decision/feature
+  availability, M15 signal alignment, next-bar entry and explicit
+  spread, entry/exit slippage and commission cost in R. It **computes
+  filter selection from the fixed at-signal fields**; input cannot pass
+  an arbitrary keep/drop flag derived from future profits. The
+  very same candidate universe is used before and after filtering.
+  Reports cost-adjusted net R, win rate, mean net R, descriptive
+  drawdown, profit factor, skipped candidates and blocking reasons.
+  Trade overlaps and actual portfolio execution remain unmodelled.
+- `coordinator/test_ultimate_filter_pairwise_audit.js` validates
+  comparison ARITHMETIC on synthetic fixtures, including forced future
+  information, moved freeze, missing/duplicate candidates, changed
+  input hash and negative costs. **No empirical gold performance
+  result is produced or claimed.**
+- Later, legally permitted historical XAUUSD BID/ASK data with GC,
+  DXY, macro/news first-availability receipts and broker costs must
+  be turned into independently reviewed at-signal records. A
+  self-declared rights/availability flag or a matching SHA digest
+  does NOT prove licensing, completeness or causally correct source
+  timestamps. Even recorded reports remain explicitly unverified,
+  WAIT, never executable. Hold out a truly untouched future window
+  and compare confidence intervals; don't optimize thresholds on it.
+
+Current upstream source permissions, historical quote continuity,
+trade tape quality and forward holdout accuracy are NOT proven.

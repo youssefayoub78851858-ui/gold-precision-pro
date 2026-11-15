@@ -7,6 +7,8 @@ on:
       - coordinator/ultimate_signal_quality_report.js
       - coordinator/ultimate_shadow_admission.js
       - coordinator/test_ultimate_shadow_admission.js
+      - coordinator/ultimate_filter_pairwise_audit.js
+      - coordinator/test_ultimate_filter_pairwise_audit.js
       - coordinator/test_ultimate_signal_quality.js
       - coordinator/v3_ultimate.js
       - .github/workflows/ultimate-signal-quality-offline-review.yml
@@ -26,5 +28,7 @@ jobs:
         run: node coordinator/test_ultimate_signal_quality.js
       - name: Conservative V3 shadow signal veto including Binance isolation
         run: node coordinator/test_ultimate_shadow_admission.js
+      - name: Fixed paired baseline vs shadow-filter candidate audit safety (offline)
+        run: node coordinator/test_ultimate_filter_pairwise_audit.js
       - name: Existing V3 Ultimate contract safety regression
         run: node coordinator/test_v3_ultimate.js
