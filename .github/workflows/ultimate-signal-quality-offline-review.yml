@@ -7,6 +7,11 @@ on:
       - coordinator/test_xauusd_spread_noise_guard.js
       - coordinator/ultimate_research_extensions.js
       - coordinator/test_ultimate_research_extensions.js
+      - coordinator/xauusd_spread_proof_readiness.js
+      - coordinator/test_xauusd_spread_proof_readiness.js
+      - research/recorded/manifest.json
+      - research/recorded/2026-09-bid.json
+      - research/recorded/2026-10-bid.json
       - coordinator/ultimate_signal_quality.js
       - coordinator/ultimate_signal_quality_report.js
       - coordinator/ultimate_shadow_admission.js
@@ -38,5 +43,7 @@ jobs:
         run: node coordinator/test_ultimate_pairwise_stability.js
       - name: Fast closed XAUUSD BID ASK MID spread and fake-breakout safety regression
         run: node coordinator/test_xauusd_spread_noise_guard.js
+      - name: Verify actual archived gold dataset is BID-only and cannot prove spread improvement
+        run: node coordinator/test_xauusd_spread_proof_readiness.js
       - name: Existing V3 Ultimate contract safety regression
         run: node coordinator/test_v3_ultimate.js

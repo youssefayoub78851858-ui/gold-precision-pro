@@ -1,0 +1,53 @@
+'use strict';
+const a=require('node:assert/strict');
+const crypto=require('node:crypto');
+const fs=require('node:fs');
+const os=require('node:os');
+const path=require('node:path');
+const {audit}=require('./xauusd_spread_proof_readiness');
+const root=path.resolve(__dirname,'..');
+const report=audit(root);
+a.equal(report.mode,'OFFLINE_XAUUSD_SPREAD_FILTER_EVIDENCE_AUDIT');
+a.equal(report.status,'PROOF_BLOCKED');
+a.equal(report.counts.recordedFiles,2);
+a.equal(report.counts.bidM15,4884);
+a.equal(report.counts.askM15,0);
+a.equal(report.counts.midM15,0);
+a.equal(report.actualHistoricalSpreadMeasured,false);
+a.equal(report.verifiedPerformanceImprovement,false);
+a.equal(report.reductionInFalseBreakouts,null);
+a.equal(report.winRateAfter,null);
+a.equal(report.signal,'WAIT');
+a.equal(report.executable,false);
+a.equal(report.providerRequestsMade,0);
+a.equal(report.ordersSent,0);
+a.equal(report.sourceLicensingVerified,false);
+a.equal(report.records.every(x=>x.sha256MatchesManifest&&x.independentProviderAuthenticityVerified===false),true);
+const backup=JSON.stringify(report),again=JSON.stringify(audit(root));
+a.equal(again,backup);
+const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'xau-proof-'));
+try{
+ const folder=path.join(tmp,'research','recorded');
+ fs.mkdirSync(folder,{recursive:true});
+ const original=path.join(root,'research','recorded');
+ for(const file of ['manifest.json','2026-09-bid.json','2026-10-bid.json'])
+  fs.copyFileSync(path.join(original,file),path.join(folder,file));
+ a.equal(audit(tmp).counts.bidM15,4884);
+ const sept=path.join(folder,'2026-09-bid.json');
+ fs.appendFileSync(sept,' ');
+ const fail=audit(tmp);
+ a.equal(fail.status,'PROOF_BLOCKED');
+ a.equal(fail.code,'HISTORICAL_FILE_DIGEST_MISMATCH');
+ a.equal(fail.afterFilterResultsAvailable,false);
+ fs.copyFileSync(path.join(original,'2026-09-bid.json'),sept);
+ const manifestPath=path.join(folder,'manifest.json');
+ const manifest=JSON.parse(fs.readFileSync(manifestPath,'utf8'));
+ manifest.datasets[0].priceConvention='BID_AND_ASK_VERIFIED'; // forged label never grants data basis
+ fs.writeFileSync(manifestPath,JSON.stringify(manifest));
+ a.equal(audit(tmp).code,'UNKNOWN_SOURCE_SYMBOL_OR_PRICE_CONVENTION');
+}finally{fs.rmSync(tmp,{recursive:true,force:true});}
+const src=fs.readFileSync(require.resolve('./xauusd_spread_proof_readiness'),'utf8');
+a(!/\bfetch\s*\(/.test(src));
+a(!/new\s+WebSocket\s*\(/.test(src));
+a(!/process\.env/.test(src));
+console.log('PASS actual repo bid-only availability, exact 4884 closed bars, no ASK/MID, SHA tamper fail-closed, no unverified profit claims');

@@ -302,6 +302,9 @@ jobs:
       - name: V3 independent shadow veto and Binance isolation (offline, no orders)
         working-directory: coordinator
         run: node test_ultimate_shadow_admission.js
+      - name: Real repository recording coverage and spread filter proof gate (offline, no provider)
+        working-directory: coordinator
+        run: node test_xauusd_spread_proof_readiness.js
       - name: Synchronized closed XAUUSD bid ask mid spread noise and fake breakout preflight (offline)
         working-directory: coordinator
         run: node test_xauusd_spread_noise_guard.js
