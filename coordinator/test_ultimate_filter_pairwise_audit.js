@@ -12,7 +12,7 @@ function candidate(i,gross,spread,failKey){
   highImpactEventWindow:false,dxyConsistent:true,gcConsistent:true,
   orderFlowConsistent:true,gcContractMatched:true,referenceSession:'LONDON',
   verifiedSessionCalendar:true,netRewardRiskAtSignal:2,
-  featuresAvailableUTC:stamp(i),sourceEvidenceAvailableUTC:Array(5).fill(stamp(i))
+  featuresAvailableUTC:stamp(i),sourceEvidenceAvailableUTC:Object.fromEntries(['DXY','GC','US02Y','US10Y','orderFlow','calendar','headlines'].map(k=>[k,stamp(i)]))
  };
  if(failKey==='regime')f.regime='CHOPPY';
  if(failKey==='news')f.highImpactEventWindow=true;
@@ -59,7 +59,8 @@ const bad=(patch,regex)=>{const copy=doc();patch(copy);if(!regex)copy.manifest.c
  a.throws(()=>audit(copy),regex||/PAIRED_AUDIT_REJECTED_/);};
 bad(x=>{x.candidates[0].atSignal.regime='CHOPPY';},/BASELINE_CANDIDATE_SET_CHANGED/);
 bad(x=>{x.candidates[0].atSignal.featuresAvailableUTC='2026-12-01T01:00:01Z';},null);
-bad(x=>{x.candidates[0].atSignal.sourceEvidenceAvailableUTC[2]='2026-12-01T01:15:00Z';},null);
+bad(x=>{x.candidates[0].atSignal.sourceEvidenceAvailableUTC.GC='2026-12-01T01:15:00Z';},null);
+bad(x=>{delete x.candidates[0].atSignal.sourceEvidenceAvailableUTC.headlines;},null);
 bad(x=>{x.candidates[0].atSignal.highImpactEventWindow='not certain';},null);
 bad(x=>{x.candidates[0].signalUTC='2026-12-01T01:10:00Z';},null);
 bad(x=>{x.candidates[0].exitUTC='2026-12-01T01:10:00Z';},null);

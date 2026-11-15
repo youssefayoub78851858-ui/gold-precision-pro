@@ -7,6 +7,7 @@
 const crypto=require('node:crypto');
 const RULES='GPP_FROZEN_V3_QUALITY_SHADOW_V1_2026_11_15';
 const MAX_ROWS=5000;
+const REQUIRED_SOURCES=['DXY','GC','US02Y','US10Y','orderFlow','calendar','headlines'];
 const REQUIRED_CONTEXT=[
  'regime','directionConfirmedM15H1H4','liquidityConfirmedBeforeSignal',
  'volatilityShock','highImpactEventWindow','dxyConsistent','gcConsistent',
@@ -38,8 +39,10 @@ function selection(f){
  if(!['LONDON','NEW_YORK','OVERLAP','ASIA_OR_OFF_HOURS'].includes(f.referenceSession))
   bad('REFERENCE_SESSION_UNKNOWN');
  if(!Number.isFinite(ms(f.featuresAvailableUTC))||
-    !Array.isArray(f.sourceEvidenceAvailableUTC)||f.sourceEvidenceAvailableUTC.length!==5||
-    f.sourceEvidenceAvailableUTC.some(t=>!Number.isFinite(ms(t))))
+    !f.sourceEvidenceAvailableUTC||typeof f.sourceEvidenceAvailableUTC!=='object'||
+    Array.isArray(f.sourceEvidenceAvailableUTC)||
+    Object.keys(f.sourceEvidenceAvailableUTC).sort().join(',')!==[...REQUIRED_SOURCES].sort().join(',')||
+    Object.values(f.sourceEvidenceAvailableUTC).some(t=>!Number.isFinite(ms(t))))
   bad('AS_OF_FEATURE_PROVENANCE_MISSING');
  for(const k of ['directionConfirmedM15H1H4','liquidityConfirmedBeforeSignal',
    'volatilityShock','highImpactEventWindow','dxyConsistent','gcConsistent',
@@ -123,7 +126,7 @@ function audit(doc){
   const sumCosts=Object.values(row.costs).reduce(sum,0);
   if(!Number.isFinite(row.grossR-sumCosts))bad('NET_OUTCOME_OVERFLOW');
   const f=row.atSignal,blocked=selection(f);
-  if(ms(f.featuresAvailableUTC)>signal||f.sourceEvidenceAvailableUTC.some(t=>ms(t)>signal))
+  if(ms(f.featuresAvailableUTC)>signal||Object.values(f.sourceEvidenceAvailableUTC).some(t=>ms(t)>signal))
    bad('FUTURE_FEATURE_OR_SOURCE_REVEALED_BEFORE_SIGNAL');
   if(blocked.length===0)accepted.push(row);
   else {denied.push(row);for(const code of blocked)reasons[code]=(reasons[code]||0)+1;}
