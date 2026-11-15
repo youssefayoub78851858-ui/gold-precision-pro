@@ -16,6 +16,12 @@ class BootstrapChecks(unittest.TestCase):
         self.assertEqual(report["payments"], 0)
         self.assertEqual(report["secretReads"], 0)
         self.assertFalse(report["sourceCompatibility"]["mayMergeHistoricalAndStreamBars"])
+        self.assertTrue(report["sourceCompatibility"]["singleSeriesHistoryCannotInitializeBidAsk"])
+        self.assertFalse(report["sourceCompatibility"]["paidMarketDataCanBeDisplayedOnPublicDemo"])
+        self.assertTrue(report["sourceCompatibility"]["privateAuthenticatedSingleUserDisplayRequired"])
+        self.assertFalse(report["subscriptionDecision"]["subscribeNow"])
+        self.assertFalse(report["subscriptionDecision"]["50CompleteH4GuaranteedOnSubscriptionDay"])
+        self.assertFalse(report["subscriptionDecision"]["canBackfillStreamingBidAskFromIntradayRest"])
 
     def test_no_history_explicit_minimum(self):
         result = bootstrap_plan()
@@ -39,6 +45,24 @@ class BootstrapChecks(unittest.TestCase):
             self.assertIn("HISTORICAL_FOREX_OHLCV_VS_WEBSOCKET_BID_ASK_EQUIVALENCE_UNVERIFIED",
                           report["blockingReasons"])
             self.assertFalse(report["sourceCompatibility"]["licenseAllowsCloudUseVerified"])
+
+    def test_full_history_count_cannot_authorize_rest_bid_ask_first_day(self):
+        for counts in (None, {"M15": 800, "H1": 200, "H4": 50},
+                       {"M15": 2048, "H1": 512, "H4": 128}):
+            report = bootstrap_plan(counts)
+            self.assert_wait(report)
+            if counts:
+                self.assertTrue(report["countMinimumsMet"])
+            self.assertIn("NO_VERIFIED_HISTORICAL_BID_ASK_ARCHIVE_FOR_FIRST_DAY_WARMUP",
+                          report["blockingReasons"])
+            self.assertIn("PERSONAL_LICENSE_REQUIRES_PRIVATE_AUTHENTICATED_DISPLAY",
+                          report["blockingReasons"])
+            self.assertTrue(report["subscriptionDecision"]
+                            ["requiresForwardBidAskCollectionOrDifferentDocumentedMatchedArchive"])
+            self.assertFalse(report["sourceCompatibility"]
+                             ["historicalRestAndWebsocketSameUnderlyingFeedVerified"])
+            self.assertFalse(report["sourceCompatibility"]
+                             ["historicalBidAskArchiveIndependentlyVerified"])
 
     def test_long_m15_archive_cannot_replace_h4(self):
         r = bootstrap_plan({"M15": 1000, "H1": 250, "H4": 49})

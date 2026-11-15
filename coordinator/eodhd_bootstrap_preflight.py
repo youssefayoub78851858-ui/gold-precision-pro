@@ -18,7 +18,9 @@ DOCS_INTRADAY = "https://eodhd.com/financial-apis/intraday-historical-data-api"
 
 
 def bootstrap_plan(counts=None):
-    """A count-only arithmetic diagnostic; cannot certify data provenance."""
+    """Count-only warmup math. REST OHLC cannot authenticate live BID/ASK basis.
+    Do not ingest a provider response, paid token or private correspondence here.
+    """
     observed = {"M15": 0, "H1": 0, "H4": 0}
     if counts is not None:
         if not isinstance(counts, dict) or set(counts) != set(observed):
@@ -39,6 +41,9 @@ def bootstrap_plan(counts=None):
     blockers = [
         "EODHD_XAUUSD_CLOUD_ENTITLEMENT_AND_RIGHTS_NOT_VERIFIED",
         "HISTORICAL_FOREX_OHLCV_VS_WEBSOCKET_BID_ASK_EQUIVALENCE_UNVERIFIED",
+        "NO_VERIFIED_HISTORICAL_BID_ASK_ARCHIVE_FOR_FIRST_DAY_WARMUP",
+        "FORWARD_STREAM_BID_ASK_50_H4_WARMUP_NOT_COLLECTED",
+        "PERSONAL_LICENSE_REQUIRES_PRIVATE_AUTHENTICATED_DISPLAY",
         "INDEPENDENT_UTC_SESSION_CALENDAR_AND_CLOCK_NOT_VERIFIED",
         "LIVE_FEED_AND_RESTART_CONTINUITY_NOT_TESTED",
         "OTHER_ULTIMATE_LAYERS_AND_BROKER_COSTS_NOT_VERIFIED",
@@ -81,14 +86,33 @@ def bootstrap_plan(counts=None):
             "bidAskHistoricalConventionVerified": False,
             "licenseAllowsCloudUseVerified": False,
             "mayMergeHistoricalAndStreamBars": False,
+            "singleSeriesHistoryCannotInitializeBidAsk": True,
+            "historicalBidAskArchiveIndependentlyVerified": False,
+            "historicalRestAndWebsocketSamePriceBasisVerified": False,
+            "historicalRestAndWebsocketSameUnderlyingFeedVerified": False,
+            "currentSessionForexHistoryForMinuteSignals": False,
+            "historicalSingleSeriesMayBeAnalyzedSeparatelyAfterRightsAndDataReview": True,
+            "paidMarketDataCanBeDisplayedOnPublicDemo": False,
+            "privateAuthenticatedSingleUserDisplayRequired": True,
             "actualHistoricalDataDownloaded": False,
+        },
+        "subscriptionDecision": {
+            "subscribeNow": False,
+            "canBackfillStreamingBidAskFromIntradayRest": False,
+            "50CompleteH4GuaranteedOnSubscriptionDay": False,
+            "requiresForwardBidAskCollectionOrDifferentDocumentedMatchedArchive": True,
+            "separateHistoricalSingleSeriesResearchRequiresIndependentProvenanceAndCostModel": True,
+            "publicRenderResearchDemoMayExposeLicensedQuotes": False,
+            "allLiveTradingRemainsDisabled": True,
         },
         "blockingReasons": blockers,
         "nextRequiredEvidence": [
             "Written XAUUSD.FOREX intraday-history entitlement and Render research rights",
-            "Official bar-price convention (bid/ask/mid) and same-feed parity evidence",
+            "Do not treat single OHLC REST history as historical BID/ASK or a same-feed match",
+            "Select forward-collection of licensed streaming BID/ASK or a separately documented same-source historical BID/ASK provider",
             "Licensed, independently dated historical sample with 50 complete H4 groups",
             "Verified UTC market session calendar and gap/restart comparison",
+            "Use an authenticated single-user private dashboard before any licensed feed is shown",
         ],
         "warning": ("Count arithmetic and provider documentation do not prove paid "
                     "access, historical quality, real-time signal eligibility or profit"),

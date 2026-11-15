@@ -119,6 +119,17 @@
 <button type="button" id="review-build-check">فحص رقم النسخة المنشورة</button>
 <p class="overview-status">الرقم يأتي من الخادم نفسه، وليس من ذاكرة الهاتف أو آخر تحديث على GitHub. لا يلزم إدخال رمز أو الاتصال بسوق الذهب.</p>
 </section><hr>
+<section id="eodhd-prepurchase" class="overview" aria-labelledby="eodhd-prepurchase-title">
+<h2 id="eodhd-prepurchase-title">EODHD — قبل الاشتراك (لا توجد بيانات مدفوعة)</h2>
+<p class="overview-status">WAIT — WebSocket مباشر BID/ASK ممكن بعد تفعيل اشتراك مرخّص، لكن تاريخ Intraday OHLC ليس أرشيف BID/ASK مثبتاً لنفس البث. ما منخلط المصدرين، وما في 50 شمعة H4 مضمونة من أول يوم.</p>
+<div class="overview-grid">
+ <div class="overview-card">أقل عدد لتهيئة H4<strong>50 H4 = 800 M15 مكتملة نظرياً</strong></div>
+ <div class="overview-card">تهيئة التاريخ المباشر<strong>غير مثبتة — جمع BID/ASK لاحقاً أو مصدر متوافق مستقل</strong></div>
+ <div class="overview-card">ترخيص العرض<strong>خدمة خاصة محمية لمستخدم واحد فقط</strong></div>
+ <div class="overview-card">قرار الشراء<strong>WAIT — لا اشتراك أو تنفيذ تلقائي</strong></div>
+</div>
+<p class="overview-status">الشارت الحالي على الصفحة العامة تجريبي وغير مرخّص لعرض بيانات EODHD المدفوعة. تجميع 800 شمعة وحده لا يثبت دقة المصدر أو اكتمال الجلسات أو نجاح الاستراتيجية.</p>
+</section><hr>
 <section id="gold-api-prepurchase" class="overview" aria-labelledby="gold-api-prepurchase-title">
 <h2 id="gold-api-prepurchase-title">Gold API Premium — فحص الشموع قبل أي دفع</h2>
 <p id="gold-api-prepurchase-status" role="status">WAIT — السعر الفوري المجاني ليس شموع تداول BID/ASK حقيقية.</p>
