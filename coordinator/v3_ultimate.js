@@ -2,7 +2,6 @@
 // Deterministic offline research. Input evidence is supplied, never fetched.
 const {assess}=require('./v3_multitimeframe');
 const {plan}=require('./v3_trade_plan');
-const {diagnostic:signalQuality}=require('./ultimate_signal_quality');
 const FEEDS=['DXY','US02Y','US10Y','GC','calendar','headlines','orderFlow'];
 const finite=Number.isFinite;
 function evidence(name,feed,now){
@@ -72,9 +71,8 @@ function evaluate(input){
  const ranges=rows.slice(-14).map((b,i,a)=>Math.max(b.high-b.low,i?Math.abs(b.high-a[i-1].close):0,i?Math.abs(b.low-a[i-1].close):0));
  const atr=ranges.length===14?ranges.reduce((a,b)=>a+b,0)/14:null;
  if(!finite(atr)||atr<=0||!finite(input.spread)||input.spread<0||input.spread>atr*0.2)blocked.push('volatility/spread');
- const qualityDiagnostics=signalQuality(input.frames,input.asOfUTC,tradePlan,input.risk,layers);
  return {engine:'V3 Ultimate',version:1,mode:'offline-research',asOfUTC:input.asOfUTC,signal:'WAIT',executable:false,
- marketContext:context(input.frames?.M15,input.asOfUTC),qualityDiagnostics,researchCandidate:blocked.length?'NONE':technical.candidate,technical,atr,layers,tradePlan,risk,
+ marketContext:context(input.frames?.M15,input.asOfUTC),researchCandidate:blocked.length?'NONE':technical.candidate,technical,atr,layers,tradePlan,risk,
  monitoring:{blocked:[...new Set(blocked)],readyFeeds:FEEDS.filter(n=>layers[n].status==='READY').length,totalFeeds:FEEDS.length},
  reason:blocked.length?'Mandatory evidence or risk gates blocked':'Research candidate only; strategy validation and operator review pending'};
 }
