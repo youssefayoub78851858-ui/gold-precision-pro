@@ -353,6 +353,7 @@ jobs:
         working-directory: coordinator
         run: |
           python -m unittest -v test_multi_source_readiness
+          node test_multi_source_public_readiness.js
           python multi_source_readiness.py --output /tmp/gpp-multi-source-readiness.json
       - name: XAUUSD signed intake, UTC candle quality, gaps and outage backoff (offline fixtures)
         working-directory: coordinator

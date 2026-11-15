@@ -1,0 +1,51 @@
+{
+  "manifestVersion": 1,
+  "mode": "OFFLINE_REQUIREMENTS_NOT_MARKET_DATA",
+  "layers": [
+    {
+      "id": "XAUUSD_BBO",
+      "providerCandidate": "Massive",
+      "requiredEvidence": "HISTORICAL_BID_ASK_AND_LIVE_QUOTE_PARITY"
+    },
+    {
+      "id": "GC_TRADES",
+      "providerCandidate": "Databento",
+      "requiredEvidence": "EXCHANGE_GC_MBO_AND_AGGRESSOR_TRADE_TAPE"
+    },
+    {
+      "id": "GC_DEPTH",
+      "providerCandidate": "Databento",
+      "requiredEvidence": "GC_MBP10_OR_MBO_FULL_DEPTH"
+    },
+    {
+      "id": "DXY",
+      "providerCandidate": "ICE_OR_LICENSED_INDEX",
+      "requiredEvidence": "VERIFIED_INTRADAY_DXY"
+    },
+    {
+      "id": "US02Y",
+      "providerCandidate": "OFFICIAL_FED_TREASURY",
+      "requiredEvidence": "DAILY_CONTEXT_ONLY"
+    },
+    {
+      "id": "US10Y",
+      "providerCandidate": "OFFICIAL_FED_TREASURY",
+      "requiredEvidence": "DAILY_CONTEXT_ONLY"
+    },
+    {
+      "id": "CALENDAR",
+      "providerCandidate": "INDEPENDENT_SCHEDULE",
+      "requiredEvidence": "COMPLETE_USD_CALENDAR_WITH_ACTUAL_AND_CONSENSUS"
+    },
+    {
+      "id": "HEADLINES",
+      "providerCandidate": "LICENSED_NEWS",
+      "requiredEvidence": "TIMESTAMPED_USD_GOLD_WORLD_NEWS"
+    },
+    {
+      "id": "RISK_COSTS",
+      "providerCandidate": "BROKER_AND_STRATEGY",
+      "requiredEvidence": "SPREAD_SLIPPAGE_COMMISSION_AND_REALISTIC_FILLS"
+    }
+  ]
+}

@@ -110,8 +110,64 @@
 </div>
 <button type="button" id="overview-refresh">تحديث حالة البحث</button>
 <p class="overview-status">DXY وGC وOrder Flow والأخبار السياسية/الجيوسياسية: UNAVAILABLE ما لم يثبتها المحرك صراحةً. سعر XAUS لا يتحول إلى شموع أو إشارة.</p>
-<nav class="overview-nav" aria-label="انتقال سريع"><a href="#spot-reference">سعر مرجعي</a><a href="#candle-source-readiness">الشموع</a><a href="#macro-research">الأخبار</a><a href="#ultimate-r2-review">Ultimate r2</a><a href="#paper-title">التداول الورقي</a></nav>
+<nav class="overview-nav" aria-label="انتقال سريع"><a href="#spot-reference">سعر مرجعي</a><a href="#candle-source-readiness">الشموع</a><a href="#macro-research">الأخبار</a><a href="#multi-source-readiness">المصادر التسعة</a><a href="#ultimate-r2-review">Ultimate r2</a><a href="#paper-title">التداول الورقي</a></nav>
 </section>
+<section id="multi-source-readiness" class="overview" aria-labelledby="multi-source-title">
+<h2 id="multi-source-title">جاهزية مصادر Gold Precision التسعة</h2>
+<p id="multi-source-state" role="status" aria-live="polite">WAIT — هذا فحص لمتطلبات المصادر، مش بيانات سوق متصلة.</p>
+<div id="multi-source-grid" class="overview-grid">
+<div class="overview-card">الذهب BID/ASK، GC، DXY، السندات، الأخبار والتكاليف<strong>غير موصولة ببيانات مدفوعة — جاري عرض المتطلبات فقط</strong></div>
+</div>
+<button id="multi-source-check" type="button">فحص وضع المصادر (مجاني، بلا طلب بيانات)</button>
+<p class="overview-status">المصدر المرشح ما بيعني أنه شغّال. بيانات السندات المجانية يومية فقط، ولا تعوّض تحديث US02Y/US10Y اللحظي. فحص GitHub غير فحص سوق مباشر؛ التداول معطّل.</p>
+</section><hr>
+<script>
+(function(){
+ const btn=document.getElementById('multi-source-check');
+ const status=document.getElementById('multi-source-state');
+ const grid=document.getElementById('multi-source-grid');
+ const names={XAUUSD_BBO:'ذهب XAUUSD BID/ASK',GC_TRADES:'صفقات GC',GC_DEPTH:'دفتر أوامر GC',DXY:'مؤشر الدولار DXY',US02Y:'سندات سنتين',US10Y:'سندات عشر سنوات',CALENDAR:'التقويم الاقتصادي',HEADLINES:'الأخبار الاقتصادية والجيوسياسية',RISK_COSTS:'السبريد والمخاطر'};
+ async function check(){
+  btn.disabled=true;
+  status.textContent='WAIT — فحص المتطلبات المخزّنة بدون اتصال ببيانات السوق...';
+  try{
+   const response=await fetch('/api/v3/ultimate/multi-source-readiness',{
+    cache:'no-store',credentials:'omit',redirect:'error',signal:AbortSignal.timeout(9000)});
+   if(!response.ok)throw Error('UNAVAILABLE');
+   const v=await response.json();
+   if(v.mode!=='OFFLINE_MULTISOURCE_CAPABILITY_AUDIT'||v.signal!=='WAIT'||
+      v.executable!==false||v.researchEligible!==false||v.paperOrdersAllowed!==false||
+      v.verifiedLiveLayerCount!==0||v.requiredLayerCount!==9||
+      v.sourceRequestsMade!==0||v.providerRequestsMade!==0||
+      v.publicLicensedDataShown!==false||
+      !v.layers||Object.keys(v.layers).length!==9)throw Error('UNSAFE');
+   const nodes=[];
+   for(const [id,name] of Object.entries(names)){
+    const layer=v.layers[id];
+    if(!layer||layer.liveReady!==false||layer.researchAdmitted!==false||
+       !['FREE_DAILY_REFERENCE_CANDIDATE','NOT_CONNECTED'].includes(layer.status))
+      throw Error('UNSAFE_LAYER');
+    const box=document.createElement('div');box.className='overview-card';
+    box.appendChild(document.createTextNode(name));
+    const label=document.createElement('strong');
+    label.textContent=layer.status==='FREE_DAILY_REFERENCE_CANDIDATE'?
+        'مرشح مجاني يومي فقط — مش مباشر':'غير موصول — بانتظار إثبات المصدر';
+    box.appendChild(label);nodes.push(box);
+   }
+   grid.replaceChildren(...nodes);
+   status.textContent='WAIT — 0 من 9 مصادر حقيقية موصولة؛ فحص برمجي فقط';
+  }catch(_error){
+   grid.replaceChildren();
+   const item=document.createElement('div');item.className='overview-card';
+   item.textContent='تعذّر التحقق من وضع المصادر — لا تعتبر أي مصدر جاهزاً';
+   grid.appendChild(item);
+   status.textContent='WAIT — حالة المصادر غير متاحة';
+  }finally{btn.disabled=false;}
+ }
+ btn.addEventListener('click',check);
+ window.addEventListener('pageshow',check);
+})();
+</script>
 <section id="review-build-identity" class="overview" aria-labelledby="review-build-title">
 <h2 id="review-build-title">نسخة النظام المنشورة على Render</h2>
 <p id="review-build-state" role="status" aria-live="polite">لم يتم التأكد بعد من رقم النسخة.</p>

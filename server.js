@@ -115,6 +115,29 @@ const server = http.createServer(async (req, res) => {
     return send(res,200,require("./coordinator/review_deploy_identity").inspect());
   }
 
+  // Public review-only source requirement inventory. Not live feed status.
+  if(req.url.split("?")[0]==="/api/v3/ultimate/multi-source-readiness"){
+    if(!DEMO_MODE)return send(res,404,{signal:"WAIT",executable:false,error:"Not found"});
+    if(req.method!=="GET")return send(res,405,{signal:"WAIT",executable:false,error:"GET only"});
+    try{
+      const out=require("./coordinator/multi_source_public_readiness").snapshot();
+      if(out.mode!=="OFFLINE_MULTISOURCE_CAPABILITY_AUDIT"||out.signal!=="WAIT"||
+         out.executable!==false||out.researchEligible!==false||
+         out.paperOrdersAllowed!==false||out.publicLicensedDataShown!==false||
+         out.sourceRequestsMade!==0||out.providerRequestsMade!==0||
+         out.verifiedLiveLayerCount!==0||out.requiredLayerCount!==9||
+         Object.keys(out.layers||{}).length!==9||Object.values(out.layers).some(
+           x=>x.liveReady!==false||x.researchAdmitted!==false))
+        throw Error("UNSAFE_SOURCE_INVENTORY");
+      res.writeHead(200,{"Content-Type":"application/json; charset=utf-8",
+        "Cache-Control":"no-store","X-Content-Type-Options":"nosniff",
+        "Referrer-Policy":"no-referrer"});
+      return res.end(JSON.stringify(out));
+    }catch(_error){
+      return send(res,503,{signal:"WAIT",executable:false,status:"SOURCE_INVENTORY_UNAVAILABLE"});
+    }
+  }
+
   // Gold API Premium pre-purchase readiness only: never fetch or expose a key.
   if(req.url.split("?")[0]==="/api/v3/ultimate/gold-api-readiness"){
     if(req.method!=="GET")return send(res,405,{signal:"WAIT",executable:false,error:"GET only"});

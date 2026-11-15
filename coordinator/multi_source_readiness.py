@@ -20,17 +20,15 @@ from databento_gc_book_preflight import validate_rows
 from massive_bbo_history_adapter import review_synthetic_massive_bbo
 from recorded_utils import ns
 
-LAYERS = (
-    ("XAUUSD_BBO", "Massive", "HISTORICAL_BID_ASK_AND_LIVE_QUOTE_PARITY"),
-    ("GC_TRADES", "Databento", "EXCHANGE_GC_MBO_AND_AGGRESSOR_TRADE_TAPE"),
-    ("GC_DEPTH", "Databento", "GC_MBP10_OR_MBO_FULL_DEPTH"),
-    ("DXY", "ICE_OR_LICENSED_INDEX", "VERIFIED_INTRADAY_DXY"),
-    ("US02Y", "OFFICIAL_FED_TREASURY", "DAILY_CONTEXT_ONLY"),
-    ("US10Y", "OFFICIAL_FED_TREASURY", "DAILY_CONTEXT_ONLY"),
-    ("CALENDAR", "INDEPENDENT_SCHEDULE", "COMPLETE_USD_CALENDAR_WITH_ACTUAL_AND_CONSENSUS"),
-    ("HEADLINES", "LICENSED_NEWS", "TIMESTAMPED_USD_GOLD_WORLD_NEWS"),
-    ("RISK_COSTS", "BROKER_AND_STRATEGY", "SPREAD_SLIPPAGE_COMMISSION_AND_REALISTIC_FILLS"),
-)
+# Single requirement registry is also used by the public read-only review UI.
+# This manifest is a list of EXPECTED sources, not proof of any connection.
+_registry = json.loads((pathlib.Path(__file__).with_name("multi_source_layers.json")).read_text(encoding="utf-8"))
+if (_registry.get("manifestVersion") != 1 or _registry.get("mode") != "OFFLINE_REQUIREMENTS_NOT_MARKET_DATA" or
+        not isinstance(_registry.get("layers"), list) or len(_registry["layers"]) != 9):
+    raise RuntimeError("INVALID_OFFLINE_SOURCE_REGISTRY")
+LAYERS = tuple((item["id"], item["providerCandidate"], item["requiredEvidence"]) for item in _registry["layers"])
+if len({name for name, _, _ in LAYERS}) != 9:
+    raise RuntimeError("DUPLICATE_OFFLINE_SOURCE_REGISTRY")
 GC_CONTRACT = re.compile(r"^GC[FGHJKMNQUVXZ][0-9]{1,4}$")
 
 

@@ -12,5 +12,8 @@ a.equal(new Set(ids).size,ids.length,'Duplicate DOM ID');
 for(const id of [...legacy.matchAll(/\bid=["']([^"']+)["']/g)].map(x=>x[1]))a(ids.includes(id),'Legacy paper UI element absent: '+id);
 a(/#unified-mobile-trading\s+button/.test(doc),'Paper buttons CSS not scoped');
 a(/#unified-mobile-trading\s+#chart/.test(doc),'Paper chart CSS not scoped');
+for(const id of ['multi-source-readiness','multi-source-check','multi-source-state','multi-source-grid'])
+ a(doc.includes('id="'+id+'"'),'Missing source inventory panel: '+id);
+a(doc.includes('/api/v3/ultimate/multi-source-readiness'));
 a(doc.includes('WAIT'));
 console.log('PASS unified mobile: chart, trade, journal and research in /ultimate, no iframe or duplicate IDs');
