@@ -44,6 +44,11 @@ jobs:
       - name: Private EODHD bid-ask to research-only pipeline intake (offline)
         working-directory: coordinator
         run: python -m unittest -v test_eodhd_research_bridge
+      - name: Massive XAUUSD Forex WebSocket BID ASK standby protocol (offline, no network)
+        working-directory: coordinator
+        run: |
+          node test_massive_ws_standby.js
+          python -m unittest -v test_massive_bbo_history_adapter
       - name: EODHD XAUUSD WebSocket safety preflight (offline)
         working-directory: coordinator
         run: node test_eodhd_ws_bridge.js

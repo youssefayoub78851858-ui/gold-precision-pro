@@ -67,7 +67,6 @@ class MassiveSyntheticHistoricalBBOTests(unittest.TestCase):
             lambda s: s["results"][0].update(participant_timestamp=1.2),
             lambda s: s["results"][0].update(participant_timestamp="123456"),
             lambda s: s["results"][0].update(bid_price=True),
-            lambda s: s["results"].insert(3, dict(s["results"][2])),
             lambda s: s["results"].reverse(),
         ):
             with self.subTest(mutate=mutate):
@@ -75,6 +74,27 @@ class MassiveSyntheticHistoricalBBOTests(unittest.TestCase):
                 mutate(sample)
                 with self.assertRaises(ValueError):
                     inspect(sample, as_of_utc=self.as_of)
+
+    def test_same_second_bbo_events_preserve_rest_response_order(self):
+        sample = payload(bars=1)
+        tied = dict(sample["results"][5])
+        tied["bid_price"] = 4002.0
+        tied["ask_price"] = 4002.4
+        sample["results"].insert(6, tied)
+        v = inspect(sample, as_of_utc=self.as_of)
+        self.assertEqual(v["quotesValidated"], 16)
+        self.assertEqual(v["incompleteM15Discarded"], 0)
+        self.assertEqual(v["completeClosedBarCounts"]["M15"], 1)
+        self.assertEqual(v["bidFrames"]["M15"][0]["high"], 4002.0)
+        self.assertEqual(v["askFrames"]["M15"][0]["high"], 4002.4)
+        self.assertEqual(v["signal"], "WAIT")
+        self.assertFalse(v["executable"])
+        # Reversed timestamps, not equal timestamps, must be rejected.
+        disordered = payload(bars=1)
+        disordered["results"][6], disordered["results"][5] = (
+            disordered["results"][5], disordered["results"][6])
+        with self.assertRaisesRegex(ValueError, "REVERSED"):
+            inspect(disordered, as_of_utc=self.as_of)
 
     def test_sparse_quotes_and_unclosed_candle_are_not_promoted(self):
         sample = payload(bars=1)

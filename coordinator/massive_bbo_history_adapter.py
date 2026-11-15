@@ -100,7 +100,10 @@ def review_synthetic_massive_bbo(payload: dict, *, as_of_utc: str) -> dict:
         raise ValueError("BBO_QUOTE_COUNT_INVALID")
     cutoff_ns = int(as_of.timestamp()) * 1000000000
     quotes = [_decode_quote(row, cutoff_ns) for row in rows]
-    if any(quotes[i]["ns"] <= quotes[i - 1]["ns"] for i in range(1, len(quotes))):
+    # Massive forex REST allows multiple distinct BBO events with an identical
+    # participant_timestamp. Preserve provider response order within ties.
+    # Only strictly reversed timestamps are invalid; no deduplication.
+    if any(quotes[i]["ns"] < quotes[i - 1]["ns"] for i in range(1, len(quotes))):
         raise ValueError("BBO_REPLAY_DUPLICATE_OR_REVERSED")
 
     groups: dict[int, list[dict]] = {}
