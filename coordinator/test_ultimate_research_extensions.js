@@ -109,6 +109,7 @@ a.equal(result.predictedWinRate,null);a.equal(result.realDataSourcesActivated,0)
 a.equal(result.economicSurprises.status,'BLOCKED');
 a.equal(result.tips10Y.status,'BLOCKED');
 a.equal(result.performance.status,'BLOCKED');
+a.equal(result.spreadNoise.reasonCode,'CLOSED_BID_ASK_HISTORY_NOT_CONNECTED');
 a.equal(JSON.stringify(fake),original);
 a.throws(()=>inspect(fake,{...coreReal,signal:'BUY'}),/UNSAFE/);
 const withSynthetic=structuredClone(fake);

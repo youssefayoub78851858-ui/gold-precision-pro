@@ -454,6 +454,7 @@ document.getElementById('r2-run').onclick=async()=>{
    'حالة السوق: '+(data.researchEnhancements?.regime?.marketRegime||'غير محسومة — بيانات مكتملة مطلوبة')+' — وصف فقط وليس توقعاً',
    'مفاجآت الأخبار: '+(data.researchEnhancements?.economicSurprises?.status||'غير متاحة')+' — لا تصويت اتجاهي',
    'تعارض الأسواق: '+(data.researchEnhancements?.crossMarket?.status||'غير متاح')+' — GC وDXY يلزمهما دليل مرخّص',
+   'فلتر السبريد BID/ASK: '+(data.researchEnhancements?.spreadNoise?.status||'غير متاح')+' — شموع حقيقية متزامنة لازمة قبل اعتماد الاختراق',
    'العوائد الحقيقية TIPS: '+(data.researchEnhancements?.tips10Y?.status||'غير موصولة')+' — بيانات يومية فقط',
    'جودة الأداء: '+(data.researchEnhancements?.performance?.status||'لا توجد نتائج مستقلة')+' — لا نسبة نجاح مثبتة',
    'كل المؤشرات وصفية فقط؛ القرار WAIT والتداول معطّل.'

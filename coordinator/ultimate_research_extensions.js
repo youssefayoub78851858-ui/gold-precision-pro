@@ -3,6 +3,7 @@
 // not an account feed, and not proof of actual source rights or predictive accuracy.
 const {time}=require('./ultimate_v2_contracts');
 const {checkFrame}=require('./v3_multitimeframe');
+const {evaluate:spreadGuard}=require('./xauusd_spread_noise_guard');
 const EPS=1e-9,MAX_EVENTS=64,MAX_OUTCOMES=5000;
 const TF={M15:15,H1:60,H4:240};
 const safe=(n)=>typeof n==='number'&&Number.isFinite(n);
@@ -177,6 +178,7 @@ function inspect(input,core){
   crossMarket:crossAssets(core,asOfUTC),
   tips10Y:realYield(r.tips10Y,input.feeds?.US10Y,core.layers?.US10Y,asOfUTC),
   performance:quality(r.holdout,asOfUTC),
+  spreadNoise:spreadGuard(r.bboClosed,asOfUTC,core.technical?.candidate||'NONE'),
   note:'Supplemental research only; missing sources never become synthetic positive signals'
  };
 }
