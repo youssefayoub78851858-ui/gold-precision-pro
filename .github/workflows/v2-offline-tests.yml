@@ -44,6 +44,9 @@ jobs:
       - name: Private EODHD bid-ask to research-only pipeline intake (offline)
         working-directory: coordinator
         run: python -m unittest -v test_eodhd_research_bridge
+      - name: Massive private closed-only BID ASK history restart and file-permission security (synthetic)
+        working-directory: coordinator
+        run: node test_massive_private_closed_store.js
       - name: Cross-language Massive historical vs streaming BID ASK consistency (synthetic)
         working-directory: coordinator
         run: |

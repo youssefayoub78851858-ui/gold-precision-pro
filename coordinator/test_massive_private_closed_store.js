@@ -1,0 +1,76 @@
+'use strict';
+const a=require('node:assert/strict');
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const {MassiveQuoteStandby}=require('./massive_ws_standby');
+const {saveClosed,loadClosed,coldRestore}=require('./massive_private_closed_store');
+const start=Date.parse('2026-11-10T08:00:00Z'),step=900000;
+let now=start+1000,rev=new MassiveQuoteStandby(()=>now);
+a.equal(rev.handle({ev:'status',status:'auth_success'}).kind,'authenticated');
+a.equal(rev.handle({ev:'status',status:'success',message:'subscribed to: C.XAU-USD'}).kind,'subscribed');
+for(let i=0;i<16;i++)for(let j=0;j<15;j++){
+ const t=start+i*step+j*60000+30000;
+ now=t+500;
+ const bid=3900+i*.03+j*.005;
+ a.equal(rev.handle({ev:'C',p:'XAU/USD',t,b:bid,a:bid+.4,x:44}).kind,'synthetic_quote');
+}
+now=start+16*step+30500;
+a.equal(rev.handle({ev:'C',p:'XAU/USD',t:start+16*step+30000,b:3901.6,a:3902,x:44}).kind,'synthetic_quote');
+const snapshot=rev.snapshot();
+a.equal(snapshot.frames.M15.length,16);
+const root=fs.mkdtempSync(path.join(os.tmpdir(),'gpp-massive-offline-'));
+const secure=path.join(root,'vault'),file=path.join(secure,'massive-synthetic-closed-m15.json');
+try{
+ a.equal(loadClosed(secure,now),null);
+ const info=saveClosed(secure,snapshot,now);
+ a.equal(info.status,'CLOSED_HISTORY_SAVED');
+ a.equal(info.closedM15Count,16);
+ a.equal(info.latestQuotePersisted,false);
+ const raw=fs.readFileSync(file,'utf8');
+ a(!raw.includes('lastSyntheticQuote'));
+ a(!raw.includes('apiKey'));
+ a(!raw.includes('authorization'));
+ a.equal(fs.statSync(file).mode&0o077,0);
+ a.equal(fs.statSync(secure).mode&0o077,0);
+ let restored=loadClosed(secure,now);
+ a.equal(restored.frames.M15.length,16);
+ a.equal(restored.frames.H1.length,4);
+ a.equal(restored.frames.H4.length,1);
+ a.equal(restored.bidFrames.H4.length,1);
+ a.equal(restored.askFrames.H4.length,1);
+ a.equal(restored.signal,'WAIT');
+ a.equal(restored.paperOrdersAllowed,false);
+ let fresh=new MassiveQuoteStandby(()=>now);
+ const result=coldRestore(fresh,secure,now);
+ a.equal(result.restoredM15Count,16);
+ a.equal(fresh.snapshot().frames.H4.length,1);
+ a.equal(fresh.snapshot().lastSyntheticQuote,null);
+ a.equal(fresh.authenticated,false);
+ a.equal(fresh.subscribed,false);
+ a.equal(fresh.snapshot().executable,false);
+ a.equal(fresh.handle({ev:'C',p:'XAU/USD',t:now,b:3900,a:3901}).reason,'QUOTE_BEFORE_SUBSCRIPTION');
+ // Tampering, bogus source status, forged minute, and future bars fail.
+ const content=JSON.parse(raw);
+ content.payload.midM15[1].close=9000;
+ fs.writeFileSync(file,JSON.stringify(content),{mode:0o600});
+ a.throws(()=>loadClosed(secure,now),/INTEGRITY/);
+ fs.writeFileSync(file,raw,{mode:0o600});
+ const copied=structuredClone(snapshot);
+ copied.mode='REAL_LIVE';
+ a.throws(()=>saveClosed(secure,copied,now),/ONLY_SYNTHETIC/);
+ copied.mode=snapshot.mode;
+ copied.frames.M15[0].openTime='2099-01-01T00:00:00.000Z';
+ a.throws(()=>saveClosed(secure,copied,now),/UNALIGNED|FUTURE/);
+ // Existing file permissions are rechecked at every load.
+ fs.chmodSync(file,0o644);
+ a.throws(()=>loadClosed(secure,now),/UNSAFE_PRIVATE/);
+ fs.chmodSync(file,0o600);
+ const other=path.join(root,'public-target');fs.writeFileSync(other,raw,{mode:0o600});
+ fs.unlinkSync(file);fs.symlinkSync(other,file);
+ a.throws(()=>loadClosed(secure,now),/UNSAFE_PRIVATE/);
+ a.throws(()=>saveClosed(secure,snapshot,now),/UNSAFE_PRIVATE/);
+ fs.unlinkSync(file);
+ fs.chmodSync(secure,0o755);
+ a.throws(()=>loadClosed(secure,now),/PRIVATE_DIRECTORY/);
+ a.throws(()=>saveClosed(secure,snapshot,now),/PRIVATE_DIRECTORY/);
+}finally{fs.rmSync(root,{recursive:true,force:true});}
+console.log('PASS synthetic Massive BID ASK private closed-only recovery, no quotes/auth restored or source requests');
