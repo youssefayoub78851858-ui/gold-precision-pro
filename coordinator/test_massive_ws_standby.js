@@ -21,7 +21,7 @@ a.equal(s.handle({ev:'status',status:'connected'}).kind,'ignored');
 a.equal(feed(s).kind,'authenticated');
 a.equal(s.handle(quote(now)).reason,'QUOTE_BEFORE_SUBSCRIPTION');
 a.equal(feed(s).kind,'authenticated');a.equal(subscribe(s).kind,'subscribed');
-a.equal(s.handle(quote(now,p='XAU/USD'.length)).kind,'ignored'); // unrelated pair
+a.equal(s.handle(quote(now,3900,3900.4,'EUR/USD')).kind,'ignored'); // unrelated pair
 let w=new MassiveQuoteStandby(()=>now);
 a.equal(feed(w).kind,'authenticated');
 a.equal(subscribe(w).kind,'subscribed');
