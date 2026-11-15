@@ -3,6 +3,10 @@ on:
   push:
     branches: [review/v2-portable-tests-20261109]
     paths:
+      - coordinator/xauusd_spread_noise_guard.js
+      - coordinator/test_xauusd_spread_noise_guard.js
+      - coordinator/ultimate_research_extensions.js
+      - coordinator/test_ultimate_research_extensions.js
       - coordinator/ultimate_signal_quality.js
       - coordinator/ultimate_signal_quality_report.js
       - coordinator/ultimate_shadow_admission.js
@@ -32,5 +36,7 @@ jobs:
         run: node coordinator/test_ultimate_filter_pairwise_audit.js
       - name: Chronological fixed paired holdout stability and small-sample warnings
         run: node coordinator/test_ultimate_pairwise_stability.js
+      - name: Fast closed XAUUSD BID ASK MID spread and fake-breakout safety regression
+        run: node coordinator/test_xauusd_spread_noise_guard.js
       - name: Existing V3 Ultimate contract safety regression
         run: node coordinator/test_v3_ultimate.js
