@@ -55,9 +55,12 @@ const local=audit(doc('LOCAL_RECORDED_RESEARCH_UNVERIFIED'));
 a.equal(local.netPerformanceImprovementProven,false);
 a.equal(local.dataLicensingIndependentlyVerified,false);
 a.equal(local.signal,'WAIT');
-const bad=(patch,regex)=>{const copy=doc();patch(copy);if(!regex)copy.manifest.candidatesSHA256=sha(copy.candidates);
+const bad=(patch,regex,keepOriginalHash=false)=>{const copy=doc();patch(copy);
+ // Recompute the manifest hash for semantic guard tests; retain the
+ // original digest only for the explicit integrity-mismatch test.
+ if(!keepOriginalHash)copy.manifest.candidatesSHA256=sha(copy.candidates);
  a.throws(()=>audit(copy),regex||/PAIRED_AUDIT_REJECTED_/);};
-bad(x=>{x.candidates[0].atSignal.regime='CHOPPY';},/BASELINE_CANDIDATE_SET_CHANGED/);
+bad(x=>{x.candidates[0].atSignal.regime='CHOPPY';},/BASELINE_CANDIDATE_SET_CHANGED/,true);
 bad(x=>{x.candidates[0].atSignal.featuresAvailableUTC='2026-12-01T01:00:01Z';},null);
 bad(x=>{x.candidates[0].atSignal.sourceEvidenceAvailableUTC.GC='2026-12-01T01:15:00Z';},null);
 bad(x=>{x.candidates[0].atSignal.sourceEvidenceAvailableUTC.GC='2026-12-01T00:54:59Z';},/INTRADAY_CROSS_MARKET_EVIDENCE_STALE/);
