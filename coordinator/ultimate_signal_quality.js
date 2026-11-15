@@ -33,6 +33,18 @@ function diagnostic(frames,asOfUTC,tradePlan={},risk={},layers={}){
     if(!test.ok)result.warnings.push(frame+'_CLOSED_DATA_UNAVAILABLE');
   }
   if(result.warnings.length)return result;
+  // A missing aligned bar could be a legitimate weekend/session closure.
+  // Without an independently verified calendar, flag gaps for human review
+  // instead of pretending continuity or inventing synthetic missing candles.
+  for(const [frame,minutes] of Object.entries(PERIODS)){
+    const rowsForFrame=frames[frame],width=minutes*60_000;
+    for(let i=1;i<rowsForFrame.length;i++){
+      if(Date.parse(rowsForFrame[i].datetime)-Date.parse(rowsForFrame[i-1].datetime)>width){
+        result.warnings.push(frame+'_GAP_REQUIRES_BROKER_SESSION_CALENDAR');
+        break;
+      }
+    }
+  }
   const rows=frames.M15;
   if(rows.length<Math.max(THRESHOLDS.efficiencyLookback+1,2*THRESHOLDS.atrPeriod+1)){
     result.warnings.push('M15_HISTORY_INSUFFICIENT_FOR_QUALITY_AUDIT');
