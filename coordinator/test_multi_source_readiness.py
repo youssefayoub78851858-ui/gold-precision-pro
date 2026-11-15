@@ -74,18 +74,24 @@ class MultiSourceOfflineTests(unittest.TestCase):
         self.assertNotIn("ask_price", str(result))
 
     def test_foreign_contract_and_unauthorized_live_flag_are_rejected(self):
+        # A valid synthetic XAU fixture allows us to detect the mismatch
+        # rather than merely rely on the mandatory WAIT default.
+        mismatch = assess_offline_stack(
+            as_of_utc=AS_OF, xau_fixture=xau(),
+            gc_mbo_fixture=gc(), gc_mbp10_fixture=gc("mbp-10", contract="GCG2027"))
+        self.assert_wait(mismatch)
+        self.assertIn("GC_CONTRACT_MISMATCH", mismatch["rejectedFixtures"])
+        self.assertEqual(mismatch["diagnosticOnlySyntheticTemporalComparison"]["status"],
+                         "BLOCKED_SYNTHETIC_SKEW_OR_CONTRACT")
+
         raw = xau()
         raw["sourceDataMode"] = "live"
         result = assess_offline_stack(
             as_of_utc=AS_OF, xau_fixture=raw,
-            gc_mbo_fixture=gc(), gc_mbp10_fixture=gc("mbp-10", contract="GCG2027"))
+            gc_mbo_fixture=gc(), gc_mbp10_fixture=gc("mbp-10"))
         self.assert_wait(result)
         self.assertEqual(result["layers"]["XAUUSD_BBO"]["status"], "REJECTED_FIXTURE")
         self.assertIn("XAUUSD_BBO", result["rejectedFixtures"])
-        self.assertIn("GC_CONTRACT_MISMATCH", result["rejectedFixtures"] if
-                      "GC_CONTRACT_MISMATCH" in result["rejectedFixtures"] else
-                      # XAU rejected, so no three-way clock comparison possible.
-                      ["GC_CONTRACT_MISMATCH"])
 
     def test_future_stale_or_bad_depth_fails_closed(self):
         bogus = gc("mbp-10")
