@@ -99,6 +99,12 @@ function audit(snapshot,base,qualityReport){
     realMarketRightsIndependentlyVerified:false,
     intradayEvidenceValidated:false};
   if(!ready)add(name+'_EVIDENCE_UNAVAILABLE_OR_HIGH_IMPACT');
+  // A crypto-perpetual trade stream must never masquerade as spot XAUUSD,
+  // exchange GC, an index, or broker yields through a generic feed name.
+  if((typeof f?.source==='string'&&/BINANCE|XAUUSDT/i.test(f.source))||
+     (typeof f?.instrument==='string'&&/XAUUSDT/i.test(f.instrument))||
+     (typeof f?.symbol==='string'&&/XAUUSDT/i.test(f.symbol)))
+   add(name+'_BINANCE_XAUUSDT_SUBSTITUTION_FORBIDDEN');
   if(f?.mode!=='recorded')add(name+'_RECORDED_PROVENANCE_UNVERIFIED');
   if(!Number.isFinite(time(f?.availableUTC))||time(f.availableUTC)>now)
    add(name+'_FIRST_AVAILABLE_AT_DECISION_UNVERIFIED');

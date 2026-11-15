@@ -34,6 +34,17 @@ fakeBinance.feeds.BINANCE_XAUUSDT=fakeBinance.binanceXauusdtResearch;
 const withBinance=review(fakeBinance);
 a.deepEqual(withBinance.shadowVeto,s);
 a.equal(withBinance.sourceResearchCandidate,result.sourceResearchCandidate);
+const mislabel=structuredClone(base);
+mislabel.feeds.GC={...mislabel.feeds.GC,source:'Binance XAUUSDT',symbol:'XAUUSDT'};
+const poisoned=review(mislabel);
+a(poisoned.shadowVeto.blockers.includes('GC_BINANCE_XAUUSDT_SUBSTITUTION_FORBIDDEN'));
+a.equal(poisoned.shadowVeto.executable,false);
+a.equal(poisoned.shadowVeto.hypotheticalFilterPass,false);
+const mislabelFlow=structuredClone(base);
+mislabelFlow.feeds.orderFlow={...mislabelFlow.feeds.orderFlow,
+ source:'binance_xauusdt_research',instrument:'XAUUSDT'};
+a(review(mislabelFlow).shadowVeto.blockers.includes(
+ 'orderFlow_BINANCE_XAUUSDT_SUBSTITUTION_FORBIDDEN'));
 const noFeed=structuredClone(base);delete noFeed.feeds.GC;
 a(review(noFeed).shadowVeto.blockers.includes('GC_EVIDENCE_UNAVAILABLE_OR_HIGH_IMPACT'));
 const gap=structuredClone(base);
