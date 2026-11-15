@@ -332,6 +332,9 @@ jobs:
       - name: Native Databento DBN binary fixtures (official SDK, no vendor connections)
         working-directory: coordinator
         run: python -m unittest -v test_databento_dbn_readonly
+      - name: Quarantined native Databento DBN trades-to-JSON bridge (offline)
+        working-directory: coordinator
+        run: python -m unittest -v test_databento_dbn_trades_candidate
       - name: Local Databento GC and official-file import tests (no vendor connections)
         working-directory: coordinator
         run: python -m unittest -v test_databento_local test_official_recorded
