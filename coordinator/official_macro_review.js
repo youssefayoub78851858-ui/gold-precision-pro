@@ -25,7 +25,9 @@ function parseFedPolicyRss(xml,now=new Date()){
   const title=inner(m[1],"title").replace(/\s+/g," ").slice(0,190);
   const link=inner(m[1],"link");
   const rawDate=inner(m[1],"pubDate"),time=Date.parse(rawDate);
-  if(!title||!Number.isFinite(time)||time>nowMs+300000||nowMs-time>120*86400000)continue;
+  // A publication time after the decision is not yet known, even if a
+  // provider clock appears a few minutes ahead: fail closed for research.
+  if(!title||!Number.isFinite(time)||time>nowMs||nowMs-time>120*86400000)continue;
   let url;try{url=new URL(link);}catch{continue;}
   if(url.protocol!=="https:"||url.hostname!=="www.federalreserve.gov"||
      !url.pathname.startsWith("/newsevents/pressreleases/"))continue;
@@ -114,7 +116,8 @@ async function getOfficialMacroReview({fetchFn=fetch,nowMs=Date.now(),offline=fa
   feeds:{fed:"OFFLINE_TEST",bls:"OFFLINE_TEST"},headlines:[],calendar:[],
   headlineReview:reviewOfficialFedHeadlines([],new Date(nowMs).toISOString()),
   note:"Offline tests: no provider requests",updatedUTC:null};
- if(memo&&nowMs<expires)return memo;
+ // Never reuse a later cached source snapshot in an earlier replay or rollback.
+ if(memo&&Number.isFinite(Date.parse(memo.checkedUTC))&&Date.parse(memo.checkedUTC)<=nowMs&&nowMs<expires)return memo;
  if(inflight)return inflight;
  inflight=(async()=>{
   const config=[

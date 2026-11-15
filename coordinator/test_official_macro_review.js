@@ -41,6 +41,13 @@ async function main(){
  assert.equal(stories.length,3);
  assert.match(stories[2].title,/& policy/);
  assert.equal(stories[0].publishedUTC,"2026-11-11T14:25:00.000Z");
+ const futureItem='<item><title>Federal Reserve future policy release</title>'+
+  '<link>https://www.federalreserve.gov/newsevents/pressreleases/monetary20261111b.htm</link>'+
+  '<pubDate>Wed, 11 Nov 2026 14:32:00 GMT</pubDate></item>';
+ const mixedRss=rss.replace('</channel>',futureItem+'</channel>');
+ assert.equal(parseFedPolicyRss(mixedRss,now).length,3);
+ const futureOnly='<rss version="2.0"><channel>'+futureItem+'</channel></rss>';
+ assert.throws(()=>parseFedPolicyRss(futureOnly,now),/FED_NO_VALID_RELEASE/);
  const reviewed=reviewOfficialFedHeadlines(stories,now.toISOString());
  assert.equal(reviewed.status,"RESEARCH_ONLY");
  assert.equal(reviewed.items[0].goldPressure,"DOWNWARD_PRESSURE");
@@ -81,6 +88,9 @@ async function main(){
  assert.equal(requests.length,2);
  const cached=await getOfficialMacroReview({nowMs:now.getTime()+1000,fetchFn:()=>{throw Error("Should be cached");}});
  assert.equal(cached.calendar.length,2);
+ const replayPast=await getOfficialMacroReview({nowMs:now.getTime()-1000,fetchFn});
+ assert.equal(replayPast.checkedUTC,"2026-11-11T14:29:59.000Z");
+ assert.equal(requests.length,4); // Later cached check must not leak backwards.
  const offline=await getOfficialMacroReview({offline:true});
  assert.equal(offline.feeds.fed,"OFFLINE_TEST");
  assert.equal(offline.headlines.length,0);
