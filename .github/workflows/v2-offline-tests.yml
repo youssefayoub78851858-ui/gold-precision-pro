@@ -47,6 +47,9 @@ jobs:
       - name: EODHD XAUUSD WebSocket safety preflight (offline)
         working-directory: coordinator
         run: node test_eodhd_ws_bridge.js
+      - name: First-month EODHD 50-H4 replay, assumed session closure and cold restart (offline synthetic only)
+        working-directory: coordinator
+        run: node test_eodhd_first_month_replay.js
       - name: First-day XAUUSD historical warmup and bid-ask parity preflight (offline)
         working-directory: coordinator
         run: python -m unittest -v test_eodhd_bootstrap_preflight
