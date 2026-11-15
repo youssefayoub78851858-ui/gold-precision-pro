@@ -44,6 +44,10 @@ jobs:
       - name: Private EODHD bid-ask to research-only pipeline intake (offline)
         working-directory: coordinator
         run: python -m unittest -v test_eodhd_research_bridge
+      - name: Cross-language Massive historical vs streaming BID ASK consistency (synthetic)
+        working-directory: coordinator
+        run: |
+          python -m unittest -v test_massive_history_stream_parity
       - name: Massive XAUUSD Forex WebSocket BID ASK standby protocol (offline, no network)
         working-directory: coordinator
         run: |
