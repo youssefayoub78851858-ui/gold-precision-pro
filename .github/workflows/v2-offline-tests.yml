@@ -358,6 +358,7 @@ jobs:
           python -m unittest -v test_research_monitor_runner
           python -m unittest -v test_research_watchdog
           python -m unittest -v test_massive_xauusd_fixture_adapter
+          python -m unittest -v test_massive_bbo_history_adapter
 
   fxcm-fclite-package-probe:
     name: FXCM FCLite package retrieval smoke (Linux, scripts disabled)
