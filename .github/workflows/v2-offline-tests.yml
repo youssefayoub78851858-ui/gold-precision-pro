@@ -349,6 +349,11 @@ jobs:
             /tmp/eodhd-bootstrap-readiness.json
             /tmp/fxcm-pre-subscription-feasibility.json
           retention-days: 14
+      - name: Nine-layer Gold Ultimate offline readiness and cross-source synthetic clock guard
+        working-directory: coordinator
+        run: |
+          python -m unittest -v test_multi_source_readiness
+          python multi_source_readiness.py --output /tmp/gpp-multi-source-readiness.json
       - name: XAUUSD signed intake, UTC candle quality, gaps and outage backoff (offline fixtures)
         working-directory: coordinator
         run: |
