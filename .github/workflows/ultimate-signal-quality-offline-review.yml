@@ -5,6 +5,8 @@ on:
     paths:
       - coordinator/ultimate_signal_quality.js
       - coordinator/ultimate_signal_quality_report.js
+      - coordinator/ultimate_shadow_admission.js
+      - coordinator/test_ultimate_shadow_admission.js
       - coordinator/test_ultimate_signal_quality.js
       - coordinator/v3_ultimate.js
       - .github/workflows/ultimate-signal-quality-offline-review.yml
@@ -22,5 +24,7 @@ jobs:
           node-version: '20'
       - name: Offline no-lookahead signal quality and risk gate diagnostics
         run: node coordinator/test_ultimate_signal_quality.js
+      - name: Conservative V3 shadow signal veto including Binance isolation
+        run: node coordinator/test_ultimate_shadow_admission.js
       - name: Existing V3 Ultimate contract safety regression
         run: node coordinator/test_v3_ultimate.js

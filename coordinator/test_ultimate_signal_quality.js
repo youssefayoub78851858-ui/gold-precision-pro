@@ -66,4 +66,8 @@ assert.equal(qualityReview.qualityDiagnostics.signal,'WAIT');
 assert.equal(qualityReview.qualityDiagnostics.effectOnCandidate,'NONE');
 assert.equal(qualityReview.qualityDiagnostics.empiricalWinProbability,null);
 assert.equal(qualityReview.providerRequestsMade,0);
+assert.equal(qualityReview.shadowVeto.signal,'WAIT');
+assert.equal(qualityReview.shadowVeto.executable,false);
+assert.equal(qualityReview.shadowVeto.liveAdmissible,false);
+assert.equal(qualityReview.shadowVeto.binanceXauusdt.participatesInV3,false);
 console.log('PASS signal quality: trending/choppy, shock, net costs, news, UTC, forming/stale, pure WAIT, V3 integration');

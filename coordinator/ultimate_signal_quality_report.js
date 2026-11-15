@@ -4,9 +4,11 @@
 // Caller supplies already-available closed candles and evidence; no network.
 const {evaluate}=require('./v3_ultimate');
 const {diagnostic}=require('./ultimate_signal_quality');
+const {audit}=require('./ultimate_shadow_admission');
 function review(input){
   const base=evaluate(input);
   const qualityDiagnostics=diagnostic(input.frames,input.asOfUTC,base.tradePlan,input.risk,base.layers);
+  const shadowVeto=audit(input,base,qualityDiagnostics);
   return {
     mode:'OFFLINE_INDEPENDENT_RESEARCH_REVIEW',
     asOfUTC:base.asOfUTC,
@@ -15,6 +17,7 @@ function review(input){
     sourceResearchCandidate:base.researchCandidate,
     technicalCandidate:base.technical?.candidate||'NONE',
     qualityDiagnostics,
+    shadowVeto,
     sourceBlockers:[...base.monitoring.blocked],
     signal:'WAIT',executable:false,paperOrdersAllowed:false,
     strategyChanged:false,providerRequestsMade:0,

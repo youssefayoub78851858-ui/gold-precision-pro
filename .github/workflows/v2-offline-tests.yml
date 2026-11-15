@@ -296,6 +296,9 @@ jobs:
             /tmp/ultimate-walkforward.json
           retention-days: 14
 
+      - name: V3 independent shadow veto and Binance isolation (offline, no orders)
+        working-directory: coordinator
+        run: node test_ultimate_shadow_admission.js
       - name: Ultimate market regime, economic surprises, cross-asset conflicts, TIPS and holdout diagnostics (offline)
         working-directory: coordinator
         run: node test_ultimate_research_extensions.js
