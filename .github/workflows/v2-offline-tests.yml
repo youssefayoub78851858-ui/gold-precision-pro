@@ -264,6 +264,9 @@ jobs:
         working-directory: coordinator
         run: node test_official_macro_review.js
 
+      - name: DFII10 TIPS real-yield daily local CSV and nominal match audit (offline only)
+        working-directory: coordinator
+        run: node test_official_dfii10_daily_review.js
       - name: Official H15 daily RSS refresh safety tests (mock feeds only)
         working-directory: coordinator
         run: node test_h15_official_rss.js

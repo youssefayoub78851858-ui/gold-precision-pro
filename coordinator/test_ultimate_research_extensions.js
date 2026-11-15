@@ -48,6 +48,18 @@ a.equal(surprises(forged,NOW).status,'BLOCKED');
 a.equal(surprises(undefined,NOW).status,'BLOCKED');
 const double=structuredClone(macro);double.events.push(structuredClone(double.events[0]));
 a.equal(surprises(double,NOW).status,'BLOCKED');
+const prepublication=structuredClone(macro);
+prepublication.events[0].releasedUTC='2026-11-10T11:29:59Z';
+prepublication.events[0].availableUTC='2026-11-10T11:30:02Z';
+a.equal(surprises(prepublication,NOW).status,'BLOCKED');
+const zeroConsensus=structuredClone(macro);
+zeroConsensus.events[0].consensus=0;
+const z=surprises(zeroConsensus,NOW);
+a.equal(z.events[0].surpriseRelativeToConsensus,null);
+a.equal(z.directionalVote,false);a.equal(z.executable,false);
+const overflow=structuredClone(macro);
+overflow.events[0].actual=1e308;overflow.events[0].consensus=-1e308;
+a.equal(surprises(overflow,NOW).status,'BLOCKED');
 
 const nominal={instrument:'DGS10',value:4.25,observationDate:'2026-11-09',availableUTC:'2026-11-09T21:00:00Z'};
 const tip={sourceDataMode:'SYNTHETIC_TEST_ONLY',series:'DFII10',frequency:'DAILY',

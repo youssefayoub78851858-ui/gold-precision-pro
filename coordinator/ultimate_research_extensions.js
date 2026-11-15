@@ -55,17 +55,18 @@ function surprises(envelope,asOfUTC){
      typeof event.units!=='string'||!/^[A-Z_%][A-Z0-9_%]{0,19}$/.test(event.units)||
      ![event.actual,event.consensus,event.previous].every(safe)||
      ![event.scheduledUTC,event.releasedUTC,event.availableUTC].every(x=>Number.isFinite(time(x)))||
-     time(event.releasedUTC)<time(event.scheduledUTC)-86400000||
+     time(event.releasedUTC)<time(event.scheduledUTC)||
      time(event.availableUTC)<time(event.releasedUTC)||
      time(event.availableUTC)>now)
    return {...blocked('RELEASE_AVAILABILITY_OR_VALUE_INVALID'),events:[]};
   seen.add(event.id);
   const delta=event.actual-event.consensus;
-  const scale=Math.max(1e-9,Math.abs(event.consensus));
+  if(!Number.isFinite(delta))return {...blocked('RELEASE_SURPRISE_ARITHMETIC_OVERFLOW'),events:[]};
+  const relative= Math.abs(event.consensus)<1e-9?null:rounded(delta/Math.abs(event.consensus));
   items.push({id:event.id,kind:event.kind,units:event.units,
    scheduledUTC:event.scheduledUTC,availableUTC:event.availableUTC,
    actual: event.actual,consensus:event.consensus,previous:event.previous,
-   surprise:rounded(delta),surpriseRelativeToConsensus:rounded(delta/scale),
+   surprise:rounded(delta),surpriseRelativeToConsensus:relative,
    result:delta>1e-9?'ABOVE_CONSENSUS':delta< -1e-9?'BELOW_CONSENSUS':'MATCHED_CONSENSUS',
    goldReaction:'NOT_OBSERVED',directionalVote:false});
  }
