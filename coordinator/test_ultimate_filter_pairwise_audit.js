@@ -64,9 +64,9 @@ bad(x=>{x.candidates[0].atSignal.regime='CHOPPY';},/BASELINE_CANDIDATE_SET_CHANG
 bad(x=>{x.candidates[0].atSignal.featuresAvailableUTC='2026-12-01T01:00:01Z';},null);
 bad(x=>{x.candidates[0].atSignal.sourceEvidenceAvailableUTC.GC='2026-12-01T01:15:00Z';},null);
 bad(x=>{x.candidates[0].atSignal.sourceEvidenceAvailableUTC.GC='2026-12-01T00:54:59Z';},/INTRADAY_CROSS_MARKET_EVIDENCE_STALE/);
-bad(x=>{x.candidates[0].atSignal.sourceEvidenceAvailableUTC.GC='2026-12-01T00:59:00Z';},null);
+{const x=doc();x.candidates[0].atSignal.sourceEvidenceAvailableUTC.GC='2026-12-01T00:59:00Z';x.manifest.candidatesSHA256=sha(x.candidates);a.equal(audit(x).baseline.candidates,4);}
 bad(x=>{x.candidates[0].atSignal.sourceEvidenceAvailableUTC.GC='2026-12-01T00:58:59Z';},/INTRADAY_CROSS_MARKET_EVIDENCE_SKEW/);
-bad(x=>{x.candidates[0].atSignal.sourceEvidenceAvailableUTC.US10Y='2026-11-30T21:00:00Z';},null);
+{const x=doc();x.candidates[0].atSignal.sourceEvidenceAvailableUTC.US10Y='2026-11-30T21:00:00Z';x.manifest.candidatesSHA256=sha(x.candidates);a.equal(audit(x).baseline.candidates,4);}
 bad(x=>{delete x.candidates[0].atSignal.sourceEvidenceAvailableUTC.headlines;},null);
 bad(x=>{x.candidates[0].atSignal.highImpactEventWindow='not certain';},null);
 bad(x=>{x.candidates[0].signalUTC='2026-12-01T01:10:00Z';},null);
