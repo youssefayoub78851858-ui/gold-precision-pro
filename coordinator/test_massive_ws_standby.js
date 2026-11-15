@@ -87,7 +87,19 @@ a.equal(heartbeat.expired(),false); // no first accepted quote: no live status t
 a.equal(heartbeat.snapshot().syntheticFramesProcessed,0);
 a.equal(heartbeat.checkIdle().kind,'wait');
 a.equal(heartbeat.snapshot().researchEligible,false);
+// An open/authorized connection with ZERO quotes must time out, too.
+let noQuotes=new MassiveQuoteStandby(()=>now);
+feed(noQuotes);subscribe(noQuotes);
+now+=179999;
+a.equal(noQuotes.checkIdle().kind,'wait');
 now+=1;
+a.equal(noQuotes.expired(),true);
+a.equal(noQuotes.checkIdle().reason,'QUOTE_STREAM_SILENT');
+a.equal(noQuotes.snapshot().syntheticStatus,'NOT_CONNECTED');
+a.equal(noQuotes.snapshot().syntheticFramesProcessed,0);
+now+=1;
+a.equal(heartbeat.handle(quote(now)).reason,'QUOTE_STREAM_SILENT');
+feed(heartbeat);subscribe(heartbeat);
 a.equal(heartbeat.handle(quote(now)).kind,'synthetic_quote');
 now+=180000;
 a.equal(heartbeat.checkIdle().reason,'QUOTE_STREAM_SILENT');

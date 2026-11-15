@@ -37,19 +37,20 @@ class MassiveQuoteStandby{
   if(typeof clock!=='function')throw Error('Independent clock required');
   this.clock=clock;this.closed={bid:[],ask:[],mid:[]};
   this.mode='NOT_CONNECTED';this.reason='OFFLINE_STANDBY';this.authenticated=false;
-  this.subscribed=false;this.lastTs=null;this.lastReceivedAt=null;this.current=null;
+  this.subscribed=false;this.lastTs=null;this.lastReceivedAt=null;this.current=null;this.connectedAt=null;
   this.lastQuote=null;this.count=0;this.malformed=0;this.discarded=0;
  }
  disconnect(reason='OFFLINE_DISCONNECTED'){
   this.mode='NOT_CONNECTED';this.reason=reason;this.authenticated=false;
-  this.subscribed=false;this.lastTs=null;this.lastReceivedAt=null;this.current=null;
+  this.subscribed=false;this.lastTs=null;this.lastReceivedAt=null;this.current=null;this.connectedAt=null;
   this.lastQuote=null;
   return {kind:'blocked',reason,signal:'WAIT',executable:false};
  }
  expired(now=this.clock()){
   if(!safeClock(now))return true;
-  return this.lastReceivedAt!==null&&(now<this.lastReceivedAt||
-      now-this.lastReceivedAt>=IDLE_MS);
+  // No-quote sockets after auth are not a healthy connection.
+  const reference=this.lastReceivedAt??this.connectedAt;
+  return reference!==null&&(now<reference||now-reference>=IDLE_MS);
  }
  checkIdle(now=this.clock()){
   if(this.expired(now))return this.disconnect('QUOTE_STREAM_SILENT');
@@ -75,6 +76,9 @@ class MassiveQuoteStandby{
  status(item){
   if(item.status==='auth_success'){
    if(this.authenticated)return this.disconnect('REPEATED_AUTH_HANDSHAKE');
+   const now=this.clock();
+   if(!safeClock(now))return this.disconnect('INVALID_AUTH_CLOCK');
+   this.connectedAt=now;
    this.authenticated=true;this.mode='AUTHENTICATED_WAIT_SUBSCRIPTION';
    this.reason='WAIT_SUBSCRIPTION';
    return {kind:'authenticated',allowedNextAction:'SUBSCRIBE_AFTER_AUTH_ONLY',
@@ -98,6 +102,7 @@ class MassiveQuoteStandby{
   if(item.p!==SYMBOL)return {kind:'ignored',signal:'WAIT',executable:false};
   if(!this.authenticated||!this.subscribed)return this.disconnect('QUOTE_BEFORE_SUBSCRIPTION');
   const now=this.clock();
+  if(this.expired(now))return this.disconnect('QUOTE_STREAM_SILENT');
   if(!safeClock(now)||!Number.isSafeInteger(item.t)||item.t<=0||
      now-item.t>MAX_AGE_MS||item.t>now+FUTURE_TOLERANCE_MS)
    return this.disconnect('STALE_OR_FUTURE_QUOTE');
