@@ -1,0 +1,23 @@
+name: Binance XAUUSDT research-only offline safety checks
+on:
+  push:
+    branches:
+      - review/v2-portable-tests-20261109
+    paths:
+      - coordinator/binance_xauusdt_research.js
+      - coordinator/test_binance_xauusdt_research.js
+      - .github/workflows/binance-xauusdt-offline-review.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Strictly offline Binance XAUUSDT research safety tests
+        run: node coordinator/test_binance_xauusdt_research.js
