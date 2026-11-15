@@ -30,5 +30,7 @@ jobs:
         run: node coordinator/test_ultimate_shadow_admission.js
       - name: Fixed paired baseline vs shadow-filter candidate audit safety (offline)
         run: node coordinator/test_ultimate_filter_pairwise_audit.js
+      - name: Chronological fixed paired holdout stability and small-sample warnings
+        run: node coordinator/test_ultimate_pairwise_stability.js
       - name: Existing V3 Ultimate contract safety regression
         run: node coordinator/test_v3_ultimate.js

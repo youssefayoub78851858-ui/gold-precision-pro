@@ -128,6 +128,16 @@ function audit(doc){
   const f=row.atSignal,blocked=selection(f);
   if(ms(f.featuresAvailableUTC)>signal||Object.values(f.sourceEvidenceAvailableUTC).some(t=>ms(t)>signal))
    bad('FUTURE_FEATURE_OR_SOURCE_REVEALED_BEFORE_SIGNAL');
+  // This paired audit must never accept a stale intraday market observation
+  // just because the feature file claims it was known before decision time.
+  // DXY/GC/orderFlow are distinct instruments; all three must be <=5 minutes
+  // old and their observations must be synchronized within 60 seconds.
+  // Daily US02Y/US10Y and calendar/news must NOT be treated as tick quotes.
+  const market=['DXY','GC','orderFlow'].map(k=>ms(f.sourceEvidenceAvailableUTC[k]));
+  if(market.some(t=>signal-t>300000))
+   bad('INTRADAY_CROSS_MARKET_EVIDENCE_STALE');
+  if(Math.max(...market)-Math.min(...market)>60000)
+   bad('INTRADAY_CROSS_MARKET_EVIDENCE_SKEW');
   if(blocked.length===0)accepted.push(row);
   else {denied.push(row);for(const code of blocked)reasons[code]=(reasons[code]||0)+1;}
  }
