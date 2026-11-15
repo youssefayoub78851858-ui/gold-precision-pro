@@ -5,7 +5,7 @@ const SERIES=[
  {series:"DGS2",years:2,url:"https://www.federalreserve.gov/feeds/Data/H15_H15_RIFLGFCY02_N.B.XML"},
  {series:"DGS10",years:10,url:"https://www.federalreserve.gov/feeds/Data/H15_H15_RIFLGFCY10_N.B.XML"}
 ];
-let cached=null,until=0,inflight=null;
+let cached=null,until=0,inflight=null,cachedAtMs=-Infinity;
 const fullDay=/^\d{4}-\d{2}-\d{2}$/;
 function getTag(xml,tag){
  const m=xml.match(new RegExp("<"+tag+"(?:\\s[^>]*)?>([\\s\\S]*?)<\\/"+tag+">","i"));
@@ -63,7 +63,8 @@ function buildOfficialDailyContext(xmls,now=new Date()){
  if(!Number.isFinite(nowMS)||nowMS<observed||nowMS-observed>10*86400000)throw Error("Stale or future H15 observation");
  const dates=parsed.map(x=>x.latest.publishedUTC).filter(Boolean);
  for(const t of dates){
-  if(Date.parse(t)>nowMS+3600000||Date.parse(t)<observed-86400000)throw Error("Invalid RSS publication timestamp");
+  // Publication cannot be treated as known before its stated UTC time.
+  if(Date.parse(t)>nowMS||Date.parse(t)<observed-86400000)throw Error("Invalid RSS publication timestamp");
  }
  return {
   mode:"OFFICIAL_RECORDED_DAILY_CONTEXT",signal:"WAIT",executable:false,
@@ -97,7 +98,8 @@ async function readAutoDailyContext({fetchFn=fetch,nowMs=Date.now(),offline=fals
   refreshWarning:reason
  });
  if(offline)return fallback("Official network deliberately disabled in offline test");
- if(cached&&nowMs<until)return cached;
+ // Do not reuse a later cached RSS result during clock rollback/replay.
+ if(cached&&nowMs>=cachedAtMs&&nowMs<until)return cached;
  if(inflight)return inflight;
  inflight=(async()=>{
   try{
@@ -112,7 +114,7 @@ async function readAutoDailyContext({fetchFn=fetch,nowMs=Date.now(),offline=fals
     return body;
    }));
    const result=buildOfficialDailyContext(xmls,new Date(nowMs));
-   cached=result;until=nowMs+60*60*1000;
+   cached=result;cachedAtMs=nowMs;until=nowMs+60*60*1000;
    return result;
   }catch(err){
    const message=String(err&&err.message||"");
@@ -132,7 +134,7 @@ async function readAutoDailyContext({fetchFn=fetch,nowMs=Date.now(),offline=fals
    console.warn("H15 daily RSS fallback: "+diagnostic);
    const result={...fallback("Official RSS refresh unavailable. Showing stored daily reference, not current market data."),
      refreshDiagnosticCode:diagnostic};
-   cached=result;until=nowMs+10*60*1000;
+   cached=result;cachedAtMs=nowMs;until=nowMs+10*60*1000;
    return result;
   }finally{inflight=null;}
  })();

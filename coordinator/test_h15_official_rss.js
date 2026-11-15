@@ -43,6 +43,8 @@ async function run(){
  assert.equal(result.rates[0].changePercentagePoints,0.05);
  assert.equal(result.rates[1].changePercentagePoints,0.02);
  assert.throws(()=>buildOfficialDailyContext([a,xml(10,4.88,4.86,"2026-11-10")],new Date("2026-11-11T14:30:00Z")),/not aligned/);
+ // RSS publication 45 minutes after this as-of clock cannot be known yet.
+ assert.throws(()=>buildOfficialDailyContext([a,b],new Date("2026-11-10T20:30:00Z")),/Invalid RSS publication timestamp/);
  assert.throws(()=>buildOfficialDailyContext([a,b],new Date("2026-11-08T14:30:00Z")),/future/);
  assert.throws(()=>buildOfficialDailyContext([a,b],new Date("2026-12-10T14:30:00Z")),/Stale/);
  assert.throws(()=>parseFeed(xml(2,49,4.51),2),/Invalid official H15 observation/);
@@ -61,6 +63,9 @@ async function run(){
  assert.equal(actual.readyForUltimateTrading,false);
  const cached=await readAutoDailyContext({fetchFn:()=>{throw Error("No double fetch");},nowMs:Date.parse("2026-11-11T14:31:00Z")});
  assert.equal(cached.rates[0].latestYieldPct,4.56);
+ const earlier=await readAutoDailyContext({fetchFn:fakeFetch,nowMs:Date.parse("2026-11-11T14:29:00Z")});
+ assert.equal(earlier.sourceStatus,"OFFICIAL_FED_RSS_REFRESHED");
+ assert.equal(requested.length,4); // Re-fetch instead of using a future cached receipt.
  const offline=await readAutoDailyContext({offline:true});
  assert.equal(offline.sourceStatus,"STORED_FALLBACK");
  assert.equal(offline.readyForFiveMinuteGate,false);
