@@ -282,6 +282,17 @@ class UltimateHTTP(unittest.TestCase):
             self.assertEqual(r2['diagnostics']['alerts']['status'],'BLOCKED')
             self.assertEqual(r2['diagnostics']['alerts']['delivery'],'RESPONSE_ONLY_NO_PUSH_OR_EMAIL')
             self.assertEqual(r2['diagnostics']['alerts']['signal'],'WAIT')
+            extra = r2['researchEnhancements']
+            self.assertEqual(extra['mode'], 'OFFLINE_ULTIMATE_RESEARCH_EXTENSIONS')
+            self.assertEqual(extra['signal'], 'WAIT')
+            self.assertFalse(extra['executable'])
+            self.assertFalse(extra['researchEligible'])
+            self.assertFalse(extra['paperOrdersAllowed'])
+            self.assertIsNone(extra['predictedWinRate'])
+            self.assertEqual(extra['providerRequestsMade'], 0)
+            self.assertEqual(extra['economicSurprises']['status'], 'BLOCKED')
+            self.assertEqual(extra['tips10Y']['status'], 'BLOCKED')
+            self.assertEqual(extra['performance']['status'], 'BLOCKED')
             self.assertEqual(request('/api/v3/ultimate', b' ' * (1048576 + 1))[0], 413)
             self.assertEqual(request('/api/v3/ultimate/r2', b' ' * (1048576 + 1))[0], 413)
         finally:

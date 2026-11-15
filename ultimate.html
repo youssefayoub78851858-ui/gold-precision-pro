@@ -451,6 +451,11 @@ document.getElementById('r2-run').onclick=async()=>{
    'الأخبار: '+(news.status||'غير متاحة')+' — '+(news.reason||'تصنيف وصفي بلا تصويت أو إشارة تداول'),
    'إدارة المخاطر: '+(risk.status||'WAIT')+(risk.entry!==null&&risk.entry!==undefined?' — دخول بحثي '+risk.entry+' / SL '+risk.sl+' / TP '+[risk.tp1,risk.tp2,risk.tp3].join(', '):' — لا توجد مستويات مؤهلة'),
    'المراقبة: '+(alerts.status||'غير متاحة')+' — '+((alerts.items||[]).length)+' تنبيه/تنبيهات | '+(alerts.delivery||'لا يوجد إرسال خارجي'),
+   'حالة السوق: '+(data.researchEnhancements?.regime?.marketRegime||'غير محسومة — بيانات مكتملة مطلوبة')+' — وصف فقط وليس توقعاً',
+   'مفاجآت الأخبار: '+(data.researchEnhancements?.economicSurprises?.status||'غير متاحة')+' — لا تصويت اتجاهي',
+   'تعارض الأسواق: '+(data.researchEnhancements?.crossMarket?.status||'غير متاح')+' — GC وDXY يلزمهما دليل مرخّص',
+   'العوائد الحقيقية TIPS: '+(data.researchEnhancements?.tips10Y?.status||'غير موصولة')+' — بيانات يومية فقط',
+   'جودة الأداء: '+(data.researchEnhancements?.performance?.status||'لا توجد نتائج مستقلة')+' — لا نسبة نجاح مثبتة',
    'كل المؤشرات وصفية فقط؛ القرار WAIT والتداول معطّل.'
   ];for(const line of lines){const p=document.createElement('p');p.textContent=line;summary.appendChild(p);}
   const alertStatus=document.getElementById('r2-alert-status');alertStatus.textContent=(alerts.status==='CLEAR'?'لا توجد تنبيهات حجب في هذه اللقطة.':'التنبيهات المحسوبة: '+((alerts.items||[]).length)+' | تُعرض داخل الصفحة فقط؛ لا يوجد إشعار فوري أو بريد.');

@@ -339,7 +339,7 @@ const server = http.createServer(async (req, res) => {
       if(result.version!==2||result.contractVersion!=="ultimate-context-events-v2"||
          result.signal!=="WAIT"||result.executable!==false||result.networkEnabled!==false)
         throw Error("Ultimate r2 safety contract failed");
-      return send(res,200,{...result,diagnostics:require("./coordinator/ultimate_diagnostics").diagnostics(JSON.parse(Buffer.concat(chunks).toString("utf8")),result)});
+      return send(res,200,{...result,diagnostics:require("./coordinator/ultimate_diagnostics").diagnostics(JSON.parse(Buffer.concat(chunks).toString("utf8")),result),researchEnhancements:require("./coordinator/ultimate_research_extensions").inspect(JSON.parse(Buffer.concat(chunks).toString("utf8")),result)});
     } catch(error) { return send(res,400,{error:"Invalid offline r2 evidence: "+error.message}); }
   }
   if (req.method === "GET" && req.url.split("?")[0] === "/ultimate") {

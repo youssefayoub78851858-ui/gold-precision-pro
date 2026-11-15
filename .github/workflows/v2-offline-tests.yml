@@ -293,6 +293,9 @@ jobs:
             /tmp/ultimate-walkforward.json
           retention-days: 14
 
+      - name: Ultimate market regime, economic surprises, cross-asset conflicts, TIPS and holdout diagnostics (offline)
+        working-directory: coordinator
+        run: node test_ultimate_research_extensions.js
       - name: Independent Ultimate v2 temporal contracts and preserved v1 registry
         working-directory: coordinator
         run: |
