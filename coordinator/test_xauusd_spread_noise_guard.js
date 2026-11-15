@@ -71,7 +71,7 @@ fail(s=>{s.mid[7].openTime='2026-11-10T08:46:00Z';},'MISALIGNED_GAPPED_UNCLOSED_
 fail(s=>{s.ask.at(-1).openTime=ASOF;},'MISALIGNED_GAPPED_UNCLOSED_OR_FUTURE_M15');
 fail(s=>{s.bid.pop();},'M15_THREE_BASIS_CLOSED_HISTORY_REQUIRED');
 fail(s=>{s.bid[3].high=NaN;},'INVALID_CLOSED_BBO_OHLC');
-fail(s=>{s.ask[1].open=s.bid[1].open-.01;},'CROSSED_OR_NONPARITY_BID_ASK_MID');
+fail(s=>{s.ask[1].open=s.bid[1].open-.01;s.ask[1].low=s.bid[1].low+.05;},'CROSSED_OR_NONPARITY_BID_ASK_MID');
 fail(s=>{s.sourceDataMode='RECORDED_REAL_LIVE';},'SYNTHETIC_XAUUSD_BBO_ONLY');
 fail(s=>{s.instrument='XAUUSDT';},'SYNTHETIC_XAUUSD_BBO_ONLY');
 a.equal(evaluate(sample(),'2026-11-10T11:45:00Z','BUY').status,'BLOCKED');
