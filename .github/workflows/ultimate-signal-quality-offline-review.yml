@@ -4,6 +4,7 @@ on:
     branches: [review/v2-portable-tests-20261109]
     paths:
       - coordinator/ultimate_signal_quality.js
+      - coordinator/ultimate_signal_quality_report.js
       - coordinator/test_ultimate_signal_quality.js
       - coordinator/v3_ultimate.js
       - .github/workflows/ultimate-signal-quality-offline-review.yml
