@@ -93,6 +93,25 @@ class BiquoteOfflineAuditTests(unittest.TestCase):
         self.assertFalse(r["ohlcStructuralChecksPassed"])
         self.assertIn("CROSS_TIMEFRAME_OHLC_MISMATCH", r["blockingReasons"])
 
+    def test_oldest_m15_retention_edge_is_not_invented_missing_candle(self):
+        quote, feeds = make_samples()
+        # Provider retains fewer M15 than H1/H4. The oldest M15
+        # may begin in the middle of an otherwise valid H4 candle.
+        feeds["M15"]["bars"] = feeds["M15"]["bars"][:-2]
+        result = self.run_audit(quote, feeds)
+        self.assert_safe(result)
+        self.assertTrue(result["ohlcStructuralChecksPassed"], result["blockingReasons"])
+        self.assertEqual(result["closedBarCounts"]["M15"], 798)
+        self.assertNotIn("PARTIAL_CROSS_TIMEFRAME_COVERAGE", result["blockingReasons"])
+
+    def test_interior_m15_gap_still_fails_h1_and_h4_parity(self):
+        quote, feeds = make_samples()
+        feeds["M15"]["bars"].pop(150)
+        result = self.run_audit(quote, feeds)
+        self.assert_safe(result)
+        self.assertFalse(result["ohlcStructuralChecksPassed"])
+        self.assertIn("PARTIAL_CROSS_TIMEFRAME_COVERAGE", result["blockingReasons"])
+
     def test_open_bar_never_counted_or_trusted(self):
         q, feeds = make_samples()
         feeds["M15"]["bars"][0]["isOpen"] = True

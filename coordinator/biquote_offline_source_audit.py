@@ -98,14 +98,21 @@ def _close(a, b):
     return math.isclose(a, b, rel_tol=1e-8, abs_tol=1e-5)
 
 
-def _compare_aggregates(m15, higher, width):
+def _compare_aggregates(m15, higher, width, latest_m15_observed):
     if not m15 or not higher:
         return
     count = width // 900
+    earliest_m15_retained = min(m15)
     for start, actual in higher.items():
+        # BiQuote retains far fewer M15 bars (~192) than H1/H4.
+        # Missing M15 members at the oldest/newest RETENTION edge
+        # do not prove a bad higher timeframe aggregate.
+        # Missing M15 members INSIDE the observed window still fail.
+        # The newest observed M15 includes any still-open M15 candle.
+        if (start < earliest_m15_retained or
+                start + (count - 1) * 900 > latest_m15_observed):
+            continue
         members = [m15.get(start + k * 900) for k in range(count)]
-        if all(member is None for member in members):
-            continue  # Higher-frame history may extend beyond the M15 window.
         if any(member is None for member in members):
             raise ValueError("PARTIAL_CROSS_TIMEFRAME_COVERAGE")
         expected = {
@@ -169,8 +176,12 @@ def audit_biquote_sample(quote, frame_envelopes, *, now):
             for name, (interval, width) in FRAMES.items():
                 verified[name] = _frame(frame_envelopes[name], interval, width, now)
                 counts[name] = len(verified[name])
-            _compare_aggregates(verified["M15"], verified["H1"], 3600)
-            _compare_aggregates(verified["M15"], verified["H4"], 14400)
+            # All M15 opening times were validated by _frame, including
+            # an optional isOpen candle. A forming M15 cannot certify that
+            # a corresponding H1/H4 aggregate has already closed.
+            latest_observed = int(_utc(frame_envelopes["M15"]["bars"][0]["openTime"]).timestamp())
+            _compare_aggregates(verified["M15"], verified["H1"], 3600, latest_observed)
+            _compare_aggregates(verified["M15"], verified["H4"], 14400, latest_observed)
             quality = True
             for name in MIN_CLOSED:
                 if counts[name] < MIN_CLOSED[name]:

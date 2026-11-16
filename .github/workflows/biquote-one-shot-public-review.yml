@@ -19,6 +19,6 @@ jobs:
       - name: Verify fixed GET-only request contract with all-network-denied unit fakes
         working-directory: coordinator
         run: python -m unittest -v test_biquote_public_one_shot
-      - name: Probe exactly 4 public BiQuote XAUUSD URLs once with no key or persistence
+      - name: Repeat exactly 4 public BiQuote GETs after retention-edge audit fix (no key, no persistence)
         working-directory: coordinator
         run: python biquote_public_one_shot.py
