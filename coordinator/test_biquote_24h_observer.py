@@ -81,8 +81,14 @@ class BiQuote24hOfflineTests(unittest.TestCase):
         self.assertEqual(result["h4UnclassifiedPartialAggregatesAcrossSnapshots"], 3*720)
         self.assertEqual(len(events), MAX_SAMPLES+1)
         # Logs contain no raw market BID/ASK or history contents.
-        self.assertNotIn("3840", str(events))
-        self.assertNotIn("ask", str(events))
+        # Aggregated counts may happen to contain the digits of a fixture
+        # price. Detect leaking RAW quote keys, not coincidental digits in
+        # safe aggregate counters such as H1 comparison totals.
+        for event in events:
+            self.assertNotIn("bid", event)
+            self.assertNotIn("ask", event)
+            self.assertNotIn("stagedBidFrames", event)
+            self.assertNotIn("stagedAskFrames", event)
 
     def test_restart_keeps_absolute_end_and_never_bursts_makeup_calls(self):
         clock = FakeClock(START + dt.timedelta(hours=3))
