@@ -115,6 +115,13 @@ class MassiveHistoricalStreamingParity(unittest.TestCase):
         self.assertIn("STREAM_M15_FAMILY_TIMESTAMP_SKEW", skew["mismatchCodes"])
         self.assertFalse(skew["historyMayMergeWithStream"])
 
+        absent = copy.deepcopy(rest)
+        absent["askFrames"] = None
+        no_family = compare_synthetic_history_and_stream(absent, stream)
+        self.assertEqual(no_family["status"], "BLOCKED_SYNTHETIC_PARITY")
+        self.assertIn("REST_M15_FAMILY_MISSING", no_family["mismatchCodes"])
+        self.assertIn("ASK_FRAMES_MISSING", no_family["mismatchCodes"])
+
         # An empty ASK family cannot pass even though its two copies agree.
         no_ask_rest, no_ask_stream = copy.deepcopy(rest), copy.deepcopy(stream)
         no_ask_rest["askFrames"]["M15"] = []

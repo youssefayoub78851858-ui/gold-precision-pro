@@ -92,8 +92,11 @@ def compare_synthetic_history_and_stream(historical: object, streamed: object) -
         ("STREAM", streamed, ("bidFrames", "askFrames", "frames")),
     ):
         for timeframe in ("M15", "H1", "H4"):
-            arrays = [dataset.get(family, {}).get(timeframe)
-                      for family in families]
+            arrays = [
+                dataset[family].get(timeframe)
+                if isinstance(dataset.get(family), dict) else None
+                for family in families
+            ]
             if not all(isinstance(rows, list) for rows in arrays):
                 mismatches.append(label + "_" + timeframe + "_FAMILY_MISSING")
                 continue
