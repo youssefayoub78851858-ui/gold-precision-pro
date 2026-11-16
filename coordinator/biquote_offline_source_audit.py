@@ -2,8 +2,9 @@
 
 Accepts externally supplied JSON envelopes only. No HTTP, WebSocket, credentials,
 trading, paper order creation or changes to production services.
-BiQuote describes MT5/Yahoo/tick-derived OHLC, but does not state a guaranteed
-bid/ask candle basis or grant underlying-feed cloud-algorithm rights here.
+BiQuote support confirmed private Render research use under BiQuote terms, but
+did not independently warrant the underlying MT5 broker's feed rights. Live
+candles are MID; an empty series may first receive BID-based MT5 history.
 Passing structural checks is NOT market-data, licence or profitability proof.
 """
 from __future__ import annotations
@@ -17,10 +18,10 @@ MIN_CLOSED = {"M15": 50, "H1": 50, "H4": 50}
 LIMIT = 1000
 MAX_QUOTE_AGE_SECONDS = 30
 STATIC_BLOCKERS = (
-    "BIQUOTE_UPSTREAM_MT5_DATA_RIGHTS_FOR_PRIVATE_RENDER_NOT_CONFIRMED",
-    "BIQUOTE_HISTORICAL_OHLC_PRICE_BASIS_VS_LIVE_BID_ASK_UNCONFIRMED",
+    "BIQUOTE_UPSTREAM_MT5_BROKER_DATA_RIGHTS_NOT_WARRANTED",
+    "BIQUOTE_MID_LIVE_CANDLES_MAY_INCLUDE_BID_HISTORY_SEED",
     "BIQUOTE_INDEPENDENT_SESSION_AND_DATA_PROVENANCE_NOT_VERIFIED",
-    "BIQUOTE_ONGOING_AVAILABILITY_AND_REAL_PRICE_PARITY_NOT_VERIFIED",
+    "BIQUOTE_NO_SLA_NO_MISSED_PERIOD_BACKFILL_OR_BROKER_PARITY_PROOF",
 )
 
 
@@ -154,7 +155,9 @@ def audit_biquote_sample(quote, frame_envelopes, *, now):
                 raise ValueError("SPREAD_DISAGREES_WITH_BID_ASK")
             tick_time = _utc(quote.get("timestamp"))
             quote_age = round((now - tick_time).total_seconds(), 3)
-            if quote_age < -5 or quote_age > MAX_QUOTE_AGE_SECONDS:
+            # Future quotes are never available at the research as-of instant.
+            # Even a 1-millisecond future tick must fail closed.
+            if quote_age < 0 or quote_age > MAX_QUOTE_AGE_SECONDS:
                 raise ValueError("INDEPENDENT_QUOTE_CLOCK_FRESHNESS_FAILED")
         except (ValueError, TypeError, OverflowError) as error:
             problems.append(str(error))
@@ -183,6 +186,13 @@ def audit_biquote_sample(quote, frame_envelopes, *, now):
         "sourceRequestsMade": 0,
         "paymentsMade": 0,
         "independentSourceLicenceVerified": False,
+        "biquoteSupportPermitsPrivateRenderResearch": True,
+        "underlyingBrokerRightsWarranted": False,
+        "candlePriceBasis": "MID_TICK_WITH_POSSIBLE_INITIAL_BID_HISTORY_SEED",
+        "liveQuotePriceBasis": "BID_ASK",
+        "historicalBidAskOHLCProvided": False,
+        "reportedRetentionClosedBarsApprox": {"M15": 192, "H1": 168, "H4": 180},
+        "missedPeriodsBackfilledByProvider": False,
         "sameFeedBidAskCandleBasisVerified": False,
         "priceParityAgainstBrokerVerified": False,
         "minimumClosedBars": dict(MIN_CLOSED),

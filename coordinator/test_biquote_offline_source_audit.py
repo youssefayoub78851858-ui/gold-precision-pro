@@ -67,8 +67,15 @@ class BiquoteOfflineAuditTests(unittest.TestCase):
         self.assertEqual(r["paymentsMade"], 0)
         self.assertFalse(r["independentSourceLicenceVerified"])
         self.assertFalse(r["mayMergeWithBrokerBidAskOrComexOrderFlow"])
-        self.assertIn("BIQUOTE_UPSTREAM_MT5_DATA_RIGHTS_FOR_PRIVATE_RENDER_NOT_CONFIRMED",
+        self.assertIn("BIQUOTE_UPSTREAM_MT5_BROKER_DATA_RIGHTS_NOT_WARRANTED",
                       r["blockingReasons"])
+        self.assertTrue(r["biquoteSupportPermitsPrivateRenderResearch"])
+        self.assertFalse(r["underlyingBrokerRightsWarranted"])
+        self.assertEqual(r["candlePriceBasis"], "MID_TICK_WITH_POSSIBLE_INITIAL_BID_HISTORY_SEED")
+        self.assertEqual(r["reportedRetentionClosedBarsApprox"],
+                         {"M15": 192, "H1": 168, "H4": 180})
+        self.assertFalse(r["historicalBidAskOHLCProvided"])
+        self.assertFalse(r["missedPeriodsBackfilledByProvider"])
 
     def test_800_mathematically_consistent_m15_still_cannot_authorize_signal(self):
         r = self.run_audit()
@@ -109,6 +116,15 @@ class BiquoteOfflineAuditTests(unittest.TestCase):
         r = self.run_audit(q, feeds)
         self.assert_safe(r)
         self.assertIn("INDEPENDENT_QUOTE_CLOCK_FRESHNESS_FAILED", r["blockingReasons"])
+
+    def test_even_one_millisecond_future_tick_fails_closed(self):
+        quote, feeds = make_samples()
+        quote["timestamp"] = iso(NOW + dt.timedelta(milliseconds=1))
+        result = self.run_audit(quote, feeds)
+        self.assert_safe(result)
+        self.assertIn("INDEPENDENT_QUOTE_CLOCK_FRESHNESS_FAILED",
+                      result["blockingReasons"])
+        self.assertLess(result["quoteAgeSeconds"], 0)
 
     def test_crossed_quote_and_boolean_prices_rejected(self):
         q, feeds = make_samples()

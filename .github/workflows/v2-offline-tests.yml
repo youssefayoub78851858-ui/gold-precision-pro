@@ -107,6 +107,9 @@ jobs:
       - name: BiQuote shared intake and paper admission standby bridge (offline only)
         working-directory: coordinator
         run: python -m unittest -v test_biquote_research_bridge
+      - name: BiQuote fixed 4-request public probe mocked with network disabled
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_public_one_shot
       - name: Opt-in EODHD worker process gate and isolated lifecycle (offline)
         working-directory: coordinator
         run: python -m unittest -v test_private_eodhd_worker

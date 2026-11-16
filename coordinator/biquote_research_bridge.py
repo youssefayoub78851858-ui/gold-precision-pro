@@ -12,8 +12,8 @@ def review_biquote_standby(quote: object, feeds: object, *, as_of: dt.datetime) 
     """Quarantine externally supplied quotes and candles without transport.
 
     No rights are inherited from vendor metadata, no independently established
-    session calendar exists, and historical OHLC cannot be assumed BID simply
-    because BiQuote provides a separate live BID/ASK quote.
+    session calendar exists. BiQuote OHLC is MID from live ticks, with
+    possible initial BID history seed; never represent these bars as BID.
     """
     now = parse_utc(as_of.isoformat())
     audit = audit_biquote_sample(quote, feeds, now=now)
@@ -41,7 +41,7 @@ def review_biquote_standby(quote: object, feeds: object, *, as_of: dt.datetime) 
         "engineStatus": "NOT_INVOKED_SOURCE_GATE_CLOSED",
         "researchIntakeStatus": intake["status"],
         "researchIntakeReasons": intake["blockingReasons"],
-        "dataOrigin": "BIQUOTE_UNVERIFIED_HISTORICAL_OHLC_BASIS",
+        "dataOrigin": "BIQUOTE_MID_LIVE_WITH_POSSIBLE_BID_HISTORY_SEED",
         "sourceAudit": audit, "paperAdmission": paper,
         "blockingReasons": list(dict.fromkeys(
             audit["blockingReasons"] + intake["blockingReasons"]

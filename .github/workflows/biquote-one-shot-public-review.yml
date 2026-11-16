@@ -1,0 +1,24 @@
+name: BiQuote one-shot public XAUUSD evidence (no credentials or orders)
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - .github/workflows/biquote-one-shot-public-review.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-readonly-sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify fixed GET-only request contract with all-network-denied unit fakes
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_public_one_shot
+      - name: Probe exactly 4 public BiQuote XAUUSD URLs once with no key or persistence
+        working-directory: coordinator
+        run: python biquote_public_one_shot.py
