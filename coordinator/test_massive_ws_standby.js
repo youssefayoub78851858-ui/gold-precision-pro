@@ -75,6 +75,17 @@ const old=now-31000;
 a.equal(z.handle(quote(old)).reason,'STALE_OR_FUTURE_QUOTE');
 let t=new MassiveQuoteStandby(()=>now);feed(t);subscribe(t);
 a.equal(t.handle(quote(now+6000)).reason,'STALE_OR_FUTURE_QUOTE');
+// A 1ms future quote is not available at decision time. A tolerated
+// +5s clock drift would introduce look-ahead into replay/adapters.
+for(const skew of [1,2500,4999,5000]){
+ const candidate=new MassiveQuoteStandby(()=>now);
+ feed(candidate);subscribe(candidate);
+ a.equal(candidate.handle(quote(now+skew)).reason,'STALE_OR_FUTURE_QUOTE');
+ a.equal(candidate.snapshot().syntheticFramesProcessed,0);
+ a.equal(candidate.snapshot().syntheticStatus,'NOT_CONNECTED');
+ a.equal(candidate.snapshot().signal,'WAIT');
+ a.equal(candidate.snapshot().executable,false);
+}
 let gap=new MassiveQuoteStandby(()=>now);feed(gap);subscribe(gap);
 a.equal(gap.handle(quote(now)).kind,'synthetic_quote');
 now+=91000;

@@ -3,7 +3,7 @@
 // No WebSocket, fetch, env variables, API keys, storage, broker or service
 // connection is created in this file, including when imported.
 // Real personal data on Render remains forbidden absent rights and operator approval.
-const WIDTH=900000,MAX_AGE_MS=30000,FUTURE_TOLERANCE_MS=5000;
+const WIDTH=900000,MAX_AGE_MS=30000;
 const MAX_QUOTE_GAP_MS=90000,OPEN_CLOSE_MARGIN_MS=60000,IDLE_MS=180000;
 const MAX_CLOSED=2048,MAX_FRAME_CHARS=65536;
 const SYMBOL='XAU/USD',TOPIC='C.XAU-USD';
@@ -103,8 +103,10 @@ class MassiveQuoteStandby{
   if(!this.authenticated||!this.subscribed)return this.disconnect('QUOTE_BEFORE_SUBSCRIPTION');
   const now=this.clock();
   if(this.expired(now))return this.disconnect('QUOTE_STREAM_SILENT');
+  // No quote timestamp beyond the independent receipt clock is usable.
+  // Even small positive clock skew is a future observation: fail closed.
   if(!safeClock(now)||!Number.isSafeInteger(item.t)||item.t<=0||
-     now-item.t>MAX_AGE_MS||item.t>now+FUTURE_TOLERANCE_MS)
+     now-item.t>MAX_AGE_MS||item.t>now)
    return this.disconnect('STALE_OR_FUTURE_QUOTE');
   if(!validPrice(item.a)||!validPrice(item.b)||item.a<item.b)
    return this.disconnect('INVALID_OR_CROSSED_BBO');
