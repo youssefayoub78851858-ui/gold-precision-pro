@@ -44,6 +44,9 @@ jobs:
       - name: Private EODHD bid-ask to research-only pipeline intake (offline)
         working-directory: coordinator
         run: python -m unittest -v test_eodhd_research_bridge
+      - name: Capital.com Demo BID ASK closed candles and no-trading offline adapter
+        working-directory: coordinator
+        run: python -m unittest -v test_capital_demo_offline_adapter
       - name: Massive private closed-only BID ASK history restart and file-permission security (synthetic)
         working-directory: coordinator
         run: node test_massive_private_closed_store.js
