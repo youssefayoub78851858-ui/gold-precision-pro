@@ -88,6 +88,41 @@ class MassiveHistoricalStreamingParity(unittest.TestCase):
         self.assertIn("MID_M15_COUNT_MISMATCH", result["mismatchCodes"])
         self.assertEqual(result["signal"], "WAIT")
 
+    def test_empty_and_cross_basis_misalignment_never_report_numerical_parity(self):
+        rest, stream = paired(create_quotes())
+        empty_rest, empty_stream = copy.deepcopy(rest), copy.deepcopy(stream)
+        for result, family_names in (
+            (empty_rest, ("bidFrames", "askFrames", "midFrames")),
+            (empty_stream, ("bidFrames", "askFrames", "frames")),
+        ):
+            for family in family_names:
+                for timeframe in ("M15", "H1", "H4"):
+                    result[family][timeframe] = []
+        zero = compare_synthetic_history_and_stream(empty_rest, empty_stream)
+        self.assertEqual(zero["status"], "BLOCKED_SYNTHETIC_PARITY")
+        self.assertIn("REST_NO_CLOSED_BID_ASK_MID_M15", zero["mismatchCodes"])
+        self.assertIn("STREAM_NO_CLOSED_BID_ASK_MID_M15", zero["mismatchCodes"])
+
+        # Both historical and live ASK can agree with each other but still
+        # disagree with BID/MID about the same M15 boundary.
+        bad_rest, bad_stream = copy.deepcopy(rest), copy.deepcopy(stream)
+        moved_time = "2026-11-10T08:00:01.000Z"
+        bad_rest["askFrames"]["M15"][0]["openTime"] = moved_time
+        bad_stream["askFrames"]["M15"][0]["openTime"] = moved_time
+        skew = compare_synthetic_history_and_stream(bad_rest, bad_stream)
+        self.assertEqual(skew["status"], "BLOCKED_SYNTHETIC_PARITY")
+        self.assertIn("REST_M15_FAMILY_TIMESTAMP_SKEW", skew["mismatchCodes"])
+        self.assertIn("STREAM_M15_FAMILY_TIMESTAMP_SKEW", skew["mismatchCodes"])
+        self.assertFalse(skew["historyMayMergeWithStream"])
+
+        # An empty ASK family cannot pass even though its two copies agree.
+        no_ask_rest, no_ask_stream = copy.deepcopy(rest), copy.deepcopy(stream)
+        no_ask_rest["askFrames"]["M15"] = []
+        no_ask_stream["askFrames"]["M15"] = []
+        missing = compare_synthetic_history_and_stream(no_ask_rest, no_ask_stream)
+        self.assertEqual(missing["status"], "BLOCKED_SYNTHETIC_PARITY")
+        self.assertIn("REST_M15_FAMILY_COUNT_SKEW", missing["mismatchCodes"])
+
     def test_admission_flags_and_bad_fixture_are_rejected(self):
         rest, stream = paired(create_quotes())
         for key, value in (("mode", "REAL_MARKET_LIVE"),

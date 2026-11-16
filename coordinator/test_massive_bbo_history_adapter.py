@@ -96,6 +96,23 @@ class MassiveSyntheticHistoricalBBOTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "REVERSED"):
             inspect(disordered, as_of_utc=self.as_of)
 
+    def test_subsecond_asof_accepts_only_observed_quotes_before_exact_boundary(self):
+        sample = payload(bars=1)
+        transition_ns = (BASE + M15 + 30) * 1_000_000_000 + 400_000_000
+        sample["results"].append({
+            "participant_timestamp": str(transition_ns),
+            "bid_price": 3901.0, "ask_price": 3901.4,
+        })
+        result = inspect(sample, as_of_utc="2026-11-02T00:15:30.500Z")
+        self.assertEqual(result["quotesValidated"], 16)
+        self.assertEqual(result["completeClosedBarCounts"]["M15"], 1)
+        self.assertEqual(result["incompleteM15Discarded"], 1)
+        self.assertFalse(result["researchEligible"])
+        with self.assertRaisesRegex(ValueError, "FUTURE_OR_UNCLOSED"):
+            inspect(sample, as_of_utc="2026-11-02T00:15:30.400Z")
+        with self.assertRaisesRegex(ValueError, "FUTURE_OR_UNCLOSED"):
+            inspect(sample, as_of_utc="2026-11-02T00:15:30.399Z")
+
     def test_sparse_quotes_and_unclosed_candle_are_not_promoted(self):
         sample = payload(bars=1)
         sample["results"] = sample["results"][:3]  # no last-minute quote

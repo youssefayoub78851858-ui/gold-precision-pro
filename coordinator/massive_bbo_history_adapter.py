@@ -98,7 +98,11 @@ def review_synthetic_massive_bbo(payload: dict, *, as_of_utc: str) -> dict:
     rows = payload["results"]
     if not isinstance(rows, list) or not 1 <= len(rows) <= MAX_QUOTES:
         raise ValueError("BBO_QUOTE_COUNT_INVALID")
-    cutoff_ns = int(as_of.timestamp()) * 1000000000
+    # Preserve the caller's microsecond as-of boundary exactly. Rounding down
+    # to a whole second rejected genuinely prior nanosecond BBO observations.
+    elapsed = as_of - dt.datetime(1970, 1, 1, tzinfo=UTC)
+    cutoff_ns = ((elapsed.days * 86400 + elapsed.seconds) * 1000000
+                 + elapsed.microseconds) * 1000
     quotes = [_decode_quote(row, cutoff_ns) for row in rows]
     # Massive forex REST allows multiple distinct BBO events with an identical
     # participant_timestamp. Preserve provider response order within ties.

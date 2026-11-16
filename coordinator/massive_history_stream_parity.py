@@ -84,6 +84,29 @@ def compare_synthetic_history_and_stream(historical: object, streamed: object) -
                     break
             else:
                 matched[timeframe] += len(old) if basis == "BID" else 0
+    # A zero-bar match is not numerical evidence. Likewise BID/ASK/MID
+    # families cannot be compared separately and then called aligned if
+    # one side is absent or timestamps disagree across price bases.
+    for label, dataset, families in (
+        ("REST", historical, ("bidFrames", "askFrames", "midFrames")),
+        ("STREAM", streamed, ("bidFrames", "askFrames", "frames")),
+    ):
+        for timeframe in ("M15", "H1", "H4"):
+            arrays = [dataset.get(family, {}).get(timeframe)
+                      for family in families]
+            if not all(isinstance(rows, list) for rows in arrays):
+                mismatches.append(label + "_" + timeframe + "_FAMILY_MISSING")
+                continue
+            if timeframe == "M15" and any(not rows for rows in arrays):
+                mismatches.append(label + "_NO_CLOSED_BID_ASK_MID_M15")
+            if len({len(rows) for rows in arrays}) != 1:
+                mismatches.append(label + "_" + timeframe + "_FAMILY_COUNT_SKEW")
+            timestamps = [
+                [canonical_utc_stamp(bar.get("openTime")) if isinstance(bar, dict)
+                 else None for bar in rows] for rows in arrays
+            ]
+            if timestamps[0] != timestamps[1] or timestamps[0] != timestamps[2]:
+                mismatches.append(label + "_" + timeframe + "_FAMILY_TIMESTAMP_SKEW")
     return {
         "mode": "OFFLINE_PARITY_DIAGNOSTIC_ONLY",
         "status": "OFFLINE_NUMERICAL_PARITY_ONLY" if not mismatches else "BLOCKED_SYNTHETIC_PARITY",
