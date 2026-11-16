@@ -109,7 +109,9 @@ def _validate_candle(row: dict, interval: str, now: dt.datetime) -> tuple[dt.dat
         raise ValueError("candle object required")
     opened = parse_utc(row.get("openTime"))
     width = INTERVALS[interval]
-    if _seconds(opened) % width:
+    # Whole-second epoch modulo alone would incorrectly accept 00:15:00.500Z
+    # as a precisely aligned M15 opening. No fractional boundary is valid.
+    if opened.microsecond or _seconds(opened) % width:
         raise ValueError(f"{interval} candle is not UTC-aligned")
     close_time = opened + dt.timedelta(seconds=width)
     if close_time > now:
@@ -151,7 +153,8 @@ def validate_frame(interval: str, frame: dict, now: dt.datetime) -> dict:
     width = INTERVALS[interval]
     if expected != sorted(expected) or len(expected) != len(set(expected)):
         raise ValueError(f"{interval} expected schedule duplicate or unordered")
-    if any(_seconds(value) % width or value + dt.timedelta(seconds=width) > now for value in expected):
+    if any(value.microsecond or _seconds(value) % width
+           or value + dt.timedelta(seconds=width) > now for value in expected):
         raise ValueError(f"{interval} expected schedule contains unclosed or unaligned bars")
     observed = set(opens)
     expected_set = set(expected)
@@ -191,7 +194,9 @@ def intake_payload(payload: dict, now: dt.datetime, policy: SourcePolicy) -> dic
     try:
         received = parse_utc(payload.get("receivedUTC"))
         now_utc = parse_utc(now.isoformat())
-        if received > now_utc + dt.timedelta(seconds=60) or (now_utc - received).total_seconds() > 120:
+        # Receipt metadata must never claim availability after the decision
+        # clock, including subsecond look-ahead in an otherwise valid packet.
+        if received > now_utc or (now_utc - received).total_seconds() > 120:
             reasons.append("INGEST_PACKET_STALE_OR_FUTURE")
     except (TypeError, ValueError):
         now_utc = parse_utc(now.isoformat())

@@ -119,6 +119,48 @@ class XauUsdFeedGateTests(unittest.TestCase):
         result = intake_payload(data, NOW, SourcePolicy())
         self.assertIn("INGEST_TIMESTAMP_INVALID", result["blockingReasons"])
 
+    def test_future_receipt_and_fractional_candle_session_boundaries_fail_closed(self):
+        # Every simulated price is a unit fixture; no external feed is called.
+        # A 1 ms future receipt is not known at the research decision instant.
+        for offset_ms in (1, 250, 59999):
+            data = payload()
+            data["receivedUTC"] = timestamp(NOW + dt.timedelta(milliseconds=offset_ms))
+            with self.subTest(receipt_future_ms=offset_ms):
+                result = intake_payload(data, NOW, SourcePolicy())
+                self.assertEqual(result["status"], "BLOCKED")
+                self.assertIn("INGEST_PACKET_STALE_OR_FUTURE", result["blockingReasons"])
+                self.assertEqual(result["frames"], {})
+                self.assertEqual(result["signal"], "WAIT")
+                self.assertIs(result["executable"], False)
+
+        for interval in ("15min", "1h", "4h"):
+            # The old integer-epoch modulo check silently truncated 500 ms.
+            data = payload()
+            opened = data["frames"][interval]["candles"][0]["openTime"]
+            fractional = opened.replace("Z", ".500Z")
+            data["frames"][interval]["candles"][0]["openTime"] = fractional
+            data["frames"][interval]["expectedOpenTimes"][0] = fractional
+            with self.subTest(candle_interval=interval):
+                result = intake_payload(data, NOW, SourcePolicy())
+                self.assertEqual(result["status"], "BLOCKED")
+                self.assertTrue(any("not UTC-aligned" in reason
+                                    for reason in result["blockingReasons"]))
+                self.assertEqual(result["signal"], "WAIT")
+                self.assertFalse(result["researchEligible"])
+
+            schedule_only = payload()
+            schedule_only["frames"][interval]["expectedOpenTimes"][0] = fractional
+            with self.subTest(schedule_interval=interval):
+                result = intake_payload(schedule_only, NOW, SourcePolicy())
+                self.assertEqual(result["status"], "BLOCKED")
+                self.assertTrue(any("expected schedule contains unclosed or unaligned bars" in reason
+                                    for reason in result["blockingReasons"]))
+                self.assertEqual(result["frames"], {})
+
+        correct = intake_payload(payload(), NOW, SourcePolicy())
+        self.assertEqual(correct["status"], "SYNTHETIC_TEST_ONLY")
+        self.assertFalse(correct["executable"])
+
     def test_recorded_source_cannot_self_certify_session_gaps(self):
         # All data below are fabricated; passing this fixture never proves a vendor feed.
         data = payload()
