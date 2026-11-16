@@ -1,4 +1,4 @@
-# Massive Currencies: XAU/USD readiness (checked 2026-11-11)
+# Massive Currencies: XAU/USD readiness (checked 2026-11-16 (review only))
 
 This is a documentation review only. No account, key, subscription, API request,
 or provider connection was used. `massive_xauusd_fixture_adapter.py` only
@@ -29,6 +29,37 @@ aligned, fresh bars and an expected-session schedule, and it never fills gaps.
   but the terms do not explicitly confirm this project's Render storage, backups,
   derived output, retention duration, or the exact C:XAUUSD entitlement. Those
   remain unverified; do not attach credentials or admit data until confirmed.
+
+## Historical coverage caveat (provider documentation; 2026-11-16)
+
+Massive's Currencies FAQ documents that gold `C:XAUUSD` starts from
+historical records dated 2009-09-27, but it also warns that
+gold is mostly missing for 2010-07 through 2013-07 and that gold/silver
+forex quotes were **sparse during 2021-01 through 2025-08**. This is a
+provider-wide caveat, not a measurement of our account or any 2026 dates.
+The advertised "all history" does **not** mean continuous BBO coverage.
+
+Before purchasing Starter or asking an operator to connect actual credentials,
+obtain written provider-level confirmation or a documented, explicitly
+authorized **non-billable** sample/coverage report for `C:XAUUSD`, separately
+for 2026-08, 2026-09 and 2026-10 (the planned chronological holdout windows).
+Verify that `/v3/quotes/C:XAUUSD` actually exposes **both** BID and ASK
+with independent market timestamps on the intended plan, not only bid-derived
+OHLC aggregates. Check actual quote density, closure and weekend/session gaps,
+fifty complete H4 bars, 90-second in-session gaps, current WS same-instrument
+quotes, and the private one-user Render research/storage rights. An empty
+response must never be treated as a successful coverage or parity check.
+If a non-billable sample is unavailable, mark this gate `BLOCKED` rather
+than paying, guessing or substituting quote counts for trade volume.
+
+References:
+- [Massive Currencies FAQ, historical coverage](https://massive.com/knowledge-base/categories/currencies)
+- [Historical forex BBO quotes endpoint](https://massive.com/docs/rest/forex/quotes/quotes)
+- [Currencies plan entitlements](https://massive.com/currencies)
+
+**No 2026 XAUUSD BBO coverage has been independently established by this
+documentation review, and no credential, network API call, charge, paper
+order or live execution is authorized.**
 
 Official references:
 
