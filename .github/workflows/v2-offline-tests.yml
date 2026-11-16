@@ -113,6 +113,9 @@ jobs:
       - name: BiQuote 24-hour bounded read-only monitoring worker (offline clock simulation)
         working-directory: coordinator
         run: python -m unittest -v test_biquote_24h_observer
+      - name: BiQuote authenticated coordinator Docker standby with all-network-denied smoke
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_render_standby
       - name: Opt-in EODHD worker process gate and isolated lifecycle (offline)
         working-directory: coordinator
         run: python -m unittest -v test_private_eodhd_worker

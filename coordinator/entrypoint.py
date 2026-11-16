@@ -15,6 +15,10 @@ from private_review_watchdog import read_audit_state,run_until_stopped
 from paper_admission_gate import assess_paper_gate
 from fxcm_mobile_readiness import read_fxcm_review_status
 from private_eodhd_worker import launch_review_worker,stop_review_worker
+# BiQuote is public read-only, isolated from broker and trade interfaces.
+# Its optional probe is imported without executing any provider requests.
+from biquote_24h_observer import observe_24h, AUTHORIZATION_ENV, AUTHORIZATION_VALUE
+from xauusd_feed_gate import parse_utc
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,*_):pass
  def do_GET(self):
@@ -49,10 +53,31 @@ class Handler(BaseHTTPRequestHandler):
 audit_root=os.environ.get('DATA_DIR','/var/data/gold-live')
 audit_enabled=os.environ.get('PRIVATE_REVIEW_AUDIT_ENABLED')=='1'
 audit_stop=threading.Event()
+# Only the explicit review opt-in starts any BiQuote public GETs. This
+# background monitor shares no state with strategy execution or paper trades.
+# No source approval is read from vendor payloads. A 24h result still has WAIT.
+biquote_review_enabled=(mode=='standby'
+ and os.environ.get(AUTHORIZATION_ENV)==AUTHORIZATION_VALUE
+ and bool(os.environ.get('GPP_BIQUOTE_REVIEW_START_UTC','').strip()))
+def run_biquote_readonly_review():
+ try:
+  start=parse_utc(os.environ['GPP_BIQUOTE_REVIEW_START_UTC'])
+  print('BIQUOTE_REVIEW24H_START '+json.dumps({'startUTC':start.isoformat(),
+          'mode':'READONLY_STANDBY','signal':'WAIT','executable':False}),flush=True)
+  result=observe_24h(start)
+  print('BIQUOTE_REVIEW24H_FINISHED '+json.dumps({'samplesObserved':result['samplesObserved'],
+          'completed24hWindow':result['completed24hWindow'],'signal':'WAIT',
+          'executable':False}),flush=True)
+ except Exception as error:
+  # Never print provider payloads or any environment secrets.
+  print('BIQUOTE_REVIEW24H_BLOCKED '+type(error).__name__,flush=True)
 server=ThreadingHTTPServer(('0.0.0.0',int(os.environ.get('BROKER_PORT','3110'))),Handler)
 if audit_enabled:
  threading.Thread(target=run_until_stopped,args=(audit_root,audit_stop),
                   daemon=True,name='private-review-audit').start()
+if biquote_review_enabled:
+ threading.Thread(target=run_biquote_readonly_review,
+                  daemon=True,name='biquote-public-24h-review').start()
 # Explicitly disabled unless private review worker, source rights, connection and
 # credentials are approved. Never auto-connect because a token already exists.
 try:
