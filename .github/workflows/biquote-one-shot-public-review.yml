@@ -18,7 +18,7 @@ jobs:
           python-version: '3.11'
       - name: Verify fixed GET-only request contract with all-network-denied unit fakes
         working-directory: coordinator
-        run: python -m unittest -v test_biquote_public_one_shot
-      - name: Repeat exactly 4 public BiQuote GETs after retention-edge audit fix (no key, no persistence)
+        run: python -m unittest -v test_biquote_public_one_shot test_biquote_overlap_evidence
+      - name: Diagnose 4 real public BiQuote XAUUSD GET responses once and report cross-frame gaps
         working-directory: coordinator
         run: python biquote_public_one_shot.py

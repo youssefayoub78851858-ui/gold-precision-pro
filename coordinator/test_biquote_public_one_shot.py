@@ -63,6 +63,12 @@ class BiQuoteOneShotSafety(unittest.TestCase):
         self.wait(report)
         self.assertTrue(report["allHttp200AndValidJson"])
         self.assertTrue(report["structuralAudit"]["ohlcStructuralChecksPassed"])
+        self.assertEqual(report["dataGeometryConformance"],
+                         "SHAPE_CHECKS_PASSED_BUT_UNLICENSED")
+        self.assertEqual(report["overlapEvidence"]["overlap"]["H4"]
+                         ["fullyCoveredAgree"], 50)
+        self.assertFalse(report["overlapEvidence"]
+                         ["sessionCalendarIndependentlyVerified"])
         self.assertEqual(report["structuralAudit"]["closedBarCounts"],
                          {"M15": 800, "H1": 200, "H4": 50})
         self.assertEqual([url for url, *_ in calls], [url for _, url in ENDPOINTS])
@@ -71,6 +77,19 @@ class BiQuoteOneShotSafety(unittest.TestCase):
         self.assertTrue(all("biquote.io/api/XAUUSD" in url for url, *_ in calls))
         self.assertFalse(report["structuralAudit"]["underlyingBrokerRightsWarranted"])
         self.assertIn("MID_", report["structuralAudit"]["candlePriceBasis"])
+
+    def test_partial_internal_m15_gap_is_diagnosed_but_not_hidden(self):
+        opener, _, packets = fake_setup()
+        packets["M15"]["bars"].pop(150)
+        result=one_shot_probe(opener,lambda:NOW)
+        self.wait(result)
+        self.assertTrue(result["allHttp200AndValidJson"])
+        self.assertEqual(result["dataGeometryConformance"],
+                         "SHAPE_CHECKS_FAILED_OR_INCOMPLETE")
+        self.assertEqual(result["overlapEvidence"]["overlap"]["H1"]
+                         ["internalM15ConstituentGaps"],1)
+        self.assertIn("CROSS_TIMEFRAME_STRUCTURE_NOT_PROVEN",
+                      result["blockingReasons"])
 
     def test_one_http_failure_never_retries_or_invents_three_frames(self):
         opener, calls, _ = fake_setup()

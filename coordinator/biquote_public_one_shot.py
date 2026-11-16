@@ -12,6 +12,7 @@ import urllib.error
 import urllib.request
 
 from biquote_offline_source_audit import audit_biquote_sample
+from biquote_overlap_evidence import diagnose_biquote_overlap
 
 UTC = dt.timezone.utc
 ENDPOINTS = (
@@ -93,6 +94,14 @@ def one_shot_probe(opener=None, clock=None):
             received["quote"],
             {tf: received[tf] for tf in ("M15", "H1", "H4")}, now=now
         )
+        result["dataGeometryConformance"] = (
+            "SHAPE_CHECKS_PASSED_BUT_UNLICENSED" if audit["ohlcStructuralChecksPassed"]
+            else "SHAPE_CHECKS_FAILED_OR_INCOMPLETE")
+        result["overlapEvidence"] = diagnose_biquote_overlap(
+            {tf: received[tf] for tf in ("M15", "H1", "H4")}, now=now
+        )
+        if not audit["ohlcStructuralChecksPassed"]:
+            result["blockingReasons"].append("CROSS_TIMEFRAME_STRUCTURE_NOT_PROVEN")
         result["structuralAudit"] = {
             "ohlcStructuralChecksPassed": audit["ohlcStructuralChecksPassed"],
             "closedBarCounts": audit["closedBarCounts"],
