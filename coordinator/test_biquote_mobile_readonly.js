@@ -110,6 +110,35 @@ async function main(){
  const mismatch=await api.snapshot({fetchFn:fake(incorrect).fetch,nowMs:()=>NOW});
  assert.equal(mismatch.httpStatus,200);secure(mismatch.body);
  assert.ok(["WAIT_CROSS_FRAME_GAPS","OBSERVED_READONLY_UNVERIFIED"].includes(mismatch.body.status));
+ // Explicit provider market closure: no fake live trend and no historical
+ // requests. A market-closed state is not labeled as an HTTP outage.
+ api.resetForTests();
+ const marketClosed=packet();marketClosed.quote.marketState="closed";
+ const closedFetcher=fake(marketClosed);
+ const marketResult=await api.snapshot({fetchFn:closedFetcher.fetch,nowMs:()=>NOW});
+ assert.equal(marketResult.httpStatus,503);secure(marketResult.body);
+ assert.deepEqual(marketResult.body.blockerCodes,["PROVIDER_REPORTED_CLOSED"]);
+ assert.equal(marketResult.body.rawQuoteShown,false);
+ assert.deepEqual(Object.keys(marketResult.body.frameSummary),[]);
+ assert.equal(closedFetcher.calls.length,1,"No OHLC requests when reported closed");
+
+ // Current quote with M15 history that ended hours ago must fail closed,
+ // rather than generating an apparently current EMA trend from stale bars.
+ api.resetForTests();
+ const stale=packet();
+ for(const row of stale.M15.bars)row.openTime=
+   new Date(Date.parse(row.openTime)-6*3600000).toISOString();
+ const staleResult=await api.snapshot({fetchFn:fake(stale).fetch,nowMs:()=>NOW});
+ assert.equal(staleResult.httpStatus,503);secure(staleResult.body);
+ assert.deepEqual(staleResult.body.blockerCodes,["CLOSED_CANDLE_STALE"]);
+ assert.equal(staleResult.body.frameSummary.M15,undefined);
+
+ // Unreachable quote cannot be misrepresented as a confirmed closure.
+ api.resetForTests();
+ const unavailable=await api.snapshot({fetchFn:async()=>{throw Error("network down")},nowMs:()=>NOW});
+ assert.equal(unavailable.httpStatus,503);secure(unavailable.body);
+ assert.deepEqual(unavailable.body.blockerCodes,["PUBLIC_FEED_INVALID_STALE_OR_UNAVAILABLE"]);
+
  // Response never contains historical OHLC raw rows, even when authorized.
  assert.equal(JSON.stringify(privateData.body).includes('"bars"'),false);
  console.log("PASS BiQuote real-formatted XAUUSD derived M15/H1/H4 telemetry; no raw candles, read-only WAIT, private quote gate");

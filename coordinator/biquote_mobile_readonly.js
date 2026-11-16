@@ -102,7 +102,13 @@ async function getJSON(url,fetchFn){
  return data;
 }
 async function collect(fetchFn,nowMs){
- const [quote,m15,h1,h4]=await Promise.all(Object.values(URLS).map(url=>getJSON(url,fetchFn)));
+ // Read the public quote first. An explicit provider-closed state is not
+ // a feed failure and must not trigger three unnecessary OHLC requests.
+ const quote=await getJSON(URLS.quote,fetchFn);
+ if(quote.symbol==="XAUUSD" && quote.marketState==="closed")
+   throw Error("PROVIDER_REPORTED_CLOSED");
+ if(quote.marketState!=="open")throw Error("MARKET_STATE_UNCONFIRMED");
+ const [m15,h1,h4]=await Promise.all(FRAMES.map(tf=>getJSON(URLS[tf],fetchFn)));
  const asOf=nowMs();
  if(quote.symbol!=="XAUUSD"||!price(quote.bid)||!price(quote.ask)||quote.ask<quote.bid
     ||typeof quote.stale!=="boolean"||quote.marketState!=="open")throw Error("QUOTE_MARKET_OR_PRICE_INVALID");
@@ -111,6 +117,15 @@ async function collect(fetchFn,nowMs){
  const tick=utcMs(quote.timestamp),age=asOf-tick;
  if(age<0||age>MAX_AGE_MS||quote.stale)throw Error("QUOTE_NOT_FRESH");
  const processed={M15:frame(m15,"M15",asOf),H1:frame(h1,"H1",asOf),H4:frame(h4,"H4",asOf)};
+ // A fresh BID/ASK tick is insufficient evidence when closed MID candles
+ // stopped updating. While provider reports market OPEN, last completed bar
+ // may lag by <= 2 full frame durations; reject any older/future dataset.
+ // No weekend or broker-session calendar is inferred from this threshold.
+ for(const tf of FRAMES){
+   const lag=asOf-Date.parse(processed[tf].view.lastClosedUTC);
+   if(!Number.isFinite(lag)||lag<0||lag>META[tf].width*2)
+     throw Error("CANDLE_STALE_"+tf);
+ }
  const comparisons={H1:overlap(processed.M15,processed.H1,3600000),
                     H4:overlap(processed.M15,processed.H4,14400000)};
  const all=Object.values(comparisons);
@@ -138,10 +153,20 @@ async function snapshot({fetchFn=globalThis.fetch,nowMs=Date.now,authorization="
    }).finally(()=>{pending=null;});
    sample=await pending;
   }
- }catch(_error){
+ }catch(error){
+  // A provider-reported closure, stale history and failed HTTP are
+  // different facts. Expose only fixed diagnostic reason codes, no vendor
+  // error text, quote prices, broker credentials or trading permissions.
+  const message=error&&error.message;
+  const reason=message==="PROVIDER_REPORTED_CLOSED"?"PROVIDER_REPORTED_CLOSED"
+    :typeof message==="string"&&/^CANDLE_STALE_(M15|H1|H4)$/.test(message)
+      ?"CLOSED_CANDLE_STALE"
+    :message==="QUOTE_NOT_FRESH"?"QUOTE_STALE_OR_UNVERIFIED"
+    :message==="PUBLIC_HTTP_UNAVAILABLE"?"PUBLIC_HTTP_UNAVAILABLE"
+    :"PUBLIC_FEED_INVALID_STALE_OR_UNAVAILABLE";
   return {httpStatus:503,body:{...WAIT,status:"WAIT_BIQUOTE_DATA_UNAVAILABLE",
     frameSummary:{},crossFrameComparisons:{},
-    blockerCodes:["PUBLIC_FEED_INVALID_STALE_OR_UNAVAILABLE"],rawQuoteShown:false}};
+    blockerCodes:[reason],rawQuoteShown:false}};
  }
  const ageAtResponse=(nowMs()-Date.parse(sample.quoteUTC))/1000;
  if(!Number.isFinite(ageAtResponse)||ageAtResponse<0||ageAtResponse>30)

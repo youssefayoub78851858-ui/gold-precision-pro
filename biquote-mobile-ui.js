@@ -29,7 +29,25 @@
    const response=await fetch("/api/v3/ultimate/biquote-observation",{
       method:"GET",headers,redirect:"error",credentials:"omit",
       cache:"no-store",signal:AbortSignal.timeout(35000)});
-   if(!response.ok)throw Error("فشل وصول المصدر أو البيانات غير صالحة (HTTP "+response.status+")");
+   if(!response.ok){
+     const failure=await response.json().catch(()=>null);
+     if(failure&&failure.signal==="WAIT"&&failure.executable===false&&
+        failure.researchEligible===false&&failure.rawQuoteShown===false&&
+        failure.status==="WAIT_BIQUOTE_DATA_UNAVAILABLE"){
+       const reason=Array.isArray(failure.blockerCodes)?failure.blockerCodes[0]:"";
+       const messages={
+         PROVIDER_REPORTED_CLOSED:"WAIT — BiQuote أفاد أن سوق الذهب مغلق؛ لا تحليل حي أو صفقة",
+         CLOSED_CANDLE_STALE:"WAIT — الشموع المغلقة قديمة رغم وصول سعر؛ التحليل متوقف",
+         QUOTE_STALE_OR_UNVERIFIED:"WAIT — آخر سعر غير حديث أو غير مؤكد",
+         PUBLIC_HTTP_UNAVAILABLE:"WAIT — تعذّر الاتصال بأحد مصادر BiQuote العامة"
+       };
+       reset();
+       $("biquote-status").textContent=messages[reason]||
+         "WAIT — البيانات غير مكتملة أو غير صالحة للتحليل";
+       return;
+     }
+     throw Error("فشل وصول المصدر أو البيانات غير صالحة (HTTP "+response.status+")");
+   }
    const data=await response.json();
    if(data.signal!=="WAIT"||data.executable!==false||
       data.researchEligible!==false||data.tradePlanExecutable!==false||
