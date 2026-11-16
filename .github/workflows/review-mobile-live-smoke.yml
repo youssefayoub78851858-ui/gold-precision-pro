@@ -57,3 +57,51 @@ jobs:
             -X POST "$base/api/v3/monitor/status")"
           [ "$code" = '405' ]
           echo 'PASS: read-only endpoint rejects POST'
+
+      - name: Confirm unified mobile screen and old bookmark redirect over HTTPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://gold-precision-v3-review-demo.onrender.com'
+          page="$(mktemp)"
+          code="$(curl -sS -L --connect-timeout 12 --max-time 55 -o "$page" -w '%{http_code}' "$base/ultimate")"
+          [ "$code" = 200 ]
+          grep -q 'biquote-mobile-observation' "$page"
+          grep -q 'biquote-viewer-secret' "$page"
+          grep -q 'biquote-mobile-ui.js' "$page"
+          body="$(mktemp)"
+          headers="$(mktemp)"
+          code="$(curl -sS --connect-timeout 12 --max-time 25 -D "$headers" -o "$body" -w '%{http_code}' "$base/paper-terminal.html")"
+          [ "$code" = 302 ]
+          grep -qi 'location: /ultimate#unified-mobile-trading' "$headers"
+          echo 'PASS real HTTPS /ultimate screen and legacy .html redirect, no additional deployment'
+      - name: Verify safe BiQuote public derived HTTP snapshot with no market keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://gold-precision-v3-review-demo.onrender.com'
+          body="$(mktemp)"
+          code="$(curl -sS --connect-timeout 12 --max-time 55 -o "$body" -w '%{http_code}' \
+            "$base/api/v3/ultimate/biquote-observation")"
+          python - "$body" "$code" <<'PY'
+          import json,sys
+          body=json.load(open(sys.argv[1]))
+          status=int(sys.argv[2])
+          assert status in (200,503),(status,body)
+          assert body['signal']=='WAIT' and body['executable'] is False
+          assert body['researchEligible'] is False
+          assert body['paperOrdersAllowed'] is False and body['orderEndpointsCalled'] is False
+          assert body['rawQuoteShown'] is False
+          assert 'bid' not in body and 'ask' not in body and 'spread' not in body
+          assert 'bars' not in body and 'rawPrivateQuote' not in body
+          if status==200:
+              assert body['status'] in ('OBSERVED_READONLY_UNVERIFIED','WAIT_CROSS_FRAME_GAPS')
+              assert all(body['frameSummary'][tf]['closedCount']>=50 for tf in ('M15','H1','H4'))
+              assert set(body['crossFrameComparisons'])=={'H1','H4'}
+              print('PASS REAL BIQUOTE derived observational JSON',body['status'],
+                    'closedBarCounts',{tf:body['frameSummary'][tf]['closedCount'] for tf in ('M15','H1','H4')},
+                    'signal',body['signal'])
+          else:
+              assert body['status'] in ('WAIT_BIQUOTE_DATA_UNAVAILABLE','WAIT_BIQUOTE_DATA_STALE')
+              print('SAFE WAIT: upstream BiQuote temporarily stale/unavailable; no data fabricated')
+          PY
