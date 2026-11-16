@@ -76,6 +76,36 @@
 <section id="unified-mobile-trading" aria-labelledby="unified-trading-title" data-mode="REVIEW_PAPER_ONLY"><main>
 <header class="heading"><div><h2 id="unified-trading-title">شارت الذهب والتداول الورقي</h2><p class="hint">XAUUSD — M15 / H1 / H4 · لا صفقات حقيقية</p></div><span id="live-badge" class="flag">WAIT · بلا بيانات حية</span></header>
 <p class="hint"><strong>تنبيه:</strong> كل فتح وإغلاق هنا محاكاة ورقية محليّة على شموع مُسجّلة أو اختبار اصطناعي. ليست توصية BUY/SELL حية، ولا يوجد اتصال وسيط.</p>
+<style>
+#biquote-mobile-observation{scroll-margin-top:85px;border-color:#577366;background:#132434;margin:12px 0}
+#biquote-mobile-observation .biq-label{font-size:.78rem;color:#b9cfce}
+#biquote-mobile-observation .biq-value{display:block;font-variant-numeric:tabular-nums;color:#e8d098;font-size:.95rem;overflow-wrap:anywhere;margin-top:5px}
+#biquote-mobile-observation .biq-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#biquote-mobile-observation .biq-item{border:1px solid #334f55;border-radius:10px;padding:10px;background:#192d3a;min-width:0}
+#biquote-mobile-observation .biq-item.wide{grid-column:1/-1}
+#biquote-mobile-observation button,#biquote-mobile-observation input{font:inherit;padding:9px;min-height:42px;border-radius:8px;max-width:100%;box-sizing:border-box}
+#biquote-mobile-observation input{color:#fff;background:#102333;border:1px solid #566b76;width:100%}
+#biquote-mobile-observation button{background:#d6b86e;color:#111e30;border:0;font-weight:750}
+#biquote-mobile-observation p{line-height:1.6}
+@media(max-width:460px){#biquote-mobile-observation .biq-grid{grid-template-columns:1fr}}
+</style>
+<section class="overview" id="biquote-mobile-observation" aria-labelledby="biquote-observation-title">
+<h2 id="biquote-observation-title">بيانات الذهب الحقيقية — BiQuote (مراقبة للقراءة فقط)</h2>
+<p class="overview-status">هاي لوحة فحص مباشر مستقلة عن شارت إعادة التداول الورقي. الشموع MID وقد تتضمن بذرة تاريخية BID. القراءات الوصفية ليست توصية تداول، والقرار دائماً <strong>WAIT</strong>.</p>
+<div class="biq-grid">
+<div class="biq-item wide"><span class="biq-label">حالة الاتصال والتحليل</span><strong class="biq-value" id="biquote-status" role="status" aria-live="polite">WAIT — جارٍ التحميل</strong></div>
+<div class="biq-item"><span class="biq-label">BID / ASK الحقيقي (عرض خاص)</span><strong class="biq-value" id="biquote-private-quote">غير متاح</strong></div>
+<div class="biq-item"><span class="biq-label">السبريد وقت الفحص</span><strong class="biq-value" id="biquote-private-spread">غير متاح</strong></div>
+<div class="biq-item wide"><span class="biq-label">وقت العيّنة وعمر السعر</span><strong class="biq-value" id="biquote-observed">غير متاح</strong></div>
+<div class="biq-item wide"><span class="biq-label">M15 — اتجاه EMA20/EMA50 وصفي</span><strong class="biq-value" id="biquote-m15">غير متاح</strong></div>
+<div class="biq-item wide"><span class="biq-label">H1 — اتجاه EMA20/EMA50 وصفي</span><strong class="biq-value" id="biquote-h1">غير متاح</strong></div>
+<div class="biq-item wide"><span class="biq-label">H4 — اتجاه EMA20/EMA50 وصفي</span><strong class="biq-value" id="biquote-h4">غير متاح</strong></div>
+<div class="biq-item wide"><span class="biq-label">نتيجة فحص تطابق الشموع M15/H1/H4</span><strong class="biq-value" id="biquote-overlap">غير متاح</strong></div>
+</div>
+<p class="overview-status">حتى ما ننشر الأسعار الخام للعامة، لازم <strong>رمز المشاهدة الخاص بـCoordinator</strong> لعرض BID/ASK. اتركه فارغاً لعرض مؤشرات البيانات الوصفية فقط. الرمز لا يُحفظ في متصفحك ولا ينرسل لـBiQuote.</p>
+<div class="bar" style="margin-top:10px"><label style="flex:2;min-width:180px;font-size:.8rem">رمز المشاهدة الخاص (اختياري)<input id="biquote-viewer-secret" type="password" autocomplete="off" spellcheck="false" placeholder="MONITOR_READONLY_TOKEN"></label><button type="button" id="biquote-refresh">تحديث فحص الذهب</button></div>
+<p class="overview-status">الفحص يتجدد كل دقيقتين عندما تكون الشاشة مفتوحة. مراقبة الـ24 ساعة على خدمة Coordinator تعمل بشكل منفصل؛ هاللوحة لا تعرض إحصاءاتها التراكمية بعد. DXY والسندات وGC وOrder Flow والأخبار غير مكتملة، لذلك لا إشارات BUY/SELL.</p>
+</section>
 <section class="card" id="paper-overview"><div class="metric-grid">
 <div class="metric"><label>قرار النظام الحقيقي</label><strong id="live-decision" class="wait">WAIT</strong></div>
 <div class="metric"><label>السعر الحي</label><strong id="live-price">غير متصل</strong></div>
@@ -803,6 +833,7 @@ if(document.readyState==='loading'){
  window.addEventListener('pageshow',checkVersion);
 })();
 </script>
+<script src="/biquote-mobile-ui.js" defer></script>
 <script src="/paper-terminal-core.js" defer></script>
 <script src="/paper-terminal-ui.js" defer></script>
 </html>

@@ -16,4 +16,18 @@ for(const id of ['multi-source-readiness','multi-source-check','multi-source-sta
  a(doc.includes('id="'+id+'"'),'Missing source inventory panel: '+id);
 a(doc.includes('/api/v3/ultimate/multi-source-readiness'));
 a(doc.includes('WAIT'));
+for(const id of ['biquote-mobile-observation','biquote-private-quote','biquote-private-spread',
+                  'biquote-status','biquote-observed','biquote-m15','biquote-h1','biquote-h4',
+                  'biquote-overlap','biquote-viewer-secret','biquote-refresh'])
+ a(doc.includes('id="'+id+'"'),'Missing read-only BiQuote UI: '+id);
+a(doc.includes('src="/biquote-mobile-ui.js"'));
+const server=fs.readFileSync('server.js','utf8');
+a(server.includes('paperPath==="/paper-terminal" || paperPath==="/paper-terminal.html"'));
+a(server.includes('"/api/v3/ultimate/biquote-observation"'));
+a(server.includes('"/biquote-mobile-ui.js":"biquote-mobile-ui.js"'));
+const script=fs.readFileSync('biquote-mobile-ui.js','utf8');
+a(script.includes('signal!=="WAIT"'));
+a(!script.includes('localStorage')&&!script.includes('sessionStorage'));
+a(!script.includes('paper-buy')&&!script.includes('paper-sell'));
+
 console.log('PASS unified mobile: chart, trade, journal and research in /ultimate, no iframe or duplicate IDs');

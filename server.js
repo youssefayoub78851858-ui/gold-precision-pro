@@ -49,7 +49,7 @@ const server = http.createServer(async (req, res) => {
   const paperPath=req.url.split("?")[0];
   // Old paper URL is only a compatibility entry; the one mobile UI lives
   // at /ultimate (single DOM with the existing paper runtime, no iframe).
-  if(paperPath==="/paper-terminal"){
+  if(paperPath==="/paper-terminal" || paperPath==="/paper-terminal.html"){
     if(!DEMO_MODE)return send(res,404,{error:"Not found"});
     if(req.method!=="GET")return send(res,405,{error:"GET only",signal:"WAIT",executable:false});
     res.writeHead(302,{"Location":"/ultimate#unified-mobile-trading",
@@ -57,8 +57,37 @@ const server = http.createServer(async (req, res) => {
       "X-Content-Type-Options":"nosniff"});
     return res.end();
   }
+  // Separate public BIQUOTE technical observations from the offline paper
+  // chart. Raw quote prices require the existing private viewer secret,
+  // verified by the private coordinator. No credentials or raw bars public.
+  if(paperPath==="/api/v3/ultimate/biquote-observation"){
+    if(!DEMO_MODE)return send(res,404,{signal:"WAIT",executable:false,error:"Review only"});
+    if(req.method!=="GET")return send(res,405,{signal:"WAIT",executable:false,error:"GET only"});
+    try{
+      const observer=require("./coordinator/biquote_mobile_readonly");
+      const privateMonitor=require("./coordinator/review_monitor_proxy");
+      const result=await observer.snapshot({
+        authorization:req.headers.authorization||"",
+        verifyViewer:async token=>{
+          const out=await privateMonitor.relay(token,{approved:true});
+          return out.httpStatus===200&&out.body?.signal==="WAIT"&&out.body?.executable===false;
+        }
+      });
+      res.writeHead(result.httpStatus,{
+        "Content-Type":"application/json; charset=utf-8",
+        "Cache-Control":"private, no-store",
+        "X-Content-Type-Options":"nosniff",
+        "Referrer-Policy":"no-referrer"
+      });
+      return res.end(JSON.stringify(result.body));
+    }catch(_error){
+      return send(res,503,{signal:"WAIT",executable:false,
+        researchEligible:false,status:"WAIT_READONLY_OBSERVATION_FAILED"});
+    }
+  }
   const paperFiles={"/paper-terminal-core.js":"paper-terminal-core.js",
-    "/paper-terminal-ui.js":"paper-terminal-ui.js"};
+    "/paper-terminal-ui.js":"paper-terminal-ui.js",
+    "/biquote-mobile-ui.js":"biquote-mobile-ui.js"};
   if(Object.prototype.hasOwnProperty.call(paperFiles,paperPath)){
     if(!DEMO_MODE)return send(res,404,{error:"Not found"});
     if(req.method!=="GET")return send(res,405,{error:"GET only",signal:"WAIT",executable:false});
