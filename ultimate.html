@@ -119,6 +119,13 @@
 <div class="gdc-level"><span>TP2</span><strong>—</strong></div>
 <div class="gdc-level"><span>TP3</span><strong>—</strong></div>
 </div><p class="gdc-sub">لن نعرض نقاط دخول أو نسبة نجاح إلا بعد إثبات مصدر التنفيذ والمخاطر واختبار النتائج خارج العينة.</p></div>
+<div class="gdc-data" id="gdc-gates" aria-label="حالة مراحل مصادر الذهب">
+<strong>جاهزية التحليل — أدلة منفصلة</strong>
+<p id="gdc-source-proof" class="gdc-sub" role="status" aria-live="polite">مصادر التأكيد: بانتظار فحص المتطلبات البرمجية. نتيجة الفحص ليست اتصالاً حياً بالسوق.</p>
+<p id="gdc-archive-proof" class="gdc-sub">أرشيف BiQuote الخاص: غير مؤكد على الشاشة العامة. لا نفترض شموع محفوظة من دون دليل Coordinator.</p>
+<p id="gdc-v3-proof" class="gdc-sub">محرك V3: وصلة بحثية مجرّبة دون تفعيل إشارات أو أوامر؛ بانتظار شموع مستقبلية كافية متصلة.</p>
+<a href="/private-monitor#biquote-forward-panel" style="display:inline-block;color:#f0d18a;font-size:.86rem;padding:7px 0">فحص الأرشيف الخاص وعدّادات الشموع على شاشة المراقبة</a>
+</div>
 <p class="gdc-reason" id="gdc-blocker">سبب WAIT: جلسات وسيط الذهب وتكاليف التنفيذ غير مثبتة؛ GC وDXY والسندات والأخبار وOrder Flow غير مؤكدة. لا صفقات حقيقية أو آلية.</p>
 <div class="gdc-action"><a href="#biquote-viewer-guide">فحص الشارت الحقيقي</a><a href="#paper-actions">التجربة الورقية اليدوية</a><a href="#multi-source-readiness">مصادر التأكيد</a></div>
 <p class="gdc-sub">لوحة القرار مربوطة بفحص BiQuote الخاص فقط؛ لا تنقل أسعار السوق إلى سجل المحاكاة ولا تفتح صفقات. التحديثات الوصفية مش إشارات BUY/SELL.</p>
@@ -252,6 +259,9 @@
  async function check(){
   btn.disabled=true;
   status.textContent='WAIT — فحص المتطلبات المخزّنة بدون اتصال ببيانات السوق...';
+  const decisionProof=document.getElementById("gdc-source-proof");
+  if(decisionProof)decisionProof.textContent=
+    "جارٍ فحص المتطلبات المخزّنة فقط — لا اتصال ببيانات السوق أو مفتاح مزوّد.";
   try{
    const response=await fetch('/api/v3/ultimate/multi-source-readiness',{
     cache:'no-store',credentials:'omit',redirect:'error',signal:AbortSignal.timeout(9000)});
@@ -278,12 +288,19 @@
    }
    grid.replaceChildren(...nodes);
    status.textContent='WAIT — 0 من 9 مصادر حقيقية موصولة؛ فحص برمجي فقط';
+   const decisionProof=document.getElementById("gdc-source-proof");
+   if(decisionProof)decisionProof.textContent=
+     "متطلبات المصادر: 0 / 9 مكتملة حسب سجل المتطلبات الثابت فقط (مش فحص سوق مباشر). "+
+     "US02Y وUS10Y مرشحان يوميان غير صالحين وحدهما لتأكيد M15.";
   }catch(_error){
    grid.replaceChildren();
    const item=document.createElement('div');item.className='overview-card';
    item.textContent='تعذّر التحقق من وضع المصادر — لا تعتبر أي مصدر جاهزاً';
    grid.appendChild(item);
    status.textContent='WAIT — حالة المصادر غير متاحة';
+   const decisionProof=document.getElementById("gdc-source-proof");
+   if(decisionProof)decisionProof.textContent=
+     "متطلبات المصادر: تعذّر التحقق؛ العدد غير معروف، ولا يوجد إثبات لاتصال GC / DXY / السندات / الأخبار.";
   }finally{btn.disabled=false;}
  }
  btn.addEventListener('click',check);
