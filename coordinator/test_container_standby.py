@@ -77,6 +77,16 @@ for p in pathlib.Path('/proc').glob('[0-9]*/cmdline'):
    host=json.loads(subprocess.check_output(['docker','inspect',cid],text=True))[0]['HostConfig'];assert host['Memory']==536870912 and host['NanoCpus']==500000000 and host['NetworkMode']=='none'
    # Test module loading from actual copied image filesystem without starting live API or worker.
    subprocess.run(['docker','exec',cid,'node','-e',"require('/app/v3_trade_plan'); console.log('PASS V3 dependency closure inside built image')"],check=True)
+   # Frozen V3 and private capture modules really coexist inside the Docker
+   # image. Empty-vault shadow is WAIT and cannot create even paper orders.
+   subprocess.run(['docker','exec',cid,'node','-e',
+                   "const x=require('/app/ultimate_four_stage_review'); if(typeof x.reviewFourStages!=='function')process.exit(1); console.log('PASS offline V3 shadow module available')"],check=True)
+   execute("from biquote_forward_shadow_review import shadow_review\n"
+           "p='/var/data/gold-live/synthetic-check-not-started'\n"
+           "r=shadow_review(p)\n"
+           "assert r['signal']=='WAIT' and r['paperOrdersAllowed'] is False\n"
+           "assert r['technicalWatch']=='NONE' and r['sourceRequestsMade']==0\n"
+           "assert 'NO_POST_HOLDOUT_CAPTURE' in r['reasonCodes']\n")
    execute("from pathlib import Path\np=Path('/var/data/gold-live');p.mkdir(exist_ok=True);(p/'standby-persistence-check').write_text('ok')")
    subprocess.run(['docker','restart',cid],check=True,stdout=subprocess.DEVNULL)
    for _ in range(40):
