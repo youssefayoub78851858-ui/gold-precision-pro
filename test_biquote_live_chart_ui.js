@@ -125,7 +125,7 @@ async function main(){
  await makeNode("biquote-refresh").click();
  assert.equal(sessionLogins,1,"Later refresh must use cookie, never resend token");
  assert.equal(requests.length,firstCookies+1);
- assert.match(makeNode("biquote-viewer-session-state").textContent,/7 أيام/);
+ assert.match(makeNode("biquote-viewer-session-state").textContent,/بتتجدّد تلقائياً/);
  assert.match(makeNode("biquote-live-caption").textContent,/READ-ONLY/);
  assert.match(makeNode("biquote-live-caption").textContent,/تغطية M15/);
  assert.match(makeNode("biquote-structure-summary").textContent,/EMA20/);
