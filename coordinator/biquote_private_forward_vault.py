@@ -291,14 +291,51 @@ def ingest(dirname, sample, *, received_utc):
         "independentProfitabilityProven":False
     }
 
+def _closed_coverage(rows, tf, last_imported):
+    """No prices or raw quotes; session pauses remain UNCLASSIFIED."""
+    width=FRAMES[tf][1]
+    stamps=[_stamp(item["openTime"]) for item in rows]
+    if not stamps:
+        return {"closedBars":0, "firstClosedUTC":None, "lastClosedUTC":None,
+                "latestContiguousBars":0, "unclassifiedGapPairs":0,
+                "unclassifiedMissingSlots":0, "ageAtLastImportSeconds":None}
+    missing=0
+    pairs=0
+    contiguous=1
+    for before,after in zip(stamps,stamps[1:]):
+        step=int((after-before).total_seconds())
+        if step!=width:
+            pairs+=1
+            missing+=max(0,step//width-1)
+            contiguous=1
+        else:
+            contiguous+=1
+    last_end=stamps[-1]+dt.timedelta(seconds=width)
+    observed=_stamp(last_imported) if last_imported else None
+    age=round((observed-last_end).total_seconds(),3) if observed else None
+    return {"closedBars":len(rows),
+            "firstClosedUTC":(stamps[0]+dt.timedelta(seconds=width)).isoformat().replace("+00:00","Z"),
+            "lastClosedUTC":last_end.isoformat().replace("+00:00","Z"),
+            "latestContiguousBars":contiguous,
+            "unclassifiedGapPairs":pairs,
+            "unclassifiedMissingSlots":missing,
+            "ageAtLastImportSeconds":age if age is not None and age>=0 else None}
+
+
 def inspect_metadata(dirname):
-    """Never expose raw candles/quotes, only local vault counts and flags."""
+    """Private counts, closed-bar continuity and last arrival; NO prices."""
     v=load_vault(dirname)
+    coverage={tf:_closed_coverage(v["closed"][tf],tf,v["lastImportedUTC"])
+              for tf in FRAMES_ORDER}
     return {**SAFE,
             "status":"PRIVATE_FORWARD_VAULT_METADATA_ONLY",
             "counts":{tf:len(v["closed"][tf]) for tf in FRAMES_ORDER},
             "quoteSamples":len(v["quoteObservations"]),
             "lastImportedUTC":v["lastImportedUTC"],
+            "forwardCoverage":coverage,
+            "coverageClassification":"GAPS_UNCLASSIFIED_WITHOUT_INDEPENDENT_BROKER_CALENDAR",
+            "researchCandidate":"NONE",
+            "tradeSignalReady":False,
             "independentProfitabilityProven":False,
             "noTradingAdmission":True}
 
