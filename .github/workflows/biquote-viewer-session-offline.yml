@@ -1,4 +1,4 @@
-name: BiQuote viewer remember-me session safety (offline)
+name: BiQuote private viewer and decision board safety (offline)
 on:
   push:
     branches: [review/v2-portable-tests-20261109]
@@ -11,12 +11,13 @@ on:
       - 'biquote-mobile-ui.js'
       - 'test_biquote_live_chart_ui.js'
       - 'test_unified_mobile.js'
+      - 'test_gold_decision_readiness.js'
       - '.github/workflows/biquote-viewer-session-offline.yml'
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  seven-day-private-session:
+  secure-viewer-and-decision-board:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -30,6 +31,8 @@ jobs:
         run: node test_biquote_live_chart_ui.js
       - name: Unified mobile DOM with paper trading isolation
         run: node test_unified_mobile.js
+      - name: Decision source readiness is static and archive remains private
+        run: node test_gold_decision_readiness.js
       - name: Protected proxy never relays private prices or forged status
         run: node coordinator/test_review_monitor_proxy.js
       - name: Keep raw gold feed and paper orders isolated
