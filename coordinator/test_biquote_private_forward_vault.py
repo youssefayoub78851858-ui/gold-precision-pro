@@ -124,7 +124,9 @@ class ForwardVault(unittest.TestCase):
     def test_interior_gap_does_not_get_filled(self):
         altered=copy.deepcopy(self.s)
         # One M15 member missing, H1/H4 remain source-observed.
-        altered["frames"]["M15"]["bars"].pop(8)
+        # A candle within the last fully CLOSED 20:00–00:00 H4 bar,
+        # not the 00:00–04:00 H4 currently forming at NOW=03:05 UTC.
+        altered["frames"]["M15"]["bars"].pop(18)
         r=ingest(self.folder,altered,received_utc=iso(NOW))
         self.safe(r)
         self.assertGreater(r["crossFrameIncompleteM15"]["H1"],0)
