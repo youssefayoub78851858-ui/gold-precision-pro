@@ -82,6 +82,43 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  a.equal(unavailable.httpStatus,200);
  a.equal(unavailable.body.biquotePrivateForwardVault.status,"VAULT_METADATA_UNAVAILABLE");
  a.ok(!JSON.stringify(unavailable).includes("secret-vault-token"));
+ const shadow={
+  mode:"BIQUOTE_PRIVATE_FORWARD_V3_SHADOW_ONLY",
+  signal:"WAIT",executable:false,paperOrdersAllowed:false,
+  tradeEligible:false,researchEligible:false,brokerOrdersSent:0,
+  sourceRequestsMade:0,approvedDirection:"NONE",signalReady:false,
+  technicalWatch:"BUY",
+  engineReview:"FROZEN_V3_COMPLETED_WITH_REAL_OBSERVED_CLOSED_BARS",
+  reasonCodes:["UNDERLYING_BROKER_SESSION_UNVERIFIED",
+               "NO_REAL_SIGNAL_WITHOUT_INDEPENDENT_CONTEXT_AND_RISK"],
+  frames:{
+   M15:{persistedClosed:80,contiguousClosed:48,neededContiguous:21,bid:987654},
+   H1:{persistedClosed:40,contiguousClosed:40,neededContiguous:21},
+   H4:{persistedClosed:23,contiguousClosed:23,neededContiguous:21}},
+  spread:987654,entry:8888888,secretQuote:"NEVER_LEAK"}
+ const sanitized=await relay(auth,{approved:true,fetchFn:async()=>mock({
+    ...expected,biquoteForwardShadow:shadow})});
+ a.equal(sanitized.httpStatus,200);
+ a.equal(sanitized.body.signal,"WAIT");
+ a.equal(sanitized.body.biquoteForwardShadow.technicalWatch,"BUY");
+ a.equal(sanitized.body.biquoteForwardShadow.approvedDirection,"NONE");
+ a.equal(sanitized.body.biquoteForwardShadow.paperOrdersAllowed,false);
+ a.equal(sanitized.body.biquoteForwardShadow.frames.H4.contiguousClosed,23);
+ for(const secret of ["987654","8888888","NEVER_LEAK","secretQuote"]){
+   a.ok(!JSON.stringify(sanitized).includes(secret),"Private raw prices and secrets must not leak");
+ }
+ for(const delta of [{signal:"BUY"},{executable:true},{paperOrdersAllowed:true},
+   {approvedDirection:"BUY"},{signalReady:true},{sourceRequestsMade:1},
+   {reasonCodes:["<price>"]},{technicalWatch:"SELL",engineReview:"NOT_YET_READY"}]){
+   const rejected=await relay(auth,{approved:true,fetchFn:async()=>mock({
+     ...expected,biquoteForwardShadow:{...shadow,...delta}})});
+   a.equal(rejected.httpStatus,503);
+ }
+ const emptyShadow=await relay(auth,{approved:true,fetchFn:async()=>mock({
+   ...expected,biquoteForwardShadow:{...shadow,technicalWatch:"NONE",
+    frames:undefined,engineReview:undefined}})});
+ a.equal(emptyShadow.httpStatus,200);
+ a.equal(emptyShadow.body.biquoteForwardShadow.technicalWatch,"NONE");
  const wrong=await relay(auth,{approved:true,fetchFn:async()=>({status:401,ok:false})});
  a.equal(wrong.httpStatus,401);
  const fault=await relay(auth,{approved:true,fetchFn:async()=>{throw Error("private secret")}});
