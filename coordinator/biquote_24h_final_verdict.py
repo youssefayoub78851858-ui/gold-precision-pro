@@ -7,6 +7,7 @@ candles, credentials or entitlement claims and never activates archives.
 from __future__ import annotations
 import datetime as dt
 import json
+import math
 import re
 import sys
 
@@ -138,10 +139,23 @@ def verdict(report):
         return out
     h1=report["h1DisagreementsAcrossSnapshots"]
     h4=report["h4DisagreementsAcrossSnapshots"]
+    peak_age=report.get("maxObservedQuoteAgeSeconds")
+    if peak_age is not None and (type(peak_age) not in (float,int)
+                                 or not math.isfinite(peak_age)
+                                 or peak_age<0 or peak_age>86400):
+        out["reasonCodes"]=["UNSAFE_AGGREGATED_QUOTE_AGE"]
+        return out
     reasons=[]
     if missed: reasons.append("MISSING_OBSERVATION_SLOTS")
-    if failed: reasons.append("HTTP_FAILURE_SAMPLES")
+    if failed: reasons.append("HTTP_OR_JSON_FAILURE_SAMPLES")
     if report["providerStaleSamples"]: reasons.append("PROVIDER_STALE_QUOTE_SAMPLES")
+    if peak_age is not None and peak_age>30:
+        # Provider stale=false does NOT overrule our independent UTC clock.
+        reasons.append("INDEPENDENT_QUOTE_AGE_EXCEEDED_30_SECONDS")
+    if ok and report["auditShapePassedSamples"]==0:
+        reasons.append("ZERO_FULL_SOURCE_STRUCTURAL_CHECK_PASSES")
+    elif report["auditShapePassedSamples"]<ok:
+        reasons.append("PARTIAL_SOURCE_STRUCTURAL_CHECK_PASSES")
     if h1 or h4 or (modern and cats["OHLC_PRICE_DISAGREEMENT"]):
         reasons.append("SOURCE_OHLC_PRICE_DISAGREEMENT")
     if ((modern and cats["UNCLASSIFIED_M15_COVERAGE_GAP"]) or
@@ -164,6 +178,12 @@ def verdict(report):
     out.update(status="REVIEW_FINISHED_READONLY_NOT_TRADE_ADMISSIBLE",
                reasonCodes=reasons,
                reportSchema="LEGACY_989699CD_NO_FAILURE_CLASS" if legacy else "EXTENDED_TYPED_FAILURE_CLASSES",
+               independentQuoteAgeMaximumSeconds=round(peak_age,3) if peak_age is not None else None,
+               totalFullyCoveredH1Compared=report["h1FullyCoveredComparedAcrossSnapshots"],
+               totalFullyCoveredH4Compared=report["h4FullyCoveredComparedAcrossSnapshots"],
+               h4PartialAggregatesAcrossSnapshots=report["h4UnclassifiedPartialAggregatesAcrossSnapshots"],
+               totalStructuralAuditPassed=report["auditShapePassedSamples"],
+               httpFailedSamples=failed,
                samplesObserved=n,missedSlots=missed,
                httpOkSamples=ok,h1OHLCDisagreements=h1,h4OHLCDisagreements=h4,
                unclassifiedCoverageSamples=report["crossFrameUnverifiedSamples"])
