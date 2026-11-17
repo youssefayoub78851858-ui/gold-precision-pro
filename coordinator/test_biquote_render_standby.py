@@ -26,6 +26,10 @@ class BiQuoteRenderStandbySafety(unittest.TestCase):
                      "biquote_public_one_shot.py",
                      "biquote_24h_observer.py"):
             self.assertIn(name, docker)
+        for name in ("biquote_forward_shadow_review.py","v3_ultimate.js",
+                     "ultimate_four_stage_review.js","ultimate_signal_quality.js",
+                     "ultimate_signal_quality_report.js","ultimate_shadow_admission.js"):
+            self.assertIn(name,docker)
         self.assertIn('CMD ["python3", "/app/entrypoint.py"]', docker)
         self.assertIn('DATA_DIR=/var/data/gold-live', docker)
         self.assertNotIn("CUTOVER_MODE=live", docker)
