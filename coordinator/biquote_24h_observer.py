@@ -141,6 +141,7 @@ class QualityCounters:
             "auditShapePassedSamples": self.audit_ok, "marketOpenSamples": self.market_open,
             "providerStaleSamples": self.quote_stale,
             "crossFrameUnverifiedSamples": self.missing_ohlc_overlap,
+            "geometryFailureClasses": dict(self.geometry_failure_classes),
             "h1FullyCoveredComparedAcrossSnapshots": self.evaluable_h1,
             "h4FullyCoveredComparedAcrossSnapshots": self.evaluable_h4,
             "h1DisagreementsAcrossSnapshots": self.disagree_h1,
