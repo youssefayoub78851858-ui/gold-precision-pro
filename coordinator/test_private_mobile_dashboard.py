@@ -40,6 +40,8 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertIn('id="biquote-shadow-review"', PUBLIC)
         self.assertIn('id="biquote-shadow-state"', PUBLIC)
         self.assertIn('id="biquote-shadow-coverage"', PUBLIC)
+        self.assertIn("21 شمعة H4", PUBLIC)
+        self.assertIn("84 ساعة نظرياً", PUBLIC)
         self.assertIn('data.biquoteForwardShadow', PUBLIC)
         self.assertIn('shadow?.paperOrdersAllowed===false', PUBLIC)
         self.assertIn('shadow?.approvedDirection==="NONE"', PUBLIC)
