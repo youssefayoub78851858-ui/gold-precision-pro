@@ -166,12 +166,55 @@ function sanitize(input){
     lastImportedUTC:v.lastImportedUTC,forwardCoverage:coverage};
   }
  }
+ // Only a fixed set of private V3 shadow diagnostics may cross into
+ // authenticated Android viewer. NEVER forward price, plans or paper orders.
+ let safeShadow=null;
+ if(input.biquoteForwardShadow!==undefined){
+  const x=input.biquoteForwardShadow;
+  if(!x||x.mode!=="BIQUOTE_PRIVATE_FORWARD_V3_SHADOW_ONLY"||
+     x.signal!=="WAIT"||x.executable!==false||
+     x.paperOrdersAllowed!==false||x.tradeEligible!==false||
+     x.researchEligible!==false||x.brokerOrdersSent!==0||
+     x.sourceRequestsMade!==0||!["BUY","SELL","NONE"].includes(x.technicalWatch)||
+     x.approvedDirection!=="NONE"||x.signalReady!==false||
+     !Array.isArray(x.reasonCodes)||x.reasonCodes.length<1||
+     x.reasonCodes.length>35||
+     x.reasonCodes.some(code=>typeof code!=="string"||! /^[A-Z0-9_]{3,90}$/.test(code)))
+   throw Error("Unsafe or forged shadow status");
+  const allowed=x.technicalWatch!=="NONE" &&
+   x.engineReview==="FROZEN_V3_COMPLETED_WITH_REAL_OBSERVED_CLOSED_BARS";
+  if(x.technicalWatch!=="NONE"&&!allowed)throw Error("Unverified technical watch");
+  const counts={};
+  if(x.frames!==undefined){
+   for(const tf of ["M15","H1","H4"]){
+    const item=x.frames?.[tf];
+    if(!item||!Number.isInteger(item.persistedClosed)||item.persistedClosed<0||
+       item.persistedClosed>45000||
+       !Number.isInteger(item.contiguousClosed)||item.contiguousClosed<0||
+       item.contiguousClosed>48||
+       item.contiguousClosed>item.persistedClosed||
+       item.neededContiguous!==21)
+      throw Error("Unsafe shadow history counts");
+    counts[tf]={persistedClosed:item.persistedClosed,
+      contiguousClosed:item.contiguousClosed,neededContiguous:21};
+   }
+  }
+  safeShadow={mode:"BIQUOTE_PRIVATE_FORWARD_V3_SHADOW_ONLY",
+    signal:"WAIT",executable:false,paperOrdersAllowed:false,
+    signalReady:false,approvedDirection:"NONE",
+    technicalWatch:x.technicalWatch,
+    engineReview:allowed?"FROZEN_V3_COMPLETED_WITH_REAL_OBSERVED_CLOSED_BARS":
+      "NOT_YET_READY",
+    frames:counts,
+    reasonCodes:[...new Set(x.reasonCodes)].slice(0,30)};
+ }
  return {status:"WAIT_EODHD_INTAKE",dataStatus:input.dataStatus,
   signal:"WAIT",executable:false,researchEligible:false,engineStatus:"NOT_INVOKED",
   paperRunning:false,closedBarCounts:safe,
   intake:{status:"BLOCKED",blockingReasons:[...new Set(reasons)].slice(0,20)},
   ...(safeAudit?{audit:safeAudit}:{}),...(safePaper?{paperGate:safePaper}:{}),
-  ...(safeForward?{biquotePrivateForwardVault:safeForward}:{})};
+  ...(safeForward?{biquotePrivateForwardVault:safeForward}:{}),
+  ...(safeShadow?{biquoteForwardShadow:safeShadow}:{})};
 }
 async function relay(authorization,{approved=false,fetchFn=globalThis.fetch}={}){
  if(!approved)return deny(503,"REVIEW_MONITOR_PROXY_DISABLED");
