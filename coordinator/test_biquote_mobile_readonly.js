@@ -99,6 +99,18 @@ async function main(){
  assert.equal(privateData.body.privateStructure.multiFrame.alignment,"OBSERVATION_MIXED_OR_AT_EMA20"===privateData.body.privateStructure.multiFrame.alignment
    ?"OBSERVATION_MIXED_OR_AT_EMA20":privateData.body.privateStructure.multiFrame.alignment);
  assert.equal(privateData.body.privateStructure.multiFrame.sessionCalendarVerified,false);
+ const observation=privateData.body.privateStructure.referenceEmaResearch;
+ assert.equal(observation.mode,"PRIVATE_MID_OBSERVED_EMA_REFERENCE_ONLY");
+ assert.equal(observation.signal,"WAIT");
+ assert.equal(observation.executable,false);
+ assert.equal(observation.tradeEligible,false);
+ assert.equal(observation.brokerSessionVerified,false);
+ assert.equal(observation.alignmentForTrading,"NOT_ASSESSABLE");
+ for(const tf of ["M15","H1","H4"]){
+   assert.equal(observation.frames[tf].signal,"WAIT");
+   assert.equal(observation.frames[tf].executable,false);
+   assert.equal(observation.frames[tf].brokerSessionVerified,false);
+ }
  assert.equal(privateData.body.privateStructure.multiFrame.underlyingBrokerRightsVerified,false);
  for(const tf of ["M15","H1","H4"]){
    const analysis=privateData.body.privateStructure.frames[tf];

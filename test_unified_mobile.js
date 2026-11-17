@@ -18,7 +18,7 @@ a(doc.includes('/api/v3/ultimate/multi-source-readiness'));
 a(doc.includes('WAIT'));
 for(const id of ['biquote-mobile-observation','biquote-private-quote','biquote-private-spread',
                   'biquote-status','biquote-observed','biquote-m15','biquote-h1','biquote-h4',
-                  'biquote-structure-summary','biquote-mtf-readiness',
+                  'biquote-structure-summary','biquote-mtf-readiness','biquote-observed-ema',
                   'biquote-overlap','biquote-viewer-secret','biquote-refresh'])
  a(doc.includes('id="'+id+'"'),'Missing read-only BiQuote UI: '+id);
 a(doc.includes('src="/biquote-mobile-ui.js"'));
@@ -44,6 +44,8 @@ a(!script.includes('window.GoldPaperCore')&&!script.includes('C.open('),
 a(script.includes('privateChart=null,privateStructure=null,privateMtf=null'));
 a(script.includes('validateMtf(data.privateStructure.multiFrame,privateStructure)'));
 a(script.includes('displayMtf()'));
+a(script.includes('validateReferenceEma(data.privateStructure.referenceEmaResearch,acceptedChart)'));
+a(script.includes('displayReferenceEma()'));
 a(script.includes('validPrivateStructure(data.privateStructure,acceptedChart)'));
 a(script.includes('f.contiguousBars<7'));
 a(script.includes('PARTIAL_OBSERVATION_UNVERIFIED_SESSION'));
