@@ -412,13 +412,35 @@
   if(busy)return;
   busy=true;button.disabled=true;
   $("biquote-status").textContent="جارٍ فحص بيانات BiQuote المباشرة للقراءة فقط...";
-  const viewer=secret.value.trim();
-  const headers={Accept:"application/json"};
-  if(viewer&&/^[A-Za-z0-9_-]{32,128}$/.test(viewer))headers.Authorization="Bearer "+viewer;
+  const sessionState=$("biquote-viewer-session-state");
   try{
+   // Only the one-time POST carries the secret. The chart GET uses an
+   // HttpOnly, Secure, SameSite=Strict session cookie. Never browser storage.
+   const viewer=secret.value.trim();
+   if(viewer){
+     if(!/^[A-Za-z0-9_-]{32,128}$/.test(viewer)){
+       sessionState.textContent="رمز المشاهدة غير صالح. انسخ القيمة الكاملة من Render.";
+       reset();
+       return;
+     }
+     const authorized=await fetch("/api/v3/ultimate/biquote-viewer-session",{
+       method:"POST",headers:{Authorization:"Bearer "+viewer,Accept:"application/json"},
+       credentials:"same-origin",redirect:"error",cache:"no-store",
+       signal:AbortSignal.timeout(12000)});
+     const reply=await authorized.json().catch(()=>null);
+     if(!authorized.ok||reply?.status!=="VIEWER_SESSION_READY"||
+        reply?.signal!=="WAIT"||reply?.executable!==false){
+       sessionState.textContent="تعذّر إنشاء جلسة المشاهدة. تأكد من الرمز ووصول Coordinator.";
+       reset();
+       return;
+     }
+     secret.value="";
+     sessionState.textContent="جلسة مشاهدة آمنة لمدة 7 أيام من تسجيل الدخول. لن تحتاج الرمز بكل زيارة.";
+   }
    const response=await fetch("/api/v3/ultimate/biquote-observation",{
-      method:"GET",headers,redirect:"error",credentials:"omit",
-      cache:"no-store",signal:AbortSignal.timeout(35000)});
+      method:"GET",headers:{Accept:"application/json"},redirect:"error",
+      credentials:"same-origin",cache:"no-store",
+      signal:AbortSignal.timeout(35000)});
    if(!response.ok){
      const failure=await response.json().catch(()=>null);
      if(failure&&failure.signal==="WAIT"&&failure.executable===false&&
@@ -458,8 +480,9 @@
      $("biquote-private-quote").textContent=fmt(data.bid)+" / "+fmt(data.ask);
      $("biquote-private-spread").textContent=fmt(data.ask-data.bid)+" دولار/أونصة";
    }else{
-     $("biquote-private-quote").textContent="محجوب: أدخل رمز المشاهدة الخاص";
-     $("biquote-private-spread").textContent="محجوب حتى التحقق من الرمز";
+     $("biquote-private-quote").textContent="محجوب: سجّل جلسة المشاهدة";
+     $("biquote-private-spread").textContent="محجوب حتى تفعيل الجلسة";
+     sessionState.textContent="ما في جلسة مفعّلة أو انتهت صلاحيتها. أدخل الرمز مرة جديدة.";
    }
    const acceptedChart=data.rawQuoteShown===true&&data.privateChartReadOnly===true&&
      data.privateChartDataBasis==="MID_WITH_POSSIBLE_BID_SEED"
@@ -500,6 +523,25 @@
     $("biquote-status").textContent="WAIT — لم تثبت صلاحية البيانات المباشرة. أعد الفحص لاحقاً.";
   }finally{busy=false;button.disabled=false;}
  }
+ const logout=$("biquote-viewer-logout");
+ if(logout)logout.addEventListener("click",async()=>{
+   if(busy)return;
+   logout.disabled=true;
+   try{
+     const out=await fetch("/api/v3/ultimate/biquote-viewer-session",{
+       method:"DELETE",headers:{Accept:"application/json"},
+       credentials:"same-origin",redirect:"error",cache:"no-store",
+       signal:AbortSignal.timeout(12000)});
+     if(!out.ok)throw Error("LOGOUT_FAILED");
+     secret.value="";
+     reset();
+     $("biquote-viewer-session-state").textContent=
+       "تم تسجيل الخروج من جلسة المشاهدة على هذا الهاتف.";
+   }catch{
+     $("biquote-viewer-session-state").textContent=
+       "تعذّر تسجيل الخروج. الجلسة قد تبقى فعّالة حتى يؤكد الخادم.";
+   }finally{logout.disabled=false;}
+ });
  drawPrivateChart();
  button.addEventListener("click",refresh);
  window.addEventListener("pageshow",refresh);
