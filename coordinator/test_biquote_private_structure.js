@@ -40,11 +40,56 @@ const broken=m15.map(x=>({...x}));
 const missing=broken.splice(42,1)[0];
 const gated=analyzeFrame(broken,"M15",NOW);
 assert.equal(gated.state,"INSUFFICIENT_VERIFIED_STRUCTURE");
-assert.equal(gated.reason,"LESS_THAN_20_CONTIGUOUS_CLOSED_BARS");
+assert.equal(gated.reason,"LESS_THAN_7_CONTIGUOUS_CLOSED_BARS");
 assert.equal(gated.unclassifiedGapsInChart,1);
 assert.equal(gated.contiguousBars,5);
 assert.equal(gated.confirmedSwingHigh,undefined);
 assert.equal(gated.ema20,undefined);
+// Only post-gap CLOSED bars may inform pivots, BOS/sweep and FVG.
+// A partial segment can be described, but never make a trade or
+// falsely report EMA20/ATR14 that need more than its confirmed bars.
+for(const tail of [7,8,11,14,15,19,20]){
+ const source=rows("H1");
+ const shortened=source.filter((_,i)=>i!==source.length-tail-1);
+ const analysis=analyzeFrame(shortened,"H1",NOW);
+ assert.equal(analysis.signal,"WAIT");
+ assert.equal(analysis.executable,false);
+ assert.equal(analysis.validForEntry,false);
+ assert.equal(analysis.sessionCalendarVerified,false);
+ assert.equal(analysis.contiguousBars,tail);
+ assert.equal(analysis.state,tail>=20?"OBSERVATION_ONLY":
+   "PARTIAL_OBSERVATION_UNVERIFIED_SESSION");
+ assert.equal(analysis.ema20===null,tail<20);
+ assert.equal(analysis.atr14===null,tail<15);
+ assert.equal(analysis.recentRangeBars,Math.min(tail,20));
+ assert.equal(analysis.technicalCoverage,"CONTIGUOUS_POST_GAP_ONLY");
+ assert.equal(analysis.unclassifiedGapsRemainBlocked,true);
+ for(const event of analysis.lastClosedEvents)
+  assert.ok(["BOS_UP","BOS_DOWN","SWEEP_HIGH","SWEEP_LOW","FVG_BULL","FVG_BEAR"].includes(event));
+}
+for(const tf of ["H1","H4"]){
+ const partial=rows(tf), gapAt=partial.length-11;
+ partial.splice(gapAt,1);
+ const x=analyzeFrame(partial,tf,NOW);
+ assert.equal(x.state,"PARTIAL_OBSERVATION_UNVERIFIED_SESSION");
+ assert.equal(x.unclassifiedGapsInChart,1);
+ assert.equal(x.contiguousBars,10);
+ assert.equal(x.ema20,null);
+ assert.equal(x.atr14,null);
+ assert.ok(x.recentRangeLow20<x.recentRangeHigh20);
+ assert.equal(x.signal,"WAIT");
+ // Pre-gap prices can change arbitrarily (within OHLC validity)
+ // without changing ANY private pivot/last-bar event.
+ const alternate=partial.map((r,i)=>i<gapAt?{
+  ...r,open:r.open+300,high:r.high+300,low:r.low+300,close:r.close+300}:r);
+ const y=analyzeFrame(alternate,tf,NOW);
+ assert.deepEqual(x,y);
+ // Disallow a 6-bar tail from claiming any structure.
+ const six=rows(tf).slice(-6);
+ const z=analyzeFrame(six,tf,NOW);
+ assert.equal(z.reason,"INVALID_CLOSED_BARS"); // no source warmup
+}
+
 // A pre-gap prefix must have zero effect on a post-gap run of 30 bars.
 const gapped=rows("M15");
 gapped.splice(12,1);

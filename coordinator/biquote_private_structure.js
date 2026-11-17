@@ -8,6 +8,7 @@
 const {structure}=require("./v3_market_structure");
 const WIDTHS=Object.freeze({M15:900000,H1:3600000,H4:14400000});
 const ORDER=Object.freeze(["M15","H1","H4"]);
+const MIN_CONFIRMED_PIVOT_WINDOW=7; // V3 left2/right2 + one last CLOSED candle
 const WAIT=Object.freeze({signal:"WAIT",executable:false,researchEligible:false,
   tradeEligible:false,paperOrdersAllowed:false});
 function price(x){return typeof x==="number"&&Number.isFinite(x)&&x>0}
@@ -60,8 +61,13 @@ function analyzeFrame(rows,tf,asOfMs){
        Date.parse(rows[first].time)-Date.parse(rows[first-1].time)===WIDTHS[tf])
   first--;
  const contiguous=rows.slice(first);
- if(contiguous.length<20)
-  return empty("LESS_THAN_20_CONTIGUOUS_CLOSED_BARS",breaks,contiguous.length);
+ // Historical BiQuote bars can span broker day/week pauses. NEVER call
+ // such pauses verified without the actual broker's session calendar.
+ // Permit 7+ bars only for within-segment confirmed pivot observations.
+ // ATR14 requires 15 connected candles, EMA20 requires 20; do not
+ // compute either indicator by jumping an unclassified gap.
+ if(contiguous.length<MIN_CONFIRMED_PIVOT_WINDOW)
+  return empty("LESS_THAN_7_CONTIGUOUS_CLOSED_BARS",breaks,contiguous.length);
  const observed=structure(contiguous,{left:2,right:2});
  const last=contiguous.at(-1);
  if(observed.signal!=="WAIT"||observed.executable!==false)
@@ -72,16 +78,21 @@ function analyzeFrame(rows,tf,asOfMs){
   observed.sweepHigh?"SWEEP_HIGH":null,observed.sweepLow?"SWEEP_LOW":null,
   observed.fvgBull?"FVG_BULL":null,observed.fvgBear?"FVG_BEAR":null
  ].filter(Boolean);
- return {...WAIT,state:"OBSERVATION_ONLY",
+ const full=contiguous.length>=20;
+ return {...WAIT,state:full?"OBSERVATION_ONLY":"PARTIAL_OBSERVATION_UNVERIFIED_SESSION",
    timeframe:tf,contiguousBars:contiguous.length,
    unclassifiedGapsInChart:breaks,
    sessionCalendarVerified:false,validForEntry:false,
    priceBasis:"MID_WITH_POSSIBLE_BID_SEED",
    lastClosedOpenUTC:contiguous.at(-1).time,
    lastClosed:rounded(last.close),
-   ema20:ema20(contiguous),atr14:atr14(contiguous),
+   ema20:full?ema20(contiguous):null,
+   atr14:contiguous.length>=15?atr14(contiguous):null,
+   recentRangeBars:recent.length,
    recentRangeHigh20:rounded(Math.max(...recent.map(x=>x.high))),
    recentRangeLow20:rounded(Math.min(...recent.map(x=>x.low))),
+   technicalCoverage:"CONTIGUOUS_POST_GAP_ONLY",
+   unclassifiedGapsRemainBlocked:true,
    confirmedSwingHigh:observed.high?rounded(observed.high.price):null,
    confirmedSwingLow:observed.low?rounded(observed.low.price):null,
    lastClosedEvents:events,

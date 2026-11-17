@@ -62,13 +62,23 @@
        safe[tf]={state:f.state,contiguousBars:Number.isInteger(f.contiguousBars)?f.contiguousBars:0};
        continue;
      }
-     if(f.state!=="OBSERVATION_ONLY"||f.timeframe!==tf||
-        !Number.isInteger(f.contiguousBars)||f.contiguousBars<20||
+     const partial=f.state==="PARTIAL_OBSERVATION_UNVERIFIED_SESSION";
+     if(!(partial||f.state==="OBSERVATION_ONLY")||f.timeframe!==tf||
+        !Number.isInteger(f.contiguousBars)||f.contiguousBars<7||
+        (partial&&f.contiguousBars>=20)||
+        (!partial&&f.contiguousBars<20)||
         !Number.isInteger(f.unclassifiedGapsInChart)||
         f.unclassifiedGapsInChart<0||
         f.lastClosedOpenUTC!==new Date(chart[tf].at(-1).t).toISOString())return null;
-     if(!["lastClosed","ema20","atr14","recentRangeHigh20","recentRangeLow20"]
+     if(!["lastClosed","recentRangeHigh20","recentRangeLow20"]
            .every(k=>typeof f[k]==="number"&&Number.isFinite(f[k])&&f[k]>0))return null;
+     if(!Number.isInteger(f.recentRangeBars)||
+        f.recentRangeBars!==Math.min(f.contiguousBars,20)||
+        f.technicalCoverage!=="CONTIGUOUS_POST_GAP_ONLY"||
+        f.unclassifiedGapsRemainBlocked!==true)return null;
+     const positive=n=>typeof n==="number"&&Number.isFinite(n)&&n>0;
+     if(f.contiguousBars<20?f.ema20!==null:!positive(f.ema20))return null;
+     if(f.contiguousBars<15?f.atr14!==null:!positive(f.atr14))return null;
      if(f.recentRangeHigh20<f.recentRangeLow20||
         !["confirmedSwingHigh","confirmedSwingLow"].every(k=>f[k]===null||
           (typeof f[k]==="number"&&Number.isFinite(f[k])&&f[k]>0)))return null;
@@ -86,21 +96,23 @@
    if(!el)return;
    const f=privateStructure?.[activeFrame];
    if(!f){el.textContent="WAIT — التحليل الهيكلي الخاص غير متاح من دون بيانات مغلقة مصرح بعرضها.";return;}
-   if(f.state!=="OBSERVATION_ONLY"){
-     el.textContent="WAIT — لا توجد 20 شمعة مغلقة متصلة على "+activeFrame+
-       " لتأكيد القمم والقيعان. لن نملأ الفجوات اصطناعياً.";
+   if(f.state==="INSUFFICIENT_VERIFIED_STRUCTURE"){
+     el.textContent="WAIT — أقل من 7 شموع مغلقة متصلة على "+activeFrame+
+       " لتأكيد القمم والقيعان داخل الجلسة. لن نملأ الفجوات اصطناعياً.";
      return;
    }
    const level=n=>n===null?"غير مؤكدة":fmt(n);
    const seen=f.lastClosedEvents.map(x=>eventNames[x]).join("، ")||"لا حدث مؤكد بالشمعة الأخيرة";
-   el.textContent="قراءة "+activeFrame+" فقط — EMA20: "+fmt(f.ema20)+
-     " | ATR14: "+fmt(f.atr14)+
-     " | قمة مؤكدة: "+level(f.confirmedSwingHigh)+
-     " | قاع مؤكد: "+level(f.confirmedSwingLow)+
-     " | نطاق آخر 20 شمعة: "+fmt(f.recentRangeLow20)+"–"+fmt(f.recentRangeHigh20)+
+   const partial=f.state==="PARTIAL_OBSERVATION_UNVERIFIED_SESSION";
+   el.textContent=(partial?"WAIT — تحليل جزئي بعد آخر فجوة غير مصنّفة. ":"قراءة وصفية فقط. ")+
+     "قراءة "+activeFrame+" — EMA20: "+(f.ema20===null?"غير متاح (<20 شمعة متصلة)":fmt(f.ema20))+
+     " | ATR14: "+(f.atr14===null?"غير متاح (<15 شمعة متصلة)":fmt(f.atr14))+
+     " | قمة نمطية مؤكدة بالشموع: "+level(f.confirmedSwingHigh)+
+     " | قاع نمطي مؤكّد بالشموع: "+level(f.confirmedSwingLow)+
+     " | نطاق آخر "+f.recentRangeBars+" شموع متصلة: "+fmt(f.recentRangeLow20)+"–"+fmt(f.recentRangeHigh20)+
      " | "+seen+" | عدد الشموع المتصلة "+f.contiguousBars+
      " | فجوات غير مصنّفة "+f.unclassifiedGapsInChart+
-     ". مستويات بحثية MID وليست نقاط دخول أو وقف خسارة. القرار WAIT.";
+     ". لا يوجد إثبات لجدول جلسات الوسيط، والمستويات البحثية MID ليست نقاط دخول أو وقف خسارة. القرار WAIT.";
  }
  function drawPrivateChart(){
    const canvas=$("biquote-live-canvas");
@@ -143,7 +155,8 @@
    // Show only AUTHENTICATED, time-aligned, confirmed research levels.
    // These are overlays, not entry/SL/TP recommendations.
    const f=privateStructure?.[activeFrame];
-   if(f?.state==="OBSERVATION_ONLY"){
+   if(f?.state==="OBSERVATION_ONLY"||
+      f?.state==="PARTIAL_OBSERVATION_UNVERIFIED_SESSION"){
      for(const [n,color] of [[f.confirmedSwingHigh,"#d8b967"],
                             [f.confirmedSwingLow,"#8aace0"],[f.ema20,"#a69be2"]]){
        if(typeof n==="number"&&n>=lo&&n<=hi){

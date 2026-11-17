@@ -43,7 +43,9 @@ a(!script.includes('window.GoldPaperCore')&&!script.includes('C.open('),
  'BiQuote live chart must never reach paper core trade execution');
 a(script.includes('privateChart=null,privateStructure=null'));
 a(script.includes('validPrivateStructure(data.privateStructure,acceptedChart)'));
-a(script.includes('f.contiguousBars<20'));
+a(script.includes('f.contiguousBars<7'));
+a(script.includes('PARTIAL_OBSERVATION_UNVERIFIED_SESSION'));
+a(script.includes('unclassifiedGapsRemainBlocked'));
 a(!script.includes('window.GoldPaperCore'));
 
 

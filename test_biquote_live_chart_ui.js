@@ -38,11 +38,18 @@ const frameSummary=Object.fromEntries(Object.entries(widths).map(([tf,w])=>[tf,{
 function chart(){
  return Object.fromEntries(Object.entries(widths).map(([tf,w])=>{
    const end=Math.floor(NOW/w)*w;
-   return [tf,Array.from({length:48},(_,i)=>{
+   const rows=Array.from({length:48},(_,i)=>{
      const value=3900+i*0.2;
      return {time:new Date(end-(48-i)*w).toISOString(),
        open:value,high:value+0.6,low:value-0.4,close:value+0.1};
-   })];
+   });
+   if(networkMode==="authorized-gapped" && tf!=="M15"){
+     // Unknown session pause. A gap before the last 10 CLOSED bars
+     // may not be silently bridged by technical indicators.
+     for(let i=0;i<38;i++)rows[i].time=
+       new Date(Date.parse(rows[i].time)-w).toISOString();
+   }
+   return [tf,rows];
  }));
 }
 const base={status:"WAIT_CROSS_FRAME_GAPS",signal:"WAIT",executable:false,
@@ -63,7 +70,7 @@ async function fetch(url,opts){
    async json(){return {status:"WAIT_BIQUOTE_DATA_UNAVAILABLE",signal:"WAIT",
     executable:false,researchEligible:false,rawQuoteShown:false,
     blockerCodes:["PUBLIC_HTTP_UNAVAILABLE"]}}};
- const allowed=networkMode==="authorized";
+ const allowed=networkMode==="authorized"||networkMode==="authorized-gapped";
  assert.equal("Authorization" in opts.headers,allowed);
  return {ok:true,status:200,async json(){return {...base,rawQuoteShown:allowed,
    ...(allowed?{bid:3910,ask:3910.2,privateChartReadOnly:true,
@@ -96,13 +103,26 @@ async function main(){
  const newBefore=candleDraws;await tabs[1].click();
  assert.ok(candleDraws>newBefore+20,"H1 selected frame must redraw real candles");
  assert.equal(tabs[1]["aria-pressed"],"true");
- assert.match(makeNode("biquote-structure-summary").textContent,/قراءة H1 فقط/);
+ assert.match(makeNode("biquote-structure-summary").textContent,/قراءة H1/);
+ // Actual after-gap candles can support 7-bar confirmed swing *patterns*
+ // without pretending to have 20 contiguous H1/H4 candles for EMA20.
+ networkMode="authorized-gapped";
+ await makeNode("biquote-refresh").click();
+ await tabs[1].click();
+ assert.match(makeNode("biquote-structure-summary").textContent,/تحليل جزئي/);
+ assert.match(makeNode("biquote-structure-summary").textContent,/غير متاح \(<20 شمعة متصلة\)/);
+ assert.match(makeNode("biquote-structure-summary").textContent,/ATR14: غير متاح/);
+ assert.match(makeNode("biquote-structure-summary").textContent,/10/);
+ await tabs[2].click();
+ assert.match(makeNode("biquote-structure-summary").textContent,/قراءة H4/);
+ assert.match(makeNode("biquote-structure-summary").textContent,/تحليل جزئي/);
+ assert.match(makeNode("biquote-structure-summary").textContent,/WAIT/);
  networkMode="offline";
  await makeNode("biquote-refresh").click();
  assert.match(makeNode("biquote-live-caption").textContent,/WAIT/);
  assert.ok(blankMessages>=2,"Offline feed must clear live chart immediately");
  assert.match(makeNode("biquote-structure-summary").textContent,/WAIT/);
- assert.equal(requests.length,3);
+ assert.equal(requests.length,4);
  assert.equal(requests.every(r=>!r.opts.headers["X-Broker-Order"]),true);
  console.log("PASS PRIVATE BiQuote chart: no anonymous raw data, 3 real MID frames after viewer auth, stale cleared; WAIT and paper isolated");
 }

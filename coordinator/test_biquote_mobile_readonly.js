@@ -173,6 +173,37 @@ async function main(){
  const mismatch=await api.snapshot({fetchFn:fake(incorrect).fetch,nowMs:()=>NOW});
  assert.equal(mismatch.httpStatus,200);secure(mismatch.body);
  assert.ok(["WAIT_CROSS_FRAME_GAPS","OBSERVED_READONLY_UNVERIFIED"].includes(mismatch.body.status));
+
+ // BiQuote H1/H4 history can straddle a daily/weekend gap, but our
+ // read-only viewer must still show strictly within-segment observations
+ // from 7+ CLOSED bars, and NEVER invent EMA20 or ATR14 from the gap.
+ api.resetForTests();
+ const withGaps=packet();
+ withGaps.H1.bars.splice(10,1);
+ withGaps.H4.bars.splice(10,1);
+ const guest=await api.snapshot({fetchFn:fake(withGaps).fetch,nowMs:()=>NOW});
+ assert.equal(guest.httpStatus,200);secure(guest.body);
+ assert.equal(guest.body.privateChart,undefined);
+ assert.equal(guest.body.privateStructure,undefined);
+ const accepted=await api.snapshot({nowMs:()=>NOW+500,
+   fetchFn:async()=>{throw Error("unexpected fetch")},
+   authorization:auth,verifyViewer:async()=>true});
+ assert.equal(accepted.httpStatus,200);secure(accepted.body);
+ assert.equal(accepted.body.privateStructure.sessionCalendarVerified,false);
+ for(const tf of ["H1","H4"]){
+   const f=accepted.body.privateStructure.frames[tf];
+   assert.equal(f.state,"PARTIAL_OBSERVATION_UNVERIFIED_SESSION");
+   assert.equal(f.contiguousBars,10);
+   assert.equal(f.unclassifiedGapsInChart,1);
+   assert.equal(f.ema20,null);
+   assert.equal(f.atr14,null);
+   assert.ok(f.recentRangeHigh20>=f.recentRangeLow20);
+   assert.equal(f.validForEntry,false);
+   assert.equal(f.executable,false);
+   assert.equal(f.paperOrdersAllowed,false);
+ }
+ assert.equal(accepted.body.privateStructure.frames.M15.state,"OBSERVATION_ONLY");
+
  // Explicit provider market closure: no fake live trend and no historical
  // requests. A market-closed state is not labeled as an HTTP outage.
  api.resetForTests();
