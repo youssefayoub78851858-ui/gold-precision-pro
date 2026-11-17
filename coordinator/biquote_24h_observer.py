@@ -47,6 +47,16 @@ class QualityCounters:
         self.quote_stale = 0
         self.http_failures = 0
         self.missing_ohlc_overlap = 0
+        # All reported categories are fixed codes, never provider payloads.
+        self.geometry_failure_classes = {
+            key: 0 for key in (
+                "UNCLASSIFIED_M15_COVERAGE_GAP",
+                "OHLC_PRICE_DISAGREEMENT",
+                "OTHER_SOURCE_SHAPE_FAILURE",
+                "NO_STRUCTURAL_FAILURE",
+                "UNAVAILABLE",
+            )
+        }
         self.evaluable_h1 = 0
         self.evaluable_h4 = 0
         self.disagree_h1 = 0
