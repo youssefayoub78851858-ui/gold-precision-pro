@@ -1,0 +1,28 @@
+name: BiQuote private forward vault offline tests (no feed calls)
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - 'coordinator/biquote_private_forward_vault.py'
+      - 'coordinator/test_biquote_private_forward_vault.py'
+      - '.github/workflows/biquote-private-forward-vault-offline.yml'
+      - 'coordinator/biquote_offline_source_audit.py'
+      - 'coordinator/biquote_overlap_evidence.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  forward-vault-mock-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify no network, private disk, closed-only time seal and archive integrity
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_private_forward_vault
+      - name: Source audit and overlap compatibility unchanged (synthetic only)
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_offline_source_audit test_biquote_overlap_evidence

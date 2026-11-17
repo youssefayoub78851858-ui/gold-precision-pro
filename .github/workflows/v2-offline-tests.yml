@@ -110,6 +110,9 @@ jobs:
       - name: BiQuote fixed 4-request public probe mocked with network disabled
         working-directory: coordinator
         run: python -m unittest -v test_biquote_public_one_shot test_biquote_overlap_evidence
+      - name: Private BiQuote forward archive validation, local owner-only disk, no network (synthetic)
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_private_forward_vault
       - name: BiQuote 24-hour bounded read-only monitoring worker (offline clock simulation)
         working-directory: coordinator
         run: python -m unittest -v test_biquote_24h_observer
