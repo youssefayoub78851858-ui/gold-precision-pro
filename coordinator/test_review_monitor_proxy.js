@@ -27,6 +27,61 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
   const denied=await relay(auth,{approved:true,fetchFn:async()=>mock({...expected,...change})});
   a.equal(denied.httpStatus,503);a.equal(denied.body.signal,"WAIT");
  }
+ const freshArchive={
+  mode:"PRIVATE_FORWARD_BIQUOTE_CAPTURE_NOT_TRADING_ADMISSIBLE",
+  status:"PRIVATE_FORWARD_VAULT_METADATA_ONLY",signal:"WAIT",
+  executable:false,researchEligible:false,tradeEligible:false,
+  paperOrdersAllowed:false,tradeSignalReady:false,
+  providerRequestsMade:0,ordersSent:0,
+  independentBrokerEntitlementVerified:false,
+  independentSessionCalendarVerified:false,
+  historicalBidAskOhlcAvailable:false,noTradingAdmission:true,
+  researchCandidate:"NONE",
+  counts:{M15:3,H1:1,H4:0},quoteSamples:10,
+  lastImportedUTC:"2026-11-18T01:30:00Z",
+  forwardCoverage:{
+   M15:{closedBars:3,firstClosedUTC:"2026-11-18T00:15:00Z",
+    lastClosedUTC:"2026-11-18T00:45:00Z",latestContiguousBars:3,
+    unclassifiedGapPairs:0,unclassifiedMissingSlots:0,ageAtLastImportSeconds:2700,
+    rawBid:989898},
+   H1:{closedBars:1,firstClosedUTC:"2026-11-18T01:00:00Z",
+    lastClosedUTC:"2026-11-18T01:00:00Z",latestContiguousBars:1,
+    unclassifiedGapPairs:0,unclassifiedMissingSlots:0,ageAtLastImportSeconds:1800},
+   H4:{closedBars:0,firstClosedUTC:null,lastClosedUTC:null,
+    latestContiguousBars:0,unclassifiedGapPairs:0,
+    unclassifiedMissingSlots:0,ageAtLastImportSeconds:null}
+  },
+  quoteObservations:[{bid:999999,ask:1000000}]
+ };
+ const withArchive=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,biquotePrivateForwardVault:freshArchive
+ })});
+ a.equal(withArchive.httpStatus,200);
+ a.equal(withArchive.body.biquotePrivateForwardVault.counts.M15,3);
+ a.equal(withArchive.body.biquotePrivateForwardVault.tradeSignalReady,false);
+ a.equal(withArchive.body.biquotePrivateForwardVault.forwardCoverage.H4.closedBars,0);
+ a.ok(!JSON.stringify(withArchive).includes("989898"));
+ a.ok(!JSON.stringify(withArchive).includes("999999"));
+ a.ok(!JSON.stringify(withArchive).includes("quoteObservations"));
+ const corruptArchive=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,biquotePrivateForwardVault:{...freshArchive,tradeSignalReady:true}
+ })});
+ a.equal(corruptArchive.httpStatus,503);
+ const gapForged=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,biquotePrivateForwardVault:{...freshArchive,forwardCoverage:{
+    ...freshArchive.forwardCoverage,M15:{
+      ...freshArchive.forwardCoverage.M15,unclassifiedMissingSlots:-1}}
+    }
+ })});
+ a.equal(gapForged.httpStatus,503);
+ const unavailable=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,biquotePrivateForwardVault:{
+   status:"VAULT_METADATA_UNAVAILABLE",signal:"WAIT",executable:false,
+   privateToken:"secret-vault-token"}
+ })});
+ a.equal(unavailable.httpStatus,200);
+ a.equal(unavailable.body.biquotePrivateForwardVault.status,"VAULT_METADATA_UNAVAILABLE");
+ a.ok(!JSON.stringify(unavailable).includes("secret-vault-token"));
  const wrong=await relay(auth,{approved:true,fetchFn:async()=>({status:401,ok:false})});
  a.equal(wrong.httpStatus,401);
  const fault=await relay(auth,{approved:true,fetchFn:async()=>{throw Error("private secret")}});
