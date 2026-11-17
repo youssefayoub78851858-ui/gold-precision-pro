@@ -157,6 +157,25 @@ class ForwardVault(unittest.TestCase):
         self.assertLess(coverage["latestContiguousBars"],coverage["closedBars"])
         self.assertEqual(r["status"],"PRIVATE_FORWARD_CAPTURE_SAVED")
 
+    def test_partial_h4_price_contradiction_cannot_be_written_to_vault(self):
+        altered=copy.deepcopy(self.s)
+        # Exercise the real 20:00-00:00 H4 within the new test holdout;
+        # missing one 22:15 M15 may be a reference pause but no gap can
+        # excuse a high less than an OBSERVED same-feed M15 high.
+        missing="2026-11-18T22:15:00Z"
+        altered["frames"]["M15"]["bars"]=[
+            item for item in altered["frames"]["M15"]["bars"]
+            if item["openTime"]!=missing]
+        h4=next(item for item in altered["frames"]["H4"]["bars"]
+                if item["openTime"]=="2026-11-18T20:00:00Z")
+        h4["high"]=max(h4["open"],h4["close"])+0.01
+        with patch.object(socket,"socket",side_effect=AssertionError("NETWORK_NOT_ALLOWED")):
+            with self.assertRaisesRegex(
+                    ValueError,"PARTIAL_CROSS_FRAME_OBSERVED_PRICE_BOUNDS_INVALID"):
+                ingest(self.folder,altered,received_utc=iso(NOW))
+        self.assertFalse((self.folder/FILE).exists())
+        self.assertEqual(inspect_metadata(self.folder)["counts"]["H4"],0)
+
     def test_stale_future_open_and_invalid_quote_fail_before_disk(self):
         for modify in (
             lambda s:s["quote"].update({"stale":True}),
