@@ -5,6 +5,7 @@ import unittest
 ROOT=pathlib.Path(__file__).resolve().parent
 HTML=(ROOT/"private_mobile_dashboard.html").read_text(encoding="utf-8")
 ENTRY=(ROOT/"entrypoint.py").read_text(encoding="utf-8")
+PUBLIC=(ROOT.parent/"private-monitor.html").read_text(encoding="utf-8")
 
 class PrivateMobileDashboardTests(unittest.TestCase):
     def test_no_public_quote_or_trading_surface(self):
@@ -30,6 +31,25 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertNotIn("OrderSend",HTML)
         self.assertNotIn("api_token=",HTML)
         self.assertNotIn("CUTOVER_MODE=live",HTML)
+
+    def test_public_android_viewer_uses_readonly_token_and_safe_archive(self):
+        self.assertIn("MONITOR_READONLY_TOKEN", PUBLIC)
+        self.assertNotIn('رمز BROKER_TOKEN', PUBLIC)
+        self.assertIn('id="biquote-forward-panel"', PUBLIC)
+        for key in ("forward-m15", "forward-h1", "forward-h4",
+                    "biquote-forward-state", "forward-last", "forward-coverage"):
+            self.assertIn('id="' + key + '"', PUBLIC)
+        self.assertIn("data.biquotePrivateForwardVault", PUBLIC)
+        self.assertIn('vault?.tradeSignalReady===false', PUBLIC)
+        self.assertIn('vault?.executable===false', PUBLIC)
+        self.assertIn('vault?.paperOrdersAllowed===false', PUBLIC)
+        self.assertIn('vault?.researchEligible===false', PUBLIC)
+        self.assertIn('vault.forwardCoverage?.[tf]?.unclassifiedMissingSlots', PUBLIC)
+        self.assertIn('el("forward-last").textContent=', PUBLIC)
+        self.assertNotIn("innerHTML", PUBLIC)
+        self.assertNotIn("localStorage", PUBLIC)
+        self.assertNotIn("sessionStorage", PUBLIC)
+        self.assertNotIn("OrderSend", PUBLIC)
 
     def test_biquote_forward_archive_counts_are_readonly_and_private(self):
         for tag in ('id="biquote-forward-panel"', 'id="forward-m15"',
