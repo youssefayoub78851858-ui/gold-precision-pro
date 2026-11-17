@@ -5,6 +5,9 @@ on:
       - review/v2-portable-tests-20261109
     paths:
       - '.github/workflows/review-mobile-live-smoke.yml'
+      - 'coordinator/biquote_mobile_readonly.js'
+      - 'biquote-mobile-ui.js'
+      - 'ultimate.html'
   workflow_dispatch:
 
 jobs:
