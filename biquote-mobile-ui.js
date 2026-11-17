@@ -435,7 +435,7 @@
        return;
      }
      secret.value="";
-     sessionState.textContent="جلسة مشاهدة آمنة لمدة 7 أيام من تسجيل الدخول. لن تحتاج الرمز بكل زيارة.";
+     sessionState.textContent="جلسة المشاهدة مفعّلة وبتتجدّد تلقائياً بهيدا المتصفح؛ ما في داعي تعيد الرمز بكل زيارة.";
    }
    const response=await fetch("/api/v3/ultimate/biquote-observation",{
       method:"GET",headers:{Accept:"application/json"},redirect:"error",
