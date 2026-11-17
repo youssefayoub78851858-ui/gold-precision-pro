@@ -22,6 +22,7 @@ class BiQuoteRenderStandbySafety(unittest.TestCase):
         docker=(ROOT/"Dockerfile").read_text()
         for name in ("biquote_offline_source_audit.py",
                      "biquote_overlap_evidence.py",
+                     "biquote_session_gap_audit.py",
                      "biquote_public_one_shot.py",
                      "biquote_24h_observer.py"):
             self.assertIn(name, docker)
