@@ -1,0 +1,50 @@
+name: Private BiQuote mobile archive readiness (offline)
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - 'coordinator/biquote_private_forward_vault.py'
+      - 'coordinator/test_biquote_private_forward_vault.py'
+      - 'coordinator/test_biquote_forward_integration.py'
+      - 'coordinator/review_monitor_proxy.js'
+      - 'coordinator/test_review_monitor_proxy.js'
+      - 'private-monitor.html'
+      - 'coordinator/private_mobile_dashboard.html'
+      - 'coordinator/test_private_mobile_dashboard.py'
+      - '.github/workflows/biquote-private-mobile-archive-review.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safe-mobile-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Reject forged vault status and strip prices from private relay
+        run: node coordinator/test_review_monitor_proxy.js
+      - name: Verify private disk archive integrity, continuity and single-poll bridge
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_private_forward_vault test_biquote_forward_integration
+      - name: Verify public and private Android pages are readonly
+        run: python -m unittest -v coordinator/test_private_mobile_dashboard.py
+      - name: Check both embedded mobile scripts compile without fetch
+        run: |
+          python - <<'PY'
+          import pathlib, subprocess, tempfile
+          names=['private-monitor.html','coordinator/private_mobile_dashboard.html']
+          with tempfile.TemporaryDirectory() as folder:
+              for n in names:
+                  doc=pathlib.Path(n).read_text(encoding='utf-8')
+                  assert doc.count('<script>')==1 and doc.count('</script>')==1, n
+                  code=doc.split('<script>',1)[1].split('</script>',1)[0]
+                  js=pathlib.Path(folder)/(pathlib.Path(n).stem+'.js')
+                  js.write_text(code,encoding='utf-8')
+                  subprocess.run(['node','--check',str(js)],check=True,timeout=15)
+          PY
