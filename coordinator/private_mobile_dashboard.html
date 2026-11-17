@@ -46,6 +46,18 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <h3>أسباب WAIT</h3>
 <ul id="reasons"><li>المصدر غير مؤهّل للتداول حتى يثبت عكس ذلك</li></ul>
 </section>
+<section id="biquote-forward-panel" aria-labelledby="biquote-forward-title">
+<h2 id="biquote-forward-title">BiQuote — الأرشيف الخاص للشموع المغلقة</h2>
+<p id="biquote-forward-state" role="status">WAIT — الحفظ الفعلي لم يثبت بعد</p>
+<div class="grid" aria-label="شموع BiQuote المحفوظة فعلياً">
+<div class="metric">M15<strong id="forward-m15">0</strong></div>
+<div class="metric">H1<strong id="forward-h1">0</strong></div>
+<div class="metric">H4<strong id="forward-h4">0</strong></div>
+</div>
+<p id="forward-last">آخر حفظ: غير مؤكد</p>
+<p id="forward-coverage">الفجوات والتغطية: غير مؤكدتين</p>
+<p><small>أعداد من القرص الخاص فقط. أي فجوة تعتبر غير مصنّفة لحين توثيق جلسات الوسيط، ولا تعني الأعداد أن البيانات مرخّصة أو أن صفقة ممكنة.</small></p>
+</section>
 <section id="fxcm-review-panel" aria-labelledby="fxcm-review-title">
 <h2 id="fxcm-review-title">FXCM — جاهزية مصدر الذهب</h2>
 <p id="fxcm-review-state" role="status">WAIT — مصدر FXCM غير متصل، ولا توجد بيانات سوق حقيقية.</p>
@@ -131,6 +143,31 @@ el("refresh").addEventListener("click",async()=>{
    const li=document.createElement("li");li.className="reason";li.textContent=item;list.append(li);
   }
   if(!list.children.length){const li=document.createElement("li");li.textContent="الدليل المستقل أو مصدر السوق غير جاهز";list.append(li);}
+  const vault=data.biquotePrivateForwardVault;
+  const safeVault=vault?.mode==="PRIVATE_FORWARD_BIQUOTE_CAPTURE_NOT_TRADING_ADMISSIBLE"
+    &&vault?.status==="PRIVATE_FORWARD_VAULT_METADATA_ONLY"
+    &&vault?.signal==="WAIT"&&vault?.executable===false
+    &&vault?.tradeEligible===false&&vault?.paperOrdersAllowed===false
+    &&vault?.researchEligible===false&&vault?.tradeSignalReady===false;
+  let preserved=0,missing=0;
+  for(const [tf,id] of [["M15","forward-m15"],["H1","forward-h1"],["H4","forward-h4"]]){
+   const n=safeVault?vault.counts?.[tf]:null;
+   const valid=Number.isInteger(n)&&n>=0&&n<=45000;
+   el(id).textContent=valid?String(n):"0";
+   if(valid)preserved+=n;
+   const gaps=safeVault?vault.forwardCoverage?.[tf]?.unclassifiedMissingSlots:null;
+   if(Number.isInteger(gaps)&&gaps>=0&&gaps<=100000)missing+=gaps;
+  }
+  el("biquote-forward-state").textContent=
+    safeVault&&preserved>0?"WAIT — شموع محفوظة، لكن صلاحية المصدر والصفقات غير مثبتة":
+    "WAIT — لم تُثبت شموع محفوظة من فترة الاختبار الجديدة";
+  const last=safeVault?vault.lastImportedUTC:null;
+  el("forward-last").textContent=typeof last==="string"&&
+   /^20\\d{2}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(?:\\.\\d{1,3})?Z$/.test(last)
+   ?"آخر تسجيل UTC: "+last:"آخر تسجيل: لا يوجد دليل محفوظ";
+  el("forward-coverage").textContent=safeVault
+   ?"فجوات زمنية غير مصنّفة في الأرشيف: "+missing+" — لا يعني صفر فجوات إثبات صلاحية الجلسات"
+   :"التغطية الزمنية لم تتحقق بعد";
   const fxcm=data.fxcmReview;
   const safeFxcm=fxcm?.provider==="FXCM"&&fxcm?.mode==="OFFLINE_PREPARATION_ONLY"
     &&fxcm?.status==="WAIT_FXCM_NOT_CONNECTED"&&fxcm?.signal==="WAIT"
@@ -211,6 +248,10 @@ el("refresh").addEventListener("click",async()=>{
   }
   el("auth-status").textContent="اكتمل فحص الحالة. الرمز محفوظ بذاكرة الصفحة مؤقتاً فقط";
  }catch(e){el("status").textContent="WAIT — تعذّر فحص المراقبة";
+  el("biquote-forward-state").textContent="WAIT — تعذّر التحقق من بيانات BiQuote المحفوظة";
+  for(const id of ["forward-m15","forward-h1","forward-h4"])el(id).textContent="0";
+  el("forward-last").textContent="آخر تسجيل: غير متاح";
+  el("forward-coverage").textContent="التغطية الزمنية لم تتحقق";
   el("fxcm-review-state").textContent="WAIT — تعذّر التحقق من حالة FXCM";
   const reasons=el("fxcm-review-reasons");reasons.replaceChildren();
   const li=document.createElement("li");li.textContent="مصدر FXCM غير موثوق أو غير متصل";reasons.append(li);
