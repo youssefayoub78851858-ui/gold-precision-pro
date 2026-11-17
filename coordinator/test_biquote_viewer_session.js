@@ -1,0 +1,71 @@
+"use strict";
+const a=require("node:assert/strict"),fs=require("node:fs");
+const s=require("./biquote_viewer_session");
+const old=process.env[s.KEY_NAME];
+const k="A".repeat(64),other="B".repeat(64),now=Date.parse("2026-11-17T18:00:00Z");
+try{
+ delete process.env[s.KEY_NAME];
+ a.throws(()=>s.issue(now),/SESSION_DISABLED/);
+ a.equal(s.authenticated({cookie:"foo=bar"},now),false);
+ process.env[s.KEY_NAME]=k;
+ const created=s.issue(now),cookie=created.cookie;
+ a(cookie.length<300);
+ a(!cookie.includes("MONITOR_READONLY_TOKEN"));
+ a(!cookie.includes("Bearer "));
+ a.equal(s.verify(cookie,now),true);
+ a.equal(s.verify(cookie,now+s.TTL_SECONDS*1000-1000),true);
+ a.equal(s.verify(cookie,now+s.TTL_SECONDS*1000),false);
+ a.equal(s.verify(cookie,now-31000),false);
+ a.equal(s.verify(cookie.slice(0,-2)+"AA",now),false);
+ a.equal(s.verify(cookie.split(".").slice(0,4).join(".")+".spoof",now),false);
+ const header="tracking=abc; "+s.COOKIE+"="+cookie+"; foo=bar";
+ a.equal(s.extract(header),cookie);
+ a.equal(s.authenticated({cookie:header,"sec-fetch-site":"same-origin"},now),true);
+ a.equal(s.authenticated({cookie:header,"sec-fetch-site":"cross-site"},now),false);
+ a.equal(s.authenticated({cookie:header,"sec-fetch-site":"none"},now),true);
+ a.equal(s.authenticated({cookie:header+"; "+s.COOKIE+"=fake"},now),false);
+ a.equal(s.authenticated({cookie:"other="+cookie},now),false);
+ a.equal(s.sameOrigin({origin:s.REVIEW_ORIGIN,"sec-fetch-site":"same-origin"}),true);
+ a.equal(s.sameOrigin({origin:"https://attacker.invalid","sec-fetch-site":"same-origin"}),false);
+ a.equal(s.sameOrigin({origin:s.REVIEW_ORIGIN,"sec-fetch-site":"cross-site"}),false);
+ a.equal(s.sameOrigin({}),false);
+ const set=s.setCookie(cookie);
+ for(const required of ["; Secure","; HttpOnly","; SameSite=Strict","; Path=/","; Max-Age="+s.TTL_SECONDS]){
+   a(set.includes(required),required);
+   a(s.clearCookie().includes(required.replace(/; Max-Age=.*/, "; Max-Age=0"))||required.startsWith("; Max-Age="));
+ }
+ a(set.startsWith(s.COOKIE+"="+cookie+";"));
+ a(s.clearCookie().includes("Max-Age=0"));
+ a(!set.includes("Domain="));
+ process.env[s.KEY_NAME]=other;
+ a.equal(s.verify(cookie,now),false,"Rotating signing key invalidates old sessions");
+ process.env[s.KEY_NAME]=k;
+ a.equal(s.verify(cookie,now),true);
+ const root=fs.readFileSync("server.js","utf8");
+ a(root.includes('"/api/v3/ultimate/biquote-viewer-session"'));
+ a(root.includes('viewerSessionAuthenticated:require("./coordinator/biquote_viewer_session").authenticated(req.headers)'));
+ a(root.includes('method:"POST"')===false,"Service should read HTTP POST request, not originate network POST");
+ a(root.includes('req.method==="DELETE"'));
+ a(root.includes("session.sameOrigin(req.headers)"));
+ a(root.includes('session.clearCookie()'));
+ a(root.includes('session.setCookie(issued.cookie)'));
+ a(root.includes('privateMonitor.relay(token,{approved:true})') ||
+   root.includes('proxy.relay(token,{approved:true})'));
+ a(root.includes("liveOrdersAllowed")===false);
+ const frontend=fs.readFileSync("biquote-mobile-ui.js","utf8");
+ a(frontend.includes('credentials:"same-origin"'));
+ a(frontend.includes('"/api/v3/ultimate/biquote-viewer-session"'));
+ a(frontend.includes('method:"DELETE"'));
+ a(!frontend.includes("localStorage"));
+ a(!frontend.includes("sessionStorage"));
+ const page=fs.readFileSync("ultimate.html","utf8");
+ a(page.includes('id="biquote-viewer-logout"'));
+ a(page.includes('id="biquote-viewer-session-state"'));
+ a.equal(s.WAIT.signal,"WAIT");
+ a.equal(s.WAIT.executable,false);
+ a.equal(s.WAIT.paperOrdersAllowed,false);
+ console.log("PASS 7-day signed HttpOnly Strict viewer cookie, expiry, key rotation, CSRF origin, read-only server wiring, no token persistence");
+}finally{
+ if(old===undefined)delete process.env[s.KEY_NAME];
+ else process.env[s.KEY_NAME]=old;
+}
