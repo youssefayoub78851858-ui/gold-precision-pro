@@ -139,6 +139,16 @@ async function collect(fetchFn,nowMs){
   observedUTC:new Date(asOf).toISOString(),quoteUTC:new Date(tick).toISOString(),
   quoteAgeSeconds:Math.round(age/1000*1000)/1000,
   rawPrivateQuote:{bid:quote.bid,ask:quote.ask,spread:quote.ask-quote.bid},
+  // Actual, independently geometry-validated CLOSED bars, never forming bars.
+  // A small in-memory snapshot for authenticated personal review display only.
+  // MID OHLC may contain provider's initial BID history seed, NOT bid/ask OHLC.
+  // This is never connected to the offline paper simulator or trade engine.
+  rawPrivateChart:Object.fromEntries(FRAMES.map(tf=>[
+    tf,processed[tf].all.slice(-48).map(row=>({
+      time:new Date(row.t).toISOString(),
+      open:row.open,high:row.high,low:row.low,close:row.close
+    }))
+  ])),
   frameSummary:Object.fromEntries(FRAMES.map(tf=>[tf,processed[tf].view])),
   crossFrameComparisons:comparisons,
   blockerCodes:["BROKER_SESSION_CALENDAR_UNVERIFIED","UPSTREAM_MT5_BROKER_RIGHTS_NOT_WARRANTED",
@@ -181,7 +191,7 @@ async function snapshot({fetchFn=globalThis.fetch,nowMs=Date.now,authorization="
   return {httpStatus:503,body:{...WAIT,status:"WAIT_BIQUOTE_DATA_STALE",
     frameSummary:{},crossFrameComparisons:{},
     blockerCodes:["LATEST_QUOTE_NO_LONGER_FRESH"],rawQuoteShown:false}};
- const {rawPrivateQuote,...safe}=sample;
+ const {rawPrivateQuote,rawPrivateChart,...safe}=sample;
  safe.quoteAgeSeconds=Math.round(ageAtResponse*1000)/1000;
  let viewer=false;
  // Verify with existing private coordinator. A public visitor never gets raw BID/ASK.
@@ -190,7 +200,9 @@ async function snapshot({fetchFn=globalThis.fetch,nowMs=Date.now,authorization="
   try{viewer=(await verifyViewer(authorization))===true;}catch{viewer=false;}
  }
  return {httpStatus:200,body:{...safe,rawQuoteShown:viewer,
-    ...(viewer?{bid:rawPrivateQuote.bid,ask:rawPrivateQuote.ask,spread:rawPrivateQuote.spread}:{})}};
+    ...(viewer?{bid:rawPrivateQuote.bid,ask:rawPrivateQuote.ask,
+      spread:rawPrivateQuote.spread,privateChart:rawPrivateChart,
+      privateChartReadOnly:true,privateChartDataBasis:"MID_WITH_POSSIBLE_BID_SEED"}:{})}};
 }
 function resetForTests(){cache=null;expires=0;pending=null;}
 module.exports={snapshot,resetForTests,URLS};

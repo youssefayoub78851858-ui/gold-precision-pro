@@ -12,11 +12,95 @@
  };
  const label={UP:"صعود وصفي (EMA20 فوق EMA50)",DOWN:"هبوط وصفي (EMA20 تحت EMA50)",
    MIXED:"اتجاه مختلط"};
- let busy=false;
+ // Completely separate from paper-terminal-core.js and its simulator.
+ // No market data is written to storage or the paper-trade journal.
+ let busy=false,activeFrame="M15",privateChart=null;
+ const frameWidth={M15:900000,H1:3600000,H4:14400000};
+ function validPrivateChart(input){
+   if(!input||typeof input!=="object"||Array.isArray(input))return null;
+   const result={};
+   for(const tf of ["M15","H1","H4"]){
+     const rows=input[tf];
+     if(!Array.isArray(rows)||rows.length<2||rows.length>48)return null;
+     let previous=-Infinity;
+     const safe=[];
+     for(const r of rows){
+       if(!r||typeof r.time!=="string"||!/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(r.time))return null;
+       const time=Date.parse(r.time);
+       if(!Number.isFinite(time)||time<=previous||time%frameWidth[tf]!==0||
+          time+frameWidth[tf]>Date.now())return null;
+       previous=time;
+       if(!["open","high","low","close"].every(k=>typeof r[k]==="number"&&Number.isFinite(r[k])&&r[k]>0))return null;
+       if(r.high<Math.max(r.open,r.close,r.low)||r.low>Math.min(r.open,r.close,r.high))return null;
+       safe.push({t:time,open:r.open,high:r.high,low:r.low,close:r.close});
+     }
+     result[tf]=safe;
+   }
+   return result;
+ }
+ function drawPrivateChart(){
+   const canvas=$("biquote-live-canvas");
+   if(!canvas)return;
+   const ctx=canvas.getContext("2d");
+   if(!ctx)return;
+   const w=Math.max(260,canvas.clientWidth||320),h=canvas.clientHeight||285,
+     dpr=Math.min(2,window.devicePixelRatio||1);
+   canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
+   ctx.setTransform(dpr,0,0,dpr,0,0);
+   ctx.fillStyle="#0b1a2a";ctx.fillRect(0,0,w,h);
+   const rows=privateChart?.[activeFrame];
+   if(!rows?.length){
+     ctx.fillStyle="#b9cae0";ctx.font="14px system-ui";ctx.textAlign="center";
+     ctx.fillText("لا توجد شموع حقيقية مصرح بعرضها",w/2,h/2);
+     return;
+   }
+   let lo=Math.min(...rows.map(r=>r.low)),hi=Math.max(...rows.map(r=>r.high));
+   const pad=Math.max(0.2,(hi-lo)*0.08);lo-=pad;hi+=pad;
+   const left=14,right=68,top=16,bottom=34,plotWidth=w-left-right,plotHeight=h-top-bottom;
+   const y=p=>top+(hi-p)/(hi-lo)*plotHeight;
+   const first=rows[0].t-frameWidth[activeFrame]/2,
+     last=rows.at(-1).t+frameWidth[activeFrame]/2;
+   const x=t=>left+(t-first)/(last-first)*plotWidth;
+   ctx.font="11px system-ui";ctx.textAlign="right";
+   for(let i=0;i<=4;i++){
+     const value=lo+(hi-lo)*i/4,Y=y(value);
+     ctx.strokeStyle="#32455e";ctx.fillStyle="#acbed7";
+     ctx.beginPath();ctx.moveTo(left,Y);ctx.lineTo(w-right+3,Y);ctx.stroke();
+     ctx.fillText(value.toFixed(2),w-4,Y+4);
+   }
+   const candleWidth=Math.max(2,Math.min(10,plotWidth/rows.length*0.58));
+   for(const r of rows){
+     const center=x(r.t),up=r.close>=r.open;
+     ctx.fillStyle=up?"#44cfb0":"#ea8292";ctx.strokeStyle=ctx.fillStyle;
+     ctx.beginPath();ctx.moveTo(center,y(r.high));ctx.lineTo(center,y(r.low));ctx.stroke();
+     ctx.fillRect(center-candleWidth/2,Math.min(y(r.open),y(r.close)),
+       candleWidth,Math.max(1,Math.abs(y(r.open)-y(r.close))));
+   }
+   ctx.fillStyle="#a9bfd7";ctx.font="11px system-ui";
+   ctx.textAlign="left";ctx.fillText(new Date(rows[0].t).toISOString().slice(5,16).replace("T"," "),left,h-11);
+   ctx.textAlign="right";ctx.fillText(new Date(rows.at(-1).t).toISOString().slice(5,16).replace("T"," "),w-right,h-11);
+ }
+ function setPrivateChart(value,status){
+   privateChart=value;
+   const caption=$("biquote-live-caption");
+   if(caption)caption.textContent=status;
+   drawPrivateChart();
+ }
+ for(const tab of document.querySelectorAll("button[data-biq-frame]"))
+   tab.addEventListener("click",()=>{
+     const tf=tab.dataset.biqFrame;
+     if(!Object.prototype.hasOwnProperty.call(frameWidth,tf))return;
+     activeFrame=tf;
+     for(const b of document.querySelectorAll("button[data-biq-frame]"))
+       b.setAttribute("aria-pressed",String(b.dataset.biqFrame===tf));
+     drawPrivateChart();
+   });
+ window.addEventListener("resize",drawPrivateChart,{passive:true});
  function reset(){
   for(const id of ["biquote-private-quote","biquote-private-spread","biquote-observed",
     "biquote-m15","biquote-h1","biquote-h4","biquote-overlap"])
    $(id).textContent="غير متاح";
+  setPrivateChart(null,"WAIT — بيانات الشارت الحقيقي غير متاحة أو منتهية الصلاحية. لا تُعرض شموع قديمة.");
  }
  async function refresh(){
   if(busy)return;
@@ -71,6 +155,15 @@
      $("biquote-private-quote").textContent="محجوب: أدخل رمز المشاهدة الخاص";
      $("biquote-private-spread").textContent="محجوب حتى التحقق من الرمز";
    }
+   const acceptedChart=data.rawQuoteShown===true&&data.privateChartReadOnly===true&&
+     data.privateChartDataBasis==="MID_WITH_POSSIBLE_BID_SEED"
+       ?validPrivateChart(data.privateChart):null;
+   if(acceptedChart)setPrivateChart(acceptedChart,
+     "شموع BiQuote مغلقة — عرض خاص READ-ONLY، MID وربما بذرة BID. "+
+     (data.status==="WAIT_CROSS_FRAME_GAPS"?
+       "بعض مجموعات H4 فيها تغطية M15 غير مكتملة، لا صفقات.":"مطابقة الأطر لا تثبت الترخيص أو الربحية."));
+   else setPrivateChart(null,
+     "لا يوجد رمز مشاهدة صالح لعرض الشموع الخام. الاتجاهات الوصفية فقط ظاهرة للعامة.");
    for(const tf of ["M15","H1","H4"]){
     const f=data.frameSummary[tf];
     $("biquote-"+tf.toLowerCase()).textContent=
@@ -92,6 +185,7 @@
     $("biquote-status").textContent="WAIT — لم تثبت صلاحية البيانات المباشرة. أعد الفحص لاحقاً.";
   }finally{busy=false;button.disabled=false;}
  }
+ drawPrivateChart();
  button.addEventListener("click",refresh);
  window.addEventListener("pageshow",refresh);
  setInterval(()=>{if(!document.hidden&&!busy)refresh();},120000);

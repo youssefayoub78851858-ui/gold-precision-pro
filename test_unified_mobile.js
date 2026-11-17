@@ -21,6 +21,12 @@ for(const id of ['biquote-mobile-observation','biquote-private-quote','biquote-p
                   'biquote-overlap','biquote-viewer-secret','biquote-refresh'])
  a(doc.includes('id="'+id+'"'),'Missing read-only BiQuote UI: '+id);
 a(doc.includes('src="/biquote-mobile-ui.js"'));
+for(const id of ['biquote-live-chart-panel','biquote-live-canvas','biquote-live-caption'])
+ a(doc.includes('id="'+id+'"'),'Missing PRIVATE BiQuote chart UI: '+id);
+a(doc.includes('data-biq-frame="M15"')&&doc.includes('data-biq-frame="H1"')&&doc.includes('data-biq-frame="H4"'));
+a(doc.includes('شارت محاكاة ورقية XAUUSD'),'Paper replay chart must be unmistakably labelled');
+a(doc.includes('شموع MID من BiQuote'),'Actual closed MID source must be labelled');
+
 const server=fs.readFileSync('server.js','utf8');
 a(server.includes('paperPath==="/paper-terminal" || paperPath==="/paper-terminal.html"'));
 a(server.includes('"/api/v3/ultimate/biquote-observation"'));
@@ -29,5 +35,11 @@ const script=fs.readFileSync('biquote-mobile-ui.js','utf8');
 a(script.includes('signal!=="WAIT"'));
 a(!script.includes('localStorage')&&!script.includes('sessionStorage'));
 a(!script.includes('paper-buy')&&!script.includes('paper-sell'));
+a(script.includes('data.rawQuoteShown===true&&data.privateChartReadOnly===true'));
+a(script.includes('validPrivateChart(data.privateChart)'));
+a(script.includes('setPrivateChart(null,'));
+a(!script.includes('GoldPaperCore')&&!script.includes('paper-terminal-core'));
+a(script.includes('privateChart=null'));
+
 
 console.log('PASS unified mobile: chart, trade, journal and research in /ultimate, no iframe or duplicate IDs');

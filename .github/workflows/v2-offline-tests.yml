@@ -223,6 +223,11 @@ jobs:
       - name: BiQuote read-only live-shape analysis and private BID ASK viewer (offline mocks)
         working-directory: coordinator
         run: node test_biquote_mobile_readonly.js
+      - name: BiQuote private live chart UI isolated from paper (offline mocks)
+        run: |
+          node --check biquote-mobile-ui.js
+          node test_biquote_live_chart_ui.js
+
 
       - name: Mobile paper terminal, order simulation and existing V3 research isolation (offline)
         run: |

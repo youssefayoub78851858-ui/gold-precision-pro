@@ -89,6 +89,15 @@
 #biquote-mobile-observation p{line-height:1.6}
 @media(max-width:460px){#biquote-mobile-observation .biq-grid{grid-template-columns:1fr}}
 </style>
+<style id="biquote-real-chart-style">
+#biquote-live-chart-panel{background:#122437;border:1px solid #527083;border-radius:14px;padding:12px;margin:12px 0;color:#e6edfa}
+#biquote-live-chart-panel h3{font-size:1.04rem;margin:4px 0 10px;color:#e9c780}
+#biquote-live-chart-panel .biq-chart-tabs{display:flex;gap:8px;direction:ltr;margin-bottom:8px}
+#biquote-live-chart-panel .biq-chart-tabs button{flex:1;background:#28415b;color:#eee;border:1px solid #617894;border-radius:9px;min-height:42px;font-weight:700}
+#biquote-live-chart-panel .biq-chart-tabs button[aria-pressed="true"]{background:#e8c47e;color:#16263c}
+#biquote-live-canvas{display:block;width:100%;height:285px;border-radius:10px;border:1px solid #33465d;background:#0b1a2a}
+#biquote-live-caption{font-size:.84rem;line-height:1.7;margin:10px 0 0;color:#c3d0e2}
+</style>
 <section class="overview" id="biquote-mobile-observation" aria-labelledby="biquote-observation-title">
 <h2 id="biquote-observation-title">بيانات الذهب الحقيقية — BiQuote (مراقبة للقراءة فقط)</h2>
 <p class="overview-status">هاي لوحة فحص مباشر مستقلة عن شارت إعادة التداول الورقي. الشموع MID وقد تتضمن بذرة تاريخية BID. القراءات الوصفية ليست توصية تداول، والقرار دائماً <strong>WAIT</strong>.</p>
@@ -102,6 +111,17 @@
 <div class="biq-item wide"><span class="biq-label">H4 — اتجاه EMA20/EMA50 وصفي</span><strong class="biq-value" id="biquote-h4">غير متاح</strong></div>
 <div class="biq-item wide"><span class="biq-label">نتيجة فحص تطابق الشموع M15/H1/H4</span><strong class="biq-value" id="biquote-overlap">غير متاح</strong></div>
 </div>
+<div id="biquote-live-chart-panel" aria-labelledby="biquote-live-title">
+<h3 id="biquote-live-title">شارت الذهب الحقيقي — BiQuote (عرض خاص للقراءة فقط)</h3>
+<div class="biq-chart-tabs" role="group" aria-label="فاصل شارت BiQuote الحقيقي">
+<button type="button" data-biq-frame="M15" aria-pressed="true">M15</button>
+<button type="button" data-biq-frame="H1" aria-pressed="false">H1</button>
+<button type="button" data-biq-frame="H4" aria-pressed="false">H4</button>
+</div>
+<canvas id="biquote-live-canvas" role="img" aria-label="شارت BiQuote الحقيقي الخاص للشموع المغلقة فقط، لا يُستخدم للتداول"></canvas>
+<p id="biquote-live-caption" role="status" aria-live="polite">الشارت الحقيقي محميّ. أدخل رمز المشاهدة الخاص واضغط تحديث فحص الذهب. من دون الرمز لا تُعرض أسعار OHLC الخام.</p>
+<p class="overview-status">شموع MID من BiQuote، وقد تحتوي بداية التاريخ على BID. تظهر الفجوات كما هي، ولا يوجد تنفيذ أوامر أو ربط بالتداول الورقي. إذا صارت البيانات قديمة يُمسح الرسم، ويبقى القرار WAIT.</p>
+</div>
 <p class="overview-status">حتى ما ننشر الأسعار الخام للعامة، لازم <strong>رمز المشاهدة الخاص بـCoordinator</strong> لعرض BID/ASK. اتركه فارغاً لعرض مؤشرات البيانات الوصفية فقط. الرمز لا يُحفظ في متصفحك ولا ينرسل لـBiQuote.</p>
 <div class="bar" style="margin-top:10px"><label style="flex:2;min-width:180px;font-size:.8rem">رمز المشاهدة الخاص (اختياري)<input id="biquote-viewer-secret" type="password" autocomplete="off" spellcheck="false" placeholder="MONITOR_READONLY_TOKEN"></label><button type="button" id="biquote-refresh">تحديث فحص الذهب</button></div>
 <p class="overview-status">الفحص يتجدد كل دقيقتين عندما تكون الشاشة مفتوحة. عند إغلاق السوق كما يصرّح المصدر أو تأخر الشموع، لا تعرض اللوحة اتجاهاً قديماً على أنه حي. مراقبة الـ24 ساعة على خدمة Coordinator تعمل بشكل منفصل؛ هاللوحة لا تعرض إحصاءاتها التراكمية بعد. DXY والسندات وGC وOrder Flow والأخبار غير مكتملة، لذلك لا إشارات BUY/SELL.</p>
@@ -113,7 +133,7 @@
 <div class="metric"><label>مصدر الشارت</label><strong id="source-kind">لا توجد شموع</strong></div>
 <div class="metric"><label>Bid / Ask عند شمعة الإعادة</label><strong id="replay-bidask">— / —</strong></div>
 <div class="metric"><label>آخر إغلاق مُسجّل UTC</label><strong id="replay-time">—</strong></div></div></section>
-<section class="card" id="paper-chart"><div class="chart-top"><h2>شارت XAUUSD · <span id="active-tf-label">M15</span></h2><div class="tabs" role="group" aria-label="الفاصل الزمني"><button type="button" data-tf="M15" class="active">M15</button><button type="button" data-tf="H1">H1</button><button type="button" data-tf="H4">H4</button></div></div>
+<section class="card" id="paper-chart"><div class="chart-top"><h2>شارت محاكاة ورقية XAUUSD · <span id="active-tf-label">M15</span></h2><div class="tabs" role="group" aria-label="الفاصل الزمني"><button type="button" data-tf="M15" class="active">M15</button><button type="button" data-tf="H1">H1</button><button type="button" data-tf="H4">H4</button></div></div>
 <canvas id="chart" role="img" aria-label="شارت شموع مغلقة تاريخية أو اصطناعية، وليس شارت مباشر"></canvas><p class="small" id="chart-note">حمّل ملفاً محلياً أو افتح العينة الاصطناعية لتجربة الشارت. لن تظهر أسعار حية.</p>
 <div class="bar"><button type="button" id="sample" class="primary">تشغيل عيّنة اختبار</button><button type="button" id="next" disabled>الشمعة التالية ←</button><button type="button" id="levels" disabled>مستويات ورقية تجريبية</button></div>
 <div class="bar" style="margin-top:8px"><label class="small" for="file-input" style="flex:2">استيراد ملف XAUUSD Bid/Ask مسجّل (JSON) <input id="file-input" type="file" accept=".json,application/json"></label><button id="export-journal" type="button" disabled>تصدير السجل JSON</button></div><p class="statusline" id="paper-message" role="status" aria-live="polite">بانتظار اختيار بيانات محلية.</p></section>
