@@ -64,6 +64,7 @@ async function main(){
  assert.equal(result.body.rawPrivateChart,undefined);
  assert.equal(result.body.privateStructure,undefined);
  assert.equal(result.body.rawPrivateStructure,undefined);
+ assert.equal(result.body.vendorDeclaredSession,undefined);
  assert.equal(result.body.privateMtf,undefined);
  assert.equal(result.body.privateChartReadOnly,undefined);
  assert.equal(JSON.stringify(result.body).includes('"bars"'),false);
@@ -92,6 +93,18 @@ async function main(){
  assert.equal(privateData.body.privateStructure.tradeEligible,false);
  assert.equal(privateData.body.privateStructure.newsAndMacroIncluded,false);
  assert.equal(privateData.body.privateStructure.orderFlowIncluded,false);
+ const vendor=privateData.body.privateStructure.vendorDeclaredSession;
+ assert.equal(vendor.mode,"BIQUOTE_VENDOR_DECLARED_SESSION_EVIDENCE_ONLY");
+ assert.equal(vendor.sourceRecord,"BIQUOTE_SUPPORT_REPLY_2026_11_16");
+ assert.equal(vendor.signal,"WAIT");
+ assert.equal(vendor.executable,false);
+ assert.equal(vendor.providerSaysPrivateRenderResearchAllowed,true);
+ assert.equal(vendor.brokerIndependentScheduleVerified,false);
+ assert.equal(vendor.allowsGapBridging,false);
+ for(const tf of ["M15","H1","H4"]){
+   assert.equal(vendor.frames[tf].signal,"WAIT");
+   assert.equal(vendor.frames[tf].executable,false);
+ }
  assert.equal(privateData.body.privateStructure.multiFrame.mode,"PRIVATE_READONLY_MTF_READINESS");
  assert.equal(privateData.body.privateStructure.multiFrame.signal,"WAIT");
  assert.equal(privateData.body.privateStructure.multiFrame.executable,false);

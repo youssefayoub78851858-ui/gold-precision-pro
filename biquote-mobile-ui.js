@@ -14,7 +14,7 @@
    MIXED:"اتجاه مختلط"};
  // Completely separate from paper-terminal-core.js and its simulator.
  // No market data is written to storage or the paper-trade journal.
- let busy=false,activeFrame="M15",privateChart=null,privateStructure=null,privateMtf=null,privateReferenceEma=null;
+ let busy=false,activeFrame="M15",privateChart=null,privateStructure=null,privateMtf=null,privateReferenceEma=null,privateVendorSchedule=null;
  const frameWidth={M15:900000,H1:3600000,H4:14400000};
  function validPrivateChart(input){
    if(!input||typeof input!=="object"||Array.isArray(input))return null;
@@ -226,6 +226,62 @@
    lines.push("قرار التداول WAIT. لا إثبات لجدول جلسات الوسيط أو ترخيص البيانات، ولا تستخدم هذه القراءة لإشارات BUY/SELL أو مستويات SL/TP.");
    el.textContent=lines.join("\n");
  }
+
+ function validateVendorSchedule(v,chart){
+   if(!chart||!v||v.mode!=="BIQUOTE_VENDOR_DECLARED_SESSION_EVIDENCE_ONLY"||
+      v.sourceRecord!=="BIQUOTE_SUPPORT_REPLY_2026_11_16"||
+      v.providerSaysPrivateRenderResearchAllowed!==true||
+      v.originalBrokerIdentified!==false||
+      v.originalBrokerUpstreamRightsWarranted!==false||
+      v.brokerIndependentScheduleVerified!==false||
+      v.dstChangesIndependentlyVerified!==false||
+      v.allowsGapBridging!==false||v.canIssueTradePlan!==false||
+      v.signal!=="WAIT"||v.executable!==false||v.tradeEligible!==false||
+      !v.frames)return null;
+   const frames={};
+   for(const tf of ["M15","H1","H4"]){
+     const f=v.frames[tf];
+     if(!f||f.timeframe!==tf||f.signal!=="WAIT"||
+        f.executable!==false||f.tradeEligible!==false||
+        f.allowsGapBridging!==false||
+        f.brokerIndependentScheduleVerified!==false||
+        f.status!=="NOT_INDEPENDENTLY_VERIFIED"||
+        f.error!==undefined||!Array.isArray(f.examples)||f.examples.length>8||
+        !["gapGroups","missingSlots","providerDeclaredPauseSlots",
+          "missingDuringProviderTradingSlots","outsideDeclaredDateWindowSlots"]
+          .every(k=>Number.isSafeInteger(f[k])&&f[k]>=0)||
+        f.providerDeclaredPauseSlots+f.missingDuringProviderTradingSlots+
+          f.outsideDeclaredDateWindowSlots!==f.missingSlots||
+        f.gapGroups>chart[tf].length-1)return null;
+     frames[tf]={
+       gaps:f.gapGroups,missing:f.missingSlots,
+       pause:f.providerDeclaredPauseSlots,
+       open:f.missingDuringProviderTradingSlots,
+       unknown:f.outsideDeclaredDateWindowSlots
+     };
+   }
+   return frames;
+ }
+ function displayVendorSchedule(){
+   const el=$("biquote-vendor-session");
+   if(!el)return;
+   if(!privateVendorSchedule){
+     el.textContent="WAIT — فحص جلسات BiQuote الخاص غير متاح بلا بيانات حديثة ورمز مشاهدة صالح.";
+     return;
+   }
+   const lines=["BiQuote أكدت في 16 نوفمبر 2026: الأحد 23:00 إلى الجمعة 22:00 UTC، "+
+     "مع استراحة يومية 22:00–23:00 UTC. المواعيد قد تتحرك ساعة عند التوقيت الصيفي."];
+   for(const tf of ["H4","H1","M15"]){
+     const f=privateVendorSchedule[tf];
+     lines.push(tf+": "+f.gaps+" مجموعات فجوات / "+f.missing+
+       " فترات غائبة. تقع "+f.pause+" ضمن إغلاق أعلنت عنه BiQuote؛ "+
+       f.open+" خلال وقت تداول معلن؛ "+f.unknown+" خارج نافذة التدقيق المحدودة.");
+   }
+   lines.push("الإذن الخاص: BiQuote سمحت بالبحث والتخزين والتداول الورقي على Render. "+
+     "لكنها لم تضمن حقوق وسيط MT5 الأصلي، ولم تقدّم جدول عطلات أو تغيّر التوقيت بشكل مستقل. "+
+     "هذا تدقيق احتمالي، لا يملأ شموعاً ولا يفعّل صفقات. القرار WAIT.");
+   el.textContent=lines.join("\n");
+ }
  const eventNames={BOS_UP:"كسر قمة مؤكدة",BOS_DOWN:"كسر قاع مؤكد",
    SWEEP_HIGH:"سحب سيولة فوق قمة",SWEEP_LOW:"سحب سيولة تحت قاع",
    FVG_BULL:"FVG صاعد",FVG_BEAR:"FVG هابط"};
@@ -332,6 +388,7 @@
    describeStructure();
    displayMtf();
    displayReferenceEma();
+   displayVendorSchedule();
  }
  for(const tab of document.querySelectorAll("button[data-biq-frame]"))
    tab.addEventListener("click",()=>{
@@ -348,7 +405,7 @@
   for(const id of ["biquote-private-quote","biquote-private-spread","biquote-observed",
     "biquote-m15","biquote-h1","biquote-h4","biquote-overlap"])
    $(id).textContent="غير متاح";
-  privateStructure=null;privateMtf=null;privateReferenceEma=null;
+  privateStructure=null;privateMtf=null;privateReferenceEma=null;privateVendorSchedule=null;
   setPrivateChart(null,"WAIT — بيانات الشارت الحقيقي غير متاحة أو منتهية الصلاحية. لا تُعرض شموع قديمة.");
  }
  async function refresh(){
@@ -411,12 +468,14 @@
    privateMtf=privateStructure?validateMtf(data.privateStructure.multiFrame,privateStructure):null;
    privateReferenceEma=privateStructure?
      validateReferenceEma(data.privateStructure.referenceEmaResearch,acceptedChart):null;
+   privateVendorSchedule=privateStructure?
+     validateVendorSchedule(data.privateStructure.vendorDeclaredSession,acceptedChart):null;
    if(acceptedChart)setPrivateChart(acceptedChart,
      "شموع BiQuote مغلقة — عرض خاص READ-ONLY، MID وربما بذرة BID. "+
      (data.status==="WAIT_CROSS_FRAME_GAPS"?
        "بعض مجموعات H4 فيها تغطية M15 غير مكتملة، لا صفقات.":"مطابقة الأطر لا تثبت الترخيص أو الربحية."));
    else{
-     privateStructure=null;privateMtf=null;privateReferenceEma=null;
+     privateStructure=null;privateMtf=null;privateReferenceEma=null;privateVendorSchedule=null;
      setPrivateChart(null,
        "لا يوجد رمز مشاهدة صالح لعرض الشموع الخام. الاتجاهات الوصفية فقط ظاهرة للعامة.");
    }

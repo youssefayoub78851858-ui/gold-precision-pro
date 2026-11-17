@@ -10,6 +10,7 @@
 const {analyzeChart}=require("./biquote_private_structure");
 const {makeMtfReadiness}=require("./biquote_mtf_readiness");
 const {examine:observeReferenceEma}=require("./biquote_observed_ema_reference");
+const {evaluateFrames:evaluateProviderSchedule}=require("./biquote_vendor_declared_session");
 const URLS=Object.freeze({
  quote:"https://biquote.io/api/XAUUSD?allowStale=false",
  M15:"https://biquote.io/api/XAUUSD/ohlc?interval=15m&limit=200",
@@ -150,6 +151,10 @@ async function collect(fetchFn,nowMs){
  // observed bars crossing only hypothetical generic pause slots is
  // displayed separately and NEVER used for MTF alignment/trading.
  privateStructure.referenceEmaResearch=observeReferenceEma(privateChart,asOf);
+ // Source-declared 2026-11 support schedule is stronger evidence than the
+ // old generic reference but NOT independent proof of MT5 broker holidays,
+ // clock changes or upstream licensing. It cannot enable trading.
+ privateStructure.vendorDeclaredSession=evaluateProviderSchedule(privateChart);
  return {
   status:all.some(x=>x.completeMismatches>0||x.incompleteM15Groups>0)
     ?"WAIT_CROSS_FRAME_GAPS":"OBSERVED_READONLY_UNVERIFIED",

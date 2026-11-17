@@ -233,6 +233,7 @@ jobs:
           node test_biquote_private_structure.js
           node test_biquote_mtf_readiness.js
           node test_biquote_observed_ema_reference.js
+          node test_biquote_vendor_declared_session.js
           node test_biquote_session_reference.js
           python -m unittest -v test_biquote_session_gap_audit
 
