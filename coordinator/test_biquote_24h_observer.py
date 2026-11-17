@@ -95,6 +95,67 @@ class BiQuote24hOfflineTests(unittest.TestCase):
             self.assertNotIn("stagedBidFrames", event)
             self.assertNotIn("stagedAskFrames", event)
 
+    def test_diagnostics_distinguish_http_faults_from_h4_internal_gap(self):
+        counters=QualityCounters()
+        failed={
+            "allHttp200AndValidJson":False,"requestCountAttempted":4,
+            "qualityDiagnostic":{
+                "mode":"BIQUOTE_METADATA_FAILURE_DIAGNOSTICS_ONLY",
+                "endpoint":{"quote":"OK","M15":"NO_HTTP_RESPONSE",
+                            "H1":"INVALID_JSON_OR_ENVELOPE","H4":"HTTP_429"},
+                "marketDataExposed":False,"sourceRequestsMade":0,
+                "tradingEnabled":False},
+        }
+        counters.add(failed)
+        okay=sample()
+        okay["qualityDiagnostic"]={
+            "mode":"BIQUOTE_METADATA_FAILURE_DIAGNOSTICS_ONLY",
+            "endpoint":{tf:"OK" for tf in ("quote","M15","H1","H4")},
+            "independentQuoteAgeOver30Seconds":True,
+            "independentQuoteAgeInvalid":False,
+            "h4InternalM15Gaps":3,"h4RetentionEdgesIncomplete":2,
+            "marketDataExposed":False,"sourceRequestsMade":0,
+            "tradingEnabled":False,
+        }
+        counters.add(okay)
+        r=counters.report(START,START+dt.timedelta(minutes=4),
+                          missed_slots=0,complete_window=False)
+        self.assertEqual(r["samplesObserved"],2)
+        self.assertEqual(r["diagnosticSamples"],2)
+        self.assertEqual(r["httpFailedSamples"],1)
+        self.assertEqual(r["httpOkSamples"],1)
+        self.assertEqual(r["endpointFailureCodes"]["H4"]["HTTP_429"],1)
+        self.assertEqual(r["endpointFailureCodes"]["M15"]["NO_HTTP_RESPONSE"],1)
+        self.assertEqual(r["endpointFailureCodes"]["H1"]["INVALID_JSON_OR_ENVELOPE"],1)
+        self.assertEqual(r["endpointFailureCodes"]["quote"]["HTTP_429"],0)
+        self.assertEqual(r["independentQuoteOver30SecondsSamples"],1)
+        self.assertEqual(r["h4RetentionEdgeIncompleteAcrossSnapshots"],2)
+        self.assertEqual(r["h4InternalM15GapsDiagnosedAcrossSnapshots"],3)
+        self.assertEqual(r["h4UnclassifiedPartialAggregatesAcrossSnapshots"],3)
+        self.check_safe(r)
+        import json
+        serialized=json.dumps(r)
+        for phrase in ("\"bid\"","\"ask\"","\"close\"",
+                       "PRIVATE_PASSWORD_DO_NOT_LOG","https://biquote.io"):
+            self.assertNotIn(phrase,serialized)
+
+    def test_malformed_diagnostic_cannot_create_dynamic_labels_or_price_dump(self):
+        x=sample()
+        x["qualityDiagnostic"]={
+            "mode":"BIQUOTE_METADATA_FAILURE_DIAGNOSTICS_ONLY",
+            "endpoint":{"quote":"OK","M15":"OK","H1":"OK",
+                        "H4":"SENSITIVE_PROVIDER_SECRET"},
+            "marketDataExposed":False,"sourceRequestsMade":0,
+            "tradingEnabled":False,
+        }
+        quality=QualityCounters()
+        quality.add(x)
+        r=quality.report(START,START+dt.timedelta(minutes=2),
+                         missed_slots=0,complete_window=False)
+        self.assertEqual(r["diagnosticSamples"],0)
+        self.assertEqual(r["httpOkSamples"],1)
+        self.assertNotIn("SENSITIVE_PROVIDER_SECRET",str(r))
+
     def test_restart_keeps_absolute_end_and_never_bursts_makeup_calls(self):
         clock = FakeClock(START + dt.timedelta(hours=3))
         report = observe_24h(
