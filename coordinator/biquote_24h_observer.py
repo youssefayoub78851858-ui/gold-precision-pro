@@ -14,7 +14,7 @@ import json
 import os
 import time
 
-from biquote_public_one_shot import one_shot_probe
+from biquote_public_one_shot import one_shot_probe, DIAGNOSTIC_CODES
 from xauusd_feed_gate import parse_utc
 
 UTC = dt.timezone.utc
@@ -71,12 +71,48 @@ class QualityCounters:
         self.archive_saved = 0
         self.archive_failed = 0
         self.archive_new_bars = {tf: 0 for tf in ("M15", "H1", "H4")}
+        # The previous 24-hour run had 29 failed snapshots but no per-endpoint
+        # fault evidence. Future opt-in bounded observations distinguish them
+        # using ONLY fixed integer counters (no raw feed or URL logging).
+        self.endpoint_failure_codes = {
+            tf: {code: 0 for code in DIAGNOSTIC_CODES if code != "OK"}
+            for tf in ("quote","M15","H1","H4")}
+        self.diagnostic_samples = 0
+        self.independent_quote_age_over_30 = 0
+        self.independent_quote_age_invalid = 0
+        self.h4_retention_edges = 0
+        self.h4_internal_m15_gaps_diagnostic = 0
 
     def add(self, result):
         self.samples += 1
         # Each probe attempts four fixed, public GETs and may fail individually.
         tried = result.get("requestCountAttempted")
         self.requests_attempted += tried if isinstance(tried, int) and 0 <= tried <= 4 else 0
+        diagnostic = result.get("qualityDiagnostic")
+        if isinstance(diagnostic,dict) and (
+            diagnostic.get("mode")=="BIQUOTE_METADATA_FAILURE_DIAGNOSTICS_ONLY"
+            and diagnostic.get("marketDataExposed") is False
+            and diagnostic.get("sourceRequestsMade")==0
+            and diagnostic.get("tradingEnabled") is False
+            and isinstance(diagnostic.get("endpoint"),dict)
+            and set(diagnostic["endpoint"])==set(self.endpoint_failure_codes)
+            and all(code in DIAGNOSTIC_CODES
+                    for code in diagnostic["endpoint"].values())):
+            self.diagnostic_samples += 1
+            for tf,code in diagnostic["endpoint"].items():
+                if code!="OK":
+                    self.endpoint_failure_codes[tf][code] += 1
+            if diagnostic.get("independentQuoteAgeOver30Seconds") is True:
+                self.independent_quote_age_over_30 += 1
+            if diagnostic.get("independentQuoteAgeInvalid") is True:
+                self.independent_quote_age_invalid += 1
+            if result.get("allHttp200AndValidJson") is True:
+                n=diagnostic.get("h4InternalM15Gaps")
+                if type(n) is int and 0<=n<=10000:
+                    self.h4_internal_m15_gaps_diagnostic+=n
+                edges=diagnostic.get("h4RetentionEdgesIncomplete")
+                if type(edges) is int and 0<=edges<=10000:
+                    self.h4_retention_edges+=edges
         if not result.get("allHttp200AndValidJson"):
             self.http_failures += 1
             return
@@ -142,6 +178,13 @@ class QualityCounters:
             "providerStaleSamples": self.quote_stale,
             "crossFrameUnverifiedSamples": self.missing_ohlc_overlap,
             "geometryFailureClasses": dict(self.geometry_failure_classes),
+            "diagnosticProtocol":"FIXED_ENDPOINT_FAILURE_COUNTS_NO_MARKET_DATA",
+            "diagnosticSamples":self.diagnostic_samples,
+            "endpointFailureCodes":self.endpoint_failure_codes,
+            "independentQuoteOver30SecondsSamples":self.independent_quote_age_over_30,
+            "independentQuoteAgeInvalidSamples":self.independent_quote_age_invalid,
+            "h4RetentionEdgeIncompleteAcrossSnapshots":self.h4_retention_edges,
+            "h4InternalM15GapsDiagnosedAcrossSnapshots":self.h4_internal_m15_gaps_diagnostic,
             "h1FullyCoveredComparedAcrossSnapshots": self.evaluable_h1,
             "h4FullyCoveredComparedAcrossSnapshots": self.evaluable_h4,
             "h1DisagreementsAcrossSnapshots": self.disagree_h1,
