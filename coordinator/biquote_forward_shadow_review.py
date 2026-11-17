@@ -95,7 +95,8 @@ def overlaps_match(frames: dict[str, list[dict]]) -> dict:
     return out
 
 
-def shadow_review(dirname: str | pathlib.Path, *, runner=None) -> dict:
+def shadow_review(dirname: str | pathlib.Path, *, runner=None,
+                  now_utc: dt.datetime | None = None) -> dict:
     """Read existing private vault; never write files or call an external feed.
 
     Only an in-process offline Node child sees OHLC. The caller receives
@@ -134,6 +135,18 @@ def shadow_review(dirname: str | pathlib.Path, *, runner=None) -> dict:
     receipt = _stamp(received)
     if receipt < START:
         safe["reasonCodes"].append("FORWARD_TIME_BOUNDARY_FAILED")
+        return safe
+    clock = dt.datetime.now(UTC) if now_utc is None else now_utc
+    if not isinstance(clock, dt.datetime) or clock.tzinfo is None or (
+        clock.utcoffset() != dt.timedelta(0)):
+        safe["reasonCodes"].append("CURRENT_UTC_CLOCK_UNVERIFIED")
+        return safe
+    freshness = (clock - receipt).total_seconds()
+    # A recorded archive can be analyzed offline, but it MUST NOT become a
+    # 'current' BUY/SELL watch after the collection worker stops or sleeps.
+    # No forward/future market data can be accepted as the present either.
+    if freshness < 0 or freshness > 300:
+        safe["reasonCodes"].append("ARCHIVED_CAPTURE_STALE_OR_FUTURE_VS_NOW")
         return safe
     quote = archive["quoteObservations"][-1]
     if not isinstance(quote, dict) or quote.get("observedUTC") != received:
