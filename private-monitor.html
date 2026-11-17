@@ -80,6 +80,18 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <p><small>التسجيل الأول المحدد بـ24 ساعة ما بكفّي وحده لتهيئة V3: الحد الأدنى 21 شمعة H4 مغلقة ومتتالية = 84 ساعة نظرياً، وقد تطول بسبب استراحات السوق. أي تمديد يحتاج تفعيل مستقل. لن ننقل شموعاً قديمة إلى فترة الاختبار الجديدة.</small></p>
 <p><small>BUY أو SELL إذا ظهرت هون تعني قراءة فنية أولية فقط، مش صفقة. لا يوجد دخول أو وقف خسارة أو أهداف معتمدة، ولا تداول ورقي أو حقيقي.</small></p>
 </section>
+<section id="four-stage-private-panel" aria-labelledby="batch-readiness-title">
+<h2 id="batch-readiness-title">نتيجة المراحل الأربع الموحّدة — خاص</h2>
+<p id="batch-readiness-state" role="status">WAIT — بانتظار تقرير Coordinator الخاص، مش بيانات حيّة</p>
+<div class="grid" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+<div class="metric">البيانات<strong id="batch-data-state" style="font-size:.9rem">غير مؤكدة</strong></div>
+<div class="metric">الأرشيف<strong id="batch-archive-state" style="font-size:.9rem">غير مؤكد</strong></div>
+<div class="metric">تحليل V3<strong id="batch-analysis-state" style="font-size:.9rem">غير مؤكد</strong></div>
+<div class="metric">الصفقات الورقية<strong id="batch-paper-state" style="font-size:.9rem">BLOCKED</strong></div>
+</div>
+<p id="batch-frames-state"><small>الشموع المتصلة في الأرشيف: غير متاحة</small></p>
+<p><small>تُقرأ هذه الحالة من Coordinator الخاص فقط بعد نشره وإتاحة الأرشيف. نتائج الاختبارات البرمجية لا تثبت بيانات السوق الحقيقية أو ترخيص المصدر أو جاهزية التداول.</small></p>
+</section>
 <section id="audit-panel" aria-labelledby="audit-title">
 <h2 id="audit-title">مراقبة اتصال الذهب والتنبيهات الداخلية</h2>
 <p id="audit-state" role="status">لم يتم فحص حالة المراقبة الدورية بعد.</p>
@@ -97,6 +109,14 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 "use strict";
 const el=id=>document.getElementById(id);
 let memoryToken="";
+function clearBatchDisplay(){
+ el("batch-readiness-state").textContent="WAIT — لا توجد حالة موثّقة للمراحل";
+ el("batch-data-state").textContent="غير مؤكدة";
+ el("batch-archive-state").textContent="غير مؤكد";
+ el("batch-analysis-state").textContent="غير مؤكد";
+ el("batch-paper-state").textContent="BLOCKED";
+ el("batch-frames-state").textContent="لا توجد عدّادات شموع معتمدة حالياً";
+}
 const labels={
  NOT_CONNECTED:"الوصلة الخاصة غير مفعّلة",
  BLOCKED:"ملف الحالة مرفوض أو غير آمن",
@@ -105,7 +125,8 @@ const labels={
  WAIT_REVIEW_OBSERVATION_ONLY:"الملف موجود، لكن يحتاج تدقيقاً مستقلاً"
 };
 el("clear").addEventListener("click",()=>{
- memoryToken="";el("auth").value="";el("auth-status").textContent="تم مسح رمز الجلسة من هذه الصفحة";
+ memoryToken="";el("auth").value="";clearBatchDisplay();
+ el("auth-status").textContent="تم مسح رمز الجلسة من هذه الصفحة";
 });
 el("refresh").addEventListener("click",async()=>{
  if(location.protocol!=="https:"&&!["localhost","127.0.0.1"].includes(location.hostname)){
@@ -187,6 +208,33 @@ el("refresh").addEventListener("click",async()=>{
     else pieces.push(tf+": غير مؤكد");
   }
   el("biquote-shadow-coverage").textContent=pieces.join(" | ");
+  const batch=data.ultimateFourStageBatch;
+  const acceptedBatch=batch?.mode==="GOLD_PRECISION_FOUR_STAGE_BATCH_READONLY_V1"
+   &&batch?.signal==="WAIT"&&batch?.executable===false
+   &&batch?.paperOrdersAllowed===false&&batch?.independentlyQualified===false
+   &&batch?.liveOrdersAllowed===false
+   &&["SOURCE_NOT_QUALIFIED","SAMPLED_SOURCE_QUALITY_CHECKED_NOT_LICENSED"].includes(batch?.dataStatus)
+   &&["NO_FORWARD_CAPTURE","FORWARD_CAPTURE_PRESENT_UNVERIFIED",
+       "PRIVATE_VAULT_NOT_READABLE"].includes(batch?.archiveStatus)
+   &&["WAIT_CLOSED_DATA_OR_CONTEXT",
+       "FROZEN_V3_TECHNICAL_OBSERVATION_ONLY"].includes(batch?.analysisStatus)
+   &&batch?.paperStatus==="BLOCKED";
+  if(acceptedBatch){
+   el("batch-readiness-state").textContent="WAIT — تقرير المراحل برمجي وآمن، الصفقات محجوبة";
+   el("batch-data-state").textContent=batch.dataStatus==="SOURCE_NOT_QUALIFIED"
+     ?"فحص غير مؤهّل":"مراقبة فقط";
+   el("batch-archive-state").textContent=batch.archiveStatus==="FORWARD_CAPTURE_PRESENT_UNVERIFIED"
+     ?"شموع مرصودة، غير معتمدة":"لم يثبت الحفظ";
+   el("batch-analysis-state").textContent=batch.analysisStatus==="FROZEN_V3_TECHNICAL_OBSERVATION_ONLY"
+     ?"قراءة فنية فقط":"WAIT";
+   el("batch-paper-state").textContent="BLOCKED";
+   const parts=[];
+   for(const tf of ["M15","H1","H4"]){
+    const n=batch.frameCounts?.[tf]?.contiguous;
+    parts.push(tf+": "+(Number.isInteger(n)&&n>=0?n:"غير معروف")+" شمعة متصلة");
+   }
+   el("batch-frames-state").textContent=parts.join(" | ");
+  }else clearBatchDisplay();
   const audit=data.audit;
   const states={AUDIT_DISABLED:"المراقب الدوري متوقف",AUDIT_NOT_STARTED:"المراقب لم يسجّل أي فحص بعد",
    AUDIT_OK:"المراقب الداخلي يعمل ويسجّل أسباب WAIT",
@@ -241,6 +289,7 @@ el("refresh").addEventListener("click",async()=>{
    el("status").textContent="WAIT — تعذّر فحص المراقبة";
    el("biquote-forward-state").textContent="WAIT — حالة أرشيف BiQuote غير متاحة";
    el("biquote-shadow-state").textContent="WAIT — تعذّر التحقق من تحليل V3 الخاص";
+   clearBatchDisplay();
    el("biquote-shadow-coverage").textContent="التغطية الفنية غير متاحة";
    for(const id of ["forward-m15","forward-h1","forward-h4"])el(id).textContent="0";
    el("forward-last").textContent="آخر تسجيل: غير متاح";
