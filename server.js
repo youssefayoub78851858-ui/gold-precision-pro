@@ -100,19 +100,27 @@ const server = http.createServer(async (req, res) => {
     try{
       const observer=require("./coordinator/biquote_mobile_readonly");
       const privateMonitor=require("./coordinator/review_monitor_proxy");
+      const viewerSession=require("./coordinator/biquote_viewer_session");
+      const authorizedDevice=viewerSession.authenticated(req.headers);
       const result=await observer.snapshot({
-        viewerSessionAuthenticated:require("./coordinator/biquote_viewer_session").authenticated(req.headers),
+        viewerSessionAuthenticated:authorizedDevice,
         authorization:req.headers.authorization||"",
         verifyViewer:async token=>{
           const out=await privateMonitor.relay(token,{approved:true});
           return out.httpStatus===200&&out.body?.signal==="WAIT"&&out.body?.executable===false;
         }
       });
+      // Refresh a verified, read-only device cookie, including when the
+      // upstream market feed is closed/unavailable. Never renew anonymous or
+      // invalid sessions; the original viewer token is not needed again.
+      const refreshed=authorizedDevice?viewerSession.renewal(req.headers):null;
       res.writeHead(result.httpStatus,{
         "Content-Type":"application/json; charset=utf-8",
         "Cache-Control":"private, no-store",
+        "Vary":"Cookie",
         "X-Content-Type-Options":"nosniff",
-        "Referrer-Policy":"no-referrer"
+        "Referrer-Policy":"no-referrer",
+        ...(refreshed?{"Set-Cookie":refreshed}:{})
       });
       return res.end(JSON.stringify(result.body));
     }catch(_error){
