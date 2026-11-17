@@ -38,7 +38,8 @@ a(!script.includes('paper-buy')&&!script.includes('paper-sell'));
 a(script.includes('data.rawQuoteShown===true&&data.privateChartReadOnly===true'));
 a(script.includes('validPrivateChart(data.privateChart)'));
 a(script.includes('setPrivateChart(null,'));
-a(!script.includes('GoldPaperCore')&&!script.includes('paper-terminal-core'));
+a(!script.includes('window.GoldPaperCore')&&!script.includes('C.open('),
+ 'BiQuote live chart must never reach paper core trade execution');
 a(script.includes('privateChart=null'));
 
 
