@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from biquote_forward_shadow_review import shadow_review, tail_contiguous, BASE
+from biquote_forward_shadow_review import shadow_review, tail_contiguous, overlaps_match, BASE
 from biquote_private_forward_vault import ingest, load_vault
 from test_biquote_private_forward_vault import sample, iso
 
@@ -55,6 +55,9 @@ class ForwardShadowTests(unittest.TestCase):
         self.assertIn(report["technicalWatch"],("BUY","SELL","NONE"))
         self.assertEqual(report["engineReview"],
                          "FROZEN_V3_COMPLETED_WITH_REAL_OBSERVED_CLOSED_BARS")
+        self.assertGreaterEqual(report["comparedCrossFrames"]["H4"]["fullyCoveredCompared"],1)
+        self.assertEqual(report["comparedCrossFrames"]["H1"]["fullyCoveredDisagreed"],0)
+        self.assertEqual(report["comparedCrossFrames"]["H4"]["fullyCoveredDisagreed"],0)
         self.assertGreaterEqual(report["frames"]["H4"]["contiguousClosed"],21)
         self.assertIn("NO_REAL_SIGNAL_WITHOUT_INDEPENDENT_CONTEXT_AND_RISK",
                       report["reasonCodes"])
@@ -90,7 +93,8 @@ class ForwardShadowTests(unittest.TestCase):
                   "hypotheticalSyntheticPlan":None,
                   "dataOrigin":"BIQUOTE_ARCHIVED_UNVERIFIED_NO_PAPER",
                   "stages":{"data":{"status":"GEOMETRY_ONLY"},
-                            "analysis":{"technicalCandidate":"SELL"}}}
+                            "analysis":{"status":"FROZEN_ENGINE_EVALUATED",
+                                        "technicalCandidate":"SELL"}}}
         received=[]
         def fake(packet):
             received.append(packet)
@@ -111,6 +115,21 @@ class ForwardShadowTests(unittest.TestCase):
             self.assertEqual(result["signal"],"WAIT")
             self.assertEqual(result["technicalWatch"],"NONE")
             self.assertIn("SHADOW_OUTPUT_CONTRACT_REJECTED",result["reasonCodes"])
+
+    def test_full_overlap_catches_intraday_price_disagreement(self):
+        ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
+        archive=load_vault(self.folder)
+        from biquote_forward_shadow_review import WIDTH
+        frames={tf:tail_contiguous(archive["closed"][tf],WIDTH[tf])
+                for tf in ("M15","H1","H4")}
+        healthy=overlaps_match(frames)
+        self.assertGreater(healthy["H4"]["fullyCoveredCompared"],0)
+        self.assertEqual(healthy["H4"]["fullyCoveredDisagreed"],0)
+        changed=frames["H4"][-2]
+        changed["high"]+=8
+        faulty=overlaps_match(frames)
+        self.assertGreater(faulty["H4"]["fullyCoveredDisagreed"],0)
+        self.assertEqual(faulty["H1"]["fullyCoveredDisagreed"],0)
 
     def test_tampered_vault_fails_and_no_secret_or_prices_printed(self):
         ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
