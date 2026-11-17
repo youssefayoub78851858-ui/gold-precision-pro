@@ -27,6 +27,28 @@ ENDPOINTS = (
 )
 MAX_RESPONSE_BYTES = 1_000_000
 
+# Only fixed status codes cross the diagnostic boundary. No vendor payloads,
+# provider exception text, URL paths, bid/ask, candles or client credentials.
+DIAGNOSTIC_CODES = (
+    "OK", "HTTP_429", "HTTP_NON_200", "NO_HTTP_RESPONSE",
+    "INVALID_JSON_OR_ENVELOPE", "MISSING_REQUIRED_ENVELOPE_FIELD",
+)
+def classify_http_record(record):
+    if not isinstance(record,dict):
+        return "NO_HTTP_RESPONSE"
+    status=record.get("httpStatus")
+    if status == 429:
+        return "HTTP_429"
+    if type(status) is not int:
+        return "NO_HTTP_RESPONSE"
+    if status != 200:
+        return "HTTP_NON_200"
+    if record.get("jsonObject") is not True:
+        return "INVALID_JSON_OR_ENVELOPE"
+    if record.get("dataPresent") is not True:
+        return "MISSING_REQUIRED_ENVELOPE_FIELD"
+    return "OK"
+
 
 def one_shot_probe(opener=None, clock=None, *, private_snapshot_sink=None):
     """Open each fixed public URL once; no credentials, retries or writes.
@@ -134,6 +156,43 @@ def one_shot_probe(opener=None, clock=None, *, private_snapshot_sink=None):
         }
     else:
         result["blockingReasons"].append("PUBLIC_HTTP_NOT_FULLY_AVAILABLE")
+    # Diagnostic-only projection; data already fetched above. Provider
+    # 'stale=false' never overrides an independent UTC quote freshness test.
+    # H4 partial coverage is not an OHLC price disagreement.
+    diag={"mode":"BIQUOTE_METADATA_FAILURE_DIAGNOSTICS_ONLY",
+          "endpoint":{label:classify_http_record(item)
+                      for (label,_),item in zip(ENDPOINTS,metadata)},
+          "independentQuoteAgeOver30Seconds":False,
+          "independentQuoteAgeInvalid":False,
+          "h1InternalM15Gaps":0,"h4InternalM15Gaps":0,
+          "h4RetentionEdgesIncomplete":0,
+          "h1CoveredOHLCDisagreements":0,"h4CoveredOHLCDisagreements":0,
+          "marketDataExposed":False,"sourceRequestsMade":0,
+          "tradingEnabled":False}
+    if result["allHttp200AndValidJson"]:
+        age=result["structuralAudit"].get("quoteAgeSeconds")
+        if type(age) in (int,float) and isinstance(age,(int,float)):
+            import math
+            if math.isfinite(age) and 0<=age<=86400:
+                diag["independentQuoteAgeOver30Seconds"]=age>30
+            else:
+                diag["independentQuoteAgeInvalid"]=True
+        else:
+            diag["independentQuoteAgeInvalid"]=True
+        overlap=result.get("overlapEvidence",{}).get("overlap",{})
+        for tf in ("H1","H4"):
+            data=overlap.get(tf,{})
+            for field,key in (
+                ("internalM15ConstituentGaps","h"+tf[1]+"InternalM15Gaps"),
+                ("fullyCoveredOHLCDisagree","h"+tf[1]+"CoveredOHLCDisagreements")):
+                count=data.get(field)
+                if type(count) is int and 0<=count<=10000:
+                    diag[key]=count
+        h4=overlap.get("H4",{})
+        n=h4.get("oldestOrNewestWindowEdgeIncomplete")
+        if type(n) is int and 0<=n<=10000:
+            diag["h4RetentionEdgesIncomplete"]=n
+    result["qualityDiagnostic"]=diag
     # Optional and strictly in-memory: the same four successful public GETs
     # are delivered to an explicitly configured private archive sink.
     # The full OHLC envelopes are never returned from this probe.
