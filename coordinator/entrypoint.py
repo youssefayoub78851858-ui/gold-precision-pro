@@ -25,6 +25,7 @@ from biquote_private_forward_vault import (
     inspect_metadata as inspect_forward_metadata,
 )
 from biquote_forward_shadow_review import shadow_review as forward_shadow_review
+from ultimate_batch_acceptance import review_batch as four_stage_batch_review
 from xauusd_feed_gate import parse_utc
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,*_):pass
@@ -62,6 +63,13 @@ class Handler(BaseHTTPRequestHandler):
      # Owner-only offline V3 analysis of already archived, closed MID bars.
      # This adds ZERO provider calls, trading permissions or raw price output.
      body['biquoteForwardShadow']=forward_shadow_review(forward_vault_dir)
+     # Four-stage acceptance reuses the SAME owner-authenticated status.
+     # No extra HTTP calls, vault writes, broker order or second V3 run.
+     body['ultimateFourStageBatch']=four_stage_batch_review(
+         forward_vault_dir,
+         vault_metadata=body['biquotePrivateForwardVault'],
+         shadow_status=body['biquoteForwardShadow'],
+         now_utc=now)
     except (OSError,ValueError,TypeError):
      body['biquotePrivateForwardVault']={'status':'VAULT_METADATA_UNAVAILABLE',
                                          'signal':'WAIT','executable':False}
