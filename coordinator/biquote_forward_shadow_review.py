@@ -104,7 +104,15 @@ def shadow_review(dirname: str | pathlib.Path, *, runner=None) -> dict:
     safe = {**BASE, "technicalWatch": "NONE", "approvedDirection": "NONE",
             "entry": None, "stopLoss": None, "takeProfit": None,
             "paperPerformance": None, "holdoutStartsUTC": "2026-11-18T00:00:00Z",
-            "reasonCodes": [*NO_SOURCE_RIGHTS], "frames": {}}
+            "reasonCodes": [*NO_SOURCE_RIGHTS], "frames": {},
+            "researchWarmup": {
+                "minimumClosedBarsEachFrame": MIN_CONTIGUOUS,
+                "minimumPerfectH4Hours": MIN_CONTIGUOUS * WIDTH["H4"] // 3600,
+                "single24HourWindowEnoughForH4": False,
+                "additionalExplicitlyApprovedCaptureRequired": True,
+                "brokerSessionGapClassificationVerified": False,
+                "paperTradingAdmissible": False,
+            }}
     metadata = inspect_metadata(dirname)
     archive = load_vault(dirname)
     rows = archive["closed"]
@@ -118,6 +126,7 @@ def shadow_review(dirname: str | pathlib.Path, *, runner=None) -> dict:
             "lastClosedUTC": metadata["forwardCoverage"][tf]["lastClosedUTC"],
             "unclassifiedGapPairs": metadata["forwardCoverage"][tf]["unclassifiedGapPairs"],
             "neededContiguous": MIN_CONTIGUOUS,
+            "additionalContiguousNeeded": max(0, MIN_CONTIGUOUS - len(continuous)),
         }
     if received is None or not archive["quoteObservations"]:
         safe["reasonCodes"].append("NO_POST_HOLDOUT_CAPTURE")
@@ -137,6 +146,11 @@ def shadow_review(dirname: str | pathlib.Path, *, runner=None) -> dict:
     if any(safe["frames"][tf]["contiguousClosed"] < MIN_CONTIGUOUS
            for tf in FRAMES_ORDER):
         safe["reasonCodes"].append("INSUFFICIENT_CONTIGUOUS_CLOSED_H4_H1_M15")
+        # A single 24-hour forward run can contain at most six closed
+        # four-hour candles. No historical/pre-holdout candles may be silently
+        # imported to make this look ready. Another capture requires consent.
+        if safe["frames"]["H4"]["contiguousClosed"] < MIN_CONTIGUOUS:
+            safe["reasonCodes"].append("ONE_DAY_FORWARD_CAPTURE_CANNOT_WARM_UP_H4")
         return safe
     closed_frames={tf: tail_contiguous(rows[tf], WIDTH[tf])
                    for tf in FRAMES_ORDER}
