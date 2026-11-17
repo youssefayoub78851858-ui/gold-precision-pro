@@ -136,7 +136,16 @@ def one_shot_probe(opener=None, clock=None, *, private_snapshot_sink=None):
         # Partial time-grid coverage is not proof of wrong OHLC prices.
         # BOTH still remain blocked as independent trading data.
         problems = audit["blockingReasons"]
-        if "CROSS_TIMEFRAME_OHLC_MISMATCH" in problems:
+        # The full audit may stop at its FIRST M15 coverage gap. The
+        # independent read-only overlap pass also checks all other fully
+        # covered groups and impossible price bounds in partial groups.
+        overlap_groups=result.get("overlapEvidence",{}).get("overlap",{})
+        observable_price_contradiction=any(
+            overlap_groups.get(tf,{}).get("fullyCoveredOHLCDisagree",0)>0 or
+            overlap_groups.get(tf,{}).get("partialObservedOHLCBoundDisagreements",0)>0
+            for tf in ("H1","H4"))
+        if ("CROSS_TIMEFRAME_OHLC_MISMATCH" in problems or
+                observable_price_contradiction):
             result["geometryFailureClass"] = "OHLC_PRICE_DISAGREEMENT"
         elif "PARTIAL_CROSS_TIMEFRAME_COVERAGE" in problems:
             result["geometryFailureClass"] = "UNCLASSIFIED_M15_COVERAGE_GAP"
@@ -166,6 +175,10 @@ def one_shot_probe(opener=None, clock=None, *, private_snapshot_sink=None):
           "independentQuoteAgeInvalid":False,
           "h1InternalM15Gaps":0,"h4InternalM15Gaps":0,
           "h4RetentionEdgesIncomplete":0,
+          "h4PartialObservedPriceContradictions":0,
+          "h4MissingM15VendorPauseCandidates":0,
+          "h4MissingM15OutsideVendorReference":0,
+          "h4MissingM15ReferenceUnknown":0,
           "h1CoveredOHLCDisagreements":0,"h4CoveredOHLCDisagreements":0,
           "marketDataExposed":False,"sourceRequestsMade":0,
           "tradingEnabled":False}
@@ -189,6 +202,14 @@ def one_shot_probe(opener=None, clock=None, *, private_snapshot_sink=None):
                 if type(count) is int and 0<=count<=10000:
                     diag[key]=count
         h4=overlap.get("H4",{})
+        for source,target in (
+            ("partialObservedOHLCBoundDisagreements","h4PartialObservedPriceContradictions"),
+            ("partialMissingM15ReferencePauseCandidates","h4MissingM15VendorPauseCandidates"),
+            ("partialMissingM15OutsideReferenceTradingTime","h4MissingM15OutsideVendorReference"),
+            ("partialMissingM15UnknownSeason","h4MissingM15ReferenceUnknown")):
+            count=h4.get(source)
+            if type(count) is int and 0<=count<=10000:
+                diag[target]=count
         n=h4.get("oldestOrNewestWindowEdgeIncomplete")
         if type(n) is int and 0<=n<=10000:
             diag["h4RetentionEdgesIncomplete"]=n
