@@ -103,5 +103,9 @@ jobs:
                     'signal',body['signal'])
           else:
               assert body['status'] in ('WAIT_BIQUOTE_DATA_UNAVAILABLE','WAIT_BIQUOTE_DATA_STALE')
-              print('SAFE WAIT: upstream BiQuote temporarily stale/unavailable; no data fabricated')
+              assert body['blockerCodes'] and all(
+                  isinstance(x,str) and x.isupper() and len(x)<90
+                  for x in body['blockerCodes'])
+              print('SAFE WAIT reason:',body['blockerCodes'][:3],
+                    '; provider data did not pass direct observation gate')
           PY
