@@ -401,7 +401,51 @@
      describeStructure();
    });
  window.addEventListener("resize",drawPrivateChart,{passive:true});
+ function decisionCenterReset(reason){
+   for(const tf of ["H4","H1","M15"]){
+     const e=$("gdc-"+tf.toLowerCase());
+     if(e)e.textContent="غير متاح";
+   }
+   const status={
+    "gdc-feed-status":reason||"WAIT — بيانات الشارت غير متاحة أو منتهية الصلاحية",
+    "gdc-observed":"آخر تحديث: غير متاح · لا توجد قراءة حديثة معتمدة",
+    "gdc-quote":"BID / ASK: محجوب أو غير متاح",
+    "gdc-blocker":"سبب WAIT: غياب البيانات الحالية أو انتهاء صلاحيتها. مصادر التأكيد وتكاليف التنفيذ غير مثبتة."
+   };
+   for(const [id,message] of Object.entries(status)){
+     const e=$(id);if(e)e.textContent=message;
+   }
+ }
+ // This is a PRIVATE, already validated observation. It can describe trend
+ // but never authorize an order, trade plan, paper position or entry/SL/TP.
+ function decisionCenterObserved(data,acceptedChart){
+   const valid=Boolean(acceptedChart)&&data.rawQuoteShown===true&&
+      data.privateChartReadOnly===true&&
+      typeof data.bid==="number"&&Number.isFinite(data.bid)&&
+      typeof data.ask==="number"&&Number.isFinite(data.ask)&&data.ask>=data.bid;
+   if(!valid){
+     decisionCenterReset("WAIT — وصلت بيانات وصفية، لكن السعر الخاص أو الشموع غير مؤكدة");
+     return;
+   }
+   $("gdc-feed-status").textContent=data.status==="WAIT_CROSS_FRAME_GAPS"?
+     "WAIT — شموع الذهب وصلت، لكن تغطية الفواصل فيها فجوات غير محسومة":
+     "WAIT — سعر وشموع BiQuote مرصودة للعرض فقط، مش للإشارات";
+   $("gdc-quote").textContent="BID / ASK وقت الفحص: "+
+     fmt(data.bid)+" / "+fmt(data.ask)+" · السبريد "+fmt(data.ask-data.bid)+" دولار/أونصة";
+   $("gdc-observed").textContent="آخر فحص: "+local(data.observedUTC)+
+     " بيروت · عمر السعر عند الفحص "+fmt(data.quoteAgeSeconds)+" ثانية";
+   for(const tf of ["H4","H1","M15"]){
+     const f=data.frameSummary[tf];
+     $("gdc-"+tf.toLowerCase()).textContent=
+       (label[f.descriptiveTrend]||"اتجاه غير محسوم")+
+       " · "+f.closedCount+" شمعة مغلقة · وصفي فقط";
+   }
+   $("gdc-blocker").textContent=data.status==="WAIT_CROSS_FRAME_GAPS"?
+     "سبب WAIT: فجوات أو اختلافات تغطية بين M15/H1/H4 غير محسومة؛ بالإضافة إلى غياب إثبات جلسات الوسيط والمصادر المساندة وتكاليف التنفيذ. لا صفقات.":
+     "سبب WAIT: شارت BiQuote وحده لا يثبت الصفقات؛ ينقص GC وDXY والسندات والأخبار وOrder Flow وحقوق الوسيط وتكاليف التنفيذ واختبارات مستقلة.";
+ }
  function reset(){
+  decisionCenterReset();
   for(const id of ["biquote-private-quote","biquote-private-spread","biquote-observed",
     "biquote-m15","biquote-h1","biquote-h4","biquote-overlap"])
    $(id).textContent="غير متاح";
@@ -412,6 +456,7 @@
   if(busy)return;
   busy=true;button.disabled=true;
   $("biquote-status").textContent="جارٍ فحص بيانات BiQuote المباشرة للقراءة فقط...";
+  decisionCenterReset("WAIT — جارٍ تحديث فحص الذهب الخاص؛ لا نعتمد السعر السابق");
   const sessionState=$("biquote-viewer-session-state");
   try{
    // Only the one-time POST carries the secret. The chart GET uses an
@@ -518,6 +563,7 @@
      " — مطابقة H4: "+b.completeMatches+" | اختلاف "+b.completeMismatches+
      " | تغطية M15 ناقصة "+b.incompleteM15Groups+
      ". الفجوات ليست مصنفة كإغلاق سوق رسمي.";
+   decisionCenterObserved(data,acceptedChart);
   }catch(_err){
     reset();
     $("biquote-status").textContent="WAIT — لم تثبت صلاحية البيانات المباشرة. أعد الفحص لاحقاً.";
