@@ -26,7 +26,7 @@ function makeNode(id){
    ...id==="biquote-live-canvas"?makeCanvas():{}};
  elements.set(id,node);return node;
 }
-const ids=["biquote-refresh","biquote-viewer-secret","biquote-live-canvas",
+const ids=["biquote-refresh","biquote-viewer-secret","biquote-viewer-logout","biquote-viewer-session-state","biquote-live-canvas",
 "biquote-live-caption","biquote-structure-summary","biquote-mtf-readiness","biquote-observed-ema","biquote-vendor-session","biquote-status","biquote-private-quote",
 "biquote-private-spread","biquote-observed","biquote-m15","biquote-h1",
 "biquote-h4","biquote-overlap"];
@@ -63,18 +63,30 @@ const base={status:"WAIT_CROSS_FRAME_GAPS",signal:"WAIT",executable:false,
    H1:{completeMatches:40,completeMismatches:0,incompleteM15Groups:0},
    H4:{completeMatches:8,completeMismatches:0,incompleteM15Groups:3}
  }};
-let networkMode="anonymous",requests=[];
+let networkMode="anonymous",requests=[],sessionActive=false,sessionLogins=0;
 async function fetch(url,opts){
  requests.push({url,opts});
+ if(url==="/api/v3/ultimate/biquote-viewer-session"){
+   assert.equal(opts.credentials,"same-origin");
+   if(opts.method==="POST"){
+     assert.equal(opts.headers.Authorization,"Bearer "+("a".repeat(40)));
+     sessionActive=true;sessionLogins++;
+     return {ok:true,status:200,async json(){return {
+       status:"VIEWER_SESSION_READY",signal:"WAIT",executable:false};}};
+   }
+   assert.equal(opts.method,"DELETE");
+   sessionActive=false;
+   return {ok:true,status:200,async json(){return {status:"VIEWER_SESSION_CLEARED"};}};
+ }
  assert.equal(url,"/api/v3/ultimate/biquote-observation");
  assert.equal(opts.method,"GET");
- assert.equal(opts.credentials,"omit");
+ assert.equal(opts.credentials,"same-origin");
+ assert.equal(opts.headers.Authorization,undefined,"Viewer token must not be sent on every chart request");
  if(networkMode==="offline")return {ok:false,status:503,
    async json(){return {status:"WAIT_BIQUOTE_DATA_UNAVAILABLE",signal:"WAIT",
     executable:false,researchEligible:false,rawQuoteShown:false,
     blockerCodes:["PUBLIC_HTTP_UNAVAILABLE"]}}};
- const allowed=networkMode==="authorized"||networkMode==="authorized-gapped";
- assert.equal("Authorization" in opts.headers,allowed);
+ const allowed=sessionActive&&(networkMode==="authorized"||networkMode==="authorized-gapped");
  return {ok:true,status:200,async json(){return {...base,rawQuoteShown:allowed,
    ...(allowed?{bid:3910,ask:3910.2,privateChartReadOnly:true,
     privateChartDataBasis:"MID_WITH_POSSIBLE_BID_SEED",
@@ -107,6 +119,13 @@ async function main(){
  networkMode="authorized";
  await makeNode("biquote-refresh").click();
  assert.ok(candleDraws>before+20,"Authenticated closed MID candles must draw");
+ assert.equal(sessionLogins,1,"Exactly one token exchange");
+ assert.equal(makeNode("biquote-viewer-secret").value,"","Original viewer token cleared immediately");
+ const firstCookies=requests.length;
+ await makeNode("biquote-refresh").click();
+ assert.equal(sessionLogins,1,"Later refresh must use cookie, never resend token");
+ assert.equal(requests.length,firstCookies+1);
+ assert.match(makeNode("biquote-viewer-session-state").textContent,/7 أيام/);
  assert.match(makeNode("biquote-live-caption").textContent,/READ-ONLY/);
  assert.match(makeNode("biquote-live-caption").textContent,/تغطية M15/);
  assert.match(makeNode("biquote-structure-summary").textContent,/EMA20/);
@@ -151,8 +170,15 @@ async function main(){
  assert.match(makeNode("biquote-mtf-readiness").textContent,/محجوب/);
  assert.match(makeNode("biquote-observed-ema").textContent,/محجوبة/);
  assert.match(makeNode("biquote-vendor-session").textContent,/غير متاح/);
- assert.equal(requests.length,4);
+ assert.equal(requests.length,6);
  assert.equal(requests.every(r=>!r.opts.headers["X-Broker-Order"]),true);
+ await makeNode("biquote-viewer-logout").click();
+ assert.equal(sessionActive,false,"Explicit logout clears browser cookie");
+ assert.match(makeNode("biquote-viewer-session-state").textContent,/تسجيل الخروج/);
+ networkMode="authorized";
+ await makeNode("biquote-refresh").click();
+ assert.match(makeNode("biquote-live-caption").textContent,/رمز مشاهدة/);
+ assert.equal(sessionLogins,1,"After logout no covert reauthentication");
  console.log("PASS PRIVATE BiQuote chart: no anonymous raw data, 3 real MID frames after viewer auth, stale cleared; WAIT and paper isolated");
 }
 main().catch(err=>{console.error(err);process.exitCode=1;});
