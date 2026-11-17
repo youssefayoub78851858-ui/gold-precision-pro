@@ -14,8 +14,10 @@ function candidateTime(slotMs,tf){
  // A reference closed slot must be entirely inside an assumed pause.
  for(let t=slotMs;t<slotMs+width;t+=900000){
   const d=new Date(t),weekday=d.getUTCDay(),hour=d.getUTCHours();
-  const weekend=(weekday===5)||(weekday===0&&hour<23)||
-    (weekday===6&&hour>=22);
+  // JavaScript UTC weekday: Sun=0, Mon=1, ... Fri=5, Sat=6.
+  // Friday still trades before 22:00. ALL of Saturday is in weekend.
+  const weekend=(weekday===5&&hour>=22)||weekday===6||
+    (weekday===0&&hour<23);
   const daily=weekday>=1&&weekday<=4&&hour===22;
   if(!weekend&&!daily)return false;
  }
