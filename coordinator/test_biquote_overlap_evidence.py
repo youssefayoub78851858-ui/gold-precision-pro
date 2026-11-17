@@ -50,6 +50,50 @@ class BiQuoteOverlapEvidenceTests(unittest.TestCase):
         self.assertEqual(r["frames"]["M15"]["missingSlotsUnclassifiedByCalendar"],1)
         self.assertIn(removed["openTime"],str(r["overlap"]["H1"]["examplesOfInternalGapUTC"]))
 
+    def test_vendor_break_gap_reference_is_not_independent_broker_calendar(self):
+        _, feeds=make_samples()
+        # Both are inside retained synthetic history, but only one is
+        # inside BiQuote's stated 22-23 UTC pause (not broker-verified).
+        pause="2026-11-02T22:00:00Z"
+        trading="2026-11-03T10:00:00Z"
+        feeds["M15"]["bars"]=[
+            b for b in feeds["M15"]["bars"]
+            if b["openTime"] not in (pause,trading)
+        ]
+        r=examine(feeds)
+        self.safe(r)
+        self.assertEqual(r["overlap"]["H4"]["internalM15ConstituentGaps"],2)
+        self.assertEqual(r["overlap"]["H4"]["partialGroupsWithObservedM15"],2)
+        self.assertEqual(r["overlap"]["H4"]["partialMissingM15ReferencePauseCandidates"],1)
+        self.assertEqual(r["overlap"]["H4"]["partialMissingM15OutsideReferenceTradingTime"],1)
+        self.assertEqual(r["overlap"]["H4"]["partialMissingM15UnknownSeason"],0)
+        self.assertEqual(r["overlap"]["H4"]["partialObservedOHLCBoundDisagreements"],0)
+        self.assertFalse(r["sessionCalendarIndependentlyVerified"])
+        self.assertEqual(r["signal"],"WAIT")
+        self.assertFalse(r["executable"])
+
+    def test_partial_h4_detects_impossible_high_even_without_all_m15(self):
+        _, feeds=make_samples()
+        missing="2026-11-02T22:00:00Z"
+        feeds["M15"]["bars"]=[
+            b for b in feeds["M15"]["bars"] if b["openTime"]!=missing]
+        target=next(b for b in feeds["H4"]["bars"]
+                    if b["openTime"]=="2026-11-02T20:00:00Z")
+        # Keep the higher candle's own high>=open,close; but it cannot
+        # contain observed M15 highs. This is impossible regardless of
+        # what happened in the missing M15 interval.
+        target["high"]=max(target["open"],target["close"])+0.01
+        r=examine(feeds)
+        self.safe(r)
+        self.assertIsNone(r["error"])
+        h4=r["overlap"]["H4"]
+        self.assertGreaterEqual(h4["partialObservedOHLCBoundDisagreements"],1)
+        self.assertGreaterEqual(h4["partialObservedOHLCFields"]["high"],1)
+        self.assertEqual(h4["partialMissingM15ReferencePauseCandidates"],1)
+        self.assertTrue(h4["internalM15ConstituentGaps"])
+        self.assertEqual(r["signal"],"WAIT")
+        self.assertFalse(r["sessionCalendarIndependentlyVerified"])
+
     def test_h4_mismatch_detected_even_when_all_m15_present(self):
         _, feeds=make_samples()
         feeds["H4"]["bars"][0]["close"] += 1
