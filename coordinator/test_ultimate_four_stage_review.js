@@ -46,6 +46,7 @@ const gap=reviewFourStages({dataOrigin:'SYNTHETIC_TEST_ONLY',snapshot:gapped});
 a.equal(gap.hypotheticalSyntheticPlan,null);
 a(gap.stages.data.blockers.includes('H1_SESSION_GAPS_UNVERIFIED'));
 const badTime=reviewFourStages({dataOrigin:'SYNTHETIC_TEST_ONLY',snapshot:{...source,asOfUTC:'tomorrow'}});
+a.equal(badTime.stages.data.status,'BLOCKED');
 a.equal(badTime.signal,'WAIT');
 a.equal(badTime.hypotheticalSyntheticPlan,null);
 const missing=reviewFourStages({});
