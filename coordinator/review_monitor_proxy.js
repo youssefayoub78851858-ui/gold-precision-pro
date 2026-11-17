@@ -104,11 +104,74 @@ function sanitize(input){
    paperOrdersAllowed:false,reasonCodes:[...new Set(codes)],
    ...(costSafe?{costReadiness:costSafe}:{})};
  }
+ // A public/mobile proxy may forward ONLY counters and timestamps from the
+ // authenticated, owner-only vault. Never forward raw BID/ASK or candle prices.
+ let safeForward=null;
+ if(input.biquotePrivateForwardVault!==undefined){
+  const v=input.biquotePrivateForwardVault;
+  if(v?.status==="VAULT_METADATA_UNAVAILABLE"){
+   if(v.signal!=="WAIT"||v.executable!==false)
+    throw Error("Unsafe vault error");
+   safeForward={status:"VAULT_METADATA_UNAVAILABLE",signal:"WAIT",executable:false};
+  }else{
+   if(v?.mode!=="PRIVATE_FORWARD_BIQUOTE_CAPTURE_NOT_TRADING_ADMISSIBLE"||
+      v.status!=="PRIVATE_FORWARD_VAULT_METADATA_ONLY"||
+      v.signal!=="WAIT"||v.executable!==false||v.researchEligible!==false||
+      v.tradeEligible!==false||v.paperOrdersAllowed!==false||
+      v.tradeSignalReady!==false||v.providerRequestsMade!==0||v.ordersSent!==0||
+      v.independentBrokerEntitlementVerified!==false||
+      v.independentSessionCalendarVerified!==false||
+      v.historicalBidAskOhlcAvailable!==false||v.noTradingAdmission!==true||
+      v.researchCandidate!=="NONE")
+    throw Error("Unsafe archive readiness");
+   const utc=t=>typeof t==="string"&&
+      /^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(t)&&
+      Number.isFinite(Date.parse(t));
+   if(!v.counts||!v.forwardCoverage||
+      !Number.isInteger(v.quoteSamples)||v.quoteSamples<0||v.quoteSamples>10000||
+      !(v.lastImportedUTC===null||utc(v.lastImportedUTC)))
+    throw Error("Invalid archive metadata");
+   const counts={},coverage={};
+   for(const tf of ["M15","H1","H4"]){
+    const n=v.counts[tf],f=v.forwardCoverage[tf];
+    if(!Number.isInteger(n)||n<0||n>45000||!f||
+       f.closedBars!==n||
+       !Number.isInteger(f.latestContiguousBars)||f.latestContiguousBars<0||
+       f.latestContiguousBars>n||
+       !Number.isInteger(f.unclassifiedGapPairs)||f.unclassifiedGapPairs<0||
+       f.unclassifiedGapPairs>n||
+       !Number.isInteger(f.unclassifiedMissingSlots)||f.unclassifiedMissingSlots<0||
+       f.unclassifiedMissingSlots>4500000||
+       (n===0&&(f.firstClosedUTC!==null||f.lastClosedUTC!==null))||
+       (n>0&&(!utc(f.firstClosedUTC)||!utc(f.lastClosedUTC)||
+        Date.parse(f.firstClosedUTC)>Date.parse(f.lastClosedUTC)))||
+       !(f.ageAtLastImportSeconds===null||(
+         typeof f.ageAtLastImportSeconds==="number"&&
+         Number.isFinite(f.ageAtLastImportSeconds)&&
+         f.ageAtLastImportSeconds>=0&&f.ageAtLastImportSeconds<=31536000)))
+      throw Error("Invalid closed-bar coverage");
+    counts[tf]=n;
+    coverage[tf]={closedBars:n,latestContiguousBars:f.latestContiguousBars,
+      unclassifiedGapPairs:f.unclassifiedGapPairs,
+      unclassifiedMissingSlots:f.unclassifiedMissingSlots,
+      lastClosedUTC:f.lastClosedUTC,
+      ageAtLastImportSeconds:f.ageAtLastImportSeconds};
+   }
+   if(Object.values(counts).some(n=>n>0)&&!utc(v.lastImportedUTC))
+    throw Error("Missing archive update time");
+   safeForward={mode:"PRIVATE_FORWARD_BIQUOTE_CAPTURE_NOT_TRADING_ADMISSIBLE",
+    status:"PRIVATE_FORWARD_VAULT_METADATA_ONLY",signal:"WAIT",executable:false,
+    tradeEligible:false,paperOrdersAllowed:false,researchEligible:false,
+    tradeSignalReady:false,counts,quoteSamples:v.quoteSamples,
+    lastImportedUTC:v.lastImportedUTC,forwardCoverage:coverage};
+  }
+ }
  return {status:"WAIT_EODHD_INTAKE",dataStatus:input.dataStatus,
   signal:"WAIT",executable:false,researchEligible:false,engineStatus:"NOT_INVOKED",
   paperRunning:false,closedBarCounts:safe,
   intake:{status:"BLOCKED",blockingReasons:[...new Set(reasons)].slice(0,20)},
-  ...(safeAudit?{audit:safeAudit}:{}),...(safePaper?{paperGate:safePaper}:{})};
+  ...(safeAudit?{audit:safeAudit}:{}),...(safePaper?{paperGate:safePaper}:{}),
+  ...(safeForward?{biquotePrivateForwardVault:safeForward}:{})};
 }
 async function relay(authorization,{approved=false,fetchFn=globalThis.fetch}={}){
  if(!approved)return deny(503,"REVIEW_MONITOR_PROXY_DISABLED");
