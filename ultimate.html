@@ -112,10 +112,10 @@
 <div class="biq-item wide"><span class="biq-label">نتيجة فحص تطابق الشموع M15/H1/H4</span><strong class="biq-value" id="biquote-overlap">غير متاح</strong></div>
 </div>
 <div class="overview" id="biquote-viewer-guide" style="border:1px solid #b99b59;border-radius:12px;padding:12px;background:#162b3b;margin:12px 0">
-<p style="margin:0 0 8px;color:#f4d18c;font-weight:750">أول مرة بس: ألصق رمز MONITOR_READONLY_TOKEN واضغط «تحديث فحص الذهب». بعدها الجلسة بتضل صالحة 7 أيام على هيدا المتصفح.</p>
-<p class="overview-status">لحماية الأسعار الخاصة، يلزم الرمز بأول دخول فقط. المتصفح بيحتفظ بجلسة موقّعة محمية لمدة 7 أيام (cookie آمنة لا يمكن لجافاسكريبت قراءتها)، <strong>مش بالرمز الأصلي</strong>. إذا انتهت الجلسة أو مسحت الكوكيز رح تحتاج تدخل الرمز مجدداً. الشارت للقراءة فقط.</p>
+<p style="margin:0 0 8px;color:#f4d18c;font-weight:750">أول مرة بس: ألصق رمز MONITOR_READONLY_TOKEN واضغط «تحديث فحص الذهب». بعدها المشاهدة بتضل مفعّلة على نفس المتصفح وبتتجدّد تلقائياً مع الاستخدام.</p>
+<p class="overview-status">لحماية الأسعار الخاصة، يلزم الرمز بأول دخول فقط. المتصفح بيحتفظ بجلسة موقّعة محمية بتتجدّد تلقائياً (cookie آمنة لا يمكن لجافاسكريبت قراءتها)، <strong>مش بالرمز الأصلي</strong>. إذا مسحت الكوكيز، غيّرت المتصفح أو الجهاز، أو انقطعت عن استخدامه فترة طويلة جداً، رح تحتاج تدخل الرمز مجدداً. الشارت للقراءة فقط.</p>
 <div class="bar" style="margin-top:10px"><label style="flex:2;min-width:180px;font-size:.8rem">رمز المشاهدة — أول دخول فقط<input id="biquote-viewer-secret" type="password" autocomplete="off" spellcheck="false" placeholder="MONITOR_READONLY_TOKEN"></label><button type="button" id="biquote-refresh">تحديث فحص الذهب</button></div>
-<p id="biquote-viewer-session-state" role="status" aria-live="polite" class="overview-status">إذا كنت دخلت خلال آخر 7 أيام، اضغط تحديث من دون إدخال الرمز.</p>
+<p id="biquote-viewer-session-state" role="status" aria-live="polite" class="overview-status">إذا سبق دخلت من هيدا المتصفح، اضغط تحديث من دون إدخال الرمز؛ جلسة المشاهدة تتجدد لحالها.</p>
 <button type="button" id="biquote-viewer-logout" style="min-height:44px;background:#334258;color:#f3e6d3;border:1px solid #6a7383;border-radius:9px;padding:9px 15px">تسجيل خروج المشاهدة من هيدا الهاتف</button>
 <p class="overview-status" style="margin-top:8px">الشارت الحي محميّ ومش مرتبط بفتح صفقات. إذا المصدر متوقف أو البيانات قديمة، بيضل الرسم فاضي والقرار WAIT.</p>
 </div>
