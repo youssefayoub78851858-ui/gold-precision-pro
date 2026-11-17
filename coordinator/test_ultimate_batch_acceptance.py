@@ -141,10 +141,13 @@ class FourStageBatchAcceptance(unittest.TestCase):
         self.assert_blocked(r)
         self.assertEqual(r["stages"]["archive"]["status"],"PRIVATE_VAULT_NOT_READABLE")
         self.assertEqual(r["stages"]["analysis"]["technicalWatch"],"NONE")
+        self.assertIn("REPORT_NOT_VERIFIED",r["stages"]["data"]["blockers"])
+        forged=fixture()
+        forged["signal"]="BUY"
+        rejected=review_batch(self.folder,final_report=forged)
+        self.assert_blocked(rejected)
         self.assertIn("UNSAFE_OR_INCOMPLETE_FINAL_REPORT",
-                      r["stages"]["data"]["blockers"] if
-                      "UNSAFE_OR_INCOMPLETE_FINAL_REPORT" in r["stages"]["data"]["blockers"]
-                      else ["REPORT_NOT_VERIFIED"])
+                      rejected["stages"]["data"]["blockers"])
 
 if __name__=="__main__":
     unittest.main()
