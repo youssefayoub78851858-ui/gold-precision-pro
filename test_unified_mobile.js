@@ -18,6 +18,7 @@ a(doc.includes('/api/v3/ultimate/multi-source-readiness'));
 a(doc.includes('WAIT'));
 for(const id of ['biquote-mobile-observation','biquote-private-quote','biquote-private-spread',
                   'biquote-status','biquote-observed','biquote-m15','biquote-h1','biquote-h4',
+                  'biquote-structure-summary',
                   'biquote-overlap','biquote-viewer-secret','biquote-refresh'])
  a(doc.includes('id="'+id+'"'),'Missing read-only BiQuote UI: '+id);
 a(doc.includes('src="/biquote-mobile-ui.js"'));
@@ -40,7 +41,10 @@ a(script.includes('validPrivateChart(data.privateChart)'));
 a(script.includes('setPrivateChart(null,'));
 a(!script.includes('window.GoldPaperCore')&&!script.includes('C.open('),
  'BiQuote live chart must never reach paper core trade execution');
-a(script.includes('privateChart=null'));
+a(script.includes('privateChart=null,privateStructure=null'));
+a(script.includes('validPrivateStructure(data.privateStructure,acceptedChart)'));
+a(script.includes('f.contiguousBars<20'));
+a(!script.includes('window.GoldPaperCore'));
 
 
 console.log('PASS unified mobile: chart, trade, journal and research in /ultimate, no iframe or duplicate IDs');

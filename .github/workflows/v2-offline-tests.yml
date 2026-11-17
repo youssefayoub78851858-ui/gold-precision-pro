@@ -227,6 +227,9 @@ jobs:
         run: |
           node --check biquote-mobile-ui.js
           node test_biquote_live_chart_ui.js
+      - name: BiQuote private multi-timeframe confirmed market structure no-lookahead (offline)
+        working-directory: coordinator
+        run: node test_biquote_private_structure.js
 
 
       - name: Mobile paper terminal, order simulation and existing V3 research isolation (offline)

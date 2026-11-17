@@ -3,6 +3,7 @@
 const assert=require("node:assert/strict");
 const fs=require("node:fs"),vm=require("node:vm"),path=require("node:path");
 const NOW=Date.now();
+const {analyzeChart}=require("./coordinator/biquote_private_structure");
 const widths={M15:900000,H1:3600000,H4:14400000};
 let candleDraws=0,blankMessages=0;
 function makeCanvas(){
@@ -23,7 +24,7 @@ function makeNode(id){
  elements.set(id,node);return node;
 }
 const ids=["biquote-refresh","biquote-viewer-secret","biquote-live-canvas",
-"biquote-live-caption","biquote-status","biquote-private-quote",
+"biquote-live-caption","biquote-structure-summary","biquote-status","biquote-private-quote",
 "biquote-private-spread","biquote-observed","biquote-m15","biquote-h1",
 "biquote-h4","biquote-overlap"];
 ids.forEach(makeNode);
@@ -67,7 +68,7 @@ async function fetch(url,opts){
  return {ok:true,status:200,async json(){return {...base,rawQuoteShown:allowed,
    ...(allowed?{bid:3910,ask:3910.2,privateChartReadOnly:true,
     privateChartDataBasis:"MID_WITH_POSSIBLE_BID_SEED",
-    privateChart:chart()}:{}),
+    privateChart:chart(),privateStructure:analyzeChart(chart(),NOW)}:{}),
    }}};
 }
 const document={getElementById:makeNode,querySelectorAll:sel=>{
@@ -81,6 +82,7 @@ async function main(){
  assert.ok(blankMessages>=1,"Default real chart is blank, never a fabricated sample");
  await makeNode("biquote-refresh").click();
  assert.match(makeNode("biquote-live-caption").textContent,/رمز مشاهدة/);
+ assert.match(makeNode("biquote-structure-summary").textContent,/WAIT/);
  const before=candleDraws;
  makeNode("biquote-viewer-secret").value="a".repeat(40);
  networkMode="authorized";
@@ -88,13 +90,18 @@ async function main(){
  assert.ok(candleDraws>before+20,"Authenticated closed MID candles must draw");
  assert.match(makeNode("biquote-live-caption").textContent,/READ-ONLY/);
  assert.match(makeNode("biquote-live-caption").textContent,/تغطية M15/);
+ assert.match(makeNode("biquote-structure-summary").textContent,/EMA20/);
+ assert.match(makeNode("biquote-structure-summary").textContent,/ATR14/);
+ assert.match(makeNode("biquote-structure-summary").textContent,/القرار WAIT/);
  const newBefore=candleDraws;await tabs[1].click();
  assert.ok(candleDraws>newBefore+20,"H1 selected frame must redraw real candles");
  assert.equal(tabs[1]["aria-pressed"],"true");
+ assert.match(makeNode("biquote-structure-summary").textContent,/قراءة H1 فقط/);
  networkMode="offline";
  await makeNode("biquote-refresh").click();
  assert.match(makeNode("biquote-live-caption").textContent,/WAIT/);
  assert.ok(blankMessages>=2,"Offline feed must clear live chart immediately");
+ assert.match(makeNode("biquote-structure-summary").textContent,/WAIT/);
  assert.equal(requests.length,3);
  assert.equal(requests.every(r=>!r.opts.headers["X-Broker-Order"]),true);
  console.log("PASS PRIVATE BiQuote chart: no anonymous raw data, 3 real MID frames after viewer auth, stale cleared; WAIT and paper isolated");

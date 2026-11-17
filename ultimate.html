@@ -119,8 +119,9 @@
 <button type="button" data-biq-frame="H4" aria-pressed="false">H4</button>
 </div>
 <canvas id="biquote-live-canvas" role="img" aria-label="شارت BiQuote الحقيقي الخاص للشموع المغلقة فقط، لا يُستخدم للتداول"></canvas>
+<div id="biquote-structure-summary" role="status" aria-live="polite" style="margin:12px 0;padding:12px;background:#1e3548;border:1px solid #50728e;border-radius:10px;font-size:.85rem;line-height:1.9;color:#e4d4a8">WAIT — المستويات الفنية المحمية تظهر بعد التحقق من رمز المشاهدة.</div>
 <p id="biquote-live-caption" role="status" aria-live="polite">الشارت الحقيقي محميّ. أدخل رمز المشاهدة الخاص واضغط تحديث فحص الذهب. من دون الرمز لا تُعرض أسعار OHLC الخام.</p>
-<p class="overview-status">شموع MID من BiQuote، وقد تحتوي بداية التاريخ على BID. تظهر الفجوات كما هي، ولا يوجد تنفيذ أوامر أو ربط بالتداول الورقي. إذا صارت البيانات قديمة يُمسح الرسم، ويبقى القرار WAIT.</p>
+<p class="overview-status">شموع MID من BiQuote، وقد تحتوي بداية التاريخ على BID. خطوط القمم/القيعان وEMA20 وقراءة BOS/FVG بحثية فقط، ولا تُحسب عبر فجوات غير مصنّفة. تظهر الفجوات كما هي، ولا يوجد تنفيذ أوامر أو ربط بالتداول الورقي. إذا صارت البيانات قديمة يُمسح الرسم، ويبقى القرار WAIT.</p>
 </div>
 <p class="overview-status">حتى ما ننشر الأسعار الخام للعامة، لازم <strong>رمز المشاهدة الخاص بـCoordinator</strong> لعرض BID/ASK. اتركه فارغاً لعرض مؤشرات البيانات الوصفية فقط. الرمز لا يُحفظ في متصفحك ولا ينرسل لـBiQuote.</p>
 <div class="bar" style="margin-top:10px"><label style="flex:2;min-width:180px;font-size:.8rem">رمز المشاهدة الخاص (اختياري)<input id="biquote-viewer-secret" type="password" autocomplete="off" spellcheck="false" placeholder="MONITOR_READONLY_TOKEN"></label><button type="button" id="biquote-refresh">تحديث فحص الذهب</button></div>

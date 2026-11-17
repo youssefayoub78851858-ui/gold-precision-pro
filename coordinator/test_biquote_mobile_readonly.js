@@ -62,6 +62,8 @@ async function main(){
  assert.equal(result.body.ask,undefined);
  assert.equal(result.body.privateChart,undefined);
  assert.equal(result.body.rawPrivateChart,undefined);
+ assert.equal(result.body.privateStructure,undefined);
+ assert.equal(result.body.rawPrivateStructure,undefined);
  assert.equal(result.body.privateChartReadOnly,undefined);
  assert.equal(JSON.stringify(result.body).includes('"bars"'),false);
  assert.equal(result.body.frameSummary.M15.closedCount,65);
@@ -83,6 +85,21 @@ async function main(){
  assert.equal(privateData.body.ask,3840.22);
  assert.equal(privateData.body.rawQuoteShown,true);
  assert.equal(privateData.body.privateChartReadOnly,true);
+ assert.equal(privateData.body.privateStructure.mode,"PRIVATE_READONLY_TECHNICAL_OBSERVATIONS");
+ assert.equal(privateData.body.privateStructure.signal,"WAIT");
+ assert.equal(privateData.body.privateStructure.executable,false);
+ assert.equal(privateData.body.privateStructure.tradeEligible,false);
+ assert.equal(privateData.body.privateStructure.newsAndMacroIncluded,false);
+ assert.equal(privateData.body.privateStructure.orderFlowIncluded,false);
+ for(const tf of ["M15","H1","H4"]){
+   const analysis=privateData.body.privateStructure.frames[tf];
+   assert.equal(analysis.signal,"WAIT");
+   assert.equal(analysis.executable,false);
+   assert.equal(analysis.tradeEligible,false);
+   assert.equal(analysis.state,"OBSERVATION_ONLY");
+   assert.ok(analysis.ema20>0&&analysis.atr14>0);
+   assert.ok(analysis.recentRangeHigh20>=analysis.recentRangeLow20);
+ }
  assert.equal(privateData.body.privateChartDataBasis,"MID_WITH_POSSIBLE_BID_SEED");
  for(const tf of ["M15","H1","H4"]){
    const rows=privateData.body.privateChart[tf];
@@ -105,10 +122,12 @@ async function main(){
  assert.equal(denied.body.rawQuoteShown,false);
  assert.equal(denied.body.bid,undefined);
  assert.equal(denied.body.privateChart,undefined);
+ assert.equal(denied.body.privateStructure,undefined);
  const invalid=await api.snapshot({fetchFn:first.fetch,nowMs:()=>NOW+8000,
    authorization:"Bearer bad",verifyViewer:async()=>{throw Error("must not verify");}});
  assert.equal(invalid.body.rawQuoteShown,false);
  assert.equal(invalid.body.privateChart,undefined);
+ assert.equal(invalid.body.privateStructure,undefined);
  // Regression: provider quote can be fresh for 30 seconds, but the
  // old 90-second cache silently caused 503 between seconds 30 and 90.
  // Refresh with a newly timestamped quote BEFORE the validation limit.
@@ -123,6 +142,7 @@ async function main(){
  assert.equal(renewed.body.rawQuoteShown,false);
  assert.equal(renewed.body.bid,undefined);
  assert.equal(renewed.body.privateChart,undefined);
+ assert.equal(renewed.body.privateStructure,undefined);
  // At +33s (previously an inevitable error), refreshed response stays valid.
  const recovered=await api.snapshot({fetchFn:async()=>{throw Error("Should reuse recent quote")},
    nowMs:()=>NOW+33000});
@@ -185,6 +205,7 @@ async function main(){
  // Response never contains historical OHLC raw rows, even when authorized.
  assert.equal(JSON.stringify(privateData.body).includes('"bars"'),false);
  assert.equal(JSON.stringify(privateData.body).includes('"rawPrivateChart"'),false);
+ assert.equal(JSON.stringify(privateData.body).includes('"rawPrivateStructure"'),false);
  console.log("PASS BiQuote XAUUSD: anonymous no raw OHLC, authorized read-only 48 closed bars per frame, strict WAIT and no paper engine integration");
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});
