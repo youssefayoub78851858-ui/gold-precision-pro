@@ -32,6 +32,7 @@ def sample():
     return {
         "allHttp200AndValidJson": True, "requestCountAttempted": 4,
         "dataGeometryConformance": "SHAPE_CHECKS_FAILED_OR_INCOMPLETE",
+        "geometryFailureClass": "UNCLASSIFIED_M15_COVERAGE_GAP",
         "httpResults": [{"endpoint": "quote", "marketState": "open",
                          "providerStale": False, "bid": 3840, "ask": 3840.2}],
         "structuralAudit": {"ohlcStructuralChecksPassed": False,
