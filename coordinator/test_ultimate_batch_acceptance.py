@@ -8,7 +8,8 @@ import unittest
 from unittest.mock import patch
 
 from ultimate_batch_acceptance import review_batch
-from biquote_private_forward_vault import ingest
+from biquote_private_forward_vault import ingest, inspect_metadata
+from biquote_forward_shadow_review import shadow_review
 from test_biquote_private_forward_vault import sample, iso
 from test_biquote_24h_final_verdict import fixture
 from test_biquote_forward_shadow_review import AFTER, EARLY
@@ -122,6 +123,31 @@ class FourStageBatchAcceptance(unittest.TestCase):
                      '"spread"','"quoteObservations"','"hypotheticalSyntheticPlan"'):
             self.assertNotIn(leak,encoded)
         self.assertNotIn("3900",encoded)
+
+    def test_protected_monitor_reuses_once_computed_status_safely(self):
+        ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
+        meta=inspect_metadata(self.folder)
+        shadow=shadow_review(self.folder,now_utc=AFTER)
+        with patch("ultimate_batch_acceptance.inspect_metadata",
+                   side_effect=AssertionError("NO_EXTRA_VAULT_READ")),patch(
+             "ultimate_batch_acceptance.shadow_review",
+                   side_effect=AssertionError("NO_DUPLICATE_V3_RUN")):
+            out=review_batch(self.folder,now_utc=AFTER,
+                             vault_metadata=meta,shadow_status=shadow)
+        self.assert_blocked(out)
+        self.assertEqual(out["stages"]["analysis"]["status"],
+                         "FROZEN_V3_TECHNICAL_OBSERVATION_ONLY")
+        forged={**meta,"tradeSignalReady":True}
+        rejected=review_batch(self.folder,now_utc=AFTER,
+                              vault_metadata=forged,shadow_status=shadow)
+        self.assert_blocked(rejected)
+        self.assertEqual(rejected["stages"]["archive"]["status"],
+                         "PRIVATE_VAULT_NOT_READABLE")
+        self.assertEqual(rejected["stages"]["analysis"]["technicalWatch"],"NONE")
+        missing=review_batch(self.folder,now_utc=AFTER,
+                             vault_metadata=meta)
+        self.assert_blocked(missing)
+        self.assertEqual(missing["stages"]["analysis"]["technicalWatch"],"NONE")
 
     def test_stale_archive_never_leaks_a_buy_or_sell(self):
         ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
