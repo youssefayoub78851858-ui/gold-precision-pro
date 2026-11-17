@@ -23,7 +23,8 @@ function time(value){
 function dataGeometry(frames,asOfUTC){
   const now=time(asOfUTC),details={},blockers=[];
   for(const [frame,minutes] of Object.entries(TIMEFRAMES)){
-    const bars=frames?.[frame],check=checkFrame(bars,minutes,now);
+    const bars=frames?.[frame],check=Number.isFinite(now)
+      ?checkFrame(bars,minutes,now):{ok:false,reason:'INVALID_INDEPENDENT_UTC_CLOCK'};
     const gaps=[];
     if(check.ok){
       const width=minutes*60000;
