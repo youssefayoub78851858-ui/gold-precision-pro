@@ -6,7 +6,11 @@
  */
 const crypto=require("node:crypto");
 const COOKIE="__Host-gpp_biquote_viewer_v1";
-const TTL_SECONDS=7*24*60*60;
+// Long-lived device trust: rolling 365-day inactivity window. The browser can
+// still clear or cap cookies; no website can promise immortal access.
+const LEGACY_TTL_SECONDS=7*24*60*60;
+const TTL_SECONDS=365*24*60*60;
+const RENEW_AFTER_SECONDS=60*60;
 const REVIEW_ORIGIN="https://gold-precision-v3-review-demo.onrender.com";
 const KEY_NAME="GPP_BIQUOTE_VIEWER_SESSION_KEY";
 const WAIT=Object.freeze({signal:"WAIT",executable:false,tradeEligible:false,
@@ -29,22 +33,35 @@ function issue(now=Date.now()){
  if(!k||!Number.isSafeInteger(now)||now<0)throw Error("SESSION_DISABLED");
  const issued=stamp(now),expiry=issued+TTL_SECONDS;
  const nonce=crypto.randomBytes(18).toString("base64url");
- const payload="v1."+issued+"."+expiry+"."+nonce;
+ const payload="v2."+issued+"."+expiry+"."+nonce;
  return {cookie:payload+"."+mac(payload,k),expiresUTC:new Date(expiry*1000).toISOString()};
 }
 function verify(cookie,now=Date.now()){
  const k=key();
  if(!k||typeof cookie!=="string"||cookie.length>300||!Number.isSafeInteger(now))return false;
  const parts=cookie.split(".");
- if(parts.length!==5||parts[0]!=="v1"||
+ if(parts.length!==5||!["v1","v2"].includes(parts[0])||
     !/^[0-9]{10}$/.test(parts[1])||!/^[0-9]{10}$/.test(parts[2])||
     !/^[a-zA-Z0-9_-]{24}$/.test(parts[3])||
     !/^[a-zA-Z0-9_-]{43}$/.test(parts[4]))return false;
  const issued=Number(parts[1]),expiry=Number(parts[2]),current=stamp(now);
- if(expiry-issued!==TTL_SECONDS||issued>current+30||expiry<=current)return false;
+ const ttl=parts[0]==="v1"?LEGACY_TTL_SECONDS:TTL_SECONDS;
+ if(expiry-issued!==ttl||issued>current+30||expiry<=current)return false;
  const payload=parts.slice(0,4).join("."),given=Buffer.from(parts[4],"base64url");
  const expected=Buffer.from(mac(payload,k),"base64url");
  return given.length===expected.length&&crypto.timingSafeEqual(given,expected);
+}
+function renewal(headers,now=Date.now()){
+ const old=extract(headers?.cookie);
+ if(!authenticated(headers,now)||typeof old!=="string")return null;
+ const parts=old.split(".");
+ // Legacy 7-day sessions upgrade on first visit without requesting the token.
+ // New device sessions refresh at most once per hour, independent of quote
+ // freshness; GET keeps this read-only identity usable across daily visits.
+ if(parts[0]!=="v1" && stamp(now)-Number(parts[1])<RENEW_AFTER_SECONDS)
+   return null;
+ const next=issue(now);
+ return setCookie(next.cookie);
 }
 function extract(header){
  if(typeof header!=="string"||header.length>8192)return null;
@@ -73,5 +90,6 @@ function setCookie(signed){
 function clearCookie(){
  return COOKIE+"=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Secure; HttpOnly; SameSite=Strict";
 }
-module.exports={COOKIE,TTL_SECONDS,KEY_NAME,REVIEW_ORIGIN,WAIT,
- issue,verify,extract,authenticated,sameOrigin,setCookie,clearCookie};
+module.exports={COOKIE,TTL_SECONDS,LEGACY_TTL_SECONDS,RENEW_AFTER_SECONDS,
+ KEY_NAME,REVIEW_ORIGIN,WAIT,
+ issue,verify,extract,authenticated,renewal,sameOrigin,setCookie,clearCookie};
