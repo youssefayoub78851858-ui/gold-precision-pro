@@ -77,6 +77,10 @@ class BiQuote24hOfflineTests(unittest.TestCase):
         self.assertEqual(result["httpOkSamples"], 720)
         self.assertEqual(result["auditShapePassedSamples"], 0)
         self.assertEqual(result["crossFrameUnverifiedSamples"], 720)
+        self.assertEqual(
+            result["geometryFailureClasses"]["UNCLASSIFIED_M15_COVERAGE_GAP"], 720)
+        self.assertEqual(
+            result["geometryFailureClasses"]["OHLC_PRICE_DISAGREEMENT"], 0)
         self.assertEqual(result["h1FullyCoveredComparedAcrossSnapshots"], 47*720)
         self.assertEqual(result["h4FullyCoveredComparedAcrossSnapshots"], 9*720)
         self.assertEqual(result["h4UnclassifiedPartialAggregatesAcrossSnapshots"], 3*720)
