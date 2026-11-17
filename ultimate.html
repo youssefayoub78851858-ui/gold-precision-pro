@@ -111,6 +111,12 @@
 <div class="biq-item wide"><span class="biq-label">H4 — اتجاه EMA20/EMA50 وصفي</span><strong class="biq-value" id="biquote-h4">غير متاح</strong></div>
 <div class="biq-item wide"><span class="biq-label">نتيجة فحص تطابق الشموع M15/H1/H4</span><strong class="biq-value" id="biquote-overlap">غير متاح</strong></div>
 </div>
+<div class="overview" id="biquote-viewer-guide" style="border:1px solid #b99b59;border-radius:12px;padding:12px;background:#162b3b;margin:12px 0">
+<p style="margin:0 0 8px;color:#f4d18c;font-weight:750">لإظهار شموع الذهب على الشارت: ألصق رمز MONITOR_READONLY_TOKEN هون واضغط «تحديث فحص الذهب».</p>
+<p class="overview-status">حتى ما ننشر الأسعار الخام للعامة، لازم <strong>رمز المشاهدة الخاص بـCoordinator</strong> لعرض BID/ASK. اتركه فارغاً لعرض مؤشرات البيانات الوصفية فقط. الرمز لا يُحفظ في متصفحك ولا ينرسل لـBiQuote.</p>
+<div class="bar" style="margin-top:10px"><label style="flex:2;min-width:180px;font-size:.8rem">رمز المشاهدة الخاص (اختياري)<input id="biquote-viewer-secret" type="password" autocomplete="off" spellcheck="false" placeholder="MONITOR_READONLY_TOKEN"></label><button type="button" id="biquote-refresh">تحديث فحص الذهب</button></div>
+<p class="overview-status" style="margin-top:8px">الشارت الحي محميّ ومش مرتبط بفتح صفقات. إذا المصدر متوقف أو البيانات قديمة، بيضل الرسم فاضي والقرار WAIT.</p>
+</div>
 <div id="biquote-live-chart-panel" aria-labelledby="biquote-live-title">
 <h3 id="biquote-live-title">شارت الذهب الحقيقي — BiQuote (عرض خاص للقراءة فقط)</h3>
 <div class="biq-chart-tabs" role="group" aria-label="فاصل شارت BiQuote الحقيقي">
@@ -137,8 +143,7 @@
 <p id="biquote-live-caption" role="status" aria-live="polite">الشارت الحقيقي محميّ. أدخل رمز المشاهدة الخاص واضغط تحديث فحص الذهب. من دون الرمز لا تُعرض أسعار OHLC الخام.</p>
 <p class="overview-status">شموع MID من BiQuote، وقد تحتوي بداية التاريخ على BID. بعد أي فجوة غير مصنّفة، قد تظهر قراءة جزئية للقمم/القيعان من 7 شموع متصلة على الأقل؛ ATR14 يحتاج 15 وEMA20 يحتاج 20 شمعة متصلة. لا تُحسب أحداث BOS/FVG عبر الفجوات. الفجوة ليست إغلاق سوق مؤكداً لأن جدول جلسات الوسيط لم يُثبت. تظهر الفجوات كما هي، ولا يوجد تنفيذ أوامر أو ربط بالتداول الورقي. إذا صارت البيانات قديمة يُمسح الرسم، ويبقى القرار WAIT.</p>
 </div>
-<p class="overview-status">حتى ما ننشر الأسعار الخام للعامة، لازم <strong>رمز المشاهدة الخاص بـCoordinator</strong> لعرض BID/ASK. اتركه فارغاً لعرض مؤشرات البيانات الوصفية فقط. الرمز لا يُحفظ في متصفحك ولا ينرسل لـBiQuote.</p>
-<div class="bar" style="margin-top:10px"><label style="flex:2;min-width:180px;font-size:.8rem">رمز المشاهدة الخاص (اختياري)<input id="biquote-viewer-secret" type="password" autocomplete="off" spellcheck="false" placeholder="MONITOR_READONLY_TOKEN"></label><button type="button" id="biquote-refresh">تحديث فحص الذهب</button></div>
+
 <p class="overview-status">الفحص يتجدد كل دقيقتين عندما تكون الشاشة مفتوحة. عند إغلاق السوق كما يصرّح المصدر أو تأخر الشموع، لا تعرض اللوحة اتجاهاً قديماً على أنه حي. مراقبة الـ24 ساعة على خدمة Coordinator تعمل بشكل منفصل؛ هاللوحة لا تعرض إحصاءاتها التراكمية بعد. DXY والسندات وGC وOrder Flow والأخبار غير مكتملة، لذلك لا إشارات BUY/SELL.</p>
 </section>
 <section class="card" id="paper-overview"><div class="metric-grid">
