@@ -162,7 +162,20 @@ def observe_24h(start_utc, *, probe=one_shot_probe, utc_now=None,
                                    flush=True)) if emit is None else emit
     first = _utc(now())
     if start > first + dt.timedelta(minutes=15):
-        raise ValueError("START_MORE_THAN_15_MINUTES_AHEAD")
+        # The ONLY permitted far-future start is the already fixed forward
+        # holdout. It must be separately armed for private archival on the
+        # reviewed Coordinator. The normal review CLI keeps the 15m guard.
+        # The slot loop sleeps without fetching until its UTC start; no
+        # second feed worker or early market-history collection is started.
+        private_holdout_armed = (
+            start == dt.datetime(2026, 11, 18, 0, 0, tzinfo=UTC)
+            and os.environ.get("GPP_BIQUOTE_REVIEW_START_UTC")
+                == "2026-11-18T00:00:00Z"
+            and os.environ.get("GPP_BIQUOTE_PRIVATE_FORWARD_ARCHIVE")
+                == "APPROVED_READONLY_PRIVATE_NO_TRADING"
+        )
+        if not private_holdout_armed:
+            raise ValueError("START_MORE_THAN_15_MINUTES_AHEAD")
     if first >= start + dt.timedelta(seconds=WINDOW_SECONDS):
         counters = QualityCounters()
         result = counters.report(start, first, missed_slots=MAX_SAMPLES,
