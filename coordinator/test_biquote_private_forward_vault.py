@@ -75,7 +75,11 @@ class ForwardVault(unittest.TestCase):
 
     def test_true_future_boundary_private_hash_no_duplicate_and_restarts(self):
         self.safe(inspect_metadata(self.folder))
-        self.assertEqual(inspect_metadata(self.folder)["counts"]["M15"],0)
+        empty=inspect_metadata(self.folder)
+        self.assertEqual(empty["counts"]["M15"],0)
+        self.assertEqual(empty["forwardCoverage"]["M15"]["latestContiguousBars"],0)
+        self.assertIsNone(empty["forwardCoverage"]["H4"]["lastClosedUTC"])
+        self.assertFalse(empty["tradeSignalReady"])
         with patch.object(socket,"socket",side_effect=AssertionError("NETWORK_NOT_ALLOWED")):
             first=ingest(self.folder,self.s,received_utc=iso(NOW))
         self.safe(first)
@@ -96,7 +100,21 @@ class ForwardVault(unittest.TestCase):
         self.assertEqual(len(doc["quoteObservations"]),1)
         self.assertEqual(os.stat(self.folder).st_mode & 0o077,0)
         self.assertEqual(os.stat(self.folder/FILE).st_mode & 0o077,0)
-        self.assertEqual(inspect_metadata(self.folder)["counts"],first["totals"])
+        summary=inspect_metadata(self.folder)
+        self.assertEqual(summary["counts"],first["totals"])
+        self.assertEqual(summary["forwardCoverage"]["M15"]["closedBars"],
+                         first["totals"]["M15"])
+        self.assertEqual(summary["forwardCoverage"]["M15"]["unclassifiedGapPairs"],0)
+        self.assertEqual(summary["forwardCoverage"]["M15"]["latestContiguousBars"],
+                         first["totals"]["M15"])
+        self.assertEqual(summary["forwardCoverage"]["M15"]["lastClosedUTC"],
+                         "2026-11-19T03:00:00Z")
+        self.assertEqual(summary["forwardCoverage"]["M15"]["ageAtLastImportSeconds"],310)
+        self.assertIs(summary["tradeSignalReady"],False)
+        self.assertEqual(summary["researchCandidate"],"NONE")
+        safe_json=json.dumps(summary)
+        for private_key in ('"bid"','"ask"','"open"','"high"','"low"','"close"'):
+            self.assertNotIn(private_key,safe_json)
         again=ingest(self.folder,self.s,received_utc=iso(NOW))
         self.safe(again)
         self.assertEqual(again["status"],"NO_NEW_BARS")
@@ -133,6 +151,10 @@ class ForwardVault(unittest.TestCase):
         self.assertGreater(r["crossFrameIncompleteM15"]["H4"],0)
         rows=load_vault(self.folder)["closed"]["M15"]
         self.assertEqual(len(rows),r["totals"]["M15"])
+        coverage=inspect_metadata(self.folder)["forwardCoverage"]["M15"]
+        self.assertEqual(coverage["unclassifiedGapPairs"],1)
+        self.assertEqual(coverage["unclassifiedMissingSlots"],1)
+        self.assertLess(coverage["latestContiguousBars"],coverage["closedBars"])
         self.assertEqual(r["status"],"PRIVATE_FORWARD_CAPTURE_SAVED")
 
     def test_stale_future_open_and_invalid_quote_fail_before_disk(self):
