@@ -116,6 +116,9 @@ jobs:
       - name: BiQuote 24-hour bounded read-only monitoring worker (offline clock simulation)
         working-directory: coordinator
         run: python -m unittest -v test_biquote_24h_observer
+      - name: Finished 24-hour review verdict - classify gaps vs true OHLC differences (offline)
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_24h_final_verdict
       - name: BiQuote authenticated coordinator Docker standby with all-network-denied smoke
         working-directory: coordinator
         run: python -m unittest -v test_biquote_render_standby
