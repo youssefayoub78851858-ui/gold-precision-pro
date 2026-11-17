@@ -34,6 +34,8 @@ class PrivateMobileDashboardTests(unittest.TestCase):
 
     def test_public_android_viewer_uses_readonly_token_and_safe_archive(self):
         self.assertIn("MONITOR_READONLY_TOKEN", PUBLIC)
+        self.assertIn('href="/ultimate#unified-mobile-trading"', PUBLIC)
+        self.assertIn("افتح شاشة الذهب والشارت والتداول الورقي", PUBLIC)
         self.assertNotIn('رمز BROKER_TOKEN', PUBLIC)
         self.assertIn('id="biquote-forward-panel"', PUBLIC)
         for key in ("forward-m15", "forward-h1", "forward-h4",
