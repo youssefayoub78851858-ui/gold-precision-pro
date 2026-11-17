@@ -174,7 +174,7 @@ async function collect(fetchFn,nowMs){
   ...WAIT
  };
 }
-async function snapshot({fetchFn=globalThis.fetch,nowMs=Date.now,authorization="",verifyViewer}={}){
+async function snapshot({fetchFn=globalThis.fetch,nowMs=Date.now,authorization="",verifyViewer,viewerSessionAuthenticated=false}={}){
  let sample;
  try{
   // Single-flight max 4 requests; no provider creds or trading endpoints.
@@ -211,7 +211,7 @@ async function snapshot({fetchFn=globalThis.fetch,nowMs=Date.now,authorization="
     blockerCodes:["LATEST_QUOTE_NO_LONGER_FRESH"],rawQuoteShown:false}};
  const {rawPrivateQuote,rawPrivateChart,rawPrivateStructure,...safe}=sample;
  safe.quoteAgeSeconds=Math.round(ageAtResponse*1000)/1000;
- let viewer=false;
+ let viewer=viewerSessionAuthenticated===true;
  // Verify with existing private coordinator. A public visitor never gets raw BID/ASK.
  if(typeof authorization==="string"&&/^Bearer [A-Za-z0-9_-]{32,128}$/.test(authorization)&&
     typeof verifyViewer==="function"){
