@@ -34,5 +34,7 @@ assert.equal(invalid.sessionCalendarVerified,false);
 const none=auditRows([],"H1");
 assert.equal(none.error,"INVALID_INPUT");
 const missing=auditRows([r("2026-11-17T10:00:00Z"),r("2026-11-17T12:00:00Z")],"H4");
-assert.equal(missing.error,"MISALIGNED_CANDLE_GAP");
+// An H4 candle stamped at 10:00 UTC is not aligned to the 4-hour grid;
+// the correct safety blocker is invalid opening time, before gap arithmetic.
+assert.equal(missing.error,"INVALID_OR_UNSORTED_CANDLE_OPEN");
 console.log("PASS BiQuote timestamp gap hypotheses: daily/weekend reference vs missing active hours, broker session NOT verified, fail WAIT");
