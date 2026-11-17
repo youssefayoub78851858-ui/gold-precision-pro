@@ -10,6 +10,7 @@ on:
       - 'coordinator/biquote_overlap_evidence.py'
       - 'coordinator/biquote_public_one_shot.py'
       - 'coordinator/biquote_24h_observer.py'
+      - 'coordinator/test_biquote_24h_observer.py'
       - 'coordinator/test_biquote_forward_integration.py'
       - 'coordinator/entrypoint.py'
       - 'coordinator/Dockerfile'
