@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import datetime as dt
 from biquote_offline_source_audit import FRAMES, _frame, _utc, _close
+from biquote_session_gap_audit import reference_window_for_missing_slot
 
 UTC = dt.timezone.utc
 FIELDS = ("open", "high", "low", "close")
@@ -71,6 +72,14 @@ def diagnose_biquote_overlap(frame_envelopes, *, now):
             "fullyCoveredAgree": 0,
             "fullyCoveredOHLCDisagree": 0,
             "internalM15ConstituentGaps": 0,
+            # Partial groups still allow a strict NECESSARY (not sufficient)
+            # OHLC-bound check. Never fill missing slots or certify parity.
+            "partialGroupsWithObservedM15": 0,
+            "partialObservedOHLCBoundDisagreements": 0,
+            "partialObservedOHLCFields": {field: 0 for field in FIELDS},
+            "partialMissingM15ReferencePauseCandidates": 0,
+            "partialMissingM15OutsideReferenceTradingTime": 0,
+            "partialMissingM15UnknownSeason": 0,
             "examplesOfInternalGapUTC": [],
             "examplesOfOHLCMismatchUTC": [],
             "disagreedOHLCFields": {field: 0 for field in FIELDS}
@@ -86,9 +95,45 @@ def diagnose_biquote_overlap(frame_envelopes, *, now):
             members = [m15.get(start + i*900) for i in range(count)]
             if any(member is None for member in members):
                 stats["internalM15ConstituentGaps"] += 1
+                missing = [start + i*900 for i,member in enumerate(members)
+                           if member is None]
+                # This is a VENDOR-DECLARED SESSION REFERENCE only, never
+                # evidence from the upstream MetaTrader broker calendar.
+                for missing_start in missing:
+                    hint=reference_window_for_missing_slot(
+                        dt.datetime.fromtimestamp(missing_start, UTC),900)
+                    if hint is True:
+                        stats["partialMissingM15ReferencePauseCandidates"] += 1
+                    elif hint is False:
+                        stats["partialMissingM15OutsideReferenceTradingTime"] += 1
+                    else:
+                        stats["partialMissingM15UnknownSeason"] += 1
+                observed=[b for b in members if b is not None]
+                if observed:
+                    stats["partialGroupsWithObservedM15"] += 1
+                    # Observed M15 high/low MUST fit within H1/H4 high/low.
+                    # This detects impossible subsets even when the complete
+                    # H4 aggregate cannot be reconstructed.
+                    bad=[]
+                    if actual["high"] < max(b["high"] for b in observed) and not _close(
+                            actual["high"],max(b["high"] for b in observed)):
+                        bad.append("high")
+                    if actual["low"] > min(b["low"] for b in observed) and not _close(
+                            actual["low"],min(b["low"] for b in observed)):
+                        bad.append("low")
+                    # Only check open or close when their exact 15-minute
+                    # constituents are present. Never infer missing prices.
+                    if members[0] is not None and not _close(
+                            actual["open"],members[0]["open"]):
+                        bad.append("open")
+                    if members[-1] is not None and not _close(
+                            actual["close"],members[-1]["close"]):
+                        bad.append("close")
+                    if bad:
+                        stats["partialObservedOHLCBoundDisagreements"] += 1
+                        for field in bad:
+                            stats["partialObservedOHLCFields"][field] += 1
                 if len(stats["examplesOfInternalGapUTC"]) < 4:
-                    missing = [start + i*900 for i, member in enumerate(members)
-                               if member is None]
                     stats["examplesOfInternalGapUTC"].append({
                         "higherOpenUTC": dt.datetime.fromtimestamp(
                             start, UTC).isoformat().replace("+00:00", "Z"),
