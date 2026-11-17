@@ -8,6 +8,11 @@ on:
       - '.github/workflows/biquote-private-forward-vault-offline.yml'
       - 'coordinator/biquote_offline_source_audit.py'
       - 'coordinator/biquote_overlap_evidence.py'
+      - 'coordinator/biquote_public_one_shot.py'
+      - 'coordinator/biquote_24h_observer.py'
+      - 'coordinator/test_biquote_forward_integration.py'
+      - 'coordinator/entrypoint.py'
+      - 'coordinator/Dockerfile'
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,7 +27,7 @@ jobs:
           python-version: '3.11'
       - name: Verify no network, private disk, closed-only time seal and archive integrity
         working-directory: coordinator
-        run: python -m unittest -v test_biquote_private_forward_vault
+        run: python -m unittest -v test_biquote_private_forward_vault test_biquote_forward_integration test_biquote_24h_observer test_biquote_public_one_shot test_biquote_render_standby
       - name: Source audit and overlap compatibility unchanged (synthetic only)
         working-directory: coordinator
         run: python -m unittest -v test_biquote_offline_source_audit test_biquote_overlap_evidence

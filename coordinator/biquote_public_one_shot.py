@@ -1,13 +1,16 @@
 """Exactly one public, credential-free BiQuote XAUUSD HTTP preflight.
 
-Read-only and diagnostic only. Never poll, retry, connect a trading account,
-write market-data files, start a websocket, issue an order or invoke an engine.
+Read-only and diagnostic only. Never polls, retries, connects a trading account,
+starts a websocket, issues an order or invokes an engine. An EXPLICIT
+in-process private sink can archive an already fetched sample without extra GETs;
+by default no data is written, and no provider data is returned to the caller.
 A green HTTP probe cannot establish underlying MT5 broker data rights.
 """
 from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 import urllib.error
 import urllib.request
 
@@ -25,11 +28,13 @@ ENDPOINTS = (
 MAX_RESPONSE_BYTES = 1_000_000
 
 
-def one_shot_probe(opener=None, clock=None):
+def one_shot_probe(opener=None, clock=None, *, private_snapshot_sink=None):
     """Open each fixed public URL once; no credentials, retries or writes.
 
     Inject opener and clock for offline deterministic regressions. Return a
     sanitized report, not raw quotes/candles, and retain no market history.
+    Only a separately approved private sink receives an in-memory original
+    sample; its result is reduced to non-price metadata. No additional GETs.
     """
     opener = urllib.request.urlopen if opener is None else opener
     clock = (lambda: dt.datetime.now(UTC)) if clock is None else clock
@@ -106,6 +111,17 @@ def one_shot_probe(opener=None, clock=None):
         result["sessionGapReferenceOnly"] = audit_gap_times(
             {tf: received[tf] for tf in ("M15", "H1", "H4")}
         )
+        # Partial time-grid coverage is not proof of wrong OHLC prices.
+        # BOTH still remain blocked as independent trading data.
+        problems = audit["blockingReasons"]
+        if "CROSS_TIMEFRAME_OHLC_MISMATCH" in problems:
+            result["geometryFailureClass"] = "OHLC_PRICE_DISAGREEMENT"
+        elif "PARTIAL_CROSS_TIMEFRAME_COVERAGE" in problems:
+            result["geometryFailureClass"] = "UNCLASSIFIED_M15_COVERAGE_GAP"
+        elif not audit["ohlcStructuralChecksPassed"]:
+            result["geometryFailureClass"] = "OTHER_SOURCE_SHAPE_FAILURE"
+        else:
+            result["geometryFailureClass"] = "NO_STRUCTURAL_FAILURE"
         if not audit["ohlcStructuralChecksPassed"]:
             result["blockingReasons"].append("CROSS_TIMEFRAME_STRUCTURE_NOT_PROVEN")
         result["structuralAudit"] = {
@@ -118,6 +134,38 @@ def one_shot_probe(opener=None, clock=None):
         }
     else:
         result["blockingReasons"].append("PUBLIC_HTTP_NOT_FULLY_AVAILABLE")
+    # Optional and strictly in-memory: the same four successful public GETs
+    # are delivered to an explicitly configured private archive sink.
+    # No raw source data is ever returned from this probe.
+    if private_snapshot_sink is not None:
+        capture = {"enabled": True, "attempted": False, "saved": False,
+                   "newClosedBars": {"M15": 0, "H1": 0, "H4": 0}}
+        if result["allHttp200AndValidJson"]:
+            capture["attempted"] = True
+            try:
+                if not callable(private_snapshot_sink):
+                    raise TypeError("PRIVATE_SINK_REQUIRED")
+                output = private_snapshot_sink(
+                    {"source": "BiQuote", "quote": received["quote"],
+                     "frames": {tf: received[tf] for tf in ("M15", "H1", "H4")}},
+                    now)
+                if (not isinstance(output, dict) or output.get("signal") != "WAIT"
+                    or output.get("executable") is not False
+                    or output.get("rawDataReturnedToCaller") is not False):
+                    raise ValueError("PRIVATE_SINK_UNSAFE_RESULT")
+                capture["saved"] = output.get("sourceMarketDataPersistedToPrivateVault") is True
+                capture["newClosedBars"] = {
+                    tf: int(output.get("newClosedBars", {}).get(tf, 0))
+                    for tf in ("M15", "H1", "H4")}
+            except (ValueError, TypeError, OSError) as error:
+                code = str(error)
+                capture["blockedReason"] = (code if re.fullmatch(r"[A-Z0-9_]{3,72}", code)
+                                            else "PRIVATE_CAPTURE_REJECTED")
+            except Exception:
+                capture["blockedReason"] = "PRIVATE_CAPTURE_ERROR"
+        result["privateArchive"] = capture
+        # Legacy public one-shot contract remains false without an opt-in sink.
+        result["marketDataStored"] = capture["saved"]
     return result
 
 

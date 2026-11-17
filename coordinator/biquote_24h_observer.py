@@ -57,6 +57,10 @@ class QualityCounters:
         self.spread_min = None
         self.spread_max = None
         self.requests_attempted = 0
+        self.archive_attempts = 0
+        self.archive_saved = 0
+        self.archive_failed = 0
+        self.archive_new_bars = {tf: 0 for tf in ("M15", "H1", "H4")}
 
     def add(self, result):
         self.samples += 1
@@ -67,6 +71,17 @@ class QualityCounters:
             self.http_failures += 1
             return
         self.http_ok += 1
+        private = result.get("privateArchive") or {}
+        if private.get("attempted") is True:
+            self.archive_attempts += 1
+            if private.get("saved") is True:
+                self.archive_saved += 1
+                for tf in self.archive_new_bars:
+                    n = private.get("newClosedBars", {}).get(tf, 0)
+                    if type(n) is int and 0 <= n <= 1000:
+                        self.archive_new_bars[tf] += n
+            elif private.get("blockedReason"):
+                self.archive_failed += 1
         if result.get("structuralAudit", {}).get("ohlcStructuralChecksPassed"):
             self.audit_ok += 1
         if result.get("dataGeometryConformance") == "SHAPE_CHECKS_FAILED_OR_INCOMPLETE":
@@ -121,7 +136,12 @@ class QualityCounters:
             "maxObservedQuoteAgeSeconds": self.age_max_seconds,
             "minObservedSpreadPrice": self.spread_min,
             "maxObservedSpreadPrice": self.spread_max,
-            "rawQuotesPersisted": False, "orderEndpointsCalled": False,
+            "rawQuotesPersisted": self.archive_saved > 0,
+            "privateArchiveAttempts": self.archive_attempts,
+            "privateArchiveSavedSnapshots": self.archive_saved,
+            "privateArchiveRejectedSnapshots": self.archive_failed,
+            "privateArchiveNewClosedBars": dict(self.archive_new_bars),
+            "orderEndpointsCalled": False,
             "cloudIndependentRightsProven": False,
             "marketSessionIndependentlyVerified": False,
             "providerSLAProven": False, "profitabilityTestPerformed": False,
@@ -181,6 +201,9 @@ def observe_24h(start_utc, *, probe=one_shot_probe, utc_now=None,
                 "asOfUTC": _utc(now()).isoformat().replace("+00:00", "Z"),
                 "httpAllOk": result.get("allHttp200AndValidJson") is True,
                 "geometryChecksOk": result.get("structuralAudit", {}).get("ohlcStructuralChecksPassed") is True,
+                "geometryFailureClass": result.get("geometryFailureClass", "UNAVAILABLE"),
+                "archiveSavedSnapshotsSoFar": counters.archive_saved,
+                "archiveRejectedSnapshotsSoFar": counters.archive_failed,
                 "staleOrGapSamplesSoFar": counters.quote_stale + counters.missing_ohlc_overlap,
                 "requestsAttemptedSoFar": counters.requests_attempted})
     # The final scheduled sample occurs at T+23h58m. Continue observing
