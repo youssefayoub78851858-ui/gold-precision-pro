@@ -67,6 +67,51 @@ class FinalVerdictTests(unittest.TestCase):
         r["startedUTC"]="2026-11-15T19:45:00Z"
         self.assertIn("REVIEW_RUN_START_UNEXPECTED",verdict(r)["reasonCodes"])
 
+    def test_real_finished_2026_nov17_metadata_only_no_quote_prices(self):
+        # Exact counters from the finished deployed 989699cd observation;
+        # not invented synthetic "live trades" or a broker entitlement.
+        r=fixture()
+        for k in ("geometryFailureClasses","privateArchiveAttempts",
+                  "privateArchiveSavedSnapshots","privateArchiveRejectedSnapshots",
+                  "privateArchiveNewClosedBars"):
+            r.pop(k)
+        r.update(
+            samplesObserved=720,missedOrSkippedSlots=0,
+            requestsAttempted=2880,httpOkSamples=691,httpFailedSamples=29,
+            auditShapePassedSamples=0,marketOpenSamples=691,
+            providerStaleSamples=0,crossFrameUnverifiedSamples=691,
+            h1FullyCoveredComparedAcrossSnapshots=32643,
+            h4FullyCoveredComparedAcrossSnapshots=6646,
+            h1DisagreementsAcrossSnapshots=0,
+            h4DisagreementsAcrossSnapshots=0,
+            h1UnclassifiedPartialAggregatesAcrossSnapshots=0,
+            h4UnclassifiedPartialAggregatesAcrossSnapshots=2051,
+            maxObservedQuoteAgeSeconds=183.859,
+        )
+        result=verdict(r)
+        self.assertEqual(result["status"],"REVIEW_FINISHED_READONLY_NOT_TRADE_ADMISSIBLE")
+        self.assertEqual(result["reportSchema"],"LEGACY_989699CD_NO_FAILURE_CLASS")
+        self.assertEqual(result["samplesObserved"],720)
+        self.assertEqual(result["httpOkSamples"],691)
+        self.assertEqual(result["httpFailedSamples"],29)
+        self.assertEqual(result["totalStructuralAuditPassed"],0)
+        self.assertEqual(result["h4PartialAggregatesAcrossSnapshots"],2051)
+        self.assertEqual(result["totalFullyCoveredH1Compared"],32643)
+        self.assertEqual(result["totalFullyCoveredH4Compared"],6646)
+        self.assertEqual(result["independentQuoteAgeMaximumSeconds"],183.859)
+        self.assertEqual(result["h4OHLCDisagreements"],0)
+        self.assertEqual(result["h1OHLCDisagreements"],0)
+        for reason in ("HTTP_OR_JSON_FAILURE_SAMPLES",
+                       "INDEPENDENT_QUOTE_AGE_EXCEEDED_30_SECONDS",
+                       "ZERO_FULL_SOURCE_STRUCTURAL_CHECK_PASSES",
+                       "UNCLASSIFIED_M15_H1_H4_COVERAGE_GAPS",
+                       "LEGACY_FAILED_GEOMETRY_CLASS_NOT_AVAILABLE"):
+            self.assertIn(reason,result["reasonCodes"])
+        for perm in ("archiveEnabled","archiveActivationAllowed",
+                     "paperOrdersAllowed","executable","tradeEligible",
+                     "researchEligible","profitabilityProven"):
+            self.assertIs(result[perm],False)
+
     def test_actual_price_disagreement_class_is_a_separate_hard_veto(self):
         report=fixture()
         report["h4DisagreementsAcrossSnapshots"]=1
