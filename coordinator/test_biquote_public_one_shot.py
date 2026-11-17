@@ -96,6 +96,60 @@ class BiQuoteOneShotSafety(unittest.TestCase):
         self.assertIn("CROSS_TIMEFRAME_STRUCTURE_NOT_PROVEN",
                       result["blockingReasons"])
 
+    def test_fixed_endpoint_fault_codes_do_not_expose_provider_payload(self):
+        opener, calls, source = fake_setup()
+        def mixed_response(request,timeout):
+            if "interval=4h" in request.full_url:
+                raise urllib.error.HTTPError(request.full_url,429,
+                                             "SENSITIVE_GATEWAY_DETAIL",{},None)
+            if "interval=1h" in request.full_url:
+                return FakeHTTPResponse(["BAD_SECRET_ENVELOPE"])
+            if "interval=15m" in request.full_url:
+                raise urllib.error.URLError("PRIVATE_PASSWORD_DO_NOT_LOG")
+            return opener(request,timeout)
+        output=one_shot_probe(mixed_response, lambda:NOW)
+        self.wait(output)
+        diag=output["qualityDiagnostic"]
+        self.assertEqual(diag["mode"],"BIQUOTE_METADATA_FAILURE_DIAGNOSTICS_ONLY")
+        self.assertEqual(diag["endpoint"],{
+            "quote":"OK","M15":"NO_HTTP_RESPONSE",
+            "H1":"INVALID_JSON_OR_ENVELOPE","H4":"HTTP_429"})
+        self.assertFalse(diag["tradingEnabled"])
+        self.assertEqual(diag["sourceRequestsMade"],0)
+        self.assertFalse(diag["marketDataExposed"])
+        encoded=json.dumps(diag)
+        for secret in ("SENSITIVE_GATEWAY_DETAIL","PRIVATE_PASSWORD_DO_NOT_LOG",
+                       "BAD_SECRET_ENVELOPE","https://","bid","ask","open","close"):
+            self.assertNotIn(secret,encoded)
+        self.assertEqual(len(calls),1)
+        self.assertNotIn("structuralAudit",output)
+        self.assertEqual(output["requestCountAttempted"],4)
+
+    def test_quote_older_than_30_seconds_is_not_reinterpreted_as_fresh(self):
+        opener, calls, data=fake_setup()
+        data["quote"]["timestamp"]=iso(NOW-dt.timedelta(seconds=183))
+        data["quote"]["stale"]=False
+        out=one_shot_probe(opener,lambda:NOW)
+        self.wait(out)
+        self.assertTrue(out["allHttp200AndValidJson"])
+        self.assertTrue(out["qualityDiagnostic"]["independentQuoteAgeOver30Seconds"])
+        self.assertFalse(out["qualityDiagnostic"]["independentQuoteAgeInvalid"])
+        self.assertIn("INDEPENDENT_QUOTE_CLOCK_FRESHNESS_FAILED",
+                      out["structuralAudit"]["blockingReasons"])
+        self.assertEqual(out["qualityDiagnostic"]["endpoint"],
+                         {k:"OK" for k in ("quote","M15","H1","H4")})
+
+    def test_invalid_future_quote_utc_does_not_pretend_to_be_valid(self):
+        opener,_,data=fake_setup()
+        data["quote"]["timestamp"]=iso(NOW+dt.timedelta(seconds=8))
+        out=one_shot_probe(opener,lambda:NOW)
+        self.assertTrue(out["qualityDiagnostic"]["independentQuoteAgeInvalid"])
+        self.assertFalse(out["qualityDiagnostic"]["independentQuoteAgeOver30Seconds"])
+        self.assertFalse(out["structuralAudit"]["ohlcStructuralChecksPassed"] is False and
+                         "CROSS_TIMEFRAME_OHLC_MISMATCH" in
+                         out["structuralAudit"]["blockingReasons"],
+                         "A bad quote clock must not be recategorized as OHLC mismatch")
+
     def test_one_http_failure_never_retries_or_invents_three_frames(self):
         opener, calls, _ = fake_setup()
         def sometimes_failed(request, timeout):
