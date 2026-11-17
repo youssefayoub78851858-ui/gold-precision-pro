@@ -31,6 +31,24 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertNotIn("api_token=",HTML)
         self.assertNotIn("CUTOVER_MODE=live",HTML)
 
+    def test_biquote_forward_archive_counts_are_readonly_and_private(self):
+        for tag in ('id="biquote-forward-panel"', 'id="forward-m15"',
+                    'id="forward-h1"', 'id="forward-h4"',
+                    'id="biquote-forward-state"', 'id="forward-last"',
+                    'id="forward-coverage"'):
+            self.assertIn(tag, HTML)
+        self.assertIn('data.biquotePrivateForwardVault', HTML)
+        self.assertIn('vault?.tradeSignalReady===false', HTML)
+        self.assertIn('vault?.paperOrdersAllowed===false', HTML)
+        self.assertIn('vault?.executable===false', HTML)
+        self.assertIn('vault?.researchEligible===false', HTML)
+        self.assertIn('vault?.status==="PRIVATE_FORWARD_VAULT_METADATA_ONLY"', HTML)
+        self.assertIn('vault.forwardCoverage?.[tf]?.unclassifiedMissingSlots', HTML)
+        self.assertIn('el("forward-last").textContent=', HTML)
+        self.assertNotIn('vault.closed', HTML)
+        self.assertNotIn('vault.quoteObservations', HTML)
+        self.assertNotIn('innerHTML', HTML)
+
     def test_no_hidden_live_activation(self):
         self.assertIn("memoryToken",HTML)
         self.assertIn('id="fxcm-review-panel"',HTML)
