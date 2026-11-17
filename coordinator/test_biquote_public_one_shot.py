@@ -150,6 +150,29 @@ class BiQuoteOneShotSafety(unittest.TestCase):
                          out["structuralAudit"]["blockingReasons"],
                          "A bad quote clock must not be recategorized as OHLC mismatch")
 
+    def test_partial_h4_impossible_bound_still_counts_as_price_conflict(self):
+        opener, calls, packets=fake_setup()
+        packets["M15"]["bars"]=[
+            row for row in packets["M15"]["bars"]
+            if row["openTime"]!="2026-11-02T22:00:00Z"]
+        h4=next(row for row in packets["H4"]["bars"]
+                if row["openTime"]=="2026-11-02T20:00:00Z")
+        h4["high"]=max(h4["open"],h4["close"])+0.01
+        result=one_shot_probe(opener,lambda:NOW)
+        self.wait(result)
+        self.assertTrue(result["allHttp200AndValidJson"])
+        self.assertFalse(result["structuralAudit"]["ohlcStructuralChecksPassed"])
+        self.assertEqual(result["geometryFailureClass"],"OHLC_PRICE_DISAGREEMENT")
+        q=result["qualityDiagnostic"]
+        self.assertEqual(q["h4PartialObservedPriceContradictions"],1)
+        self.assertEqual(q["h4MissingM15VendorPauseCandidates"],1)
+        self.assertEqual(q["h4MissingM15OutsideVendorReference"],0)
+        self.assertEqual(q["sourceRequestsMade"],0)
+        self.assertFalse(q["marketDataExposed"])
+        self.assertFalse(result["executable"])
+        self.assertFalse(result["paperOrdersAllowed"])
+        self.assertEqual(len(calls),4)
+
     def test_one_http_failure_never_retries_or_invents_three_frames(self):
         opener, calls, _ = fake_setup()
         def sometimes_failed(request, timeout):
