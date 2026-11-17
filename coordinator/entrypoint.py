@@ -24,6 +24,7 @@ from biquote_private_forward_vault import (
     APPROVAL as FORWARD_APPROVAL, ingest as forward_ingest,
     inspect_metadata as inspect_forward_metadata,
 )
+from biquote_forward_shadow_review import shadow_review as forward_shadow_review
 from xauusd_feed_gate import parse_utc
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,*_):pass
@@ -58,9 +59,17 @@ class Handler(BaseHTTPRequestHandler):
    if forward_capture_enabled:
     try:
      body['biquotePrivateForwardVault']=inspect_forward_metadata(forward_vault_dir)
-    except (OSError,ValueError):
+     # Owner-only offline V3 analysis of already archived, closed MID bars.
+     # This adds ZERO provider calls, trading permissions or raw price output.
+     body['biquoteForwardShadow']=forward_shadow_review(forward_vault_dir)
+    except (OSError,ValueError,TypeError):
      body['biquotePrivateForwardVault']={'status':'VAULT_METADATA_UNAVAILABLE',
                                          'signal':'WAIT','executable':False}
+     body['biquoteForwardShadow']={'mode':'BIQUOTE_PRIVATE_FORWARD_V3_SHADOW_ONLY',
+        'signal':'WAIT','executable':False,'paperOrdersAllowed':False,
+        'tradeEligible':False,'researchEligible':False,'brokerOrdersSent':0,
+        'sourceRequestsMade':0,'technicalWatch':'NONE','approvedDirection':'NONE',
+        'signalReady':False,'reasonCodes':['VAULT_UNAVAILABLE_OR_TAMPERED']}
   data=json.dumps(body).encode();self.send_response(status);self.send_header('Content-Type','application/json');self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(data)
 audit_root=os.environ.get('DATA_DIR','/var/data/gold-live')
 audit_enabled=os.environ.get('PRIVATE_REVIEW_AUDIT_ENABLED')=='1'
