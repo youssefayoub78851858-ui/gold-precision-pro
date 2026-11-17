@@ -6,6 +6,7 @@
  * pivots; no orders, forecast, source authorization or strategy admission.
  */
 const {structure}=require("./v3_market_structure");
+const {auditRows}=require("./biquote_session_reference");
 const WIDTHS=Object.freeze({M15:900000,H1:3600000,H4:14400000});
 const ORDER=Object.freeze(["M15","H1","H4"]);
 const MIN_CONFIRMED_PIVOT_WINDOW=7; // V3 left2/right2 + one last CLOSED candle
@@ -68,6 +69,10 @@ function analyzeFrame(rows,tf,asOfMs){
  // compute either indicator by jumping an unclassified gap.
  if(contiguous.length<MIN_CONFIRMED_PIVOT_WINDOW)
   return empty("LESS_THAN_7_CONTIGUOUS_CLOSED_BARS",breaks,contiguous.length);
+ // Label only whether missing UTC slots resemble a GENERAL winter pause.
+ // This may help an operator request the exact broker session calendar,
+ // but never joins bars or changes trading admission.
+ const referenceOnlyGapAudit=auditRows(rows,tf);
  const observed=structure(contiguous,{left:2,right:2});
  const last=contiguous.at(-1);
  if(observed.signal!=="WAIT"||observed.executable!==false)
@@ -82,6 +87,7 @@ function analyzeFrame(rows,tf,asOfMs){
  return {...WAIT,state:full?"OBSERVATION_ONLY":"PARTIAL_OBSERVATION_UNVERIFIED_SESSION",
    timeframe:tf,contiguousBars:contiguous.length,
    unclassifiedGapsInChart:breaks,
+   referenceOnlyGapAudit,
    sessionCalendarVerified:false,validForEntry:false,
    priceBasis:"MID_WITH_POSSIBLE_BID_SEED",
    lastClosedOpenUTC:contiguous.at(-1).time,

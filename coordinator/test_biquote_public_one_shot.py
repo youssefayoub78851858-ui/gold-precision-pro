@@ -76,6 +76,11 @@ class BiQuoteOneShotSafety(unittest.TestCase):
                             for _, method, auth, timeout in calls))
         self.assertTrue(all("biquote.io/api/XAUUSD" in url for url, *_ in calls))
         self.assertFalse(report["structuralAudit"]["underlyingBrokerRightsWarranted"])
+        self.assertEqual(report["sessionGapReferenceOnly"]["status"],
+                         "REFERENCE_ONLY_NOT_BROKER_VERIFIED")
+        self.assertIs(report["sessionGapReferenceOnly"]["brokerScheduleVerified"],False)
+        self.assertIs(report["sessionGapReferenceOnly"]["executable"],False)
+        self.assertEqual(report["sessionGapReferenceOnly"]["signal"],"WAIT")
         self.assertIn("MID_", report["structuralAudit"]["candlePriceBasis"])
 
     def test_partial_internal_m15_gap_is_diagnosed_but_not_hidden(self):

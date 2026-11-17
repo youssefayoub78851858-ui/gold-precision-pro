@@ -13,6 +13,7 @@ import urllib.request
 
 from biquote_offline_source_audit import audit_biquote_sample
 from biquote_overlap_evidence import diagnose_biquote_overlap
+from biquote_session_gap_audit import audit_gap_times
 
 UTC = dt.timezone.utc
 ENDPOINTS = (
@@ -99,6 +100,11 @@ def one_shot_probe(opener=None, clock=None):
             else "SHAPE_CHECKS_FAILED_OR_INCOMPLETE")
         result["overlapEvidence"] = diagnose_biquote_overlap(
             {tf: received[tf] for tf in ("M15", "H1", "H4")}, now=now
+        )
+        # Gap timings only, no prices, trade hours derived from a GENERAL
+        # winter reference, never a claim about the upstream MT5 broker.
+        result["sessionGapReferenceOnly"] = audit_gap_times(
+            {tf: received[tf] for tf in ("M15", "H1", "H4")}
         )
         if not audit["ohlcStructuralChecksPassed"]:
             result["blockingReasons"].append("CROSS_TIMEFRAME_STRUCTURE_NOT_PROVEN")

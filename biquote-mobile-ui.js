@@ -84,6 +84,15 @@
           (typeof f[k]==="number"&&Number.isFinite(f[k])&&f[k]>0)))return null;
      if(!Array.isArray(f.lastClosedEvents)||f.lastClosedEvents.length>6||
         !f.lastClosedEvents.every(v=>whitelist.includes(v)))return null;
+     const gap=f.referenceOnlyGapAudit;
+     if(!gap||gap.brokerCalendarVerified!==false||gap.sessionCalendarVerified!==false||
+        gap.bridgeBarsAllowed!==false||gap.executable!==false||gap.signal!=="WAIT"||
+        gap.timeframe!==tf||!Number.isInteger(gap.gapCount)||
+        gap.gapCount!==f.unclassifiedGapsInChart||!Array.isArray(gap.examples)||
+        gap.examples.length>8)return null;
+     if(!gap.examples.every(g=>Number.isInteger(g.missingSlots)&&g.missingSlots>0&&
+        /^(REFERENCE_PAUSE_CANDIDATE_NOT_BROKER_VERIFIED|MISSING_IN_REFERENCE_TRADING_HOURS|REFERENCE_RANGE_UNKNOWN)$/.test(g.label)))
+       return null;
      safe[tf]={...f,lastClosedEvents:[...f.lastClosedEvents]};
    }
    return safe;
@@ -103,6 +112,19 @@
    }
    const level=n=>n===null?"غير مؤكدة":fmt(n);
    const seen=f.lastClosedEvents.map(x=>eventNames[x]).join("، ")||"لا حدث مؤكد بالشمعة الأخيرة";
+   const reference=f.referenceOnlyGapAudit;
+   const candidates=reference?.referencePauseCandidates||0;
+   const missing=reference?.missingDuringReferenceTradingHours||0;
+   const unknown=reference?.outsideReference||0;
+   const gapExamples=(reference?.examples||[]).slice(-2).map(g=>
+     g.previousBarUTC.slice(5,16).replace("T"," ")+" UTC → "+
+     g.nextBarUTC.slice(5,16).replace("T"," ")+" UTC: "+
+     (g.label==="REFERENCE_PAUSE_CANDIDATE_NOT_BROKER_VERIFIED"?
+       "تشبه استراحة شائعة فقط، ليست مؤكدة":
+       g.label==="MISSING_IN_REFERENCE_TRADING_HOURS"?
+       "فجوة بوقت تداول مرجعي، تتطلب تدقيق":
+       "لا يوجد جدول مرجعي كافٍ")
+   ).join(" ؛ ");
    const partial=f.state==="PARTIAL_OBSERVATION_UNVERIFIED_SESSION";
    el.textContent=(partial?"WAIT — تحليل جزئي بعد آخر فجوة غير مصنّفة. ":"قراءة وصفية فقط. ")+
      "قراءة "+activeFrame+" — EMA20: "+(f.ema20===null?"غير متاح (<20 شمعة متصلة)":fmt(f.ema20))+
@@ -112,7 +134,11 @@
      " | نطاق آخر "+f.recentRangeBars+" شموع متصلة: "+fmt(f.recentRangeLow20)+"–"+fmt(f.recentRangeHigh20)+
      " | "+seen+" | عدد الشموع المتصلة "+f.contiguousBars+
      " | فجوات غير مصنّفة "+f.unclassifiedGapsInChart+
-     ". لا يوجد إثبات لجدول جلسات الوسيط، والمستويات البحثية MID ليست نقاط دخول أو وقف خسارة. القرار WAIT.";
+     ". مرجع نوفمبر الزمني فقط: "+candidates+" شموع غائبة تشبه توقفاً شائعاً، "+
+     missing+" غائبة خلال تداول مرجعي، "+unknown+" خارج المرجع. "+
+     (gapExamples?" أمثلة أوقات الفجوات: "+gapExamples+". ":"")+
+     "جدول جلسات وسيط BiQuote الأصلي غير موثّق، ولا نصل أي شموع عبر الفجوات. "+
+     "مستويات MID ليست نقاط دخول أو وقف خسارة. القرار WAIT.";
  }
  function drawPrivateChart(){
    const canvas=$("biquote-live-canvas");

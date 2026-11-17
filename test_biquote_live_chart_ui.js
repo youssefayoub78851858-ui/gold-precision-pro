@@ -110,6 +110,8 @@ async function main(){
  await makeNode("biquote-refresh").click();
  await tabs[1].click();
  assert.match(makeNode("biquote-structure-summary").textContent,/تحليل جزئي/);
+ assert.match(makeNode("biquote-structure-summary").textContent,/جدول جلسات وسيط BiQuote الأصلي غير موثّق/);
+ assert.match(makeNode("biquote-structure-summary").textContent,/أمثلة أوقات الفجوات/);
  assert.match(makeNode("biquote-structure-summary").textContent,/غير متاح \(<20 شمعة متصلة\)/);
  assert.match(makeNode("biquote-structure-summary").textContent,/ATR14: غير متاح/);
  assert.match(makeNode("biquote-structure-summary").textContent,/10/);

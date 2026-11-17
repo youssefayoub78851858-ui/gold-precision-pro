@@ -19,6 +19,10 @@ for(const tf of ["M15","H1","H4"]){
  assert.equal(x.researchEligible,false);assert.equal(x.tradeEligible,false);
  assert.equal(x.paperOrdersAllowed,false);assert.equal(x.validForEntry,false);
  assert.equal(x.sessionCalendarVerified,false);
+ assert.equal(x.referenceOnlyGapAudit.brokerCalendarVerified,false);
+ assert.equal(x.referenceOnlyGapAudit.bridgeBarsAllowed,false);
+ assert.equal(x.referenceOnlyGapAudit.signal,"WAIT");
+ assert.equal(x.referenceOnlyGapAudit.executable,false);
  assert.equal(x.state,"OBSERVATION_ONLY");
  assert.equal(x.contiguousBars,48);
  assert.equal(x.unclassifiedGapsInChart,0);
@@ -73,6 +77,9 @@ for(const tf of ["H1","H4"]){
  const x=analyzeFrame(partial,tf,NOW);
  assert.equal(x.state,"PARTIAL_OBSERVATION_UNVERIFIED_SESSION");
  assert.equal(x.unclassifiedGapsInChart,1);
+ assert.equal(x.referenceOnlyGapAudit.gapCount,1);
+ assert.equal(x.referenceOnlyGapAudit.sessionCalendarVerified,false);
+ assert.equal(x.referenceOnlyGapAudit.bridgeBarsAllowed,false);
  assert.equal(x.contiguousBars,10);
  assert.equal(x.ema20,null);
  assert.equal(x.atr14,null);

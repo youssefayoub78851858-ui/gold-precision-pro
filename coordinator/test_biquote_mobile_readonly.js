@@ -195,6 +195,10 @@ async function main(){
    assert.equal(f.state,"PARTIAL_OBSERVATION_UNVERIFIED_SESSION");
    assert.equal(f.contiguousBars,10);
    assert.equal(f.unclassifiedGapsInChart,1);
+   assert.equal(f.referenceOnlyGapAudit.sessionCalendarVerified,false);
+   assert.equal(f.referenceOnlyGapAudit.brokerCalendarVerified,false);
+   assert.equal(f.referenceOnlyGapAudit.bridgeBarsAllowed,false);
+   assert.equal(f.referenceOnlyGapAudit.gapCount,1);
    assert.equal(f.ema20,null);
    assert.equal(f.atr14,null);
    assert.ok(f.recentRangeHigh20>=f.recentRangeLow20);
