@@ -73,6 +73,12 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <p id="forward-coverage">الفجوات والتغطية: غير مؤكدتين</p>
 <p><small>أعداد من القرص الخاص فقط. أي فجوة تعتبر غير مصنّفة لحين توثيق جلسات الوسيط، ولا تعني الأعداد أن البيانات مرخّصة أو أن صفقة ممكنة.</small></p>
 </section>
+<section id="biquote-shadow-review" aria-labelledby="biquote-shadow-title">
+<h2 id="biquote-shadow-title">تحليل V3 من أرشيف BiQuote الخاص — بحث فقط</h2>
+<p id="biquote-shadow-state" role="status">WAIT — بانتظار شموع جديدة كافية لتقييم الاتجاه</p>
+<p id="biquote-shadow-coverage">M15 / H1 / H4: بانتظار شموع مغلقة متصلة</p>
+<p><small>BUY أو SELL إذا ظهرت هون تعني قراءة فنية أولية فقط، مش صفقة. لا يوجد دخول أو وقف خسارة أو أهداف معتمدة، ولا تداول ورقي أو حقيقي.</small></p>
+</section>
 <section id="audit-panel" aria-labelledby="audit-title">
 <h2 id="audit-title">مراقبة اتصال الذهب والتنبيهات الداخلية</h2>
 <p id="audit-state" role="status">لم يتم فحص حالة المراقبة الدورية بعد.</p>
@@ -161,6 +167,25 @@ el("refresh").addEventListener("click",async()=>{
   el("forward-coverage").textContent=safeVault
    ?"فجوات زمنية غير مصنّفة في الأرشيف: "+missing+" — لا يعني صفر فجوات إثبات صلاحية الجلسات"
    :"التغطية الزمنية لم تتحقق بعد";
+  const shadow=data.biquoteForwardShadow;
+  const safeShadow=shadow?.mode==="BIQUOTE_PRIVATE_FORWARD_V3_SHADOW_ONLY"
+    &&shadow?.signal==="WAIT"&&shadow?.executable===false
+    &&shadow?.paperOrdersAllowed===false&&shadow?.signalReady===false
+    &&shadow?.approvedDirection==="NONE"
+    &&["BUY","SELL","NONE"].includes(shadow?.technicalWatch);
+  const side=safeShadow?shadow.technicalWatch:"NONE";
+  el("biquote-shadow-state").textContent=side!=="NONE"
+    ?"WAIT — ملاحظة فنية V3: "+side+" (ليست صفقة، ممنوع التنفيذ)"
+    :"WAIT — لا يوجد اتجاه بحثي مؤهّل أو البيانات غير كافية";
+  const pieces=[];
+  for(const tf of ["M15","H1","H4"]){
+    const x=safeShadow?shadow.frames?.[tf]:null;
+    if(x&&Number.isInteger(x.contiguousClosed)&&x.contiguousClosed>=0&&
+       x.contiguousClosed<=48&&x.neededContiguous===21)
+      pieces.push(tf+": "+x.contiguousClosed+" / 21 شمعة متصلة (بحثي)");
+    else pieces.push(tf+": غير مؤكد");
+  }
+  el("biquote-shadow-coverage").textContent=pieces.join(" | ");
   const audit=data.audit;
   const states={AUDIT_DISABLED:"المراقب الدوري متوقف",AUDIT_NOT_STARTED:"المراقب لم يسجّل أي فحص بعد",
    AUDIT_OK:"المراقب الداخلي يعمل ويسجّل أسباب WAIT",
@@ -214,6 +239,8 @@ el("refresh").addEventListener("click",async()=>{
  }catch(e){
    el("status").textContent="WAIT — تعذّر فحص المراقبة";
    el("biquote-forward-state").textContent="WAIT — حالة أرشيف BiQuote غير متاحة";
+   el("biquote-shadow-state").textContent="WAIT — تعذّر التحقق من تحليل V3 الخاص";
+   el("biquote-shadow-coverage").textContent="التغطية الفنية غير متاحة";
    for(const id of ["forward-m15","forward-h1","forward-h4"])el(id).textContent="0";
    el("forward-last").textContent="آخر تسجيل: غير متاح";
    el("forward-coverage").textContent="التغطية الزمنية لم تتحقق";
