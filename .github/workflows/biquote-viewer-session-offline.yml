@@ -1,0 +1,36 @@
+name: BiQuote viewer remember-me session safety (offline)
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - 'coordinator/biquote_viewer_session.js'
+      - 'coordinator/test_biquote_viewer_session.js'
+      - 'coordinator/biquote_mobile_readonly.js'
+      - 'server.js'
+      - 'ultimate.html'
+      - 'biquote-mobile-ui.js'
+      - 'test_biquote_live_chart_ui.js'
+      - 'test_unified_mobile.js'
+      - '.github/workflows/biquote-viewer-session-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  seven-day-private-session:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Server-signed cookie, expiry, same-origin, session revocation
+        run: node coordinator/test_biquote_viewer_session.js
+      - name: Browser simulation - token once, no storage, old data cleared
+        run: node test_biquote_live_chart_ui.js
+      - name: Unified mobile DOM with paper trading isolation
+        run: node test_unified_mobile.js
+      - name: Protected proxy never relays private prices or forged status
+        run: node coordinator/test_review_monitor_proxy.js
+      - name: Keep raw gold feed and paper orders isolated
+        run: node coordinator/test_biquote_mobile_readonly.js
