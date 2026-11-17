@@ -2,6 +2,11 @@
 const a=require('node:assert/strict'),fs=require('node:fs');
 const doc=fs.readFileSync('ultimate.html','utf8'),legacy=fs.readFileSync('paper-terminal.html','utf8');
 a(doc.includes('id="unified-mobile-trading"'));a(doc.includes('data-mode="REVIEW_PAPER_ONLY"'));
+a(doc.includes('id="biquote-viewer-guide"'),"Mobile viewer control must be visible above private chart");
+a(doc.indexOf('id="biquote-viewer-secret"')<doc.indexOf('id="biquote-live-canvas"'),
+ "Show private viewer input before blank protected chart on mobile");
+a(doc.indexOf('id="biquote-refresh"')<doc.indexOf('id="biquote-live-canvas"'),
+ "Refresh control must precede protected chart");
 a(!doc.includes('href="/paper-terminal"'));a(!/<iframe\b/i.test(doc));
 for(const id of ['unified-trading-title','paper-overview','paper-chart','paper-analysis','paper-actions','paper-statistics','chart','paper-buy','paper-sell','paper-close','trade-rows','stat-net','stat-dd','stop-selftest','overview-system','overview-signal','macro-refresh'])
  a(doc.includes('id="'+id+'"'),'Missing merged component: '+id);
