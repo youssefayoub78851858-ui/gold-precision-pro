@@ -74,10 +74,15 @@ jobs:
           grep -q 'biquote-mobile-ui.js' "$page"
           grep -q 'biquote-live-canvas' "$page"
           grep -q 'biquote-live-chart-panel' "$page"
+          grep -q 'biquote-structure-summary' "$page"
+          grep -q 'BOS/FVG' "$page"
           grep -q 'شارت محاكاة ورقية XAUUSD' "$page"
           script="$(mktemp)"
           curl -fsS --connect-timeout 12 --max-time 40 -o "$script" "$base/biquote-mobile-ui.js"
           grep -q 'function validPrivateChart' "$script"
+          grep -q 'function validPrivateStructure' "$script"
+          grep -q 'function describeStructure' "$script"
+          grep -q 'validPrivateStructure(data.privateStructure,acceptedChart)' "$script"
           grep -q 'data.rawQuoteShown===true&&data.privateChartReadOnly===true' "$script"
           echo 'PASS real HTTPS: separate private MID chart and explicitly offline paper simulator'
           body="$(mktemp)"
@@ -108,6 +113,7 @@ jobs:
           assert 'privateChart' not in body and 'rawPrivateChart' not in body
           assert 'privateChartReadOnly' not in body
           assert 'privateChartDataBasis' not in body
+          assert 'privateStructure' not in body and 'rawPrivateStructure' not in body
           if status==200:
               assert body['status'] in ('OBSERVED_READONLY_UNVERIFIED','WAIT_CROSS_FRAME_GAPS')
               assert all(body['frameSummary'][tf]['closedCount']>=50 for tf in ('M15','H1','H4'))
