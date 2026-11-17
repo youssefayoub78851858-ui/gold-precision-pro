@@ -33,7 +33,8 @@ BASE={
 }
 FRAME_CODES={"M15":"M15","H1":"H1","H4":"H4"}
 
-def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=None):
+def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=None,
+                 vault_metadata=None, shadow_status=None):
     """All four workstreams, one fail-closed report; offline, NO disk writes."""
     result={**BASE,"stages":{},"reasonCodes":[]}
     # Stage 1: qualified source vs completed observation of an unqualified feed.
@@ -62,8 +63,30 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
     }
     # Stage 2: protected prospective data archive, no new provider calls.
     try:
-        m=inspect_metadata(vault_dir)
-        sh=shadow_review(vault_dir,runner=shadow_runner,now_utc=now_utc)
+        # Coordinator already reads these inside a protected status request.
+        # Reuse that same result instead of reloading disk and running V3 a
+        # second time; standalone CLI still reads directly.
+        if (vault_metadata is None) != (shadow_status is None):
+            raise ValueError("INCOMPLETE_PRECOMPUTED_STATUS")
+        if vault_metadata is None:
+            m=inspect_metadata(vault_dir)
+            sh=shadow_review(vault_dir,runner=shadow_runner,now_utc=now_utc)
+        else:
+            m=vault_metadata
+            sh=shadow_status
+            if (not isinstance(m,dict) or
+                m.get("status")!="PRIVATE_FORWARD_VAULT_METADATA_ONLY" or
+                m.get("signal")!="WAIT" or m.get("executable") is not False or
+                m.get("paperOrdersAllowed") is not False or
+                m.get("tradeSignalReady") is not False or
+                not isinstance(sh,dict) or
+                sh.get("mode")!="BIQUOTE_PRIVATE_FORWARD_V3_SHADOW_ONLY" or
+                sh.get("signal")!="WAIT" or
+                sh.get("executable") is not False or
+                sh.get("paperOrdersAllowed") is not False or
+                sh.get("signalReady") is not False or
+                sh.get("approvedDirection")!="NONE"):
+                raise ValueError("FORGED_PRECOMPUTED_STATUS")
         counts={tf:m["counts"][tf] for tf in FRAMES_ORDER}
         tails={tf:sh["frames"][tf]["contiguousClosed"] for tf in FRAMES_ORDER}
         archive_status="FORWARD_CAPTURE_PRESENT_UNVERIFIED" if any(counts.values()) else "NO_FORWARD_CAPTURE"
