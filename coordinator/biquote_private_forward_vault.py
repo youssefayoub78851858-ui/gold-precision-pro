@@ -223,6 +223,12 @@ def ingest(dirname, sample, *, received_utc):
         _fail("FRAME_VALIDATION_"+evidence["error"])
     if any(evidence["overlap"][tf]["fullyCoveredOHLCDisagree"]>0 for tf in ("H1","H4")):
         _fail("CROSS_FRAME_OHLC_MISMATCH")
+    # Even an incomplete H4 must contain each observed M15 extreme and
+    # its known opening/closing member. Partial coverage is NEVER silently
+    # approved; this stricter invariant only rejects impossible source data.
+    if any(evidence["overlap"][tf]["partialObservedOHLCBoundDisagreements"]>0
+           for tf in ("H1","H4")):
+        _fail("PARTIAL_CROSS_FRAME_OBSERVED_PRICE_BOUNDS_INVALID")
     for tf in FRAMES_ORDER:
         newest=evidence["frames"][tf]["newestClosedUTC"]
         if newest is None or \
