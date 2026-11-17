@@ -208,13 +208,77 @@ function sanitize(input){
     frames:counts,
     reasonCodes:[...new Set(x.reasonCodes)].slice(0,30)};
  }
+ // Four-stage owner-only status: fixed enums/counters ONLY. The full
+ // private review (and any BID/ASK, raw bars or test PnL) never crosses this
+ // sanitized monitor boundary. A synthetically healthy V3 is NOT approval.
+ let safeBatch=null;
+ if(input.ultimateFourStageBatch!==undefined){
+  const x=input.ultimateFourStageBatch,st=x?.stages;
+  const allowedData=new Set(["SOURCE_NOT_QUALIFIED",
+    "SAMPLED_SOURCE_QUALITY_CHECKED_NOT_LICENSED"]);
+  const allowedArchive=new Set(["NO_FORWARD_CAPTURE",
+    "FORWARD_CAPTURE_PRESENT_UNVERIFIED","PRIVATE_VAULT_NOT_READABLE"]);
+  const allowedAnalysis=new Set(["WAIT_CLOSED_DATA_OR_CONTEXT",
+    "FROZEN_V3_TECHNICAL_OBSERVATION_ONLY"]);
+  const frames=st?.archive?.closedCounts;
+  const consecutive=st?.archive?.consecutiveClosedCounts;
+  if(x?.mode!=="GOLD_PRECISION_FOUR_STAGE_BATCH_READONLY_V1"||
+     x.signal!=="WAIT"||x.executable!==false||
+     x.paperOrdersAllowed!==false||x.liveOrdersAllowed!==false||
+     x.tradeEligible!==false||x.signalReady!==false||
+     x.researchEligible!==false||x.brokerOrdersSent!==0||
+     x.providerRequestsMade!==0||x.archiveWritesMade!==0||
+     x.paperLedgerWritesMade!==0||x.rawMarketPricesExposed!==false||
+     x.brokerFeedRightsIndependentlyVerified!==false||
+     x.brokerSessionCalendarIndependentlyVerified!==false||
+     x.historicalBidAskExecutionVerified!==false||
+     x.outOfSampleNetExpectancyProven!==false||
+     !allowedData.has(st?.data?.status)||
+     st.data.sourceRightsVerified!==false||
+     st.data.independentBrokerCalendarVerified!==false||
+     st.data.liveProviderConnected!==false||
+     !allowedArchive.has(st?.archive?.status)||
+     st.archive.dataSourceIndependentlyAuthenticated!==false||
+     st.archive.sessionGapsProven!==false||
+     !allowedAnalysis.has(st?.analysis?.status)||
+     st.analysis.approvedDirection!=="NONE"||
+     !["BUY","SELL","NONE"].includes(st.analysis.technicalWatch)||
+     st.analysis.entry!==null||st.analysis.stopLoss!==null||
+     st.analysis.takeProfit!==null||st.analysis.winProbability!==null||
+     st.analysis.independentContextVerified!==false||
+     st.context?.status!=="INDEPENDENT_SOURCE_CONFIRMATIONS_REQUIRED"||
+     st.paper?.status!=="BLOCKED"||
+     st.paper.paperOrdersAllowed!==false||
+     st.paper.paperLedgerOpened!==false||
+     st.paper.sampleTradesCreated!==0||
+     st.paper.brokerCostsVerified!==false||
+     st.paper.forwardNetPerformanceEstablished!==false)
+   throw Error("Unsafe four-stage batch admission");
+  const countSafe={};
+  for(const tf of ["M15","H1","H4"]){
+   const n=frames?.[tf],k=consecutive?.[tf];
+   if(!Number.isInteger(n)||n<0||n>45000||
+      !Number.isInteger(k)||k<0||k>n)
+     throw Error("Unsafe batch archive counts");
+   countSafe[tf]={closed:n,contiguous:k};
+  }
+  safeBatch={mode:"GOLD_PRECISION_FOUR_STAGE_BATCH_READONLY_V1",
+   signal:"WAIT",executable:false,paperOrdersAllowed:false,
+   dataStatus:st.data.status,archiveStatus:st.archive.status,
+   analysisStatus:st.analysis.status,paperStatus:"BLOCKED",
+   independentlyQualified:false,liveOrdersAllowed:false,
+   technicalWatch:st.analysis.status==="FROZEN_V3_TECHNICAL_OBSERVATION_ONLY"
+     ?st.analysis.technicalWatch:"NONE",
+   frameCounts:countSafe};
+ }
  return {status:"WAIT_EODHD_INTAKE",dataStatus:input.dataStatus,
   signal:"WAIT",executable:false,researchEligible:false,engineStatus:"NOT_INVOKED",
   paperRunning:false,closedBarCounts:safe,
   intake:{status:"BLOCKED",blockingReasons:[...new Set(reasons)].slice(0,20)},
   ...(safeAudit?{audit:safeAudit}:{}),...(safePaper?{paperGate:safePaper}:{}),
   ...(safeForward?{biquotePrivateForwardVault:safeForward}:{}),
-  ...(safeShadow?{biquoteForwardShadow:safeShadow}:{})};
+  ...(safeShadow?{biquoteForwardShadow:safeShadow}:{}),
+  ...(safeBatch?{ultimateFourStageBatch:safeBatch}:{})};
 }
 async function relay(authorization,{approved=false,fetchFn=globalThis.fetch}={}){
  if(!approved)return deny(503,"REVIEW_MONITOR_PROXY_DISABLED");
