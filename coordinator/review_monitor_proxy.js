@@ -241,6 +241,8 @@ function sanitize(input){
      st.archive.dataSourceIndependentlyAuthenticated!==false||
      st.archive.sessionGapsProven!==false||
      !allowedAnalysis.has(st?.analysis?.status)||
+     (st.analysis.status!=="FROZEN_V3_TECHNICAL_OBSERVATION_ONLY"&&
+      st.analysis.technicalWatch!=="NONE")||
      st.analysis.approvedDirection!=="NONE"||
      !["BUY","SELL","NONE"].includes(st.analysis.technicalWatch)||
      st.analysis.entry!==null||st.analysis.stopLoss!==null||
