@@ -37,6 +37,12 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertIn('href="/ultimate#unified-mobile-trading"', PUBLIC)
         self.assertIn("افتح شاشة الذهب والشارت والتداول الورقي", PUBLIC)
         self.assertNotIn('رمز BROKER_TOKEN', PUBLIC)
+        self.assertIn('id="biquote-shadow-review"', PUBLIC)
+        self.assertIn('id="biquote-shadow-state"', PUBLIC)
+        self.assertIn('id="biquote-shadow-coverage"', PUBLIC)
+        self.assertIn('data.biquoteForwardShadow', PUBLIC)
+        self.assertIn('shadow?.paperOrdersAllowed===false', PUBLIC)
+        self.assertIn('shadow?.approvedDirection==="NONE"', PUBLIC)
         self.assertIn('id="biquote-forward-panel"', PUBLIC)
         for key in ("forward-m15", "forward-h1", "forward-h4",
                     "biquote-forward-state", "forward-last", "forward-coverage"):
