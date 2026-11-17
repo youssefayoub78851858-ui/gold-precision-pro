@@ -72,6 +72,7 @@ function examine(chart,asOfMs){
  for(const tf of NAMES)frames[tf]=frameCandidate(chart?.[tf],tf,asOfMs);
  return {...WAIT,mode:"PRIVATE_MID_OBSERVED_EMA_REFERENCE_ONLY",
   brokerSessionVerified:false,upstreamRightsVerified:false,
+  observationOnly:true,gapsAssumedClosed:false,
   decisionReady:false,alignmentForTrading:"NOT_ASSESSABLE",
   sourceClock:"UTC_CLOSED_BARS_ONLY",
   frames};
