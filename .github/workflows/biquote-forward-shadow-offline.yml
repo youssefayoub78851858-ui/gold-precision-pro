@@ -1,0 +1,33 @@
+name: BiQuote forward archive to frozen V3 shadow research (offline)
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - 'coordinator/biquote_forward_shadow_review.py'
+      - 'coordinator/test_biquote_forward_shadow_review.py'
+      - 'coordinator/ultimate_four_stage_review.js'
+      - 'coordinator/v3_ultimate.js'
+      - 'coordinator/biquote_private_forward_vault.py'
+      - '.github/workflows/biquote-forward-shadow-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  private-forward-shadow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify future MID candles drive V3 offline, never BUY SELL paper orders
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_forward_shadow_review
+      - name: Verify existing synthetic four-stage regression still remains WAIT
+        run: node coordinator/test_ultimate_four_stage_review.js
+      - name: Verify human review admission still blocks paper trading
+        run: python -m unittest -v coordinator/test_ultimate_four_stage_paper.py
