@@ -4,6 +4,8 @@ on:
     branches: [review/v2-portable-tests-20261109]
     paths:
       - 'coordinator/biquote_forward_shadow_review.py'
+      - 'coordinator/biquote_24h_final_verdict.py'
+      - 'coordinator/test_biquote_24h_final_verdict.py'
       - 'coordinator/test_biquote_forward_shadow_review.py'
       - 'coordinator/ultimate_four_stage_review.js'
       - 'coordinator/v3_ultimate.js'
@@ -27,6 +29,9 @@ jobs:
       - name: Verify future MID candles drive V3 offline, never BUY SELL paper orders
         working-directory: coordinator
         run: python -m unittest -v test_biquote_forward_shadow_review
+      - name: Verify 24-hour final report distinguishes unknown session gaps from OHLC mismatches
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_24h_final_verdict
       - name: Verify existing synthetic four-stage regression still remains WAIT
         run: node coordinator/test_ultimate_four_stage_review.js
       - name: Verify human review admission still blocks paper trading
