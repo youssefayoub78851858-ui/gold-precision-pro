@@ -1,0 +1,28 @@
+name: Archived XAUUSD BID-only cost stress (development only)
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - 'coordinator/archived_bid_cost_sensitivity.js'
+      - 'coordinator/test_archived_bid_cost_sensitivity.js'
+      - '.github/workflows/archived-bid-cost-stress-offline.yml'
+      - 'coordinator/app/frozen/backtest.js'
+      - 'coordinator/app/frozen/strategy.js'
+      - 'coordinator/xauusd_spread_proof_readiness.js'
+      - 'research/recorded/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  archived-bid-development:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Assert recorded BID archive SHA, unchanged candidate geometry and no trading
+        run: node coordinator/test_archived_bid_cost_sensitivity.js
+      - name: Print Sep/Oct V2 historical R under hypothetical roundtrip price frictions
+        run: node coordinator/archived_bid_cost_sensitivity.js
