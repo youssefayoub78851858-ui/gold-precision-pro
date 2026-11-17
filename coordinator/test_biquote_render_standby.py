@@ -26,10 +26,13 @@ class BiQuoteRenderStandbySafety(unittest.TestCase):
                      "biquote_public_one_shot.py",
                      "biquote_24h_observer.py"):
             self.assertIn(name, docker)
-        for name in ("biquote_forward_shadow_review.py","v3_ultimate.js",
+        for name in ("biquote_forward_shadow_review.py","biquote_24h_final_verdict.py",
+                     "ultimate_batch_acceptance.py","v3_ultimate.js",
                      "ultimate_four_stage_review.js","ultimate_signal_quality.js",
                      "ultimate_signal_quality_report.js","ultimate_shadow_admission.js"):
             self.assertIn(name,docker)
+        self.assertIn("ultimate_batch_acceptance.py",docker)
+        self.assertIn("biquote_24h_final_verdict.py",docker)
         self.assertIn('CMD ["python3", "/app/entrypoint.py"]', docker)
         self.assertIn('DATA_DIR=/var/data/gold-live', docker)
         self.assertNotIn("CUTOVER_MODE=live", docker)
@@ -39,6 +42,9 @@ class BiQuoteRenderStandbySafety(unittest.TestCase):
         self.assertIn("biquote_review_enabled=(mode=='standby'", entry)
         self.assertIn("os.environ.get(AUTHORIZATION_ENV)==AUTHORIZATION_VALUE",entry)
         self.assertIn("GPP_BIQUOTE_REVIEW_START_UTC",entry)
+        self.assertIn("four_stage_batch_review(",entry)
+        self.assertIn("vault_metadata=body['biquotePrivateForwardVault']",entry)
+        self.assertIn("shadow_status=body['biquoteForwardShadow']",entry)
         self.assertIn("if biquote_review_enabled:",entry)
         self.assertIn("daemon=True,name='biquote-public-24h-review'",entry)
         self.assertIn("if mode=='live':",entry)
