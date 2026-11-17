@@ -81,6 +81,10 @@ class QualityCounters:
             self.http_failures += 1
             return
         self.http_ok += 1
+        kind = result.get("geometryFailureClass", "UNAVAILABLE")
+        if kind not in self.geometry_failure_classes:
+            kind = "UNAVAILABLE"
+        self.geometry_failure_classes[kind] += 1
         private = result.get("privateArchive") or {}
         if private.get("attempted") is True:
             self.archive_attempts += 1
