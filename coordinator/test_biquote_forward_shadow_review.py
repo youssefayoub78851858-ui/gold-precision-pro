@@ -36,6 +36,13 @@ class ForwardShadowTests(unittest.TestCase):
         self.assertFalse(short["signalReady"])
         self.assertEqual(short["signal"],"WAIT")
         self.assertIn("INSUFFICIENT_CONTIGUOUS_CLOSED_H4_H1_M15",short["reasonCodes"])
+        self.assertIn("ONE_DAY_FORWARD_CAPTURE_CANNOT_WARM_UP_H4",short["reasonCodes"])
+        self.assertEqual(short["researchWarmup"]["minimumPerfectH4Hours"],84)
+        self.assertFalse(short["researchWarmup"]["single24HourWindowEnoughForH4"])
+        self.assertTrue(short["researchWarmup"]["additionalExplicitlyApprovedCaptureRequired"])
+        self.assertFalse(short["researchWarmup"]["paperTradingAdmissible"])
+        self.assertEqual(short["frames"]["H4"]["additionalContiguousNeeded"],
+                         21-short["frames"]["H4"]["contiguousClosed"])
         self.assertFalse(short["paperOrdersAllowed"])
         self.assertIsNone(short["entry"])
         self.assertIsNone(short["stopLoss"])
@@ -59,6 +66,7 @@ class ForwardShadowTests(unittest.TestCase):
         self.assertEqual(report["comparedCrossFrames"]["H1"]["fullyCoveredDisagreed"],0)
         self.assertEqual(report["comparedCrossFrames"]["H4"]["fullyCoveredDisagreed"],0)
         self.assertGreaterEqual(report["frames"]["H4"]["contiguousClosed"],21)
+        self.assertEqual(report["frames"]["H4"]["additionalContiguousNeeded"],0)
         self.assertIn("NO_REAL_SIGNAL_WITHOUT_INDEPENDENT_CONTEXT_AND_RISK",
                       report["reasonCodes"])
         self.assertIn("GC_DXY_YIELDS_CALENDAR_NEWS_AND_LICENSED_ORDERFLOW_UNVERIFIED",
