@@ -19,6 +19,9 @@ on:
       - coordinator/ultimate_filter_pairwise_audit.js
       - coordinator/test_ultimate_filter_pairwise_audit.js
       - coordinator/test_ultimate_signal_quality.js
+      - coordinator/ultimate_four_stage_review.js
+      - coordinator/test_ultimate_four_stage_review.js
+      - coordinator/test_ultimate_four_stage_paper.py
       - coordinator/v3_ultimate.js
       - .github/workflows/ultimate-signal-quality-offline-review.yml
   workflow_dispatch:
@@ -35,6 +38,10 @@ jobs:
           node-version: '20'
       - name: Offline no-lookahead signal quality and risk gate diagnostics
         run: node coordinator/test_ultimate_signal_quality.js
+      - name: Integrated four stages - research candidates, context, data and paper readiness
+        run: node coordinator/test_ultimate_four_stage_review.js
+      - name: Offline paper admission stays locked for synthetic preview
+        run: python3 -m unittest -v coordinator/test_ultimate_four_stage_paper.py
       - name: Conservative V3 shadow signal veto including Binance isolation
         run: node coordinator/test_ultimate_shadow_admission.js
       - name: Fixed paired baseline vs shadow-filter candidate audit safety (offline)
