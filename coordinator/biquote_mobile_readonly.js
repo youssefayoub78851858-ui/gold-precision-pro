@@ -18,6 +18,10 @@ const FRAMES=Object.freeze(["M15","H1","H4"]);
 const MAX_BYTES=1000000;
 const MAX_AGE_MS=30000;
 const CACHE_MS=90000;
+// A 90-second successful-response cache must NEVER override the independent
+// 30-second market-quote freshness gate. Refresh at 20s, leaving headroom
+// for HTTP latency; still fail closed if the new quote cannot be verified.
+const MAX_REUSABLE_QUOTE_AGE_MS=20000;
 const WAIT=Object.freeze({signal:"WAIT",executable:false,researchEligible:false,orderEndpointsCalled:false,paperOrdersAllowed:false,tradePlanExecutable:false});
 let cache=null,expires=0,pending=null;
 
@@ -146,7 +150,11 @@ async function snapshot({fetchFn=globalThis.fetch,nowMs=Date.now,authorization="
  let sample;
  try{
   // Single-flight max 4 requests; no provider creds or trading endpoints.
-  if(cache&&nowMs()<expires)sample=cache;
+  const cacheNow=nowMs();
+  const cachedQuoteTime=cache?Date.parse(cache.quoteUTC):NaN;
+  if(cache&&cacheNow<expires&&Number.isFinite(cachedQuoteTime)&&
+     cacheNow>=cachedQuoteTime&&cacheNow-cachedQuoteTime<=MAX_REUSABLE_QUOTE_AGE_MS)
+    sample=cache;
   else{
    if(!pending)pending=collect(fetchFn,nowMs).then(value=>{
     cache=value;expires=nowMs()+CACHE_MS;return value;

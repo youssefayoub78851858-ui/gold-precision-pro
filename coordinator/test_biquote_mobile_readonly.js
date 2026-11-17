@@ -80,6 +80,7 @@ async function main(){
  assert.equal(privateData.body.rawQuoteShown,true);
  assert.equal(checked,1);
  assert.equal(first.calls.length,4,"Cache avoids redundant rapid requests");
+
  const denied=await api.snapshot({fetchFn:first.fetch,nowMs:()=>NOW+7000,
    authorization:auth,verifyViewer:async()=>false});
  assert.equal(denied.body.rawQuoteShown,false);
@@ -87,6 +88,26 @@ async function main(){
  const invalid=await api.snapshot({fetchFn:first.fetch,nowMs:()=>NOW+8000,
    authorization:"Bearer bad",verifyViewer:async()=>{throw Error("must not verify");}});
  assert.equal(invalid.body.rawQuoteShown,false);
+ // Regression: provider quote can be fresh for 30 seconds, but the
+ // old 90-second cache silently caused 503 between seconds 30 and 90.
+ // Refresh with a newly timestamped quote BEFORE the validation limit.
+ const renewedPacket=packet();
+ renewedPacket.quote.timestamp=new Date(NOW+23500).toISOString();
+ const renewedFetcher=fake(renewedPacket);
+ const renewed=await api.snapshot({fetchFn:renewedFetcher.fetch,nowMs:()=>NOW+25000});
+ assert.equal(renewed.httpStatus,200,"Expired quote cache must refetch");
+ secure(renewed.body);
+ assert.ok(renewed.body.quoteAgeSeconds<=2,renewed.body.quoteAgeSeconds);
+ assert.equal(renewedFetcher.calls.length,4,"4 new GETs, never background poll");
+ assert.equal(renewed.body.rawQuoteShown,false);
+ assert.equal(renewed.body.bid,undefined);
+ // At +33s (previously an inevitable error), refreshed response stays valid.
+ const recovered=await api.snapshot({fetchFn:async()=>{throw Error("Should reuse recent quote")},
+   nowMs:()=>NOW+33000});
+ assert.equal(recovered.httpStatus,200);
+ secure(recovered.body);
+ assert.equal(recovered.body.rawQuoteShown,false);
+
  // Expired cached quote must not claim the initial observation remains fresh.
  api.resetForTests();
  let current=packet();current.quote.timestamp=new Date(NOW-61000).toISOString();

@@ -58,8 +58,9 @@
         Number.isInteger(data.frameSummary[tf].closedCount)&&
         data.frameSummary[tf].closedCount>=50))
      throw Error("رد غير آمن أو بيانات غير مؤهلة للعرض");
-   $("biquote-status").textContent=
-      "BiQuote XAUUSD — عيّنة حقيقية فُحصت بنجاح، القرار WAIT (لا أوامر)";
+   $("biquote-status").textContent=data.status==="WAIT_CROSS_FRAME_GAPS"
+      ?"WAIT — أسعار BiQuote وصلت، لكن فحص الشموع كشف فجوات أو اختلافات غير محسومة"
+      :"BiQuote XAUUSD — عيّنة حقيقية فُحصت، القرار WAIT (لا أوامر)";
    $("biquote-observed").textContent=local(data.observedUTC)+
       " بيروت | عمر آخر سعر عند الفحص: "+fmt(data.quoteAgeSeconds)+" ثانية";
    if(data.rawQuoteShown===true&&
