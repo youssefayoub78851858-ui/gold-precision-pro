@@ -38,6 +38,35 @@ class FinalVerdictTests(unittest.TestCase):
             "minObservedSpreadPrice","maxObservedSpreadPrice",
             "bid","ask","open","high","low","close")))
 
+    def test_actual_deployed_989699cd_legacy_report_schema(self):
+        r=fixture()
+        # Deployed Coordinator's previous 24h observer reports no typed
+        # geometryFailureClasses or privateArchive* counters.
+        for k in ("geometryFailureClasses","privateArchiveAttempts",
+                  "privateArchiveSavedSnapshots","privateArchiveRejectedSnapshots",
+                  "privateArchiveNewClosedBars"):
+            r.pop(k)
+        out=verdict(r)
+        self.assertEqual(out["status"],"REVIEW_FINISHED_READONLY_NOT_TRADE_ADMISSIBLE")
+        self.assertEqual(out["reportSchema"],"LEGACY_989699CD_NO_FAILURE_CLASS")
+        self.assertEqual(out["h1OHLCDisagreements"],0)
+        self.assertEqual(out["h4OHLCDisagreements"],0)
+        self.assertIn("LEGACY_FAILED_GEOMETRY_CLASS_NOT_AVAILABLE",out["reasonCodes"])
+        self.assertIn("UNCLASSIFIED_M15_H1_H4_COVERAGE_GAPS",out["reasonCodes"])
+        self.assertNotIn("SOURCE_OHLC_PRICE_DISAGREEMENT",out["reasonCodes"])
+        self.assertFalse(out["archiveActivationAllowed"])
+        r["h4DisagreementsAcrossSnapshots"]=1
+        out=verdict(r)
+        self.assertIn("SOURCE_OHLC_PRICE_DISAGREEMENT",out["reasonCodes"])
+        r.pop("h4DisagreementsAcrossSnapshots")
+        self.assertEqual(verdict(r)["status"],"BLOCKED")
+        r=fixture()
+        r.pop("geometryFailureClasses")
+        self.assertIn("MIXED_OR_UNKNOWN_REPORT_SCHEMA",verdict(r)["reasonCodes"])
+        r=fixture()
+        r["startedUTC"]="2026-11-15T19:45:00Z"
+        self.assertIn("REVIEW_RUN_START_UNEXPECTED",verdict(r)["reasonCodes"])
+
     def test_actual_price_disagreement_class_is_a_separate_hard_veto(self):
         report=fixture()
         report["h4DisagreementsAcrossSnapshots"]=1
