@@ -1,0 +1,31 @@
+name: BiQuote bounded failure-class diagnostics (offline)
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - 'coordinator/biquote_public_one_shot.py'
+      - 'coordinator/biquote_24h_observer.py'
+      - 'coordinator/test_biquote_public_one_shot.py'
+      - 'coordinator/test_biquote_24h_observer.py'
+      - '.github/workflows/biquote-metadata-diagnostics-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bounded-diagnostics-no-market-orders:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify one-shot fixed four GET outcomes with no network
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_public_one_shot
+      - name: Verify bounded quality counters and output free of quotes
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_24h_observer
+      - name: Verify completed 24h final report stays WAIT
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_24h_final_verdict
