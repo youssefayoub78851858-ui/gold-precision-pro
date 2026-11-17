@@ -15,6 +15,8 @@ a(doc.includes('تعذّر التحقق؛ العدد غير معروف'),"Failed
 a(doc.includes('أرشيف BiQuote الخاص: غير مؤكد على الشاشة العامة'),"No fabricated forward-vault status");
 a(doc.includes('مراقبة BiQuote المكتملة بتاريخ 17 نوفمبر 2026'),"Timestamped historical report, not current live feed");
 a(doc.includes('691 استجابة كاملة و29 عينة ناقصة HTTP/JSON'),"Show 720-slot quality failures");
+a(doc.includes('كلّها بين 22:03 و22:59 UTC'),"Failures are confined to dated vendor-declared reference break");
+a(doc.includes('من دون تأكيد مستقل لجلسة الوسيط'),"Never certify independent broker calendar by timing coincidence");
 a(doc.includes('صفر فحص جودة كامل ناجح'),"No fake qualification from zero price mismatches");
 a(doc.includes('الأرشفة التلقائية محجوبة وقرار الصفقات WAIT'),"Source-quality veto stays visible");
 a(doc.includes('href="#biquote-live-chart-panel"'),"Mobile chart nav should open real read-only chart");
