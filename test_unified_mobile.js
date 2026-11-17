@@ -19,6 +19,15 @@ a(doc.includes('كلّها بين 22:03 و22:59 UTC'),"Failures are confined to 
 a(doc.includes('من دون تأكيد مستقل لجلسة الوسيط'),"Never certify independent broker calendar by timing coincidence");
 a(doc.includes('صفر فحص جودة كامل ناجح'),"No fake qualification from zero price mismatches");
 a(doc.includes('الأرشفة التلقائية محجوبة وقرار الصفقات WAIT'),"Source-quality veto stays visible");
+for(const id of ["gdc-four-stage-batch","gdc-batch-data","gdc-batch-archive",
+                 "gdc-batch-engine","gdc-batch-paper"])
+ a(doc.includes('id="'+id+'"'),"Four-stage batch status not visible: "+id);
+a(doc.includes('اختبار المسار البرمجي المتكامل نجح ببيانات اختبارية غير حقيقية'));
+a(doc.includes('الوصلة جاهزة · التفعيل غير مثبت'));
+a(doc.includes('التداول اليدوي التجريبي منفصل'));
+a(doc.includes('إشاراته محجوبة'));
+a(!doc.includes('الصفقات الحقيقية جاهزة'));
+
 a(doc.includes('href="#biquote-live-chart-panel"'),"Mobile chart nav should open real read-only chart");
 a(doc.includes('href="#paper-actions"'),"Paper controls clearly separate from real data");
 a(doc.includes('خطة الصفقة — غير مفعّلة'));
