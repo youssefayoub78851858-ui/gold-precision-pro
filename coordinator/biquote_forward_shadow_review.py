@@ -69,6 +69,32 @@ def tail_contiguous(rows: object, width: int) -> list[dict]:
     return list(reversed(tail))
 
 
+def overlaps_match(frames: dict[str, list[dict]]) -> dict:
+    """Check source-observed fully covered H1/H4 closes using M15, not inferred bars."""
+    m15={b["datetime"]: b for b in frames["M15"]}
+    out={}
+    for tf, n in (("H1",4),("H4",16)):
+        verified=0
+        mismatches=0
+        for higher in frames[tf]:
+            start=_stamp(higher["datetime"])
+            sub=[m15.get((start+dt.timedelta(minutes=15*i)).strftime("%Y-%m-%dT%H:%M:%SZ"))
+                 for i in range(n)]
+            if any(x is None for x in sub):
+                continue  # unknown coverage, NEVER treat as matched
+            expected={"open":sub[0]["open"],
+                      "high":max(b["high"] for b in sub),
+                      "low":min(b["low"] for b in sub),
+                      "close":sub[-1]["close"]}
+            verified+=1
+            if any(abs(expected[k]-higher[k])>max(0.00001,abs(higher[k])*1e-8)
+                   for k in expected):
+                mismatches+=1
+        out[tf]={"fullyCoveredCompared":verified,
+                 "fullyCoveredDisagreed":mismatches}
+    return out
+
+
 def shadow_review(dirname: str | pathlib.Path, *, runner=None) -> dict:
     """Read existing private vault; never write files or call an external feed.
 
@@ -112,11 +138,19 @@ def shadow_review(dirname: str | pathlib.Path, *, runner=None) -> dict:
            for tf in FRAMES_ORDER):
         safe["reasonCodes"].append("INSUFFICIENT_CONTIGUOUS_CLOSED_H4_H1_M15")
         return safe
+    closed_frames={tf: tail_contiguous(rows[tf], WIDTH[tf])
+                   for tf in FRAMES_ORDER}
+    parity=overlaps_match(closed_frames)
+    safe["comparedCrossFrames"]=parity
+    if (any(parity[tf]["fullyCoveredCompared"] < 1 or
+            parity[tf]["fullyCoveredDisagreed"] > 0
+            for tf in ("H1","H4"))):
+        safe["reasonCodes"].append("FORWARD_CROSS_FRAME_PARITY_NOT_PROVEN")
+        return safe
     packet = {"dataOrigin": "BIQUOTE_ARCHIVED_UNVERIFIED_NO_PAPER",
               "snapshot": {
                   "asOfUTC": received,
-                  "frames": {tf: tail_contiguous(rows[tf], WIDTH[tf])
-                             for tf in FRAMES_ORDER},
+                  "frames": closed_frames,
                   "feeds": {},   # NEVER forge GC/DXY/yields/news/order flow.
                   "spread": quote["spread"],
                   # There is no verified broker lot/commission contract.
@@ -143,7 +177,9 @@ def shadow_review(dirname: str | pathlib.Path, *, runner=None) -> dict:
         safe["reasonCodes"].append("SHADOW_OUTPUT_CONTRACT_REJECTED")
         return safe
     stages = output.get("stages")
-    if not isinstance(stages, dict) or stages.get("data", {}).get("status") != "GEOMETRY_ONLY":
+    if (not isinstance(stages, dict) or
+        stages.get("data", {}).get("status") != "GEOMETRY_ONLY" or
+        stages.get("analysis", {}).get("status") != "FROZEN_ENGINE_EVALUATED"):
         safe["reasonCodes"].append("FROZEN_V3_GEOMETRY_NOT_VERIFIED")
         return safe
     direction = stages.get("analysis", {}).get("technicalCandidate")
