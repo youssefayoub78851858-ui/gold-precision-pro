@@ -70,9 +70,59 @@
 </style>
 <h1>Gold Precision Pro Ultimate</h1>
 <p class="unified-intro">شاشة واحدة للشارت والتحليل والتداول الورقي. <strong>القرار الحقيقي WAIT</strong> حتى تتصل بيانات سوق مرخّصة؛ كل الصفقات هنا محاكاة محلية.</p>
+<style id="gold-decision-style">
+#gold-decision-center{background:linear-gradient(155deg,#122439,#121a2d 70%);border:1px solid #af8c4e;border-radius:18px;padding:15px;margin:12px 0 15px;box-shadow:0 10px 27px #0005;scroll-margin-top:78px;color:#e9eff9}
+#gold-decision-center *{box-sizing:border-box}
+#gold-decision-center h2{font-size:1.22rem;color:#f1d493;margin:2px 0 7px}
+#gold-decision-center .gdc-sub{font-size:.84rem;color:#b9c7da;line-height:1.6;margin:5px 0 12px}
+#gold-decision-center .gdc-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#gold-decision-center .gdc-wait{font-weight:800;letter-spacing:.05em;font-size:1.3rem;border:1px solid #c59741;border-radius:12px;background:#4a3415;color:#ffe4a1;padding:9px 15px;direction:ltr}
+#gold-decision-center .gdc-data{background:#1a2a3e;border:1px solid #3e546e;border-radius:12px;padding:13px;margin-top:10px}
+#gold-decision-center .gdc-data strong{display:block;color:#f1d493;margin:4px 0;font-size:.97rem;overflow-wrap:anywhere}
+#gold-decision-center .gdc-columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
+#gold-decision-center .gdc-metric{background:#1d2e43;border-radius:10px;border:1px solid #394f67;padding:10px;min-width:0}
+#gold-decision-center .gdc-metric span{display:block;font-size:.75rem;color:#b1c6d8;margin:0 0 6px}
+#gold-decision-center .gdc-metric strong{font-size:.86rem;color:#f1e0bc;overflow-wrap:anywhere;display:block}
+#gold-decision-center .gdc-levels{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:9px 0}
+#gold-decision-center .gdc-level{border:1px dashed #63758a;border-radius:9px;padding:9px 3px;text-align:center}
+#gold-decision-center .gdc-level span{display:block;color:#bac8d7;font-size:.69rem}
+#gold-decision-center .gdc-level strong{color:#e4d0a7}
+#gold-decision-center .gdc-action{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+#gold-decision-center .gdc-action a{flex:1;min-width:130px;text-align:center;border-radius:9px;background:#2a3e54;padding:10px 8px;color:#f7d68f;font-weight:700;font-size:.85rem;text-decoration:none;border:1px solid #62728b}
+#gold-decision-center .gdc-reason{border-right:3px solid #b9934d;padding:5px 11px;color:#d8e1eb;font-size:.84rem;line-height:1.75;margin:10px 0}
+@media(max-width:560px){
+ #gold-decision-center{padding:11px}
+ #gold-decision-center .gdc-top{align-items:flex-start}
+ #gold-decision-center .gdc-wait{font-size:1.1rem}
+ #gold-decision-center .gdc-columns{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #gold-decision-center .gdc-metric{padding:8px 6px}
+ #gold-decision-center .gdc-metric strong{font-size:.78rem}
+ #gold-decision-center .gdc-levels{grid-template-columns:repeat(5,minmax(0,1fr))}
+ #gold-decision-center .gdc-level{padding:7px 1px}
+}
+</style>
 <nav class="unified-mobile-nav" aria-label="أقسام نظام الذهب الموحد">
-<a href="#unified-mobile-trading">الشارت</a><a href="#paper-actions">الصفقات</a><a href="#paper-statistics">السجل</a><a href="#review-overview">التحليل والأخبار</a>
+<a href="#gold-decision-center">القرار</a><a href="#biquote-live-chart-panel">شارت الذهب</a><a href="#paper-actions">تداول ورقي</a><a href="#paper-statistics">السجل</a>
 </nav>
+<section id="gold-decision-center" aria-labelledby="gdc-title" data-approval="READ_ONLY_WAIT">
+<div class="gdc-top"><div><h2 id="gdc-title">Gold Precision · مركز القرار</h2><p class="gdc-sub">XAUUSD | شارت خاص للقراءة فقط · البحث غير مؤهّل للصفقات</p></div><strong class="gdc-wait" id="gdc-decision" aria-label="قرار نظام التداول WAIT">WAIT</strong></div>
+<div class="gdc-data"><span class="gdc-sub">حالة الذهب الحقيقي</span><strong id="gdc-feed-status" role="status" aria-live="polite">WAIT — بانتظار فحص بيانات BiQuote الخاصة</strong><p id="gdc-observed" class="gdc-sub">آخر تحديث: غير متاح · السعر: محجوب حتى التحقق</p><p id="gdc-quote" class="gdc-sub">BID / ASK: لا توجد بيانات مشاهدة معتمدة</p></div>
+<div class="gdc-columns" aria-label="اتجاه الفواصل الوصفي — ليس توصية">
+<div class="gdc-metric"><span>H4 · الاتجاه العام</span><strong id="gdc-h4">غير متاح</strong></div>
+<div class="gdc-metric"><span>H1 · تأكيد الساعة</span><strong id="gdc-h1">غير متاح</strong></div>
+<div class="gdc-metric"><span>M15 · التوقيت</span><strong id="gdc-m15">غير متاح</strong></div>
+</div>
+<div class="gdc-data"><strong>خطة الصفقة — غير مفعّلة</strong><div class="gdc-levels" aria-label="لا توجد مستويات دخول أو وقف أو أهداف حقيقية">
+<div class="gdc-level"><span>ENTRY</span><strong>—</strong></div>
+<div class="gdc-level"><span>SL</span><strong>—</strong></div>
+<div class="gdc-level"><span>TP1</span><strong>—</strong></div>
+<div class="gdc-level"><span>TP2</span><strong>—</strong></div>
+<div class="gdc-level"><span>TP3</span><strong>—</strong></div>
+</div><p class="gdc-sub">لن نعرض نقاط دخول أو نسبة نجاح إلا بعد إثبات مصدر التنفيذ والمخاطر واختبار النتائج خارج العينة.</p></div>
+<p class="gdc-reason" id="gdc-blocker">سبب WAIT: جلسات وسيط الذهب وتكاليف التنفيذ غير مثبتة؛ GC وDXY والسندات والأخبار وOrder Flow غير مؤكدة. لا صفقات حقيقية أو آلية.</p>
+<div class="gdc-action"><a href="#biquote-viewer-guide">فحص الشارت الحقيقي</a><a href="#paper-actions">التجربة الورقية اليدوية</a><a href="#multi-source-readiness">مصادر التأكيد</a></div>
+<p class="gdc-sub">لوحة القرار مربوطة بفحص BiQuote الخاص فقط؛ لا تنقل أسعار السوق إلى سجل المحاكاة ولا تفتح صفقات. التحديثات الوصفية مش إشارات BUY/SELL.</p>
+</section>
 <section id="unified-mobile-trading" aria-labelledby="unified-trading-title" data-mode="REVIEW_PAPER_ONLY"><main>
 <header class="heading"><div><h2 id="unified-trading-title">شارت الذهب والتداول الورقي</h2><p class="hint">XAUUSD — M15 / H1 / H4 · لا صفقات حقيقية</p></div><span id="live-badge" class="flag">WAIT · بلا بيانات حية</span></header>
 <p class="hint"><strong>تنبيه:</strong> كل فتح وإغلاق هنا محاكاة ورقية محليّة على شموع مُسجّلة أو اختبار اصطناعي. ليست توصية BUY/SELL حية، ولا يوجد اتصال وسيط.</p>
