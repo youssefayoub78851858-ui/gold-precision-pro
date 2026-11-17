@@ -91,6 +91,18 @@ class ForwardCaptureSinglePoll(unittest.TestCase):
                          "FORWARD_HOLDOUT_NOT_STARTED")
         self.assertFalse(self.path.exists())
 
+
+    def test_private_live_receive_microseconds_normalized_to_milliseconds(self):
+        # Real UTC clock returns six decimal places; private vault timestamps
+        # intentionally admit up to three. Do not reject all live receipts.
+        received = NOW + dt.timedelta(microseconds=987654)
+        packet = copy.deepcopy(self.data)
+        saved = ingest(self.path, packet,
+            received_utc=received.isoformat(timespec='milliseconds').replace('+00:00', 'Z'))
+        self.assertTrue(saved["sourceMarketDataPersistedToPrivateVault"])
+        self.assertEqual(inspect_metadata(self.path)["lastImportedUTC"],
+                         "2026-11-19T03:05:10.987Z")
+
     def test_bad_quote_rejected_without_poll_retry_or_data_leak(self):
         self.data["quote"]["stale"] = True
         opener, calls = simulated_poll(self.data)
@@ -112,6 +124,7 @@ class ForwardCaptureSinglePoll(unittest.TestCase):
             "forward_vault_dir.startswith('/var/data/')",
             "if start < FORWARD_START:",
             "one_shot_probe(private_snapshot_sink=archive_received)",
+            "received.isoformat(timespec='milliseconds')",
             "observe_24h(start,probe=one_shared_poll)",
             "if forward_capture_enabled:",
         ):

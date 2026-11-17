@@ -3,7 +3,7 @@
 Read-only and diagnostic only. Never polls, retries, connects a trading account,
 starts a websocket, issues an order or invokes an engine. An EXPLICIT
 in-process private sink can archive an already fetched sample without extra GETs;
-by default no data is written, and no provider data is returned to the caller.
+by default no data is written, and no full source OHLC envelopes are returned.
 A green HTTP probe cannot establish underlying MT5 broker data rights.
 """
 from __future__ import annotations
@@ -136,7 +136,7 @@ def one_shot_probe(opener=None, clock=None, *, private_snapshot_sink=None):
         result["blockingReasons"].append("PUBLIC_HTTP_NOT_FULLY_AVAILABLE")
     # Optional and strictly in-memory: the same four successful public GETs
     # are delivered to an explicitly configured private archive sink.
-    # No raw source data is ever returned from this probe.
+    # The full OHLC envelopes are never returned from this probe.
     if private_snapshot_sink is not None:
         capture = {"enabled": True, "attempted": False, "saved": False,
                    "newClosedBars": {"M15": 0, "H1": 0, "H4": 0}}

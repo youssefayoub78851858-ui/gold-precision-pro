@@ -88,7 +88,7 @@ def run_biquote_readonly_review():
     raise ValueError('FORWARD_CAPTURE_START_BEFORE_HOLDOUT')
    def archive_received(packet,received):
     return forward_ingest(forward_vault_dir,packet,
-        received_utc=received.isoformat().replace('+00:00','Z'))
+        received_utc=received.isoformat(timespec='milliseconds').replace('+00:00','Z'))
    def one_shared_poll():
     return one_shot_probe(private_snapshot_sink=archive_received)
    result=observe_24h(start,probe=one_shared_poll)

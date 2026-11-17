@@ -47,3 +47,7 @@ volume using `biquote_private_forward_vault.ingest`. **There is no second poll.*
   execution spreads, and strategy profitability remain **unverified**.
 - Tests use synthetic fixtures and no live BiQuote network access. Deployment
   and actual file persistence on Render still require operator inspection.
+
+UTC receipt timestamps are formatted to **millisecond precision** before
+private vault validation; live Python clocks otherwise include six-digit
+microseconds and would be rejected even for valid received data.
