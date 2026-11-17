@@ -44,6 +44,29 @@ paper no-order simulations. Passing these tests **does not mean the
 strategy has a known win rate**, that the upstream broker's rights have
 been granted, or that published dashboards reflect live market trades.
 
+## Alternative source shortlisted without payment
+
+Massive Currencies Starter was verified against the current Massive public
+currency product/docs and a support answer on 16 November 2026:
+**$49/month**, includes real-time Forex WebSocket BBO quotes and historical
+Forex quotes, under an individual-use personal terms regime. Massive notes
+its Forex aggregates are BID-derived, so they cannot substitute for
+historical executable BID/ASK without a separate quote reconstruction.
+
+- Product/plans: https://massive.com/pricing?product=currencies
+- Quote WebSocket: https://massive.com/docs/websocket/forex/quotes
+- Historical quote docs: https://massive.com/docs/flat-files/forex/quotes
+- Personal cloud usage: https://massive.com/knowledge-base/article/which-plan-do-i-need-to-show-massive-data-in-my-app
+- Personal market-data terms: https://massive.com/legal/market-data-terms-of-service
+
+**Not purchased, not linked, no API key used, not production eligible.**
+The exact historical `C:XAUUSD` BID/ASK dates, hourly completeness and
+quote/aggregate parity have not been proven by an independent authorized
+data sample. Massive does not supply COMEX GC MBO/MBP Order Flow in that
+Forex quote tier; Databento/CME fees and exchange rights remain
+**separate and unresolved**. This plan is a *fallback candidate*, not
+a claimed one-subscription solution for the entire trading system.
+
 ## Why there is no safe one-click 'activate all'
 
 The historical review's 29 failures are known to occur only in the
