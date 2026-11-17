@@ -61,6 +61,24 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertNotIn("sessionStorage", PUBLIC)
         self.assertNotIn("OrderSend", PUBLIC)
 
+    def test_private_four_stage_batch_has_locked_mobile_evidence(self):
+        for tag in ('id="four-stage-private-panel"', 'id="batch-readiness-state"',
+                    'id="batch-data-state"', 'id="batch-archive-state"',
+                    'id="batch-analysis-state"', 'id="batch-paper-state"',
+                    'id="batch-frames-state"'):
+            self.assertIn(tag,PUBLIC)
+        self.assertIn("data.ultimateFourStageBatch",PUBLIC)
+        self.assertIn('batch?.paperOrdersAllowed===false',PUBLIC)
+        self.assertIn('batch?.liveOrdersAllowed===false',PUBLIC)
+        self.assertIn('batch?.independentlyQualified===false',PUBLIC)
+        self.assertIn('el("batch-paper-state").textContent="BLOCKED"',PUBLIC)
+        self.assertIn("clearBatchDisplay()",PUBLIC)
+        self.assertNotIn('batch.entry',PUBLIC)
+        self.assertNotIn('batch.stopLoss',PUBLIC)
+        self.assertNotIn('batch.takeProfit',PUBLIC)
+        self.assertIn("four_stage_batch_review(",ENTRY)
+        self.assertIn("shadow_status=body['biquoteForwardShadow']",ENTRY)
+
     def test_biquote_forward_archive_counts_are_readonly_and_private(self):
         for tag in ('id="biquote-forward-panel"', 'id="forward-m15"',
                     'id="forward-h1"', 'id="forward-h4"',
