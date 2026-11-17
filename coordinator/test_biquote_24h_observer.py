@@ -114,6 +114,10 @@ class BiQuote24hOfflineTests(unittest.TestCase):
             "independentQuoteAgeOver30Seconds":True,
             "independentQuoteAgeInvalid":False,
             "h4InternalM15Gaps":3,"h4RetentionEdgesIncomplete":2,
+            "h4PartialObservedPriceContradictions":1,
+            "h4MissingM15VendorPauseCandidates":4,
+            "h4MissingM15OutsideVendorReference":2,
+            "h4MissingM15ReferenceUnknown":0,
             "marketDataExposed":False,"sourceRequestsMade":0,
             "tradingEnabled":False,
         }
@@ -131,6 +135,10 @@ class BiQuote24hOfflineTests(unittest.TestCase):
         self.assertEqual(r["independentQuoteOver30SecondsSamples"],1)
         self.assertEqual(r["h4RetentionEdgeIncompleteAcrossSnapshots"],2)
         self.assertEqual(r["h4InternalM15GapsDiagnosedAcrossSnapshots"],3)
+        self.assertEqual(r["h4PartialObservedPriceConflictsAcrossSnapshots"],1)
+        self.assertEqual(r["h4MissingM15VendorPauseReferenceAcrossSnapshots"],4)
+        self.assertEqual(r["h4MissingM15VendorTradingReferenceAcrossSnapshots"],2)
+        self.assertEqual(r["h4MissingM15ReferenceUnknownAcrossSnapshots"],0)
         self.assertEqual(r["h4UnclassifiedPartialAggregatesAcrossSnapshots"],3)
         self.check_safe(r)
         import json
