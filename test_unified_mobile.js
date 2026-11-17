@@ -7,12 +7,16 @@ for(const id of ["gold-decision-center","gdc-title","gdc-decision","gdc-feed-sta
                  "gdc-h4","gdc-h1","gdc-m15","gdc-blocker"])
  a(doc.includes('id="'+id+'"'),"Missing owner-only mobile decision panel element: "+id);
 a(doc.includes('data-approval="READ_ONLY_WAIT"'));
-for(const id of ["gdc-source-proof","gdc-archive-proof","gdc-v3-proof","gdc-gates"])
+for(const id of ["gdc-source-proof","gdc-archive-proof","gdc-v3-proof","gdc-24h-audit","gdc-gates"])
  a(doc.includes('id="'+id+'"'),"Missing safe readiness gate: "+id);
 a(doc.includes('href="/private-monitor#biquote-forward-panel"'),"Owner-only vault check must remain separate");
 a(doc.includes('متطلبات المصادر: 0 / 9 مكتملة حسب سجل المتطلبات الثابت فقط'),"A 0/9 STATIC audit must not be labelled a realtime market status");
 a(doc.includes('تعذّر التحقق؛ العدد غير معروف'),"Failed metadata check cannot default to fake readiness");
 a(doc.includes('أرشيف BiQuote الخاص: غير مؤكد على الشاشة العامة'),"No fabricated forward-vault status");
+a(doc.includes('مراقبة BiQuote المكتملة بتاريخ 17 نوفمبر 2026'),"Timestamped historical report, not current live feed");
+a(doc.includes('691 استجابة كاملة و29 عينة ناقصة HTTP/JSON'),"Show 720-slot quality failures");
+a(doc.includes('صفر فحص جودة كامل ناجح'),"No fake qualification from zero price mismatches");
+a(doc.includes('الأرشفة التلقائية محجوبة وقرار الصفقات WAIT'),"Source-quality veto stays visible");
 a(doc.includes('href="#biquote-live-chart-panel"'),"Mobile chart nav should open real read-only chart");
 a(doc.includes('href="#paper-actions"'),"Paper controls clearly separate from real data");
 a(doc.includes('خطة الصفقة — غير مفعّلة'));
