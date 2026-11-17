@@ -3,6 +3,14 @@ const a=require('node:assert/strict'),fs=require('node:fs');
 const doc=fs.readFileSync('ultimate.html','utf8'),legacy=fs.readFileSync('paper-terminal.html','utf8');
 a(doc.includes('id="unified-mobile-trading"'));a(doc.includes('data-mode="REVIEW_PAPER_ONLY"'));
 a(doc.includes('id="biquote-viewer-guide"'),"Mobile viewer control must be visible above private chart");
+for(const id of ["gold-decision-center","gdc-title","gdc-decision","gdc-feed-status","gdc-observed","gdc-quote",
+                 "gdc-h4","gdc-h1","gdc-m15","gdc-blocker"])
+ a(doc.includes('id="'+id+'"'),"Missing owner-only mobile decision panel element: "+id);
+a(doc.includes('data-approval="READ_ONLY_WAIT"'));
+a(doc.includes('href="#biquote-live-chart-panel"'),"Mobile chart nav should open real read-only chart");
+a(doc.includes('href="#paper-actions"'),"Paper controls clearly separate from real data");
+a(doc.includes('خطة الصفقة — غير مفعّلة'));
+a(doc.includes('<strong>—</strong>'),"No fabricated entry/SL/TP");
 a(doc.indexOf('id="biquote-viewer-secret"')<doc.indexOf('id="biquote-live-canvas"'),
  "Show private viewer input before blank protected chart on mobile");
 a(doc.indexOf('id="biquote-refresh"')<doc.indexOf('id="biquote-live-canvas"'),
@@ -53,6 +61,10 @@ a(script.includes('validateReferenceEma(data.privateStructure.referenceEmaResear
 a(script.includes('displayReferenceEma()'));
 a(script.includes('validateVendorSchedule(data.privateStructure.vendorDeclaredSession,acceptedChart)'));
 a(script.includes('displayVendorSchedule()'));
+a(script.includes('decisionCenterObserved(data,acceptedChart)'));
+a(script.includes('decisionCenterReset()'));
+a(!script.includes('document.cookie'));
+a(!script.includes('window.GoldPaperCore'));
 a(script.includes('validPrivateStructure(data.privateStructure,acceptedChart)'));
 a(script.includes('f.contiguousBars<7'));
 a(script.includes('PARTIAL_OBSERVATION_UNVERIFIED_SESSION'));
