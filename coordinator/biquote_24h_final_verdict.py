@@ -42,7 +42,8 @@ def verdict(report):
          "forwardArchivalResearchNeedsSeparateApproval":True}
     if not isinstance(report,dict) or report.get("event")!="BIQUOTE_REVIEW24H_REPORT":
         return out
-    if any((report.get(k) is not expected) for k,expected in (
+    if any(((report.get(k) is not expected) if type(expected) is bool
+            else (report.get(k)!=expected)) for k,expected in (
         ("signal","WAIT"),("executable",False),
         ("researchEligible",False),("paperOrdersAllowed",False),
         ("orderEndpointsCalled",False),("profitabilityTestPerformed",False),
