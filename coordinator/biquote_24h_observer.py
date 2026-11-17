@@ -82,6 +82,10 @@ class QualityCounters:
         self.independent_quote_age_invalid = 0
         self.h4_retention_edges = 0
         self.h4_internal_m15_gaps_diagnostic = 0
+        self.h4_partial_observed_price_conflicts = 0
+        self.h4_missing_vendor_pause_reference = 0
+        self.h4_missing_vendor_trading_reference = 0
+        self.h4_missing_reference_unknown = 0
 
     def add(self, result):
         self.samples += 1
@@ -113,6 +117,20 @@ class QualityCounters:
                 edges=diagnostic.get("h4RetentionEdgesIncomplete")
                 if type(edges) is int and 0<=edges<=10000:
                     self.h4_retention_edges+=edges
+                # Conservative subset-of-observed-M15 evidence. Repeats
+                # across samples are summed as observations, NOT unique bars.
+                for field,attr in (
+                    ("h4PartialObservedPriceContradictions",
+                     "h4_partial_observed_price_conflicts"),
+                    ("h4MissingM15VendorPauseCandidates",
+                     "h4_missing_vendor_pause_reference"),
+                    ("h4MissingM15OutsideVendorReference",
+                     "h4_missing_vendor_trading_reference"),
+                    ("h4MissingM15ReferenceUnknown",
+                     "h4_missing_reference_unknown")):
+                    value=diagnostic.get(field)
+                    if type(value) is int and 0<=value<=10000:
+                        setattr(self,attr,getattr(self,attr)+value)
         if not result.get("allHttp200AndValidJson"):
             self.http_failures += 1
             return
@@ -185,6 +203,10 @@ class QualityCounters:
             "independentQuoteAgeInvalidSamples":self.independent_quote_age_invalid,
             "h4RetentionEdgeIncompleteAcrossSnapshots":self.h4_retention_edges,
             "h4InternalM15GapsDiagnosedAcrossSnapshots":self.h4_internal_m15_gaps_diagnostic,
+            "h4PartialObservedPriceConflictsAcrossSnapshots":self.h4_partial_observed_price_conflicts,
+            "h4MissingM15VendorPauseReferenceAcrossSnapshots":self.h4_missing_vendor_pause_reference,
+            "h4MissingM15VendorTradingReferenceAcrossSnapshots":self.h4_missing_vendor_trading_reference,
+            "h4MissingM15ReferenceUnknownAcrossSnapshots":self.h4_missing_reference_unknown,
             "h1FullyCoveredComparedAcrossSnapshots": self.evaluable_h1,
             "h4FullyCoveredComparedAcrossSnapshots": self.evaluable_h4,
             "h1DisagreementsAcrossSnapshots": self.disagree_h1,
