@@ -141,6 +141,40 @@ class BiQuote24hOfflineTests(unittest.TestCase):
                         utc_now=clock.now, sleep=clock.sleep,
                         emit=lambda x: None)
 
+    def test_fixed_private_holdout_can_arm_early_without_early_requests(self):
+        holdout=dt.datetime(2026,11,18,0,0,tzinfo=UTC)
+        clock=FakeClock(holdout-dt.timedelta(hours=6))
+        calls=[]
+        def probe():
+            calls.append(clock.now())
+            return sample()
+        env={"GPP_BIQUOTE_REVIEW_START_UTC":"2026-11-18T00:00:00Z",
+             "GPP_BIQUOTE_PRIVATE_FORWARD_ARCHIVE":
+                 "APPROVED_READONLY_PRIVATE_NO_TRADING"}
+        with patch.dict(os.environ,env):
+            result=observe_24h(holdout,probe=probe,utc_now=clock.now,
+                               sleep=clock.sleep,emit=lambda x: None)
+        self.assertEqual(len(calls),720)
+        self.assertEqual(calls[0],holdout)
+        self.assertEqual(clock.current,holdout+dt.timedelta(days=1))
+        self.assertEqual(result["requestsAttempted"],2880)
+        self.assertEqual(result["missedOrSkippedSlots"],0)
+        self.assertTrue(result["completed24hWindow"])
+        self.assertEqual(result["signal"],"WAIT")
+        self.assertIs(result["executable"],False)
+
+    def test_fixed_holdout_cannot_prearm_without_private_approval(self):
+        holdout=dt.datetime(2026,11,18,0,0,tzinfo=UTC)
+        clock=FakeClock(holdout-dt.timedelta(hours=6))
+        with patch.dict(os.environ,{
+                "GPP_BIQUOTE_REVIEW_START_UTC":"2026-11-18T00:00:00Z",
+                "GPP_BIQUOTE_PRIVATE_FORWARD_ARCHIVE":""}):
+            with self.assertRaisesRegex(ValueError,
+                                        "START_MORE_THAN_15_MINUTES_AHEAD"):
+                observe_24h(holdout,probe=sample,utc_now=clock.now,
+                            sleep=clock.sleep,emit=lambda x: None)
+        self.assertEqual(clock.slept,0)
+
     def test_main_requires_explicit_authorization_not_a_default_service(self):
         with patch.dict(os.environ,{AUTHORIZATION_ENV:""},clear=False):
             with patch.object(sys,"argv",["biquote_24h_observer.py",
