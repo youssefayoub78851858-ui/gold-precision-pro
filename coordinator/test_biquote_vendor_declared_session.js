@@ -23,7 +23,17 @@ assert.equal(slotClosed(ms("2026-11-15T22:45:00Z"),900000),true);
 assert.equal(slotClosed(ms("2026-11-15T23:00:00Z"),900000),false);
 // Provider warned DST shift; outside the supported November window
 // no presumption of a fixed UTC schedule is allowed.
-assert.equal(slotClosed(ms("2026-11-08T22:00:00Z"),900000),null);
+assert.equal(slotClosed(ms("2026-11-01T22:00:00Z"),900000),null);
+assert.equal(slotClosed(ms("2026-11-08T22:00:00Z"),900000),true);
+assert.equal(slotClosed(ms("2026-11-02T22:00:00Z"),900000),true);
+// The first November weekend's Friday is after the 2026 DST transition:
+// still only a vendor-declared hypothesis, never broker-independent proof.
+const firstWeekend=evaluateGap([
+ r("2026-11-06T20:00:00Z"),r("2026-11-08T20:00:00Z")],"H4");
+safe(firstWeekend);
+assert.equal(firstWeekend.providerDeclaredPauseSlots,11);
+assert.equal(firstWeekend.missingDuringProviderTradingSlots,0);
+assert.equal(firstWeekend.outsideDeclaredDateWindowSlots,0);
 assert.equal(slotClosed(ms("2026-12-01T22:00:00Z"),900000),null);
 const daily=evaluateGap([
  r("2026-11-16T21:00:00Z"),r("2026-11-16T23:00:00Z")],"H1");
@@ -51,7 +61,7 @@ safe(partialH4);
 assert.equal(partialH4.providerDeclaredPauseSlots,0);
 assert.equal(partialH4.missingDuringProviderTradingSlots,1);
 const old=evaluateGap([
- r("2026-11-08T20:00:00Z"),r("2026-11-09T00:00:00Z")],"H1");
+ r("2026-11-01T20:00:00Z"),r("2026-11-02T00:00:00Z")],"H1");
 safe(old);
 assert.equal(old.outsideDeclaredDateWindowSlots,3);
 assert.equal(old.providerDeclaredPauseSlots,0);

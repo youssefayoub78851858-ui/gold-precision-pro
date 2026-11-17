@@ -9,18 +9,18 @@
  * and upstream usage rights are unknown. NEVER bridge missing OHLC,
  * fill bars, authorize technical entries, or mark a signal tradeable.
  *
- * Bounded to 2026-11-09..2026-11-30 UTC, safely away from 2026 DST
+ * Bounded to 2026-11-02..2026-11-30 UTC, safely away from 2026 DST
  * transition. Outside that range classify UNKNOWN. The public
  * generic-reference audit remains unchanged and separately labeled.
  */
 const WIDTHS=Object.freeze({M15:900000,H1:3600000,H4:14400000});
-const FROM=Date.parse("2026-11-09T00:00:00Z");
+const FROM=Date.parse("2026-11-02T00:00:00Z");
 const UNTIL=Date.parse("2026-11-30T00:00:00Z");
 const BASE=Object.freeze({
  mode:"BIQUOTE_VENDOR_DECLARED_SESSION_EVIDENCE_ONLY",
  sourceRecord:"BIQUOTE_SUPPORT_REPLY_2026_11_16",
  scheduleSource:"PROVIDER_SUPPORT_NOT_ORIGINAL_BROKER_DOCUMENT",
- coveredUtc:"2026-11-09 through 2026-11-29 inclusive",
+ coveredUtc:"2026-11-02 through 2026-11-29 inclusive",
  providerSaysPrivateRenderResearchAllowed:true,
  providerSaysSingleMT5Feed:true,
  originalBrokerIdentified:false,
