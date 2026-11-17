@@ -32,7 +32,7 @@ class ForwardShadowTests(unittest.TestCase):
         # Test feed appears only after fixed forward start.
         with patch.object(socket,"socket",side_effect=AssertionError("NO_EXTERNAL_REQUESTS")):
             ingest(self.folder,sample(EARLY),received_utc=iso(EARLY))
-            short=shadow_review(self.folder,runner=impossible)
+            short=shadow_review(self.folder,runner=impossible,now_utc=EARLY)
         self.assertFalse(short["signalReady"])
         self.assertEqual(short["signal"],"WAIT")
         self.assertIn("INSUFFICIENT_CONTIGUOUS_CLOSED_H4_H1_M15",short["reasonCodes"])
@@ -52,7 +52,7 @@ class ForwardShadowTests(unittest.TestCase):
         with patch.object(socket,"socket",side_effect=AssertionError("NO_EXTERNAL_REQUESTS")):
             saved=ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
             self.assertEqual(saved["status"],"PRIVATE_FORWARD_CAPTURE_SAVED")
-            report=shadow_review(self.folder)
+            report=shadow_review(self.folder,now_utc=AFTER)
         self.assertEqual(report["signal"],"WAIT")
         self.assertFalse(report["executable"])
         self.assertFalse(report["paperOrdersAllowed"])
@@ -87,7 +87,7 @@ class ForwardShadowTests(unittest.TestCase):
         with patch.object(socket,"socket",side_effect=AssertionError("NO_EXTERNAL_REQUESTS")):
             saved=ingest(self.folder,history,received_utc=iso(AFTER))
             self.assertEqual(saved["status"],"PRIVATE_FORWARD_CAPTURE_SAVED")
-            report=shadow_review(self.folder,runner=lambda _:self.fail("gap crossed"))
+            report=shadow_review(self.folder,runner=lambda _:self.fail("gap crossed"),now_utc=AFTER)
         self.assertEqual(report["signal"],"WAIT")
         self.assertEqual(report["technicalWatch"],"NONE")
         self.assertIn("INSUFFICIENT_CONTIGUOUS_CLOSED_H4_H1_M15",report["reasonCodes"])
@@ -107,7 +107,7 @@ class ForwardShadowTests(unittest.TestCase):
         def fake(packet):
             received.append(packet)
             return json.dumps(standard)
-        out=shadow_review(self.folder,runner=fake)
+        out=shadow_review(self.folder,runner=fake,now_utc=AFTER)
         self.assertEqual(out["technicalWatch"],"SELL")
         self.assertEqual(out["approvedDirection"],"NONE")
         self.assertIsNone(out["entry"])
@@ -119,7 +119,7 @@ class ForwardShadowTests(unittest.TestCase):
                        {"hypotheticalSyntheticPlan":{"direction":"SELL"}},
                        {"dataOrigin":"SYNTHETIC_TEST_ONLY"}):
             bad={**standard,**change}
-            result=shadow_review(self.folder,runner=lambda _:json.dumps(bad))
+            result=shadow_review(self.folder,runner=lambda _:json.dumps(bad),now_utc=AFTER)
             self.assertEqual(result["signal"],"WAIT")
             self.assertEqual(result["technicalWatch"],"NONE")
             self.assertIn("SHADOW_OUTPUT_CONTRACT_REJECTED",result["reasonCodes"])
@@ -150,6 +150,22 @@ class ForwardShadowTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"VAULT_TAMPER"):
             shadow_review(self.folder)
         self.assertEqual(BASE["signal"],"WAIT")
+
+    def test_no_stale_or_future_archive_is_presented_as_current_signal(self):
+        ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
+        def cannot(_):
+            self.fail("Stale or future archive must never be evaluated")
+        for clock in (AFTER-dt.timedelta(seconds=1),
+                      AFTER+dt.timedelta(minutes=5,seconds=1)):
+            report=shadow_review(self.folder,runner=cannot,now_utc=clock)
+            self.assertEqual(report["signal"],"WAIT")
+            self.assertEqual(report["technicalWatch"],"NONE")
+            self.assertIn("ARCHIVED_CAPTURE_STALE_OR_FUTURE_VS_NOW",
+                          report["reasonCodes"])
+            self.assertFalse(report["paperOrdersAllowed"])
+        live=shadow_review(self.folder,now_utc=AFTER+dt.timedelta(minutes=4))
+        self.assertIn(live["technicalWatch"],("BUY","SELL","NONE"))
+        self.assertEqual(live["approvedDirection"],"NONE")
 
     def test_tail_contiguous_uses_real_post_gap_only(self):
         rows=[{"openTime":f"2026-11-18T{h:02d}:00:00Z",
