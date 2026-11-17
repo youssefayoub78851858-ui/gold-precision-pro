@@ -29,7 +29,8 @@ function makeNode(id){
 const ids=["biquote-refresh","biquote-viewer-secret","biquote-viewer-logout","biquote-viewer-session-state","biquote-live-canvas",
 "biquote-live-caption","biquote-structure-summary","biquote-mtf-readiness","biquote-observed-ema","biquote-vendor-session","biquote-status","biquote-private-quote",
 "biquote-private-spread","biquote-observed","biquote-m15","biquote-h1",
-"biquote-h4","biquote-overlap"];
+"biquote-h4","biquote-overlap","gdc-decision","gdc-feed-status","gdc-observed",
+"gdc-quote","gdc-h4","gdc-h1","gdc-m15","gdc-blocker"];
 ids.forEach(makeNode);
 const tabs=["M15","H1","H4"].map(tf=>{
  const t=makeNode("tab-"+tf);t.dataset.biqFrame=tf;return t;
@@ -108,6 +109,8 @@ const context={window,document,Date,Number,Math,Object,Array,JSON,String,Boolean
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,"biquote-mobile-ui.js"),"utf8"),context,{timeout:2000});
 async function main(){
  assert.ok(blankMessages>=1,"Default real chart is blank, never a fabricated sample");
+assert.equal(makeNode("gdc-decision").textContent,"","Decision remains fixed WAIT in HTML, never overwritten by data");
+assert.equal(makeNode("gdc-quote").textContent,"","Never show a private quote before authorization");
  await makeNode("biquote-refresh").click();
  assert.match(makeNode("biquote-live-caption").textContent,/رمز مشاهدة/);
  assert.match(makeNode("biquote-structure-summary").textContent,/WAIT/);
@@ -119,6 +122,11 @@ async function main(){
  networkMode="authorized";
  await makeNode("biquote-refresh").click();
  assert.ok(candleDraws>before+20,"Authenticated closed MID candles must draw");
+ assert.match(makeNode("gdc-feed-status").textContent,/WAIT/);
+ assert.match(makeNode("gdc-quote").textContent,/3910/);
+ assert.match(makeNode("gdc-h4").textContent,/وصفي فقط/);
+ assert.match(makeNode("gdc-m15").textContent,/شمعة مغلقة/);
+ assert.match(makeNode("gdc-blocker").textContent,/لا صفقات/);
  assert.equal(sessionLogins,1,"Exactly one token exchange");
  assert.equal(makeNode("biquote-viewer-secret").value,"","Original viewer token cleared immediately");
  const firstCookies=requests.length;
@@ -170,10 +178,14 @@ async function main(){
  assert.match(makeNode("biquote-mtf-readiness").textContent,/محجوب/);
  assert.match(makeNode("biquote-observed-ema").textContent,/محجوبة/);
  assert.match(makeNode("biquote-vendor-session").textContent,/غير متاح/);
+ assert.match(makeNode("gdc-feed-status").textContent,/WAIT/);
+ assert.equal(makeNode("gdc-h1").textContent,"غير متاح");
+ assert.doesNotMatch(makeNode("gdc-quote").textContent,/3910/,"Stale PRIVATE price must clear");
  assert.equal(requests.length,6);
  assert.equal(requests.every(r=>!r.opts.headers["X-Broker-Order"]),true);
  await makeNode("biquote-viewer-logout").click();
  assert.equal(sessionActive,false,"Explicit logout clears browser cookie");
+ assert.doesNotMatch(makeNode("gdc-quote").textContent,/3910/,"Logout must clear mobile decision quote");
  assert.match(makeNode("biquote-viewer-session-state").textContent,/تسجيل الخروج/);
  networkMode="authorized";
  await makeNode("biquote-refresh").click();
