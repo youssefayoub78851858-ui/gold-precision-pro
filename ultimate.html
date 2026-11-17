@@ -127,6 +127,17 @@
 <p id="gdc-24h-audit" class="gdc-reason" role="status">نتيجة مراقبة BiQuote المكتملة بتاريخ 17 نوفمبر 2026 (تقرير تاريخي ثابت، مش فحص حي): 720/720 عينة؛ 691 استجابة كاملة و29 عينة ناقصة HTTP/JSON (كلّها بين 22:03 و22:59 UTC، ضمن استراحة BiQuote اليومية المعلنة، لكن من دون تأكيد مستقل لجلسة الوسيط)؛ صفر فحص جودة كامل ناجح؛ صفر اختلاف OHLC في المقاطع المكتملة فقط؛ 2,051 ملاحظة تغطية H4 جزئية متكررة عبر العينات؛ أقصى عمر سعر 183.859 ثانية. لذلك الأرشفة التلقائية محجوبة وقرار الصفقات WAIT.</p>
 <a href="/private-monitor#biquote-forward-panel" style="display:inline-block;color:#f0d18a;font-size:.86rem;padding:7px 0">فحص الأرشيف الخاص وعدّادات الشموع على شاشة المراقبة</a>
 </div>
+<section id="gdc-four-stage-batch" class="gdc-data" aria-labelledby="gdc-batch-title">
+<h3 id="gdc-batch-title" style="color:#f1d493;margin:0 0 9px">المراحل الأربع — حالة التنفيذ الفعلي</h3>
+<p class="gdc-sub">اختبار المسار البرمجي المتكامل نجح ببيانات اختبارية غير حقيقية. حالة المصادر والأسعار ليست مؤهّلة لصفقات فعلية.</p>
+<div class="gdc-columns" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+<div class="gdc-metric" id="gdc-batch-data"><span>1 · بيانات الذهب</span><strong>الفحص موجود · الاعتماد موقوف</strong><small>تقرير BiQuote: 29 عينة HTTP/JSON غير مكتملة، وفحص الجودة الشامل لم ينجح.</small></div>
+<div class="gdc-metric" id="gdc-batch-archive"><span>2 · تسجيل الشموع</span><strong>الوصلة جاهزة · التفعيل غير مثبت</strong><small>لا يوجد إثبات حالي لحفظ شموع جديدة كافية على Coordinator.</small></div>
+<div class="gdc-metric" id="gdc-batch-engine"><span>3 · تحليل V3</span><strong>اختبار الربط نجح · WAIT</strong><small>أي BUY/SELL بحثي ليس إشارة مسموحة، والمصادر المساندة غير مثبتة.</small></div>
+<div class="gdc-metric" id="gdc-batch-paper"><span>4 · التداول الورقي</span><strong>المحرك متاح · إشاراته محجوبة</strong><small>التداول اليدوي التجريبي منفصل؛ لا صفقات آلية أو نتائج ربح مثبتة.</small></div>
+</div>
+<p class="gdc-sub">الأرشفة، حق استخدام بيانات الوسيط، السبريد الحقيقي وتكاليف التنفيذ، وتجربة الربحية المستقلة تبقى شروطاً خارجية غير مكتملة. ما في اشتراك ولا تداول حقيقي مفعّل.</p>
+</section>
 <p class="gdc-reason" id="gdc-blocker">سبب WAIT: جلسات وسيط الذهب وتكاليف التنفيذ غير مثبتة؛ GC وDXY والسندات والأخبار وOrder Flow غير مؤكدة. لا صفقات حقيقية أو آلية.</p>
 <div class="gdc-action"><a href="#biquote-viewer-guide">فحص الشارت الحقيقي</a><a href="#paper-actions">التجربة الورقية اليدوية</a><a href="#multi-source-readiness">مصادر التأكيد</a></div>
 <p class="gdc-sub">لوحة القرار مربوطة بفحص BiQuote الخاص فقط؛ لا تنقل أسعار السوق إلى سجل المحاكاة ولا تفتح صفقات. التحديثات الوصفية مش إشارات BUY/SELL.</p>
