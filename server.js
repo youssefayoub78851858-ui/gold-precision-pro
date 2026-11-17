@@ -57,6 +57,40 @@ const server = http.createServer(async (req, res) => {
       "X-Content-Type-Options":"nosniff"});
     return res.end();
   }
+  // One-time viewer-token exchange; grants only read-only candle visibility.
+  // No raw monitor token is placed in the cookie, client storage or logs.
+  if(paperPath==="/api/v3/ultimate/biquote-viewer-session"){
+    if(!DEMO_MODE)return send(res,404,{signal:"WAIT",executable:false});
+    const session=require("./coordinator/biquote_viewer_session");
+    const headers={"Content-Type":"application/json; charset=utf-8",
+      "Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff",
+      "Referrer-Policy":"no-referrer","Vary":"Cookie"};
+    const reply=(status,body,cookie)=>{
+      res.writeHead(status,{...headers,...(cookie?{"Set-Cookie":cookie}:{})});
+      res.end(JSON.stringify({...session.WAIT,...body}));
+    };
+    if(!session.sameOrigin(req.headers))return reply(403,{status:"SESSION_ORIGIN_REJECTED"});
+    if(req.method==="DELETE")return reply(200,{status:"VIEWER_SESSION_CLEARED"},
+       session.clearCookie());
+    if(req.method!=="POST")return reply(405,{status:"SESSION_POST_ONLY"});
+    if(req.headers["content-length"]&&Number(req.headers["content-length"])>0)
+      return reply(413,{status:"SESSION_BODY_FORBIDDEN"});
+    const token=req.headers.authorization||"";
+    if(!/^Bearer [A-Za-z0-9_-]{32,128}$/.test(token))
+      return reply(401,{status:"VIEWER_AUTH_REQUIRED"});
+    try{
+      const proxy=require("./coordinator/review_monitor_proxy");
+      const out=await proxy.relay(token,{approved:true});
+      if(out.httpStatus!==200||out.body?.signal!=="WAIT"||
+         out.body?.executable!==false||out.body?.researchEligible!==false)
+        return reply(401,{status:"VIEWER_AUTH_FAILED"});
+      const issued=session.issue();
+      return reply(200,{status:"VIEWER_SESSION_READY",expiresUTC:issued.expiresUTC},
+         session.setCookie(issued.cookie));
+    }catch(_error){
+      return reply(503,{status:"VIEWER_SESSION_UNAVAILABLE"});
+    }
+  }
   // Separate public BIQUOTE technical observations from the offline paper
   // chart. Raw quote prices require the existing private viewer secret,
   // verified by the private coordinator. No credentials or raw bars public.
@@ -67,6 +101,7 @@ const server = http.createServer(async (req, res) => {
       const observer=require("./coordinator/biquote_mobile_readonly");
       const privateMonitor=require("./coordinator/review_monitor_proxy");
       const result=await observer.snapshot({
+        viewerSessionAuthenticated:require("./coordinator/biquote_viewer_session").authenticated(req.headers),
         authorization:req.headers.authorization||"",
         verifyViewer:async token=>{
           const out=await privateMonitor.relay(token,{approved:true});
