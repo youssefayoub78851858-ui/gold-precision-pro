@@ -14,7 +14,7 @@
    MIXED:"اتجاه مختلط"};
  // Completely separate from paper-terminal-core.js and its simulator.
  // No market data is written to storage or the paper-trade journal.
- let busy=false,activeFrame="M15",privateChart=null,privateStructure=null;
+ let busy=false,activeFrame="M15",privateChart=null,privateStructure=null,privateMtf=null;
  const frameWidth={M15:900000,H1:3600000,H4:14400000};
  function validPrivateChart(input){
    if(!input||typeof input!=="object"||Array.isArray(input))return null;
@@ -96,6 +96,80 @@
      safe[tf]={...f,lastClosedEvents:[...f.lastClosedEvents]};
    }
    return safe;
+ }
+
+ function validateMtf(input,structure){
+   if(!structure||!input||input.mode!=="PRIVATE_READONLY_MTF_READINESS"||
+      input.state!=="NO_TRADE_RESEARCH_ONLY"||input.signal!=="WAIT"||
+      input.executable!==false||input.tradeEligible!==false||
+      input.researchEligible!==false||input.paperOrdersAllowed!==false||
+      input.validForEntry!==false||input.sessionCalendarVerified!==false||
+      input.underlyingBrokerRightsVerified!==false||
+      input.orderFlowIntegrated!==false||input.macroAndNewsIntegrated!==false||
+      !["UNVERIFIED","OHLC_MISMATCH","PARTIAL_M15_CONSTITUENTS","MATCHED_COMPARED_WINDOWS_ONLY"]
+        .includes(input.quality)||
+      !["NOT_ASSESSABLE","OBSERVATION_ALL_ABOVE_EMA20",
+        "OBSERVATION_ALL_BELOW_EMA20","OBSERVATION_MIXED_OR_AT_EMA20"]
+        .includes(input.alignment)||
+      !input.frameSummaries||!Array.isArray(input.blockerCodes)||
+      input.blockerCodes.length<5||input.blockerCodes.length>12||
+      !input.blockerCodes.every(x=>typeof x==="string"&&
+        /^[A-Z0-9_]{8,90}$/.test(x)))return null;
+   const accepted={};
+   for(const tf of ["H4","H1","M15"]){
+     const f=input.frameSummaries[tf],raw=structure[tf];
+     if(!f||!raw||f.timeframe!==tf||
+        !["FULL_CONTIGUOUS_TECHNICAL","PARTIAL_POST_GAP","INSUFFICIENT_OR_INVALID"]
+          .includes(f.coverage)||
+        !["ABOVE_EMA20","BELOW_EMA20","AT_EMA20","UNDETERMINED"].includes(f.direction)||
+        !Number.isInteger(f.contiguousBars)||f.contiguousBars!==raw.contiguousBars||
+        f.sessionCalendarVerified!==false||f.tradeEligible!==false||
+        f.executable!==false)return null;
+     if(f.coverage==="FULL_CONTIGUOUS_TECHNICAL" &&
+       (f.contiguousBars<20||f.ema20Available!==true||
+        f.direction==="UNDETERMINED"))return null;
+     if(f.coverage!=="FULL_CONTIGUOUS_TECHNICAL" &&
+       (f.ema20Available!==false||f.direction!=="UNDETERMINED"))return null;
+     accepted[tf]={...f};
+   }
+   if(Object.values(accepted).some(x=>x.coverage!=="FULL_CONTIGUOUS_TECHNICAL") &&
+      input.alignment!=="NOT_ASSESSABLE")return null;
+   return {frames:accepted,alignment:input.alignment,quality:input.quality,
+     blockerCodes:[...input.blockerCodes]};
+ }
+ function displayMtf(){
+   const el=$("biquote-mtf-readiness");
+   if(!el)return;
+   if(!privateMtf){
+     el.textContent="WAIT — التقييم الموحد محجوب حتى تأكيد الشموع ورمز المشاهدة الخاص.";
+     return;
+   }
+   const tfName={H4:"H4 (الاتجاه الأكبر)",H1:"H1 (الساعة)",M15:"M15 (التوقيت)"};
+   const name={ABOVE_EMA20:"السعر فوق EMA20 (وصفي)",
+     BELOW_EMA20:"السعر تحت EMA20 (وصفي)",AT_EMA20:"السعر يلامس EMA20",
+     UNDETERMINED:"غير محسوم (EMA20 غير متاح)"};
+   const parts=["التقييم الموحد — WAIT، لا صفقات"];
+   for(const tf of ["H4","H1","M15"]){
+     const f=privateMtf.frames[tf];
+     parts.push(tfName[tf]+": "+name[f.direction]+
+       " | شموع متصلة "+f.contiguousBars+
+       " | "+(f.coverage==="FULL_CONTIGUOUS_TECHNICAL"?"قراءة كاملة للفاصل":
+         f.coverage==="PARTIAL_POST_GAP"?"تحليل جزئي بعد فجوة":"بيانات غير كافية"));
+   }
+   const quality={OHLC_MISMATCH:"اختلاف OHLC بين الفواصل",
+     PARTIAL_M15_CONSTITUENTS:"تغطية M15 ناقصة لبعض شموع H4/H1",
+     MATCHED_COMPARED_WINDOWS_ONLY:"المقاطع المتداخلة التي قورنت متطابقة فقط",
+     UNVERIFIED:"لم يثبت تطابق الفواصل"};
+   parts.push("التوافق الفني: "+(privateMtf.alignment==="NOT_ASSESSABLE"?
+     "غير قابل للتقييم بسبب نقص بيانات الفواصل":
+     privateMtf.alignment==="OBSERVATION_ALL_ABOVE_EMA20"?
+       "الفواصل الثلاثة فوق EMA20 وصفياً":
+       privateMtf.alignment==="OBSERVATION_ALL_BELOW_EMA20"?
+       "الفواصل الثلاثة تحت EMA20 وصفياً":"قراءة مختلطة"));
+   parts.push("سلامة تغطية الشموع: "+quality[privateMtf.quality]);
+   parts.push("ما يزال ينقص: إثبات جلسات وحقوق وسيط MT5، بيانات BID/ASK تاريخية، "+
+     "الأخبار وDXY والسندات وGC/Order Flow، واختبار ربحية مستقل. لا دخول أو SL أو TP.");
+   el.textContent=parts.join("\n");
  }
  const eventNames={BOS_UP:"كسر قمة مؤكدة",BOS_DOWN:"كسر قاع مؤكد",
    SWEEP_HIGH:"سحب سيولة فوق قمة",SWEEP_LOW:"سحب سيولة تحت قاع",
@@ -201,6 +275,7 @@
    if(caption)caption.textContent=status;
    drawPrivateChart();
    describeStructure();
+   displayMtf();
  }
  for(const tab of document.querySelectorAll("button[data-biq-frame]"))
    tab.addEventListener("click",()=>{
@@ -217,7 +292,7 @@
   for(const id of ["biquote-private-quote","biquote-private-spread","biquote-observed",
     "biquote-m15","biquote-h1","biquote-h4","biquote-overlap"])
    $(id).textContent="غير متاح";
-  privateStructure=null;
+  privateStructure=null;privateMtf=null;
   setPrivateChart(null,"WAIT — بيانات الشارت الحقيقي غير متاحة أو منتهية الصلاحية. لا تُعرض شموع قديمة.");
  }
  async function refresh(){
@@ -277,12 +352,13 @@
      data.privateChartDataBasis==="MID_WITH_POSSIBLE_BID_SEED"
        ?validPrivateChart(data.privateChart):null;
    privateStructure=acceptedChart?validPrivateStructure(data.privateStructure,acceptedChart):null;
+   privateMtf=privateStructure?validateMtf(data.privateStructure.multiFrame,privateStructure):null;
    if(acceptedChart)setPrivateChart(acceptedChart,
      "شموع BiQuote مغلقة — عرض خاص READ-ONLY، MID وربما بذرة BID. "+
      (data.status==="WAIT_CROSS_FRAME_GAPS"?
        "بعض مجموعات H4 فيها تغطية M15 غير مكتملة، لا صفقات.":"مطابقة الأطر لا تثبت الترخيص أو الربحية."));
    else{
-     privateStructure=null;
+     privateStructure=null;privateMtf=null;
      setPrivateChart(null,
        "لا يوجد رمز مشاهدة صالح لعرض الشموع الخام. الاتجاهات الوصفية فقط ظاهرة للعامة.");
    }

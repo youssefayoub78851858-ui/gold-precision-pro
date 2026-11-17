@@ -64,6 +64,7 @@ async function main(){
  assert.equal(result.body.rawPrivateChart,undefined);
  assert.equal(result.body.privateStructure,undefined);
  assert.equal(result.body.rawPrivateStructure,undefined);
+ assert.equal(result.body.privateMtf,undefined);
  assert.equal(result.body.privateChartReadOnly,undefined);
  assert.equal(JSON.stringify(result.body).includes('"bars"'),false);
  assert.equal(result.body.frameSummary.M15.closedCount,65);
@@ -91,6 +92,14 @@ async function main(){
  assert.equal(privateData.body.privateStructure.tradeEligible,false);
  assert.equal(privateData.body.privateStructure.newsAndMacroIncluded,false);
  assert.equal(privateData.body.privateStructure.orderFlowIncluded,false);
+ assert.equal(privateData.body.privateStructure.multiFrame.mode,"PRIVATE_READONLY_MTF_READINESS");
+ assert.equal(privateData.body.privateStructure.multiFrame.signal,"WAIT");
+ assert.equal(privateData.body.privateStructure.multiFrame.executable,false);
+ assert.equal(privateData.body.privateStructure.multiFrame.tradeEligible,false);
+ assert.equal(privateData.body.privateStructure.multiFrame.alignment,"OBSERVATION_MIXED_OR_AT_EMA20"===privateData.body.privateStructure.multiFrame.alignment
+   ?"OBSERVATION_MIXED_OR_AT_EMA20":privateData.body.privateStructure.multiFrame.alignment);
+ assert.equal(privateData.body.privateStructure.multiFrame.sessionCalendarVerified,false);
+ assert.equal(privateData.body.privateStructure.multiFrame.underlyingBrokerRightsVerified,false);
  for(const tf of ["M15","H1","H4"]){
    const analysis=privateData.body.privateStructure.frames[tf];
    assert.equal(analysis.signal,"WAIT");
@@ -190,6 +199,9 @@ async function main(){
    authorization:auth,verifyViewer:async()=>true});
  assert.equal(accepted.httpStatus,200);secure(accepted.body);
  assert.equal(accepted.body.privateStructure.sessionCalendarVerified,false);
+ assert.equal(accepted.body.privateStructure.multiFrame.alignment,"NOT_ASSESSABLE");
+ assert.equal(accepted.body.privateStructure.multiFrame.signal,"WAIT");
+ assert.equal(accepted.body.privateStructure.multiFrame.tradeEligible,false);
  for(const tf of ["H1","H4"]){
    const f=accepted.body.privateStructure.frames[tf];
    assert.equal(f.state,"PARTIAL_OBSERVATION_UNVERIFIED_SESSION");

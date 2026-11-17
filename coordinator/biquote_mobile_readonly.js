@@ -8,6 +8,7 @@
  * hidden retries, interval loops or permission inferred from upstream JSON.
  */
 const {analyzeChart}=require("./biquote_private_structure");
+const {makeMtfReadiness}=require("./biquote_mtf_readiness");
 const URLS=Object.freeze({
  quote:"https://biquote.io/api/XAUUSD?allowStale=false",
  M15:"https://biquote.io/api/XAUUSD/ohlc?interval=15m&limit=200",
@@ -143,6 +144,7 @@ async function collect(fetchFn,nowMs){
     }))
   ]));
  const privateStructure=analyzeChart(privateChart,asOf);
+ privateStructure.multiFrame=makeMtfReadiness(privateStructure,comparisons);
  return {
   status:all.some(x=>x.completeMismatches>0||x.incompleteM15Groups>0)
     ?"WAIT_CROSS_FRAME_GAPS":"OBSERVED_READONLY_UNVERIFIED",

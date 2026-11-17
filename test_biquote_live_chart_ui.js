@@ -4,6 +4,7 @@ const assert=require("node:assert/strict");
 const fs=require("node:fs"),vm=require("node:vm"),path=require("node:path");
 const NOW=Date.now();
 const {analyzeChart}=require("./coordinator/biquote_private_structure");
+const {makeMtfReadiness}=require("./coordinator/biquote_mtf_readiness");
 const widths={M15:900000,H1:3600000,H4:14400000};
 let candleDraws=0,blankMessages=0;
 function makeCanvas(){
@@ -24,7 +25,7 @@ function makeNode(id){
  elements.set(id,node);return node;
 }
 const ids=["biquote-refresh","biquote-viewer-secret","biquote-live-canvas",
-"biquote-live-caption","biquote-structure-summary","biquote-status","biquote-private-quote",
+"biquote-live-caption","biquote-structure-summary","biquote-mtf-readiness","biquote-status","biquote-private-quote",
 "biquote-private-spread","biquote-observed","biquote-m15","biquote-h1",
 "biquote-h4","biquote-overlap"];
 ids.forEach(makeNode);
@@ -75,7 +76,11 @@ async function fetch(url,opts){
  return {ok:true,status:200,async json(){return {...base,rawQuoteShown:allowed,
    ...(allowed?{bid:3910,ask:3910.2,privateChartReadOnly:true,
     privateChartDataBasis:"MID_WITH_POSSIBLE_BID_SEED",
-    privateChart:chart(),privateStructure:analyzeChart(chart(),NOW)}:{}),
+    privateChart:chart(),privateStructure:(()=>{
+      const s=analyzeChart(chart(),NOW);
+      s.multiFrame=makeMtfReadiness(s,base.crossFrameComparisons);
+      return s;
+    })()}:{}),
    }}};
 }
 const document={getElementById:makeNode,querySelectorAll:sel=>{
@@ -90,6 +95,7 @@ async function main(){
  await makeNode("biquote-refresh").click();
  assert.match(makeNode("biquote-live-caption").textContent,/رمز مشاهدة/);
  assert.match(makeNode("biquote-structure-summary").textContent,/WAIT/);
+ assert.match(makeNode("biquote-mtf-readiness").textContent,/WAIT/);
  const before=candleDraws;
  makeNode("biquote-viewer-secret").value="a".repeat(40);
  networkMode="authorized";
@@ -100,6 +106,11 @@ async function main(){
  assert.match(makeNode("biquote-structure-summary").textContent,/EMA20/);
  assert.match(makeNode("biquote-structure-summary").textContent,/ATR14/);
  assert.match(makeNode("biquote-structure-summary").textContent,/القرار WAIT/);
+ assert.match(makeNode("biquote-mtf-readiness").textContent,/الفواصل الثلاثة فوق EMA20/);
+ assert.match(makeNode("biquote-mtf-readiness").textContent,/H4/);
+ assert.match(makeNode("biquote-mtf-readiness").textContent,/H1/);
+ assert.match(makeNode("biquote-mtf-readiness").textContent,/M15/);
+ assert.match(makeNode("biquote-mtf-readiness").textContent,/لا صفقات/);
  const newBefore=candleDraws;await tabs[1].click();
  assert.ok(candleDraws>newBefore+20,"H1 selected frame must redraw real candles");
  assert.equal(tabs[1]["aria-pressed"],"true");
@@ -110,6 +121,8 @@ async function main(){
  await makeNode("biquote-refresh").click();
  await tabs[1].click();
  assert.match(makeNode("biquote-structure-summary").textContent,/تحليل جزئي/);
+ assert.match(makeNode("biquote-mtf-readiness").textContent,/غير قابل للتقييم/);
+ assert.match(makeNode("biquote-mtf-readiness").textContent,/تغطية M15 ناقصة/);
  assert.match(makeNode("biquote-structure-summary").textContent,/جدول جلسات وسيط BiQuote الأصلي غير موثّق/);
  assert.match(makeNode("biquote-structure-summary").textContent,/أمثلة أوقات الفجوات/);
  assert.match(makeNode("biquote-structure-summary").textContent,/غير متاح \(<20 شمعة متصلة\)/);
@@ -124,6 +137,8 @@ async function main(){
  assert.match(makeNode("biquote-live-caption").textContent,/WAIT/);
  assert.ok(blankMessages>=2,"Offline feed must clear live chart immediately");
  assert.match(makeNode("biquote-structure-summary").textContent,/WAIT/);
+ assert.match(makeNode("biquote-mtf-readiness").textContent,/WAIT/);
+ assert.match(makeNode("biquote-mtf-readiness").textContent,/محجوب/);
  assert.equal(requests.length,4);
  assert.equal(requests.every(r=>!r.opts.headers["X-Broker-Order"]),true);
  console.log("PASS PRIVATE BiQuote chart: no anonymous raw data, 3 real MID frames after viewer auth, stale cleared; WAIT and paper isolated");

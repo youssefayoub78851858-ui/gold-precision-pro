@@ -119,6 +119,10 @@
 <button type="button" data-biq-frame="H4" aria-pressed="false">H4</button>
 </div>
 <canvas id="biquote-live-canvas" role="img" aria-label="شارت BiQuote الحقيقي الخاص للشموع المغلقة فقط، لا يُستخدم للتداول"></canvas>
+<section aria-label="تقييم الفواصل الثلاثة الحقيقي" style="margin:12px 0;direction:rtl;background:#15283c;border:1px solid #b99b59;border-radius:12px;padding:12px">
+<h3 style="margin:0 0 8px;color:#ebc77d;font-size:1rem">تقييم الذهب الموحد — H4 / H1 / M15</h3>
+<div id="biquote-mtf-readiness" role="status" aria-live="polite" style="white-space:pre-line;color:#e4d9c1;line-height:2;font-size:.87rem">WAIT — القراءة الموحدة للبحث فقط. أدخل رمز المشاهدة الخاص وحدّث فحص الذهب.</div>
+</section>
 <div id="biquote-structure-summary" role="status" aria-live="polite" style="margin:12px 0;padding:12px;background:#1e3548;border:1px solid #50728e;border-radius:10px;font-size:.85rem;line-height:1.9;color:#e4d4a8">WAIT — المستويات الفنية المحمية تظهر بعد التحقق من رمز المشاهدة.</div>
 <p id="biquote-live-caption" role="status" aria-live="polite">الشارت الحقيقي محميّ. أدخل رمز المشاهدة الخاص واضغط تحديث فحص الذهب. من دون الرمز لا تُعرض أسعار OHLC الخام.</p>
 <p class="overview-status">شموع MID من BiQuote، وقد تحتوي بداية التاريخ على BID. بعد أي فجوة غير مصنّفة، قد تظهر قراءة جزئية للقمم/القيعان من 7 شموع متصلة على الأقل؛ ATR14 يحتاج 15 وEMA20 يحتاج 20 شمعة متصلة. لا تُحسب أحداث BOS/FVG عبر الفجوات. الفجوة ليست إغلاق سوق مؤكداً لأن جدول جلسات الوسيط لم يُثبت. تظهر الفجوات كما هي، ولا يوجد تنفيذ أوامر أو ربط بالتداول الورقي. إذا صارت البيانات قديمة يُمسح الرسم، ويبقى القرار WAIT.</p>
