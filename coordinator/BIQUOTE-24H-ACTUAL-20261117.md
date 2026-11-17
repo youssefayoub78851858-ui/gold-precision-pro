@@ -46,6 +46,33 @@ age criterion. `auditShapePassedSamples=0` is not remotely sufficient to
 claim successful feed qualification. Gap/session classification remains
 unverified against the upstream MT5 broker calendar.
 
+## Additional forensic evidence: all 29 incomplete samples are in one declared break
+
+Inspection of the **actual private Render application sample logs**, with the
+exact fixed filter `httpAllOk":false`, returned **29 records** and no next
+page. They are **contiguous slots 69 through 97 inclusive**, observed every
+two minutes between **2026-11-16T22:03:02Z and 22:59:02Z**. Every one lies
+inside **22:00–23:00 UTC**, the daily no-tick break that BiQuote support
+described on 16 November for its source's winter schedule. No failures
+outside that time range were present in the recorded 720-slot run.
+
+This is **strong temporal evidence** for a provider/market-session
+break explanation, not proof of any specific HTTP failure status, or a
+licence to disregard these samples as valid candles. The legacy worker
+recorded only `httpAllOk=false` for these slots; it **cannot recover**
+individual endpoint status codes or prove the underlying upstream MT5
+broker's actual session hours. A 60-minute provider-declared break is not
+automatically an independently verified broker calendar. All trading
+admission gates stay blocked.
+
+A code-only improvement on the review branch now captures **fixed,
+non-sensitive per-endpoint failure categories** (`quote`, `M15`, `H1`,
+`H4`) alongside independent quote-clock violations, distinguishing
+`HTTP_429`, missing responses, HTTP non-200, invalid JSON/envelopes and
+incomplete source shapes. It is **not deployed to the Coordinator** and
+does not retroactively generate detail absent from the old log. Any
+further live capture would require a separately authorized bounded run.
+
 ## Change decision and safe next steps
 
 **Decision: WAIT. Do NOT enable the forward archival worker based on this
