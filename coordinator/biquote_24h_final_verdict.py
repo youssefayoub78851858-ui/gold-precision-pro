@@ -66,6 +66,10 @@ def verdict(report):
     except (TypeError,ValueError):
         out["reasonCodes"]=["INVALID_REVIEW_UTC_WINDOW"]
         return out
+    # Exact pre-authorized observed run, not any later or unowned report.
+    if started!=dt.datetime(2026,11,16,19,45,tzinfo=UTC):
+        out["reasonCodes"]=["REVIEW_RUN_START_UNEXPECTED"]
+        return out
     completed=report.get("completed24hWindow") is True
     if not completed or last<started+dt.timedelta(hours=24):
         out["reasonCodes"]=["REVIEW_NOT_COMPLETED"]
@@ -82,10 +86,24 @@ def verdict(report):
         "h4DisagreementsAcrossSnapshots":1000000,
         "h1UnclassifiedPartialAggregatesAcrossSnapshots":1000000,
         "h4UnclassifiedPartialAggregatesAcrossSnapshots":1000000,
-        "privateArchiveAttempts":720,
-        "privateArchiveSavedSnapshots":720,
-        "privateArchiveRejectedSnapshots":720,
     }
+    # The actual 989699cd Render observer predates category and private
+    # archival counters. Recognize this older exact schema, never infer
+    # missing categories or pretend it already archived anything.
+    new_fields=("geometryFailureClasses","privateArchiveAttempts",
+                "privateArchiveSavedSnapshots","privateArchiveRejectedSnapshots",
+                "privateArchiveNewClosedBars")
+    legacy=all(k not in report for k in new_fields)
+    modern=all(k in report for k in new_fields)
+    if not (legacy or modern):
+        out["reasonCodes"]=["MIXED_OR_UNKNOWN_REPORT_SCHEMA"]
+        return out
+    if modern:
+        integer_fields.update({
+            "privateArchiveAttempts":720,
+            "privateArchiveSavedSnapshots":720,
+            "privateArchiveRejectedSnapshots":720,
+        })
     if any(not _num(report.get(k),maxval) for k,maxval in integer_fields.items()):
         out["reasonCodes"]=["INVALID_REPORT_COUNTERS"]
         return out
@@ -93,22 +111,29 @@ def verdict(report):
     missed=report["missedOrSkippedSlots"]
     ok=report["httpOkSamples"]
     failed=report["httpFailedSamples"]
-    cats=report.get("geometryFailureClasses")
-    if (not isinstance(cats,dict) or set(cats)!=set(CATEGORIES) or
-        any(not _num(cats[k],720) for k in CATEGORIES) or
-        n+missed!=720 or ok+failed!=n or
-        sum(cats.values())!=ok or
+    cats=report.get("geometryFailureClasses") if modern else None
+    if (n+missed!=720 or ok+failed!=n or
         report["requestsAttempted"]>4*n or
         report["auditShapePassedSamples"]>ok or
         report["marketOpenSamples"]>ok or
         report["providerStaleSamples"]>ok or
         report["crossFrameUnverifiedSamples"]>ok or
         report["h1DisagreementsAcrossSnapshots"]>report["h1FullyCoveredComparedAcrossSnapshots"] or
-        report["h4DisagreementsAcrossSnapshots"]>report["h4FullyCoveredComparedAcrossSnapshots"] or
+        report["h4DisagreementsAcrossSnapshots"]>report["h4FullyCoveredComparedAcrossSnapshots"]):
+        out["reasonCodes"]=["REPORT_COUNTER_CONTRADICTION_OR_UNEXPECTED_ARCHIVE"]
+        return out
+    if modern and (
+        not isinstance(cats,dict) or set(cats)!=set(CATEGORIES) or
+        any(not _num(cats[k],720) for k in CATEGORIES) or
+        sum(cats.values())!=ok or
         report["privateArchiveSavedSnapshots"]>report["privateArchiveAttempts"] or
         report["privateArchiveRejectedSnapshots"]>report["privateArchiveAttempts"] or
         report["privateArchiveAttempts"]>n or
-        report["privateArchiveSavedSnapshots"]>0):
+        report["privateArchiveSavedSnapshots"]>0 or
+        not isinstance(report["privateArchiveNewClosedBars"],dict) or
+        any(not _num(report["privateArchiveNewClosedBars"].get(tf),50000)
+            for tf in ("M15","H1","H4")) or
+        any(report["privateArchiveNewClosedBars"][tf]>0 for tf in ("M15","H1","H4"))):
         out["reasonCodes"]=["REPORT_COUNTER_CONTRADICTION_OR_UNEXPECTED_ARCHIVE"]
         return out
     h1=report["h1DisagreementsAcrossSnapshots"]
@@ -117,15 +142,17 @@ def verdict(report):
     if missed: reasons.append("MISSING_OBSERVATION_SLOTS")
     if failed: reasons.append("HTTP_FAILURE_SAMPLES")
     if report["providerStaleSamples"]: reasons.append("PROVIDER_STALE_QUOTE_SAMPLES")
-    if h1 or h4 or cats["OHLC_PRICE_DISAGREEMENT"]:
+    if h1 or h4 or (modern and cats["OHLC_PRICE_DISAGREEMENT"]):
         reasons.append("SOURCE_OHLC_PRICE_DISAGREEMENT")
-    if (cats["UNCLASSIFIED_M15_COVERAGE_GAP"] or
+    if ((modern and cats["UNCLASSIFIED_M15_COVERAGE_GAP"]) or
         report["crossFrameUnverifiedSamples"] or
         report["h1UnclassifiedPartialAggregatesAcrossSnapshots"] or
         report["h4UnclassifiedPartialAggregatesAcrossSnapshots"]):
         reasons.append("UNCLASSIFIED_M15_H1_H4_COVERAGE_GAPS")
-    if cats["OTHER_SOURCE_SHAPE_FAILURE"] or cats["UNAVAILABLE"]:
+    if modern and (cats["OTHER_SOURCE_SHAPE_FAILURE"] or cats["UNAVAILABLE"]):
         reasons.append("SOURCE_GEOMETRY_OR_AUDIT_UNAVAILABLE")
+    if legacy and report["auditShapePassedSamples"]<ok:
+        reasons.append("LEGACY_FAILED_GEOMETRY_CLASS_NOT_AVAILABLE")
     if not report["h1FullyCoveredComparedAcrossSnapshots"] or not report["h4FullyCoveredComparedAcrossSnapshots"]:
         reasons.append("NO_FULLY_COVERED_H1_H4_OHLC_COMPARISONS")
     if not reasons: reasons.append("ONLY_SAMPLED_SOURCE_GEOMETRY_VERIFIED")
@@ -135,7 +162,9 @@ def verdict(report):
                     "GC_DXY_NEWS_YIELDS_ORDERFLOW_NOT_LIVE_VERIFIED",
                     "FORWARD_PROFITABILITY_NOT_TESTED"])
     out.update(status="REVIEW_FINISHED_READONLY_NOT_TRADE_ADMISSIBLE",
-               reasonCodes=reasons,samplesObserved=n,missedSlots=missed,
+               reasonCodes=reasons,
+               reportSchema="LEGACY_989699CD_NO_FAILURE_CLASS" if legacy else "EXTENDED_TYPED_FAILURE_CLASSES",
+               samplesObserved=n,missedSlots=missed,
                httpOkSamples=ok,h1OHLCDisagreements=h1,h4OHLCDisagreements=h4,
                unclassifiedCoverageSamples=report["crossFrameUnverifiedSamples"])
     return out
