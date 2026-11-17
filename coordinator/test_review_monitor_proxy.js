@@ -119,6 +119,66 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
     frames:undefined,engineReview:undefined}})});
  a.equal(emptyShadow.httpStatus,200);
  a.equal(emptyShadow.body.biquoteForwardShadow.technicalWatch,"NONE");
+ const batch={
+  mode:"GOLD_PRECISION_FOUR_STAGE_BATCH_READONLY_V1",
+  signal:"WAIT",executable:false,paperOrdersAllowed:false,
+  liveOrdersAllowed:false,tradeEligible:false,signalReady:false,
+  researchEligible:false,brokerOrdersSent:0,providerRequestsMade:0,
+  archiveWritesMade:0,paperLedgerWritesMade:0,
+  rawMarketPricesExposed:false,
+  brokerFeedRightsIndependentlyVerified:false,
+  brokerSessionCalendarIndependentlyVerified:false,
+  historicalBidAskExecutionVerified:false,
+  outOfSampleNetExpectancyProven:false,
+  stages:{
+   data:{status:"SOURCE_NOT_QUALIFIED",sourceRightsVerified:false,
+    independentBrokerCalendarVerified:false,liveProviderConnected:false,
+    liveQuote:{bid:12345}},
+   archive:{status:"NO_FORWARD_CAPTURE",
+    closedCounts:{M15:0,H1:0,H4:0},
+    consecutiveClosedCounts:{M15:0,H1:0,H4:0},
+    dataSourceIndependentlyAuthenticated:false,sessionGapsProven:false,
+    quoteSamples:[{ask:12346}]},
+   analysis:{status:"WAIT_CLOSED_DATA_OR_CONTEXT",
+    approvedDirection:"NONE",technicalWatch:"NONE",entry:null,
+    stopLoss:null,takeProfit:null,winProbability:null,
+    independentContextVerified:false,rawCandles:[{close:12347}]},
+   context:{status:"INDEPENDENT_SOURCE_CONFIRMATIONS_REQUIRED"},
+   paper:{status:"BLOCKED",paperOrdersAllowed:false,
+    paperLedgerOpened:false,sampleTradesCreated:0,
+    brokerCostsVerified:false,forwardNetPerformanceEstablished:false,
+    fakeProfit:12348}
+  },
+  unknownApiKey:"PRIVATE_SECRET_TOKEN"
+ };
+ const outBatch=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,ultimateFourStageBatch:batch
+ })});
+ a.equal(outBatch.httpStatus,200);
+ a.equal(outBatch.body.ultimateFourStageBatch.signal,"WAIT");
+ a.equal(outBatch.body.ultimateFourStageBatch.paperOrdersAllowed,false);
+ a.equal(outBatch.body.ultimateFourStageBatch.dataStatus,"SOURCE_NOT_QUALIFIED");
+ a.equal(outBatch.body.ultimateFourStageBatch.archiveStatus,"NO_FORWARD_CAPTURE");
+ a.equal(outBatch.body.ultimateFourStageBatch.analysisStatus,"WAIT_CLOSED_DATA_OR_CONTEXT");
+ a.equal(outBatch.body.ultimateFourStageBatch.technicalWatch,"NONE");
+ a.equal(outBatch.body.ultimateFourStageBatch.frameCounts.H4.contiguous,0);
+ for(const secret of ["12345","12346","12347","12348","PRIVATE_SECRET_TOKEN",
+                      "fakeProfit","rawCandles","unknownApiKey"]){
+  a.ok(!JSON.stringify(outBatch).includes(secret),"No prices or secrets on mobile");
+ }
+ for(const change of [{signal:"BUY"},{paperOrdersAllowed:true},
+   {archiveWritesMade:1},{brokerOrdersSent:1},
+   {outOfSampleNetExpectancyProven:true},{rawMarketPricesExposed:true},
+   {stages:{...batch.stages,analysis:{...batch.stages.analysis,
+    technicalWatch:"BUY"}}},
+   {stages:{...batch.stages,paper:{...batch.stages.paper,
+    paperOrdersAllowed:true}}},
+   {stages:{...batch.stages,archive:{...batch.stages.archive,
+    consecutiveClosedCounts:{M15:0,H1:0,H4:999}}}}]){
+   const bad=await relay(auth,{approved:true,fetchFn:async()=>mock({
+    ...expected,ultimateFourStageBatch:{...batch,...change}})});
+   a.equal(bad.httpStatus,503,"Forged batch readiness rejected");
+ }
  const wrong=await relay(auth,{approved:true,fetchFn:async()=>({status:401,ok:false})});
  a.equal(wrong.httpStatus,401);
  const fault=await relay(auth,{approved:true,fetchFn:async()=>{throw Error("private secret")}});
