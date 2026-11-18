@@ -427,6 +427,75 @@ document.addEventListener('DOMContentLoaded',function(){
  }
 });
 </script>
+
+<!-- GPP_REFERENCE_SINGLE_SCREEN_FINISH_20261118: one coherent mobile dashboard, preserve original audit controls and source honesty. -->
+<style id="gpp-reference-single-screen-finish">
+#gpp-reference-dashboard .gpp-reference-details{border:1px solid #3a5169;border-radius:12px;background:#101e30;margin:9px 0;color:#d8e3ee}
+#gpp-reference-dashboard .gpp-reference-details>summary{cursor:pointer;list-style:none;padding:12px;color:#edce8b;font-weight:800;font-size:.82rem}
+#gpp-reference-dashboard .gpp-reference-details>summary::-webkit-details-marker{display:none}
+#gpp-reference-dashboard .gpp-reference-details>summary:after{content:" +";float:left}
+#gpp-reference-dashboard .gpp-reference-details[open]>summary:after{content:" −"}
+#gpp-reference-dashboard .gpp-reference-details>div{padding:0 8px 9px}
+#gpp-reference-dashboard .gpp-reference-details #biquote-mobile-observation,
+#gpp-reference-dashboard .gpp-reference-details #gold-decision-center{margin:6px 0!important;box-shadow:none!important}
+#gpp-reference-dashboard .gpp-data-note{color:#b9c8d7;font-size:.7rem;text-align:center;margin:5px 0 10px}
+@media(max-width:700px){
+ #gpp-reference-dashboard .gpp-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ #gpp-reference-dashboard .gpp-grid:not(.two){grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ #gpp-reference-dashboard .gpp-mini{min-height:68px!important}
+ #gpp-reference-dashboard .gpp-status{margin-top:9px!important}
+ #gpp-reference-dashboard .gpp-reference-details .overview{max-width:100%!important}
+}
+</style>
+<script>
+(function(){
+ function finish(){
+  var dash=document.getElementById('gpp-reference-dashboard');
+  if(!dash)return;
+  var quote=dash.querySelector('.gpp-quote');
+  var chart=document.getElementById('biquote-live-chart-panel');
+  if(quote&&chart&&chart.previousElementSibling!==quote){
+   // Keep chart immediately below the quote; observation badge follows the chart.
+   quote.insertAdjacentElement('afterend',chart);
+  }
+  var detail=document.getElementById('gpp-reference-details');
+  if(!detail){
+   detail=document.createElement('details');
+   detail.id='gpp-reference-details';detail.className='gpp-reference-details';
+   var summary=document.createElement('summary');
+   summary.textContent='فحص المصدر والتحليل التفصيلي (اضغط للعرض)';
+   detail.appendChild(summary);
+   var inside=document.createElement('div');inside.id='gpp-reference-details-body';detail.appendChild(inside);
+   var proof=dash.querySelector('.gpp-proof');
+   if(proof)proof.insertAdjacentElement('beforebegin',detail);else dash.appendChild(detail);
+  }
+  var body=document.getElementById('gpp-reference-details-body');
+  ['biquote-mobile-observation','gold-decision-center'].forEach(function(id){
+   var el=document.getElementById(id);
+   if(el&&el.parentElement!==body)body.appendChild(el);
+  });
+  var settings=dash.querySelector('.gpp-tabs a[href="#gdc-gates"]');
+  if(settings)settings.setAttribute('href','#biquote-viewer-guide');
+  var analysis=dash.querySelector('.gpp-tabs a[href="#biquote-live-chart-panel"]');
+  if(analysis)analysis.setAttribute('href','#biquote-live-chart-panel');
+  if(!document.getElementById('gpp-data-note')){
+   var note=document.createElement('p');note.id='gpp-data-note';note.className='gpp-data-note';
+   note.textContent='شارت BiQuote: عينات مرصودة وليست بث MT5؛ البيانات الناقصة لا تتحول إلى إشارات.';
+   if(chart)chart.insertAdjacentElement('afterend',note);
+  }
+  // Open the correct disclosure for any direct link to its contained panels.
+  document.querySelectorAll('a[href="#biquote-viewer-guide"],a[href="#gdc-gates"]').forEach(function(a){
+   if(a.dataset.gppDisclosureReady)return;
+   a.dataset.gppDisclosureReady='true';
+   a.addEventListener('click',function(){detail.open=true});
+  });
+  if(['#biquote-viewer-guide','#gdc-gates','#gold-decision-center','#biquote-mobile-observation'].indexOf(location.hash)>=0)detail.open=true;
+ }
+ document.addEventListener('DOMContentLoaded',finish);
+ window.addEventListener('load',finish);
+ window.addEventListener('pageshow',finish);
+})();
+</script>
 <nav class="unified-mobile-nav" aria-label="أقسام نظام الذهب الموحد">
 <a href="#gold-decision-center">القرار</a><a href="#biquote-live-chart-panel">شارت الذهب</a><a href="#paper-actions">تداول ورقي</a><a href="#paper-statistics">السجل</a>
 </nav>
