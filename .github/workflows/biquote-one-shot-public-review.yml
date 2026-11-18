@@ -19,6 +19,8 @@ jobs:
       - name: Verify fixed GET-only request contract with all-network-denied unit fakes
         working-directory: coordinator
         run: python -m unittest -v test_biquote_public_one_shot test_biquote_overlap_evidence test_biquote_session_gap_audit
-      - name: Audit actual missing candle UTC times against generic reference (unverified broker, one-shot)
+      # Explicitly bounded to ONE run, four public GETs, no credentials,
+      # no retries, no persistence and no raw BID/ASK or OHLC in CI logs.
+      - name: Single free BiQuote read-only sample — sanitized quality counters only
         working-directory: coordinator
         run: python biquote_public_one_shot.py
