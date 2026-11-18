@@ -50,6 +50,24 @@ class FourStageBatchAcceptance(unittest.TestCase):
         self.assertFalse(archive["stage2SourceVerified"])
         self.assertFalse(archive["stage2SessionCalendarVerified"])
         self.assertFalse(archive["stage2EligibleForPaper"])
+        analysis=report["stages"]["analysis"]
+        stage3=analysis["stage3"]
+        self.assertEqual(stage3["signal"],"WAIT")
+        self.assertFalse(stage3["brokerRightsVerified"])
+        self.assertFalse(stage3["brokerSessionCalendarVerified"])
+        self.assertFalse(stage3["independentMacroOrderFlowVerified"])
+        self.assertFalse(stage3["paperOrdersAllowed"])
+        self.assertFalse(stage3["liveOrdersAllowed"])
+        self.assertEqual(stage3["minimumContiguousClosedEachFrame"],21)
+        self.assertEqual(stage3["framesWithWarmup"],
+                         sum(archive["consecutiveClosedCounts"][tf]>=21
+                             for tf in ("M15","H1","H4")))
+        self.assertEqual(stage3["h4ContiguousClosed"],archive["consecutiveClosedCounts"]["H4"])
+        self.assertEqual(stage3["h4RemainingUntil21"],
+                         max(0,21-stage3["h4ContiguousClosed"]))
+        self.assertEqual(stage3["frozenV3Observed"],
+                         analysis["status"]=="FROZEN_V3_TECHNICAL_OBSERVATION_ONLY")
+        self.assertEqual(stage3["crossFrameParityObserved"],stage3["frozenV3Observed"])
         self.assertEqual(set(archive["stage2Frames"]),{"M15","H1","H4"})
         for tf in ("M15","H1","H4"):
             frame=archive["stage2Frames"][tf]
@@ -72,6 +90,8 @@ class FourStageBatchAcceptance(unittest.TestCase):
         self.assertEqual(out["stages"]["archive"]["stage2Status"],"WAIT_NO_FORWARD_CLOSED_BARS")
         self.assertEqual(out["stages"]["archive"]["stage2Frames"]["H4"]["remainingUntil21"],21)
         self.assertEqual(out["stages"]["archive"]["closedCounts"]["H4"],0)
+        self.assertEqual(out["stages"]["analysis"]["stage3"]["status"],
+                         "WAIT_CLOSED_BAR_WARMUP")
         self.assertEqual(out["stages"]["archive"]["capacityStatus"],"CAPACITY_HEADROOM")
         self.assertEqual(out["stages"]["archive"]["quoteSamplesRemaining"],10000)
         self.assertFalse(out["stages"]["archive"]["archiveCapacityExhausted"])
@@ -142,6 +162,8 @@ class FourStageBatchAcceptance(unittest.TestCase):
         self.assertEqual(out["stages"]["archive"]["quoteSamplesRemaining"],9999)
         self.assertEqual(out["stages"]["analysis"]["status"],
                          "FROZEN_V3_TECHNICAL_OBSERVATION_ONLY")
+        self.assertEqual(out["stages"]["analysis"]["stage3"]["status"],
+                         "WAIT_INDEPENDENT_FEEDS_AND_RIGHTS")
         self.assertIn(out["stages"]["analysis"]["technicalWatch"],
                       ("BUY","SELL","NONE"))
         self.assertEqual(out["stages"]["paper"]["sampleTradesCreated"],0)
@@ -178,6 +200,24 @@ class FourStageBatchAcceptance(unittest.TestCase):
         self.assert_blocked(missing)
         self.assertEqual(missing["stages"]["analysis"]["technicalWatch"],"NONE")
 
+    def test_forged_precomputed_v3_parity_never_evaluates(self):
+        ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
+        m=inspect_metadata(self.folder)
+        shadow=shadow_review(self.folder,now_utc=AFTER)
+        for fake in (
+            {**shadow,"comparedCrossFrames":{"H1":{"fullyCoveredCompared":0,
+                "fullyCoveredDisagreed":0},"H4":{"fullyCoveredCompared":1,
+                "fullyCoveredDisagreed":0}}},
+            {**shadow,"comparedCrossFrames":{"H1":{"fullyCoveredCompared":1,
+                "fullyCoveredDisagreed":1},"H4":{"fullyCoveredCompared":1,
+                "fullyCoveredDisagreed":0}}},
+        ):
+            r=review_batch(self.folder,vault_metadata=m,shadow_status=fake,now_utc=AFTER)
+            self.assert_blocked(r)
+            self.assertEqual(r["stages"]["archive"]["status"],"PRIVATE_VAULT_NOT_READABLE")
+            self.assertEqual(r["stages"]["analysis"]["technicalWatch"],"NONE")
+        self.assertFalse(self.folder.joinpath("fake-approval").exists())
+
     def test_stale_archive_never_leaks_a_buy_or_sell(self):
         ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
         out=review_batch(self.folder,now_utc=AFTER+dt.timedelta(hours=6),
@@ -195,6 +235,8 @@ class FourStageBatchAcceptance(unittest.TestCase):
         r=review_batch(self.folder,final_report={"signal":"BUY"})
         self.assert_blocked(r)
         self.assertEqual(r["stages"]["archive"]["status"],"PRIVATE_VAULT_NOT_READABLE")
+        self.assertEqual(r["stages"]["analysis"]["stage3"]["status"],
+                         "WAIT_ARCHIVE_UNAVAILABLE")
         self.assertEqual(r["stages"]["archive"]["stage2Status"],"WAIT_PRIVATE_ARCHIVE_UNAVAILABLE")
         self.assertEqual(r["stages"]["archive"]["capacityStatus"],"CAPACITY_METADATA_UNAVAILABLE")
         self.assertTrue(r["stages"]["archive"]["archiveCapacityExhausted"])
