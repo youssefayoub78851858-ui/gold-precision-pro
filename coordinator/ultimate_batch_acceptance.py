@@ -15,6 +15,7 @@ from biquote_24h_final_verdict import verdict
 from biquote_private_forward_vault import FRAMES_ORDER, inspect_metadata
 from biquote_forward_shadow_review import shadow_review
 from paper_admission_gate import assess_biquote_paper_gate
+from private_forward_capacity_preflight import capacity_readiness
 
 UTC=dt.timezone.utc
 BASE={
@@ -89,6 +90,7 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
                 raise ValueError("FORGED_PRECOMPUTED_STATUS")
         counts={tf:m["counts"][tf] for tf in FRAMES_ORDER}
         tails={tf:sh["frames"][tf]["contiguousClosed"] for tf in FRAMES_ORDER}
+        capacity=capacity_readiness(m)
         archive_status="FORWARD_CAPTURE_PRESENT_UNVERIFIED" if any(counts.values()) else "NO_FORWARD_CAPTURE"
     except (OSError,ValueError,TypeError,KeyError):
         m=None
@@ -96,10 +98,16 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
         counts={tf:0 for tf in FRAMES_ORDER}
         tails={tf:0 for tf in FRAMES_ORDER}
         archive_status="PRIVATE_VAULT_NOT_READABLE"
+        capacity=None
     result["stages"]["archive"]={
         "status":archive_status,
         "closedCounts":counts,
         "consecutiveClosedCounts":tails,
+        "capacityStatus":capacity["status"] if capacity else "CAPACITY_METADATA_UNAVAILABLE",
+        "quoteSamplesRemaining":capacity["quoteSamplesRemaining"] if capacity else None,
+        "quoteSamplesHardCap":capacity["quoteSamplesHardCap"] if capacity else None,
+        "archiveCapacityExhausted":capacity["status"]=="CAPACITY_LIMIT_REACHED" if capacity else True,
+        "automaticQuoteDeletionAllowed":False,
         "minimumNeededEach":21,
         "lastImportedUTC":m.get("lastImportedUTC") if m else None,
         "privateStorageVerified":m is not None and any(counts.values()),
