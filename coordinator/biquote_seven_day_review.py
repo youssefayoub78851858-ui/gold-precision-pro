@@ -22,6 +22,7 @@ from biquote_private_forward_vault import (
     START, APPROVAL_ENV, APPROVAL, ingest, inspect_metadata, load_vault,
 )
 from biquote_session_gap_audit import audit_closed_timestamp_reference
+from biquote_forward_shadow_review import tail_contiguous, overlaps_match, WIDTH
 from private_forward_capacity_preflight import capacity_readiness
 
 UTC = dt.timezone.utc
@@ -103,6 +104,41 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
                  "brokerSessionVerified": False, "gapsApproved": False, **SAFE})
         except (OSError, ValueError, TypeError, KeyError):
             log({"event": "BIQUOTE_STAGE3_REFERENCE_UNAVAILABLE",
+                 "phase": phase, "dayIndex": index, **SAFE})
+            return
+        # Reuse this SAME sealed archive read to prove how many H1/H4 OHLC
+        # bars are completely covered by M15; no raw OHLC or timestamps
+        # enter logs. Uncovered bars must never count as agreements.
+        try:
+            tails = {}
+            for tf in ("M15", "H1", "H4"):
+                if len(original["closed"][tf]) != expected_counts[tf]:
+                    raise ValueError("PARITY_ARCHIVE_COUNT_INCONSISTENT")
+                tail = tail_contiguous(original["closed"][tf], WIDTH[tf])
+                if original["closed"][tf] and not tail:
+                    raise ValueError("PARITY_CLOSED_DATA_INVALID")
+                tails[tf] = tail
+            matches = overlaps_match(tails)
+            evidence = {}
+            for tf in ("H1", "H4"):
+                compared = matches[tf]["fullyCoveredCompared"]
+                wrong = matches[tf]["fullyCoveredDisagreed"]
+                observed = len(tails[tf])
+                if (type(compared) is not int or type(wrong) is not int or
+                        not 0 <= wrong <= compared <= observed <= 48):
+                    raise ValueError("PARITY_COUNTS_INVALID")
+                evidence[tf] = {
+                    "higherClosedExamined": observed,
+                    "fullyCoveredCompared": compared,
+                    "fullyCoveredDisagreed": wrong,
+                    "notFullyCovered": observed - compared,
+                }
+            log({"event": "BIQUOTE_STAGE3_ARCHIVE_OHLC_OVERLAP",
+                 "phase": phase, "dayIndex": index, "frames": evidence,
+                 "brokerSessionVerified": False,
+                 "sourceRightsVerified": False, "tradeEligible": False, **SAFE})
+        except (OSError, ValueError, TypeError, KeyError):
+            log({"event": "BIQUOTE_STAGE3_OHLC_OVERLAP_UNAVAILABLE",
                  "phase": phase, "dayIndex": index, **SAFE})
 
     completed = skipped = 0
