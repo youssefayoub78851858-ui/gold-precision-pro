@@ -202,6 +202,52 @@ function sanitize(input){
      brokerCalendarVerified:false,captureVerifiedByBroker:false,
      asOfUTC:f.asOfUTC,ageSeconds:age};
    }
+   // Independently validate age of the last really CLOSED M15/H1/H4
+   // candle. A fresh tick/quote cannot make a frozen candle history fresh.
+   // These age thresholds are purely diagnostics, not broker trading hours.
+   if(v.closedFrameFreshness!==undefined){
+    const f=v.closedFrameFreshness;
+    if(!f||f.mode!=="BIQUOTE_PRIVATE_CLOSED_FRAME_AGE_DIAGNOSTIC_ONLY"||
+       f.status!=="AGE_COUNTS_ONLY_UNVERIFIED"||
+       f.signal!=="WAIT"||f.executable!==false||
+       f.paperOrdersAllowed!==false||f.sourceQualified!==false||
+       f.brokerCalendarVerified!==false||f.gapBridgingAllowed!==false||
+       typeof f.asOfUTC!=="string"||!utc(f.asOfUTC)||
+       Math.abs(Date.now()-Date.parse(f.asOfUTC))>120000||
+       !f.frames||Object.keys(f.frames).sort().join(",")!=="H1,H4,M15")
+     throw Error("Unsafe closed-bar age diagnostic");
+    const frames={};
+    for(const [tf,width] of [["M15",900],["H1",3600],["H4",14400]]){
+     const x=f.frames[tf],close=coverage[tf].lastClosedUTC,
+       n=counts[tf],threshold=width*2;
+     let status,age=null;
+     if(n===0){
+      status="NO_CLOSED_BAR";
+     }else{
+      if(typeof close!=="string"||!utc(close))
+       throw Error("Unverifiable closed-bar timestamp");
+      const diff=(Date.parse(f.asOfUTC)-Date.parse(close))/1000;
+      if(!Number.isFinite(diff))throw Error("Unverifiable closed-bar clock");
+      if(diff<0)status="FUTURE_CLOSE_OR_CLOCK_SKEW";
+      else{
+       age=Math.min(Math.floor(diff),31536000);
+       status=diff<=threshold?"RECENT_UNVERIFIED":
+         "CANDLE_STALE_OVER_TWO_FRAMES";
+      }
+     }
+     if(!x||x.status!==status||x.thresholdSeconds!==threshold||
+        !(age===null?x.ageSeconds===null:
+          Number.isInteger(x.ageSeconds)&&Math.abs(x.ageSeconds-age)<=1))
+      throw Error("Forged closed-bar age diagnostic");
+     frames[tf]={status,ageSeconds:age,thresholdSeconds:threshold};
+    }
+    safeForward.closedFrameFreshness={
+     mode:"BIQUOTE_PRIVATE_CLOSED_FRAME_AGE_DIAGNOSTIC_ONLY",
+     status:"AGE_COUNTS_ONLY_UNVERIFIED",signal:"WAIT",executable:false,
+     paperOrdersAllowed:false,sourceQualified:false,
+     brokerCalendarVerified:false,gapBridgingAllowed:false,
+     asOfUTC:f.asOfUTC,frames};
+   }
    // Gap classification is a *vendor reference hypothesis*, not proof of
    // an upstream broker schedule. Forward aggregated integers only, never
    // timestamp arrays or market price payloads from the sealed vault.
