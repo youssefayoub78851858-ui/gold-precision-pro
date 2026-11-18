@@ -63,6 +63,52 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  a.ok(!JSON.stringify(withArchive).includes("989898"));
  a.ok(!JSON.stringify(withArchive).includes("999999"));
  a.ok(!JSON.stringify(withArchive).includes("quoteObservations"));
+ // Never trust upstream claims that a generic vendor pause certifies the
+ // underlying broker's calendar, nor forward raw timestamps or BID/ASK.
+ const refFrame=n=>({
+  persistedClosed:n,gapPairs:0,unclassifiedMissingSlots:0,
+  vendorPauseCandidateSlotsNotVerified:0,outsideVendorReferenceSlots:0,
+  unknownReferenceSlots:0,comparisonHasAtLeastTwoBars:n>=2,
+  rawBid:987654321,privateTimestamp:"2026-11-18T10:15:00Z"});
+ const gapReference={
+  mode:"BIQUOTE_PRIVATE_REFERENCE_GAP_COUNTS_ONLY",
+  status:"REFERENCE_ONLY_NOT_BROKER_VERIFIED",
+  signal:"WAIT",executable:false,researchEligible:false,
+  paperOrdersAllowed:false,liveOrdersAllowed:false,
+  independentBrokerCalendarVerified:false,sourceRightsVerified:false,
+  allGapsRemainUnclassified:true,
+  frames:{M15:refFrame(3),H1:refFrame(1),H4:refFrame(0)},
+  providerApiKey:"PRIVATE_NEVER_FORWARD_KEY"};
+ const withRef=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,biquotePrivateForwardVault:{...freshArchive,gapReference}
+ })});
+ a.equal(withRef.httpStatus,200);
+ const mobileRef=withRef.body.biquotePrivateForwardVault.gapReference;
+ a.equal(mobileRef.status,"REFERENCE_ONLY_NOT_BROKER_VERIFIED");
+ a.equal(mobileRef.frames.M15.unclassifiedMissingSlots,0);
+ a.equal(mobileRef.allGapsRemainUnclassified,true);
+ a.equal(mobileRef.sourceRightsVerified,false);
+ a.equal(mobileRef.paperOrdersAllowed,false);
+ for(const secret of ["PRIVATE_NEVER_FORWARD_KEY","987654321","privateTimestamp",
+                     "2026-11-18T10:15:00Z"]){
+  a.ok(!JSON.stringify(withRef).includes(secret),"Private gap evidence must be aggregate-only");
+ }
+ for(const badRef of [
+  {...gapReference,allGapsRemainUnclassified:false},
+  {...gapReference,independentBrokerCalendarVerified:true},
+  {...gapReference,sourceRightsVerified:true},
+  {...gapReference,signal:"BUY"},
+  {...gapReference,frames:{...gapReference.frames,M15:{
+    ...gapReference.frames.M15,unclassifiedMissingSlots:1}}},
+  {...gapReference,frames:{...gapReference.frames,M15:{
+    ...gapReference.frames.M15,outsideVendorReferenceSlots:-1}}}
+ ]){
+  const no=await relay(auth,{approved:true,fetchFn:async()=>mock({
+   ...expected,biquotePrivateForwardVault:{...freshArchive,gapReference:badRef}
+  })});
+  a.equal(no.httpStatus,503,"Unsafe broker session claim must fail closed");
+  a.equal(no.body.signal,"WAIT");
+ }
  const corruptArchive=await relay(auth,{approved:true,fetchFn:async()=>mock({
   ...expected,biquotePrivateForwardVault:{...freshArchive,tradeSignalReady:true}
  })});
