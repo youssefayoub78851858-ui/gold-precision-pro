@@ -240,6 +240,62 @@ class SevenDayReviewTests(unittest.TestCase):
                            "2026-11-18T00","\"high\"","\"open\""):
                 self.assertNotIn(secret,str(events)+str(outcome))
 
+    def test_mid_vs_closed_bars_log_reports_only_validated_counts(self):
+        # Real HTTP is never contacted. A synthetic tick from one sealed
+        # closed candle matches each timeframe, then contradicts all three.
+        opened="2026-11-18T08:00:00Z"
+        closed={"openTime":opened,"open":4000.0,"high":4000.5,
+                "low":3999.5,"close":4000.2}
+        for tick_bid,expected in ((4000.1,"CONSISTENT_OBSERVED_SAMPLES_ONLY"),
+                                  (4008.0,"OBSERVED_MID_OUTSIDE_CLOSED_OHLC"),
+                                  (-1.0,None)):
+            log=[]
+            vault={"schema":1,"source":"BIQUOTE_UNVERIFIED_UPSTREAM_MT5",
+                   "closed":{tf:[dict(closed)] for tf in ("M15","H1","H4")},
+                   "quoteObservations":[{
+                       "tickUTC":"2026-11-18T08:02:00Z",
+                       "observedUTC":"2026-11-18T08:02:02Z",
+                       "bid":tick_bid,"ask":4008.5 if tick_bid==4008.0 else 4000.3,
+                       "password":"PRIVATE_DO_NOT_PRINT"}],
+                   "secret":"BRIDGE_MUST_NOT_LEAK"}
+            counts={"M15":1,"H1":1,"H4":1}
+            with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")),patch.object(
+                    run,"load_vault",return_value=vault):
+                response=run.run_seven_days(VAULT,clock=lambda:DAY+dt.timedelta(minutes=2),
+                    metadata=lambda _:{**meta(1),"counts":counts},
+                    observer=lambda *_args,**_kwargs:{"signal":"WAIT",
+                        "executable":False,"completed24hWindow":True},
+                    emit=log.append,days=1,environment=ENV)
+            self.assertEqual(response["signal"],"WAIT")
+            self.assertFalse(response["paperOrdersAllowed"])
+            entries=[x for x in log
+                     if x["event"]=="BIQUOTE_STAGE3_QUOTE_MID_CLOSED_RANGE"]
+            if expected is None:
+                self.assertFalse(entries)
+                self.assertEqual(len([x for x in log if
+                    x["event"]=="BIQUOTE_STAGE3_QUOTE_MID_RANGE_UNAVAILABLE"]),1)
+            else:
+                self.assertEqual(len(entries),1)
+                proof=entries[0]
+                self.assertEqual(proof["status"],expected)
+                self.assertEqual(proof["phase"],"RESTART")
+                self.assertEqual(proof["sourceQuoteSamples"],1)
+                for tf in ("M15","H1","H4"):
+                    item=proof["frames"][tf]
+                    self.assertEqual(item["comparableQuoteSamples"],1)
+                    self.assertEqual(item["outsideClosedOHLC"],int(tick_bid>4001))
+                    self.assertEqual(item["withinClosedOHLC"],int(tick_bid<4001))
+                    self.assertEqual(item["notInArchivedClosedBars"],0)
+                self.assertFalse(proof["brokerSessionVerified"])
+                self.assertFalse(proof["sourceRightsVerified"])
+                self.assertFalse(proof["tradeEligible"])
+                self.assertFalse(proof["liveOrdersAllowed"])
+            printed=str(log)+str(response)
+            for secret in ("PRIVATE_DO_NOT_PRINT","BRIDGE_MUST_NOT_LEAK",
+                           "4000.1","4008.0","4008.5",opened,
+                           "'bid'","'ask'","'openTime'"):
+                self.assertNotIn(secret,printed)
+
     def test_mismatched_sealed_reference_is_unavailable_without_promoting(self):
         events=[]
         forged={**meta(4),"counts":{"M15":2,"H1":0,"H4":0}}
