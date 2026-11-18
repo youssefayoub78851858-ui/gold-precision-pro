@@ -72,6 +72,10 @@ for(const id of ['biquote-live-chart-panel','biquote-live-canvas','biquote-live-
  a(doc.includes('id="'+id+'"'),'Missing PRIVATE BiQuote chart UI: '+id);
 a(doc.includes('data-biq-frame="M15"')&&doc.includes('data-biq-frame="H1"')&&doc.includes('data-biq-frame="H4"'));
 a(doc.includes('شارت محاكاة ورقية XAUUSD'),'Paper replay chart must be unmistakably labelled');
+a(doc.includes('id="paper-chart-not-live"'),"H1 replay chart requires prominent no-live disclaimer");
+a(doc.includes('الشمعة المفتوحة ما عم تتحرك مع سوق الذهب الحقيقي'),"No claim that the demo plots live MT5 candles");
+a(doc.includes('هيدا شارت محاكاة، مش بث مباشر من MT5'),"Source difference is explicit");
+
 a(doc.includes('شموع MID من BiQuote'),'Actual closed MID source must be labelled');
 
 const server=fs.readFileSync('server.js','utf8');
