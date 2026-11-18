@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from biquote_private_forward_vault import (
-    FILE, START, ingest, inspect_metadata, load_vault, capture_freshness
+    FILE, START, ingest, inspect_metadata, load_vault, capture_freshness, closed_frame_freshness
 )
 
 UTC=dt.timezone.utc
@@ -170,6 +170,58 @@ class ForwardVault(unittest.TestCase):
             for secret in ('"bid"','"ask"','"spread"','"close"'):
                 self.assertNotIn(secret,safe)
         self.assertEqual(len(load_vault(self.folder)["quoteObservations"]),1)
+
+    def test_stale_closed_frames_detected_even_when_quote_sample_is_new(self):
+        # One timestamp and NO provider calls. Diagnostic thresholds of
+        # 30m/2h/8h are not broker-close/schedule assertions.
+        with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+            ingest(self.folder,self.s,received_utc=iso(NOW))
+            early=inspect_metadata(self.folder,now_utc=NOW)
+            m15_stale=inspect_metadata(
+                self.folder,now_utc=NOW+dt.timedelta(minutes=31))
+            all_stale=inspect_metadata(
+                self.folder,now_utc=NOW+dt.timedelta(hours=9))
+            future=inspect_metadata(
+                self.folder,now_utc=NOW-dt.timedelta(days=2))
+        x=early["closedFrameFreshness"]
+        self.assertEqual(x["status"],"AGE_COUNTS_ONLY_UNVERIFIED")
+        self.assertEqual(x["frames"]["M15"]["status"],"RECENT_UNVERIFIED")
+        self.assertEqual(x["frames"]["H1"]["status"],"RECENT_UNVERIFIED")
+        self.assertEqual(x["frames"]["H4"]["status"],"RECENT_UNVERIFIED")
+        a=m15_stale["closedFrameFreshness"]["frames"]
+        self.assertEqual(a["M15"]["status"],"CANDLE_STALE_OVER_TWO_FRAMES")
+        self.assertEqual(a["H1"]["status"],"RECENT_UNVERIFIED")
+        self.assertEqual(a["H4"]["status"],"RECENT_UNVERIFIED")
+        self.assertEqual(a["M15"]["thresholdSeconds"],1800)
+        self.assertEqual(a["H1"]["thresholdSeconds"],7200)
+        self.assertEqual(a["H4"]["thresholdSeconds"],28800)
+        for tf in ("M15","H1","H4"):
+            self.assertEqual(
+                all_stale["closedFrameFreshness"]["frames"][tf]["status"],
+                "CANDLE_STALE_OVER_TWO_FRAMES")
+            self.assertEqual(
+                future["closedFrameFreshness"]["frames"][tf]["status"],
+                "FUTURE_CLOSE_OR_CLOCK_SKEW")
+        self.assertEqual(early["captureFreshness"]["status"],"RECENT_UNVERIFIED")
+        self.assertFalse(x["brokerCalendarVerified"])
+        self.assertFalse(x["gapBridgingAllowed"])
+        self.assertFalse(x["sourceQualified"])
+        self.assertFalse(x["paperOrdersAllowed"])
+        self.assertEqual(x["signal"],"WAIT")
+        for f in (early,m15_stale,all_stale,future):
+            payload=json.dumps(f["closedFrameFreshness"])
+            for field in ('"open"','"high"','"low"','"close"','"bid"','"ask"',
+                          '"spread"'):
+                self.assertNotIn(field,payload)
+            self.assertFalse(f["tradeSignalReady"])
+        empty=inspect_metadata(self.folder/"missing",now_utc=NOW)
+        self.assertEqual(empty["closedFrameFreshness"]["frames"]["H4"]["status"],
+                         "NO_CLOSED_BAR")
+        malformed=closed_frame_freshness({"M15":{}},now_utc=NOW)
+        self.assertEqual(malformed["status"],"UNAVAILABLE")
+        invalid_clock=closed_frame_freshness(
+            early["forwardCoverage"],now_utc=dt.datetime(2026,11,19))
+        self.assertEqual(invalid_clock["status"],"UNAVAILABLE")
 
     def test_candle_revision_rejected_without_rewriting_archive(self):
         ingest(self.folder,self.s,received_utc=iso(NOW))
