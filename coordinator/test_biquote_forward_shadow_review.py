@@ -43,6 +43,12 @@ class ForwardShadowTests(unittest.TestCase):
         self.assertFalse(short["researchWarmup"]["paperTradingAdmissible"])
         self.assertEqual(short["frames"]["H4"]["additionalContiguousNeeded"],
                          21-short["frames"]["H4"]["contiguousClosed"])
+        self.assertEqual(short["diagnosticCrossFrameParity"]["status"],
+                         "CLOSED_ARCHIVE_GEOMETRY_ONLY_NOT_TRADE_PROOF")
+        self.assertEqual(short["diagnosticCrossFrameParity"]["signal"],"WAIT")
+        self.assertFalse(short["diagnosticCrossFrameParity"]["paperOrdersAllowed"])
+        self.assertFalse(short["diagnosticCrossFrameParity"]["sourceRightsVerified"])
+        self.assertEqual(short["diagnosticCrossFrameParity"]["frames"]["H4"]["fullyCoveredCompared"],0)
         self.assertFalse(short["paperOrdersAllowed"])
         self.assertIsNone(short["entry"])
         self.assertIsNone(short["stopLoss"])
@@ -62,6 +68,15 @@ class ForwardShadowTests(unittest.TestCase):
         self.assertIn(report["technicalWatch"],("BUY","SELL","NONE"))
         self.assertEqual(report["engineReview"],
                          "FROZEN_V3_COMPLETED_WITH_REAL_OBSERVED_CLOSED_BARS")
+        observed=report["diagnosticCrossFrameParity"]
+        self.assertEqual(observed["status"],"CLOSED_ARCHIVE_GEOMETRY_ONLY_NOT_TRADE_PROOF")
+        self.assertFalse(observed["brokerCalendarVerified"])
+        self.assertFalse(observed["sourceRightsVerified"])
+        self.assertEqual(observed["frames"]["H4"]["fullyCoveredDisagreed"],0)
+        self.assertGreaterEqual(observed["frames"]["H4"]["fullyCoveredCompared"],1)
+        self.assertEqual(observed["frames"]["H4"]["higherClosedExamined"],
+                         observed["frames"]["H4"]["fullyCoveredCompared"]+
+                         observed["frames"]["H4"]["notFullyCovered"])
         self.assertGreaterEqual(report["comparedCrossFrames"]["H4"]["fullyCoveredCompared"],1)
         self.assertEqual(report["comparedCrossFrames"]["H1"]["fullyCoveredDisagreed"],0)
         self.assertEqual(report["comparedCrossFrames"]["H4"]["fullyCoveredDisagreed"],0)
@@ -138,6 +153,24 @@ class ForwardShadowTests(unittest.TestCase):
         faulty=overlaps_match(frames)
         self.assertGreater(faulty["H4"]["fullyCoveredDisagreed"],0)
         self.assertEqual(faulty["H1"]["fullyCoveredDisagreed"],0)
+
+    def test_mismatched_archived_h4_is_blocked_before_strategy_even_when_warm(self):
+        # A corrupted in-memory read simulates adversarial cross-frame values.
+        # Never trust apparently complete H4 if its M15 constituents disagree.
+        ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
+        archive=load_vault(self.folder)
+        archive["closed"]["H4"][-2]["high"]+=12
+        with patch("biquote_forward_shadow_review.load_vault",return_value=archive):
+            result=shadow_review(self.folder,now_utc=AFTER,
+                  runner=lambda _:self.fail("OHLC disagreement must block V3"))
+        self.assertEqual(result["technicalWatch"],"NONE")
+        self.assertEqual(result["signal"],"WAIT")
+        self.assertFalse(result["paperOrdersAllowed"])
+        self.assertFalse(result["sourceRequestsMade"])
+        self.assertIn("ARCHIVED_CROSS_FRAME_OHLC_DISAGREEMENT",result["reasonCodes"])
+        self.assertGreater(result["diagnosticCrossFrameParity"]["frames"]["H4"]
+                           ["fullyCoveredDisagreed"],0)
+        self.assertNotIn("3912",json.dumps(result))
 
     def test_tampered_vault_fails_and_no_secret_or_prices_printed(self):
         ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
