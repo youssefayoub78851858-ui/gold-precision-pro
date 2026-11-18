@@ -193,6 +193,53 @@ class SevenDayReviewTests(unittest.TestCase):
                        "2026-11-16T21"):
             self.assertNotIn(marker,str(events)+str(out))
 
+    def test_closed_h1_h4_parity_in_render_events_is_counts_only(self):
+        start=dt.datetime(2026,11,18,tzinfo=UTC)
+        def closed(minutes):
+            return {"openTime":(start+dt.timedelta(minutes=minutes))
+                    .strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "open":100,"high":101,"low":99,"close":100}
+        archive={"closed":{
+            "M15":[closed(15*i) for i in range(32)],
+            "H1":[closed(60*i) for i in range(8)],
+            "H4":[closed(240*i) for i in range(2)]},
+            "quoteObservations":[{"secret":"NOT_FOR_LOGS"}]}
+        metadata={**meta(4),"counts":{"M15":32,"H1":8,"H4":2},
+                  "privateKey":"CREDENTIAL_MUST_NEVER_LEAK"}
+        for mismatched in (False, True):
+            events=[]
+            sample_archive={"closed":{tf:[dict(x) for x in rows]
+              for tf,rows in archive["closed"].items()},
+              "quoteObservations":archive["quoteObservations"]}
+            if mismatched:
+                sample_archive["closed"]["H4"][-1]["high"]=102
+            with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")),patch.object(
+                    run,"load_vault",return_value=sample_archive):
+                outcome=run.run_seven_days(VAULT,clock=lambda:DAY+dt.timedelta(minutes=2),
+                    metadata=lambda _:metadata,
+                    observer=lambda *_args,**_kwargs:{"signal":"WAIT",
+                        "executable":False,"completed24hWindow":True},
+                    emit=events.append,days=1,environment=ENV)
+            results=[x for x in events
+                     if x["event"]=="BIQUOTE_STAGE3_ARCHIVE_OHLC_OVERLAP"]
+            self.assertEqual(len(results),1)
+            proof=results[0]
+            self.assertEqual(proof["phase"],"RESTART")
+            self.assertEqual(proof["frames"]["H1"]["fullyCoveredCompared"],8)
+            self.assertEqual(proof["frames"]["H4"]["fullyCoveredCompared"],2)
+            self.assertEqual(proof["frames"]["H4"]["fullyCoveredDisagreed"],
+                             1 if mismatched else 0)
+            self.assertEqual(proof["frames"]["H4"]["notFullyCovered"],0)
+            self.assertFalse(proof["sourceRightsVerified"])
+            self.assertFalse(proof["brokerSessionVerified"])
+            self.assertFalse(proof["tradeEligible"])
+            self.assertFalse(proof["liveOrdersAllowed"])
+            self.assertFalse(proof["paperOrdersAllowed"])
+            self.assertEqual(outcome["signal"],"WAIT")
+            for secret in ("CREDENTIAL_MUST_NEVER_LEAK","NOT_FOR_LOGS",
+                           "2026-11-18T00","\"high\"","\"open\""):
+                self.assertNotIn(secret,str(events)+str(outcome))
+
     def test_mismatched_sealed_reference_is_unavailable_without_promoting(self):
         events=[]
         forged={**meta(4),"counts":{"M15":2,"H1":0,"H4":0}}
