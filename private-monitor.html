@@ -71,6 +71,7 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 </div>
 <p id="forward-last">آخر حفظ: غير مؤكد</p>
 <p id="forward-coverage">الفجوات والتغطية: غير مؤكدتين</p>
+<p id="forward-gap-reference" role="status">WAIT — مقارنة الفجوات مع استراحة السوق المعلنة غير متاحة</p>
 <p><small>أعداد من القرص الخاص فقط. أي فجوة تعتبر غير مصنّفة لحين توثيق جلسات الوسيط، ولا تعني الأعداد أن البيانات مرخّصة أو أن صفقة ممكنة.</small></p>
 </section>
 <section id="biquote-shadow-review" aria-labelledby="biquote-shadow-title">
@@ -195,6 +196,36 @@ el("refresh").addEventListener("click",async()=>{
   el("forward-coverage").textContent=safeVault
    ?"فجوات زمنية غير مصنّفة في الأرشيف: "+missing+" — لا يعني صفر فجوات إثبات صلاحية الجلسات"
    :"التغطية الزمنية لم تتحقق بعد";
+  // Safe aggregate-only reference: the market pause is NOT the broker calendar.
+  const ref=safeVault?vault.gapReference:null;
+  const referenceSafe=ref?.status==="REFERENCE_ONLY_NOT_BROKER_VERIFIED"
+   &&ref?.signal==="WAIT"&&ref?.executable===false
+   &&ref?.paperOrdersAllowed===false
+   &&ref?.sourceRightsVerified===false
+   &&ref?.independentBrokerCalendarVerified===false
+   &&ref?.allGapsRemainUnclassified===true;
+  const gapParts=[];
+  let trustworthyReference=referenceSafe;
+  for(const tf of ["M15","H1","H4"]){
+   const f=ref?.frames?.[tf],base=vault?.forwardCoverage?.[tf];
+   const fields=["unclassifiedMissingSlots","vendorPauseCandidateSlotsNotVerified",
+     "outsideVendorReferenceSlots","unknownReferenceSlots"];
+   if(!trustworthyReference||!f||!base||
+      fields.some(k=>!Number.isInteger(f[k])||f[k]<0||f[k]>4500000)||
+      f.unclassifiedMissingSlots!==base.unclassifiedMissingSlots||
+      f.vendorPauseCandidateSlotsNotVerified+f.outsideVendorReferenceSlots+
+        f.unknownReferenceSlots!==f.unclassifiedMissingSlots){
+     trustworthyReference=false;break;
+   }
+   gapParts.push(tf+": مفقود "+f.unclassifiedMissingSlots
+    +"، مرجع استراحة "+f.vendorPauseCandidateSlotsNotVerified
+    +"، خارج المرجع "+f.outsideVendorReferenceSlots
+    +"، غير محسوم "+f.unknownReferenceSlots);
+  }
+  el("forward-gap-reference").textContent=trustworthyReference
+   ?"WAIT — مقارنة استراحة عامة غير موثّقة للوسيط: "+gapParts.join(" | ")
+     +" | لا تثبت اكتمال بيانات BiQuote أو صلاحية التداول"
+   :"WAIT — فحص استراحة السوق غير متاح؛ كل الفجوات تظل غير معتمدة";
   const shadow=data.biquoteForwardShadow;
   const safeShadow=shadow?.mode==="BIQUOTE_PRIVATE_FORWARD_V3_SHADOW_ONLY"
     &&shadow?.signal==="WAIT"&&shadow?.executable===false
@@ -363,6 +394,7 @@ el("refresh").addEventListener("click",async()=>{
    for(const id of ["forward-m15","forward-h1","forward-h4"])el(id).textContent="0";
    el("forward-last").textContent="آخر تسجيل: غير متاح";
    el("forward-coverage").textContent="التغطية الزمنية لم تتحقق";
+   el("forward-gap-reference").textContent="WAIT — مقارنة استراحة السوق غير متاحة";
    el("auth-status").textContent=e.message;
  }
  finally{b.disabled=false;}
