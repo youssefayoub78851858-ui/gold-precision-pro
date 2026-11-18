@@ -191,13 +191,14 @@
 <p class="overview-status" style="margin-top:8px">الشارت الحي محميّ ومش مرتبط بفتح صفقات. إذا المصدر متوقف أو البيانات قديمة، بيضل الرسم فاضي والقرار WAIT.</p>
 </div>
 <div id="biquote-live-chart-panel" aria-labelledby="biquote-live-title">
-<h3 id="biquote-live-title">شارت الذهب الحقيقي — BiQuote (عرض خاص للقراءة فقط)</h3>
+<h3 id="biquote-live-title">شارت الذهب المرصود — BiQuote (عرض خاص للقراءة فقط)</h3>
+<p id="biquote-forming-candle-note" role="status" class="overview-status" style="background:#293f4c;border:1px solid #8b9db5;border-radius:8px;padding:9px;color:#f4e3bb">شمعة H1 / M15 / H4 المفتوحة تظهر من عينات أسعار BiQuote المحمية عند وصولها، ومميّزة بلون ذهبي. هيدي شمعة جزئية من عينات متفرقة، **مش تيكات MT5 ولا OHLC كامل**. التحديث الدوري كل دقيقتين، مش لحظي؛ ولا تدخل بالتحليل أو الصفقات.</p>
 <div class="biq-chart-tabs" role="group" aria-label="فاصل شارت BiQuote الحقيقي">
 <button type="button" data-biq-frame="M15" aria-pressed="true">M15</button>
 <button type="button" data-biq-frame="H1" aria-pressed="false">H1</button>
 <button type="button" data-biq-frame="H4" aria-pressed="false">H4</button>
 </div>
-<canvas id="biquote-live-canvas" role="img" aria-label="شارت BiQuote الحقيقي الخاص للشموع المغلقة فقط، لا يُستخدم للتداول"></canvas>
+<canvas id="biquote-live-canvas" role="img" aria-label="شارت BiQuote خاص: شموع مغلقة فعلية مع شمعة مفتوحة تقريبية من الأسعار المرصودة إن توفرت، للعرض فقط"></canvas>
 <section aria-label="تقييم الفواصل الثلاثة الحقيقي" style="margin:12px 0;direction:rtl;background:#15283c;border:1px solid #b99b59;border-radius:12px;padding:12px">
 <h3 style="margin:0 0 8px;color:#ebc77d;font-size:1rem">تقييم الذهب الموحد — H4 / H1 / M15</h3>
 <div id="biquote-mtf-readiness" role="status" aria-live="polite" style="white-space:pre-line;color:#e4d9c1;line-height:2;font-size:.87rem">WAIT — القراءة الموحدة للبحث فقط. أدخل رمز المشاهدة الخاص وحدّث فحص الذهب.</div>
@@ -227,7 +228,7 @@
 <div class="metric"><label>Bid / Ask عند شمعة الإعادة</label><strong id="replay-bidask">— / —</strong></div>
 <div class="metric"><label>آخر إغلاق مُسجّل UTC</label><strong id="replay-time">—</strong></div></div></section>
 <section class="card" id="paper-chart"><div class="chart-top"><h2>شارت محاكاة ورقية XAUUSD · <span id="active-tf-label">M15</span></h2><div class="tabs" role="group" aria-label="الفاصل الزمني"><button type="button" data-tf="M15" class="active">M15</button><button type="button" data-tf="H1">H1</button><button type="button" data-tf="H4">H4</button></div></div>
-<p id="paper-chart-not-live" role="status" style="background:#3a2530;border:1px solid #df8a8a;border-radius:9px;padding:9px 11px;color:#ffe6e0;font-weight:700;margin:8px 0">تنبيه: هيدا شارت محاكاة، مش بث مباشر من MT5. الشمعة المفتوحة ما عم تتحرك مع سوق الذهب الحقيقي. قرار الصفقات WAIT.</p>
+<p id="paper-chart-not-live" role="status" style="background:#3a2530;border:1px solid #df8a8a;border-radius:9px;padding:9px 11px;color:#ffe6e0;font-weight:700;margin:8px 0">تنبيه: هيدا شارت محاكاة، مش بث مباشر من MT5. <a href="#biquote-live-chart-panel" style="color:#ffe08b;text-decoration:underline">افتح شارت BiQuote الخاص للشمعة المتكوّنة من عينات الأسعار</a> بعد تفعيل المشاهدة. ما في بث MT5 لحظي أو صفقات. القرار WAIT.</p>
 <canvas id="chart" role="img" aria-label="شارت شموع مغلقة تاريخية أو اصطناعية، وليس شارت مباشر"></canvas><p class="small" id="chart-note">حمّل ملفاً محلياً أو افتح العينة الاصطناعية لتجربة الشارت. لن تظهر أسعار حية.</p>
 <div class="bar"><button type="button" id="sample" class="primary">تشغيل عيّنة اختبار</button><button type="button" id="next" disabled>الشمعة التالية ←</button><button type="button" id="levels" disabled>مستويات ورقية تجريبية</button></div>
 <div class="bar" style="margin-top:8px"><label class="small" for="file-input" style="flex:2">استيراد ملف XAUUSD Bid/Ask مسجّل (JSON) <input id="file-input" type="file" accept=".json,application/json"></label><button id="export-journal" type="button" disabled>تصدير السجل JSON</button></div><p class="statusline" id="paper-message" role="status" aria-live="polite">بانتظار اختيار بيانات محلية.</p></section>
@@ -957,6 +958,7 @@ if(document.readyState==='loading'){
  window.addEventListener('pageshow',checkVersion);
 })();
 </script>
+<script src="/biquote-live-candle-preview.js" defer></script>
 <script src="/biquote-mobile-ui.js" defer></script>
 <script src="/paper-terminal-core.js" defer></script>
 <script src="/paper-terminal-ui.js" defer></script>
