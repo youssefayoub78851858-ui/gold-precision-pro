@@ -238,6 +238,44 @@ function sanitize(input){
       contiguousClosed:item.contiguousClosed,neededContiguous:21};
    }
   }
+  // Compare already-closed archive OHLC without leaking price levels.
+  // "Compared" is only the fully covered subset; the remainder must not
+  // be silently counted as agreeing. All output remains WAIT-only.
+  let safeParity=null;
+  if(x.diagnosticCrossFrameParity!==undefined){
+   const p=x.diagnosticCrossFrameParity,details={};
+   if(!p||p.status!=="CLOSED_ARCHIVE_GEOMETRY_ONLY_NOT_TRADE_PROOF"||
+      p.signal!=="WAIT"||p.sourceRightsVerified!==false||
+      p.brokerCalendarVerified!==false||p.paperOrdersAllowed!==false||
+      !x.frames||!counts.M15||!counts.H1||!counts.H4)
+    throw Error("Unsafe shadow OHLC geometry");
+   for(const tf of ["H1","H4"]){
+    const v=p.frames?.[tf],end=counts[tf].contiguousClosed;
+    if(!v||
+       [v.higherClosedExamined,v.fullyCoveredCompared,
+        v.fullyCoveredDisagreed,v.notFullyCovered].some(
+           k=>!Number.isInteger(k)||k<0||k>48)||
+       v.higherClosedExamined!==end||
+       v.fullyCoveredCompared+v.notFullyCovered!==end||
+       v.fullyCoveredDisagreed>v.fullyCoveredCompared||
+       v.fullyCoveredCompared>Math.floor(counts.M15.contiguousClosed/
+          (tf==="H1"?4:16))||
+       (v.fullyCoveredDisagreed>0&&x.technicalWatch!=="NONE"))
+      throw Error("Contradictory or inflated OHLC comparison");
+    details[tf]={
+      higherClosedExamined:end,
+      fullyCoveredCompared:v.fullyCoveredCompared,
+      fullyCoveredDisagreed:v.fullyCoveredDisagreed,
+      notFullyCovered:v.notFullyCovered};
+   }
+   if(allowed && ["H1","H4"].some(tf=>
+     details[tf].fullyCoveredCompared<1||
+     details[tf].fullyCoveredDisagreed!==0))
+    throw Error("Forged V3 observation without OHLC parity");
+   safeParity={status:"CLOSED_ARCHIVE_GEOMETRY_ONLY_NOT_TRADE_PROOF",
+     signal:"WAIT",paperOrdersAllowed:false,
+     sourceRightsVerified:false,brokerCalendarVerified:false,frames:details};
+  }
   safeShadow={mode:"BIQUOTE_PRIVATE_FORWARD_V3_SHADOW_ONLY",
     signal:"WAIT",executable:false,paperOrdersAllowed:false,
     signalReady:false,approvedDirection:"NONE",
@@ -245,6 +283,7 @@ function sanitize(input){
     engineReview:allowed?"FROZEN_V3_COMPLETED_WITH_REAL_OBSERVED_CLOSED_BARS":
       "NOT_YET_READY",
     frames:counts,
+    ...(safeParity?{diagnosticCrossFrameParity:safeParity}:{}),
     reasonCodes:[...new Set(x.reasonCodes)].slice(0,30)};
  }
  // Four-stage owner-only status: fixed enums/counters ONLY. The full
