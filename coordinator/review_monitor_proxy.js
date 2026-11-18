@@ -580,6 +580,52 @@ function sanitize(input){
    capacityExhausted:st.archive.archiveCapacityExhausted,
    ...(stage2Safe?{stage2:stage2Safe}:{}),
    ...(stage3Safe?{stage3:stage3Safe}:{})};
+   // The four-stage WAIT-only checklist cannot claim source authorisation.
+   // Derive the expected blockers from independently validated counters.
+   if(x.completionAudit!==undefined){
+    const a=x.completionAudit,missing={},blockers=[];
+    if(st.archive.status==="PRIVATE_VAULT_NOT_READABLE")
+     blockers.push("PRIVATE_VAULT_UNREADABLE");
+    else if(st.archive.status==="NO_FORWARD_CAPTURE")
+     blockers.push("NO_POST_HOLDOUT_CLOSED_CANDLES");
+    for(const tf of ["M15","H1","H4"]){
+     missing[tf]=Math.max(0,21-consecutive[tf]);
+     if(missing[tf])blockers.push("STRICT_"+tf+"_CLOSED_WARMUP_INCOMPLETE");
+    }
+    blockers.push("UNDERLYING_BROKER_MARKET_DATA_RIGHTS_UNCONFIRMED",
+      "BROKER_XAUUSD_SESSION_DST_UNCONFIRMED",
+      "GC_TRADES_MBO_MBP10_LICENSING_NOT_ESTABLISHED",
+      "DXY_US02Y_US10Y_AND_EVENT_CONTEXT_NOT_INDEPENDENTLY_LIVE",
+      "EXECUTION_BID_ASK_SPREAD_SLIPPAGE_FEES_UNVERIFIED",
+      "OUT_OF_SAMPLE_NET_EXPECTANCY_NOT_PROVEN");
+    if(!a||a.mode!=="GOLD_PRECISION_ONE_BATCH_COMPLETION_GATE_V1"||
+       a.status!=="WAIT_EXTERNAL_EVIDENCE_AND_FORWARD_DATA"||
+       a.signal!=="WAIT"||a.executable!==false||
+       a.paperOrdersAllowed!==false||a.liveOrdersAllowed!==false||
+       a.providerRequestsMade!==0||a.brokerOrdersSent!==0||
+       a.independentMarketRightsVerified!==false||
+       a.brokerSessionDSTVerified!==false||
+       a.GCOrderFlowLicensed!==false||
+       a.independentMacroFeedsVerified!==false||
+       a.executionCostsVerified!==false||
+       a.outOfSampleNetExpectancyVerified!==false||
+       a.archiveIntegrityObserved!==(st.archive.status===
+        "FORWARD_CAPTURE_PRESENT_UNVERIFIED")||
+       !a.missingStrictClosedBarsUntil21||
+       ["M15","H1","H4"].some(tf=>
+        a.missingStrictClosedBarsUntil21[tf]!==missing[tf])||
+       !Array.isArray(a.remainingBlockerCodes)||
+       JSON.stringify(a.remainingBlockerCodes)!==JSON.stringify(blockers))
+     throw Error("Unsafe or forged one-batch completion checklist");
+    safeBatch.completionAudit={
+      mode:"GOLD_PRECISION_ONE_BATCH_COMPLETION_GATE_V1",
+      status:"WAIT_EXTERNAL_EVIDENCE_AND_FORWARD_DATA",
+      signal:"WAIT",executable:false,
+      paperOrdersAllowed:false,liveOrdersAllowed:false,
+      archiveIntegrityObserved:a.archiveIntegrityObserved,
+      missingStrictClosedBarsUntil21:missing,
+      remainingBlockerCodes:blockers};
+   }
  }
  // One archived observation feeds the Android vault, V3 and four-stage
  // panels. Mismatched closed-bar counts (or a research watch despite stale
