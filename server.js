@@ -130,7 +130,8 @@ const server = http.createServer(async (req, res) => {
   }
   const paperFiles={"/paper-terminal-core.js":"paper-terminal-core.js",
     "/paper-terminal-ui.js":"paper-terminal-ui.js",
-    "/biquote-mobile-ui.js":"biquote-mobile-ui.js"};
+    "/biquote-mobile-ui.js":"biquote-mobile-ui.js",
+    "/biquote-live-candle-preview.js":"biquote-live-candle-preview.js"};
   if(Object.prototype.hasOwnProperty.call(paperFiles,paperPath)){
     if(!DEMO_MODE)return send(res,404,{error:"Not found"});
     if(req.method!=="GET")return send(res,405,{error:"GET only",signal:"WAIT",executable:false});
