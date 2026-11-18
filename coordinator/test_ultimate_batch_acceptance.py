@@ -45,6 +45,37 @@ class FourStageBatchAcceptance(unittest.TestCase):
         self.assertFalse(report["stages"]["paper"]["forwardNetPerformanceEstablished"])
         self.assertEqual(report["stages"]["context"]["status"],
                          "INDEPENDENT_SOURCE_CONFIRMATIONS_REQUIRED")
+        checklist=report["completionAudit"]
+        self.assertEqual(checklist["mode"],
+                         "GOLD_PRECISION_ONE_BATCH_COMPLETION_GATE_V1")
+        self.assertEqual(checklist["status"],
+                         "WAIT_EXTERNAL_EVIDENCE_AND_FORWARD_DATA")
+        self.assertEqual(checklist["signal"],"WAIT")
+        for field in ("executable","paperOrdersAllowed","liveOrdersAllowed",
+                      "independentMarketRightsVerified","brokerSessionDSTVerified",
+                      "GCOrderFlowLicensed","independentMacroFeedsVerified",
+                      "executionCostsVerified","outOfSampleNetExpectancyVerified"):
+            self.assertIs(checklist[field],False,field)
+        self.assertEqual(checklist["providerRequestsMade"],0)
+        self.assertEqual(checklist["brokerOrdersSent"],0)
+        self.assertEqual(
+            checklist["archiveIntegrityObserved"],
+            report["stages"]["archive"]["status"]==
+            "FORWARD_CAPTURE_PRESENT_UNVERIFIED")
+        self.assertEqual(
+            checklist["missingStrictClosedBarsUntil21"],
+            {tf:max(0,21-report["stages"]["archive"]["consecutiveClosedCounts"][tf])
+             for tf in ("M15","H1","H4")})
+        self.assertIn("UNDERLYING_BROKER_MARKET_DATA_RIGHTS_UNCONFIRMED",
+                      checklist["remainingBlockerCodes"])
+        self.assertIn("BROKER_XAUUSD_SESSION_DST_UNCONFIRMED",
+                      checklist["remainingBlockerCodes"])
+        self.assertIn("GC_TRADES_MBO_MBP10_LICENSING_NOT_ESTABLISHED",
+                      checklist["remainingBlockerCodes"])
+        self.assertIn("EXECUTION_BID_ASK_SPREAD_SLIPPAGE_FEES_UNVERIFIED",
+                      checklist["remainingBlockerCodes"])
+        self.assertIn("OUT_OF_SAMPLE_NET_EXPECTANCY_NOT_PROVEN",
+                      checklist["remainingBlockerCodes"])
         self.assertFalse(report["stages"]["archive"]["automaticQuoteDeletionAllowed"])
         archive=report["stages"]["archive"]
         self.assertFalse(archive["stage2SourceVerified"])
@@ -217,6 +248,23 @@ class FourStageBatchAcceptance(unittest.TestCase):
             self.assertEqual(r["stages"]["archive"]["status"],"PRIVATE_VAULT_NOT_READABLE")
             self.assertEqual(r["stages"]["analysis"]["technicalWatch"],"NONE")
         self.assertFalse(self.folder.joinpath("fake-approval").exists())
+
+    def test_checklist_distinguishes_empty_warmup_and_broker_blockers(self):
+        no_data=review_batch(self.folder)
+        self.assert_blocked(no_data)
+        codes=no_data["completionAudit"]["remainingBlockerCodes"]
+        self.assertIn("NO_POST_HOLDOUT_CLOSED_CANDLES",codes)
+        self.assertIn("STRICT_H4_CLOSED_WARMUP_INCOMPLETE",codes)
+        ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
+        full=review_batch(self.folder,now_utc=AFTER)
+        self.assert_blocked(full)
+        codes=full["completionAudit"]["remainingBlockerCodes"]
+        self.assertNotIn("NO_POST_HOLDOUT_CLOSED_CANDLES",codes)
+        self.assertNotIn("STRICT_H4_CLOSED_WARMUP_INCOMPLETE",codes)
+        self.assertEqual(full["completionAudit"]["missingStrictClosedBarsUntil21"]["H4"],0)
+        self.assertIn("BROKER_XAUUSD_SESSION_DST_UNCONFIRMED",codes)
+        self.assertIn("OUT_OF_SAMPLE_NET_EXPECTANCY_NOT_PROVEN",codes)
+        self.assertEqual(full["stages"]["paper"]["sampleTradesCreated"],0)
 
     def test_standalone_four_stages_read_only_one_verified_vault(self):
         ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
