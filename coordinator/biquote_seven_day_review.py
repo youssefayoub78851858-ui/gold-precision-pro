@@ -24,6 +24,7 @@ from biquote_private_forward_vault import (
 from biquote_session_gap_audit import audit_closed_timestamp_reference
 from biquote_forward_shadow_review import tail_contiguous, overlaps_match, WIDTH
 from private_forward_capacity_preflight import capacity_readiness
+from biquote_quote_mid_parity import audit_closed_quote_mid_parity
 
 UTC = dt.timezone.utc
 DAYS = 7
@@ -140,6 +141,56 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
         except (OSError, ValueError, TypeError, KeyError):
             log({"event": "BIQUOTE_STAGE3_OHLC_OVERLAP_UNAVAILABLE",
                  "phase": phase, "dayIndex": index, **SAFE})
+        # Price-free account of sampled BID/ASK midpoint consistency against
+        # the *already sealed* CLOSED M15/H1/H4 ranges. Uses no extra GET or
+        # disk read and never accepts a license or trading-ready claim.
+        try:
+            q=audit_closed_quote_mid_parity(original)
+            statuses={"CONSISTENT_OBSERVED_SAMPLES_ONLY",
+                      "NO_COMPARABLE_CLOSED_SAMPLES",
+                      "OBSERVED_MID_OUTSIDE_CLOSED_OHLC"}
+            if (q["status"] not in statuses or q["signal"]!="WAIT" or
+                q["executable"] is not False or
+                q["brokerRightsVerified"] is not False or
+                q["brokerSessionCalendarVerified"] is not False or
+                q["paperOrdersAllowed"] is not False or
+                q["sourceQuoteSamples"]!=len(original["quoteObservations"])):
+                raise ValueError("UNSAFE_MID_CANDLE_DIAGNOSTIC")
+            safe_frames={}
+            for tf in ("M15","H1","H4"):
+                item=q["frames"][tf]
+                count=expected_counts[tf]
+                source_n=q["sourceQuoteSamples"]
+                comparable=item["comparableQuoteSamples"]
+                matching=item["withinClosedOHLC"]
+                outside=item["outsideClosedOHLC"]
+                unpaired=item["notInArchivedClosedBars"]
+                distinct=item["distinctComparableClosedBars"]
+                if (item["archivedClosedBars"]!=count or
+                    any(type(n) is not int or n<0 for n in
+                        (count,comparable,matching,outside,unpaired,distinct)) or
+                    comparable+unpaired!=source_n or
+                    matching+outside!=comparable or
+                    distinct>min(count,comparable)):
+                    raise ValueError("CONTRADICTORY_MID_CANDLE_COUNTS")
+                safe_frames[tf]={
+                    "comparableQuoteSamples":comparable,
+                    "withinClosedOHLC":matching,
+                    "outsideClosedOHLC":outside,
+                    "notInArchivedClosedBars":unpaired,
+                    "distinctComparableClosedBars":distinct}
+            log({"event":"BIQUOTE_STAGE3_QUOTE_MID_CLOSED_RANGE",
+                 "phase":phase,"dayIndex":index,
+                 "status":q["status"],
+                 "sourceQuoteSamples":q["sourceQuoteSamples"],
+                 "frames":safe_frames,
+                 "sourceRightsVerified":False,
+                 "brokerSessionVerified":False,
+                 "independentBrokerParityVerified":False,
+                 "tradeEligible":False,**SAFE})
+        except (OSError,ValueError,TypeError,KeyError,OverflowError):
+            log({"event":"BIQUOTE_STAGE3_QUOTE_MID_RANGE_UNAVAILABLE",
+                 "phase":phase,"dayIndex":index,**SAFE})
 
     completed = skipped = 0
     state = "BOUNDED_REVIEW_FINISHED"
