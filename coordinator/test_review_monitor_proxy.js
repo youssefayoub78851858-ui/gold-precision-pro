@@ -63,6 +63,57 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  a.ok(!JSON.stringify(withArchive).includes("989898"));
  a.ok(!JSON.stringify(withArchive).includes("999999"));
  a.ok(!JSON.stringify(withArchive).includes("quoteObservations"));
+ // Price-free tick/candle parity from the owner-only sealed feed:
+ // 10 quote observations are NOT 10 independent historic BID/ASK bars.
+ const parity={
+  mode:"PRIVATE_BIQUOTE_QUOTE_MID_CLOSED_OHLC_COUNTS_V1",
+  status:"CONSISTENT_OBSERVED_SAMPLES_ONLY",signal:"WAIT",executable:false,
+  researchEligible:false,paperOrdersAllowed:false,liveOrdersAllowed:false,
+  brokerRightsVerified:false,brokerSessionCalendarVerified:false,
+  independentBrokerPriceParityVerified:false,historicalBidAskOHLCVerified:false,
+  sourceCandleBasis:"LIVE_MID_WITH_POSSIBLE_INITIAL_BID_SEED",
+  sourceQuoteSamples:10,
+  frames:{
+   M15:{archivedClosedBars:3,comparableQuoteSamples:2,
+     withinClosedOHLC:2,outsideClosedOHLC:0,notInArchivedClosedBars:8,
+     distinctComparableClosedBars:1,rawPrice:"HIDE_PRIVATE_M15"},
+   H1:{archivedClosedBars:1,comparableQuoteSamples:5,
+     withinClosedOHLC:5,outsideClosedOHLC:0,notInArchivedClosedBars:5,
+     distinctComparableClosedBars:1},
+   H4:{archivedClosedBars:0,comparableQuoteSamples:0,
+     withinClosedOHLC:0,outsideClosedOHLC:0,notInArchivedClosedBars:10,
+     distinctComparableClosedBars:0}
+  },secretBid:98765.5
+ };
+ const withParity=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,biquotePrivateForwardVault:{
+   ...freshArchive,quoteCandleMidGeometry:parity}
+ })});
+ a.equal(withParity.httpStatus,200);
+ a.equal(withParity.body.biquotePrivateForwardVault.
+   quoteCandleMidGeometry.frames.M15.withinClosedOHLC,2);
+ a.equal(withParity.body.biquotePrivateForwardVault.
+   quoteCandleMidGeometry.paperOrdersAllowed,false);
+ a.ok(!JSON.stringify(withParity).includes("HIDE_PRIVATE_M15"));
+ a.ok(!JSON.stringify(withParity).includes("98765.5"));
+ for(const bad of [
+  {brokerRightsVerified:true},{brokerSessionCalendarVerified:true},
+  {historicalBidAskOHLCVerified:true},
+  {independentBrokerPriceParityVerified:true},
+  {liveOrdersAllowed:true},{status:"SOURCE_VERIFIED"},
+  {sourceQuoteSamples:11},
+  {frames:{...parity.frames,
+    M15:{...parity.frames.M15,comparableQuoteSamples:3}}},
+  {frames:{...parity.frames,
+    H4:{...parity.frames.H4,outsideClosedOHLC:1}}},
+  {status:"OBSERVED_MID_OUTSIDE_CLOSED_OHLC"}
+ ]){
+  const denied=await relay(auth,{approved:true,fetchFn:async()=>mock({
+   ...expected,biquotePrivateForwardVault:{
+    ...freshArchive,quoteCandleMidGeometry:{...parity,...bad}}
+  })});
+  a.equal(denied.httpStatus,503,"No fake source or quote parity proof");
+ }
  // Metadata liveness is based on the sealed quote receipt and UTC.
  // No numeric price/spread from private storage may reach the mobile relay.
  const currentIso=new Date().toISOString();
