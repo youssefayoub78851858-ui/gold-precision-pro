@@ -141,6 +141,25 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
        rawHigh:76543210}},
   untrustedSecret:"PRIVATE_DO_NOT_FORWARD"
  };
+ const warmup={
+  status:"STRICT_RAW_CLOSED_BARS_BROKER_CALENDAR_UNVERIFIED",
+  signal:"WAIT",paperOrdersAllowed:false,
+  brokerCalendarVerified:false,sourceRightsVerified:false,
+  gapBridgingAllowed:false,frames:{
+   M15:{persistedClosed:80,strictLatestContiguous:48,remainingUntil21:0,
+    unclassifiedMissingSlots:4,vendorPauseCandidatesNotVerified:4,
+    outsideVendorReferenceSlots:0,unknownReferenceSlots:0,
+    lastRunAfterUnclassifiedGap:true,privateRawOHLC:"DO_NOT_LEAK_WARMUP"},
+   H1:{persistedClosed:40,strictLatestContiguous:40,remainingUntil21:0,
+    unclassifiedMissingSlots:0,vendorPauseCandidatesNotVerified:0,
+    outsideVendorReferenceSlots:0,unknownReferenceSlots:0,
+    lastRunAfterUnclassifiedGap:false},
+   H4:{persistedClosed:23,strictLatestContiguous:23,remainingUntil21:0,
+    unclassifiedMissingSlots:0,vendorPauseCandidatesNotVerified:0,
+    outsideVendorReferenceSlots:0,unknownReferenceSlots:0,
+    lastRunAfterUnclassifiedGap:false}
+  },secret:"CREDENTIAL_NOT_FOR_MOBILE"
+ };
  const shadow={
   mode:"BIQUOTE_PRIVATE_FORWARD_V3_SHADOW_ONLY",
   signal:"WAIT",executable:false,paperOrdersAllowed:false,
@@ -155,7 +174,7 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
    H1:{persistedClosed:40,contiguousClosed:40,neededContiguous:21},
    H4:{persistedClosed:23,contiguousClosed:23,neededContiguous:21}},
   spread:987654,entry:8888888,secretQuote:"NEVER_LEAK",
-  diagnosticCrossFrameParity:parity}
+  diagnosticCrossFrameParity:parity,warmupContinuity:warmup}
  const sanitized=await relay(auth,{approved:true,fetchFn:async()=>mock({
     ...expected,biquoteForwardShadow:shadow})});
  a.equal(sanitized.httpStatus,200);
@@ -164,6 +183,14 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  a.equal(sanitized.body.biquoteForwardShadow.approvedDirection,"NONE");
  a.equal(sanitized.body.biquoteForwardShadow.paperOrdersAllowed,false);
  a.equal(sanitized.body.biquoteForwardShadow.frames.H4.contiguousClosed,23);
+ a.equal(sanitized.body.biquoteForwardShadow.warmupContinuity.signal,"WAIT");
+ a.equal(sanitized.body.biquoteForwardShadow.warmupContinuity.frames.M15.
+   vendorPauseCandidatesNotVerified,4);
+ a.equal(sanitized.body.biquoteForwardShadow.warmupContinuity.frames.M15.
+   lastRunAfterUnclassifiedGap,true);
+ a.equal(sanitized.body.biquoteForwardShadow.warmupContinuity.gapBridgingAllowed,false);
+ a.ok(!JSON.stringify(sanitized).includes("DO_NOT_LEAK_WARMUP"));
+ a.ok(!JSON.stringify(sanitized).includes("CREDENTIAL_NOT_FOR_MOBILE"));
  for(const secret of ["987654","8888888","NEVER_LEAK","secretQuote"]){
    a.ok(!JSON.stringify(sanitized).includes(secret),"Private raw prices and secrets must not leak");
  }
@@ -183,6 +210,25 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  for(const sensitive of ["PRIVATE_DO_NOT_FORWARD","87654321","76543210",
                          "rawPrice","rawHigh"]){
   a.ok(!JSON.stringify(withParity).includes(sensitive));
+ }
+ for(const altered of [
+  {...warmup,brokerCalendarVerified:true},
+  {...warmup,sourceRightsVerified:true},
+  {...warmup,gapBridgingAllowed:true},
+  {...warmup,paperOrdersAllowed:true},
+  {...warmup,frames:{...warmup.frames,M15:{
+   ...warmup.frames.M15,strictLatestContiguous:80}}},
+  {...warmup,frames:{...warmup.frames,M15:{
+   ...warmup.frames.M15,vendorPauseCandidatesNotVerified:5}}},
+  {...warmup,frames:{...warmup.frames,H4:{
+   ...warmup.frames.H4,remainingUntil21:1}}},
+  {...warmup,frames:{...warmup.frames,M15:{
+   ...warmup.frames.M15,lastRunAfterUnclassifiedGap:false}}},
+ ]){
+  const denied=await relay(auth,{approved:true,fetchFn:async()=>mock({
+   ...expected,biquoteForwardShadow:{...shadow,warmupContinuity:altered}
+  })});
+  a.equal(denied.httpStatus,503,"Forged warmup reference should fail closed");
  }
  // Never show an apparently strong BUY/SELL research watch from a
  // frozen-engine claim without both 21 closed bars AND archived H1/H4 parity.
@@ -238,7 +284,8 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  const emptyShadow=await relay(auth,{approved:true,fetchFn:async()=>mock({
    ...expected,biquoteForwardShadow:{...shadow,technicalWatch:"NONE",
     frames:undefined,engineReview:undefined,
-    diagnosticCrossFrameParity:undefined}})});
+    diagnosticCrossFrameParity:undefined,
+    warmupContinuity:undefined}})});
  a.equal(emptyShadow.httpStatus,200);
  a.equal(emptyShadow.body.biquoteForwardShadow.technicalWatch,"NONE");
  const batch={
