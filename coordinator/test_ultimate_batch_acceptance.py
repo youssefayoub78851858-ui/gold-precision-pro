@@ -46,6 +46,18 @@ class FourStageBatchAcceptance(unittest.TestCase):
         self.assertEqual(report["stages"]["context"]["status"],
                          "INDEPENDENT_SOURCE_CONFIRMATIONS_REQUIRED")
         self.assertFalse(report["stages"]["archive"]["automaticQuoteDeletionAllowed"])
+        archive=report["stages"]["archive"]
+        self.assertFalse(archive["stage2SourceVerified"])
+        self.assertFalse(archive["stage2SessionCalendarVerified"])
+        self.assertFalse(archive["stage2EligibleForPaper"])
+        self.assertEqual(set(archive["stage2Frames"]),{"M15","H1","H4"})
+        for tf in ("M15","H1","H4"):
+            frame=archive["stage2Frames"][tf]
+            self.assertEqual(frame["persistedClosed"],archive["closedCounts"][tf])
+            self.assertEqual(frame["contiguousClosed"],archive["consecutiveClosedCounts"][tf])
+            self.assertEqual(frame["remainingUntil21"],max(0,21-frame["contiguousClosed"]))
+            self.assertGreaterEqual(frame["unclassifiedGapPairs"],0)
+            self.assertGreaterEqual(frame["unclassifiedMissingSlots"],0)
         self.assertIn(report["stages"]["archive"]["capacityStatus"],
                       ("CAPACITY_HEADROOM","CAPACITY_WARNING","CAPACITY_LIMIT_REACHED",
                        "CAPACITY_METADATA_UNAVAILABLE"))
@@ -57,6 +69,8 @@ class FourStageBatchAcceptance(unittest.TestCase):
         self.assertEqual(out["stages"]["data"]["status"],"SOURCE_NOT_QUALIFIED")
         self.assertFalse(out["stages"]["data"]["reviewWindowCompleted"])
         self.assertEqual(out["stages"]["archive"]["status"],"NO_FORWARD_CAPTURE")
+        self.assertEqual(out["stages"]["archive"]["stage2Status"],"WAIT_NO_FORWARD_CLOSED_BARS")
+        self.assertEqual(out["stages"]["archive"]["stage2Frames"]["H4"]["remainingUntil21"],21)
         self.assertEqual(out["stages"]["archive"]["closedCounts"]["H4"],0)
         self.assertEqual(out["stages"]["archive"]["capacityStatus"],"CAPACITY_HEADROOM")
         self.assertEqual(out["stages"]["archive"]["quoteSamplesRemaining"],10000)
@@ -104,6 +118,9 @@ class FourStageBatchAcceptance(unittest.TestCase):
         self.assertEqual(out["stages"]["archive"]["status"],
                          "FORWARD_CAPTURE_PRESENT_UNVERIFIED")
         self.assertLess(out["stages"]["archive"]["consecutiveClosedCounts"]["H4"],21)
+        self.assertEqual(out["stages"]["archive"]["stage2Status"],
+                         "WAIT_CONTIGUOUS_CLOSED_BAR_WARMUP")
+        self.assertGreater(out["stages"]["archive"]["stage2Frames"]["H4"]["remainingUntil21"],0)
         self.assertEqual(out["stages"]["analysis"]["status"],
                          "WAIT_CLOSED_DATA_OR_CONTEXT")
         self.assertIn("ONE_DAY_FORWARD_CAPTURE_CANNOT_WARM_UP_H4",
@@ -118,6 +135,9 @@ class FourStageBatchAcceptance(unittest.TestCase):
                          "FORWARD_CAPTURE_PRESENT_UNVERIFIED")
         self.assertGreaterEqual(
             out["stages"]["archive"]["consecutiveClosedCounts"]["H4"],21)
+        self.assertEqual(out["stages"]["archive"]["stage2Status"],
+                         "WAIT_INDEPENDENT_SOURCE_RIGHTS_AND_CALENDAR")
+        self.assertEqual(out["stages"]["archive"]["stage2Frames"]["H4"]["remainingUntil21"],0)
         self.assertEqual(out["stages"]["archive"]["capacityStatus"],"CAPACITY_HEADROOM")
         self.assertEqual(out["stages"]["archive"]["quoteSamplesRemaining"],9999)
         self.assertEqual(out["stages"]["analysis"]["status"],
@@ -175,6 +195,7 @@ class FourStageBatchAcceptance(unittest.TestCase):
         r=review_batch(self.folder,final_report={"signal":"BUY"})
         self.assert_blocked(r)
         self.assertEqual(r["stages"]["archive"]["status"],"PRIVATE_VAULT_NOT_READABLE")
+        self.assertEqual(r["stages"]["archive"]["stage2Status"],"WAIT_PRIVATE_ARCHIVE_UNAVAILABLE")
         self.assertEqual(r["stages"]["archive"]["capacityStatus"],"CAPACITY_METADATA_UNAVAILABLE")
         self.assertTrue(r["stages"]["archive"]["archiveCapacityExhausted"])
         self.assertEqual(r["stages"]["analysis"]["technicalWatch"],"NONE")

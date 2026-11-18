@@ -90,6 +90,7 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <div class="metric">الصفقات الورقية<strong id="batch-paper-state" style="font-size:.9rem">BLOCKED</strong></div>
 </div>
 <p id="batch-frames-state"><small>الشموع المتصلة في الأرشيف: غير متاحة</small></p>
+<p id="batch-quality-state" role="status">الخطوة الثانية: فحص اتصال الشموع والفجوات — غير متاح بعد</p>
 <p id="batch-capacity-state" role="status">سعة عينات السبريد/الاقتباسات: لم تُفحص على القرص الخاص بعد</p>
 <p><small>تُقرأ هذه الحالة من Coordinator الخاص فقط بعد نشره وإتاحة الأرشيف. نتائج الاختبارات البرمجية لا تثبت بيانات السوق الحقيقية أو ترخيص المصدر أو جاهزية التداول.</small></p>
 </section>
@@ -118,6 +119,7 @@ function clearBatchDisplay(){
  el("batch-paper-state").textContent="BLOCKED";
  el("batch-frames-state").textContent="لا توجد عدّادات شموع معتمدة حالياً";
  el("batch-capacity-state").textContent="سعة الأرشيف: غير مؤكدة";
+ el("batch-quality-state").textContent="الخطوة الثانية: جاهزية الشموع غير مؤكدة — WAIT";
 }
 const labels={
  NOT_CONNECTED:"الوصلة الخاصة غير مفعّلة",
@@ -236,6 +238,29 @@ el("refresh").addEventListener("click",async()=>{
     parts.push(tf+": "+(Number.isInteger(n)&&n>=0?n:"غير معروف")+" شمعة متصلة");
    }
    el("batch-frames-state").textContent=parts.join(" | ");
+   const stage2=batch.stage2;
+   const qualityStates={
+     WAIT_PRIVATE_ARCHIVE_UNAVAILABLE:"الأرشيف الخاص غير متاح للفحص",
+     WAIT_NO_FORWARD_CLOSED_BARS:"ما في شموع جديدة مغلقة محفوظة بعد",
+     WAIT_CONTIGUOUS_CLOSED_BAR_WARMUP:"عم نجمع شموع مغلقة متصلة لتهيئة V3",
+     WAIT_INDEPENDENT_SOURCE_RIGHTS_AND_CALENDAR:"الشموع كافية للتهيئة فقط؛ حقوق المصدر والجلسات بعدن غير مثبتين"
+   };
+   const qualityValid=stage2?.signal==="WAIT"&&stage2?.paperOrdersAllowed===false
+    &&stage2?.brokerRightsVerified===false&&stage2?.sessionCalendarVerified===false
+    &&Object.hasOwn(qualityStates,stage2?.status);
+   const frameDetails=[];
+   let flagged=false;
+   for(const tf of ["M15","H1","H4"]){
+     const f=qualityValid?stage2.frames?.[tf]:null;
+     const rem=f?.remainingUntil21,g=f?.unclassifiedGapPairs;
+     if(!Number.isInteger(rem)||rem<0||rem>21||
+        !Number.isInteger(g)||g<0||g>45000){flagged=true;break}
+     frameDetails.push(tf+": باقي "+rem+" شمعة؛ فجوات غير مصنّفة "+g)
+   }
+   el("batch-quality-state").textContent=
+      qualityValid&&!flagged
+      ?"الخطوة الثانية — WAIT: "+qualityStates[stage2.status]+" | "+frameDetails.join(" | ")
+      :"الخطوة الثانية — WAIT: معلومات الفواصل غير مؤكدة";
    const status=batch.capacityStatus;
    const remaining=batch.quoteSamplesRemaining;
    const limit=batch.quoteSamplesHardCap;

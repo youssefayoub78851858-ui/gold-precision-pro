@@ -169,6 +169,36 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  a.equal(outBatch.body.ultimateFourStageBatch.capacityStatus,"CAPACITY_HEADROOM");
  a.equal(outBatch.body.ultimateFourStageBatch.quoteSamplesRemaining,10000);
  a.equal(outBatch.body.ultimateFourStageBatch.capacityExhausted,false);
+ const quality={...batch,
+  stages:{...batch.stages,archive:{...batch.stages.archive,
+   stage2Status:"WAIT_NO_FORWARD_CLOSED_BARS",
+   stage2Frames:Object.fromEntries(["M15","H1","H4"].map(tf=>
+    [tf,{persistedClosed:0,contiguousClosed:0,remainingUntil21:21,
+      unclassifiedGapPairs:0,unclassifiedMissingSlots:0}])),
+   stage2SourceVerified:false,stage2SessionCalendarVerified:false,
+   stage2EligibleForPaper:false}}};
+ const withQuality=await relay(auth,{approved:true,fetchFn:async()=>mock({
+   ...expected,ultimateFourStageBatch:quality
+ })});
+ a.equal(withQuality.httpStatus,200);
+ a.equal(withQuality.body.ultimateFourStageBatch.stage2.signal,"WAIT");
+ a.equal(withQuality.body.ultimateFourStageBatch.stage2.frames.H4.remainingUntil21,21);
+ a.equal(withQuality.body.ultimateFourStageBatch.stage2.paperOrdersAllowed,false);
+ for(const attempted of [
+  {stage2Status:"WAIT_INDEPENDENT_SOURCE_RIGHTS_AND_CALENDAR"},
+  {stage2SourceVerified:true},
+  {stage2EligibleForPaper:true},
+  {stage2Frames:{...quality.stages.archive.stage2Frames,
+   H4:{...quality.stages.archive.stage2Frames.H4,remainingUntil21:0}}},
+  {stage2Frames:{...quality.stages.archive.stage2Frames,
+   M15:{...quality.stages.archive.stage2Frames.M15,unclassifiedMissingSlots:-1}}}
+ ]){
+  const denial=await relay(auth,{approved:true,fetchFn:async()=>mock({
+   ...expected,ultimateFourStageBatch:{...quality,
+    stages:{...quality.stages,archive:{...quality.stages.archive,...attempted}}}
+  })});
+  a.equal(denial.httpStatus,503,"Forged Stage 2 status blocked");
+ }
  for(const secret of ["12345","12346","12347","12348","PRIVATE_SECRET_TOKEN",
                       "fakeProfit","rawCandles","unknownApiKey"]){
   a.ok(!JSON.stringify(outBatch).includes(secret),"No prices or secrets on mobile");

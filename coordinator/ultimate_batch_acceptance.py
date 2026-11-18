@@ -91,6 +91,28 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
         counts={tf:m["counts"][tf] for tf in FRAMES_ORDER}
         tails={tf:sh["frames"][tf]["contiguousClosed"] for tf in FRAMES_ORDER}
         capacity=capacity_readiness(m)
+        # Stage 2 never promotes source or technical readiness. Require
+        # cross-file counter consistency before showing continuity progress.
+        for tf in FRAMES_ORDER:
+            details=sh["frames"][tf]
+            coverage=m["forwardCoverage"][tf]
+            if (type(tails[tf]) is not int or
+                not 0<=tails[tf]<=min(counts[tf],48) or
+                details.get("persistedClosed")!=counts[tf] or
+                details.get("neededContiguous")!=21 or
+                coverage.get("closedBars")!=counts[tf] or
+                type(coverage.get("unclassifiedGapPairs")) is not int or
+                not 0<=coverage["unclassifiedGapPairs"]<=counts[tf] or
+                type(coverage.get("unclassifiedMissingSlots")) is not int or
+                not 0<=coverage["unclassifiedMissingSlots"]<=4500000):
+                raise ValueError("INCONSISTENT_STAGE2_PRIVATE_CLOSED_HISTORY")
+        stage2_frames={tf:{
+            "persistedClosed":counts[tf],
+            "contiguousClosed":tails[tf],
+            "remainingUntil21":max(0,21-tails[tf]),
+            "unclassifiedGapPairs":m["forwardCoverage"][tf]["unclassifiedGapPairs"],
+            "unclassifiedMissingSlots":m["forwardCoverage"][tf]["unclassifiedMissingSlots"]
+        } for tf in FRAMES_ORDER}
         archive_status="FORWARD_CAPTURE_PRESENT_UNVERIFIED" if any(counts.values()) else "NO_FORWARD_CAPTURE"
     except (OSError,ValueError,TypeError,KeyError):
         m=None
@@ -98,11 +120,26 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
         counts={tf:0 for tf in FRAMES_ORDER}
         tails={tf:0 for tf in FRAMES_ORDER}
         archive_status="PRIVATE_VAULT_NOT_READABLE"
+        stage2_frames={tf:{
+            "persistedClosed":0,"contiguousClosed":0,
+            "remainingUntil21":21,
+            "unclassifiedGapPairs":0,"unclassifiedMissingSlots":0
+        } for tf in FRAMES_ORDER}
         capacity=None
+    stage2_status=("WAIT_PRIVATE_ARCHIVE_UNAVAILABLE" if m is None else
+                   "WAIT_NO_FORWARD_CLOSED_BARS" if not any(counts.values()) else
+                   "WAIT_CONTIGUOUS_CLOSED_BAR_WARMUP" if any(
+                       tails[tf]<21 for tf in FRAMES_ORDER) else
+                   "WAIT_INDEPENDENT_SOURCE_RIGHTS_AND_CALENDAR")
     result["stages"]["archive"]={
         "status":archive_status,
         "closedCounts":counts,
         "consecutiveClosedCounts":tails,
+        "stage2Status":stage2_status,
+        "stage2Frames":stage2_frames,
+        "stage2SourceVerified":False,
+        "stage2SessionCalendarVerified":False,
+        "stage2EligibleForPaper":False,
         "capacityStatus":capacity["status"] if capacity else "CAPACITY_METADATA_UNAVAILABLE",
         "quoteSamplesRemaining":capacity["quoteSamplesRemaining"] if capacity else None,
         "quoteSamplesHardCap":capacity["quoteSamplesHardCap"] if capacity else None,

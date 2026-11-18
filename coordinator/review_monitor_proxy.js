@@ -276,6 +276,44 @@ function sanitize(input){
      throw Error("Unsafe batch archive counts");
    countSafe[tf]={closed:n,contiguous:k};
   }
+  let stage2Safe=null;
+  const qualityStatus=st.archive.stage2Status;
+  const qualityFrames=st.archive.stage2Frames;
+  if(qualityStatus!==undefined||qualityFrames!==undefined){
+   const required=(st.archive.status==="PRIVATE_VAULT_NOT_READABLE"
+      ?"WAIT_PRIVATE_ARCHIVE_UNAVAILABLE":
+      st.archive.status==="NO_FORWARD_CAPTURE"
+      ?"WAIT_NO_FORWARD_CLOSED_BARS":
+      ["M15","H1","H4"].some(tf=>consecutive[tf]<21)
+      ?"WAIT_CONTIGUOUS_CLOSED_BAR_WARMUP"
+      :"WAIT_INDEPENDENT_SOURCE_RIGHTS_AND_CALENDAR");
+   if(qualityStatus!==required||!qualityFrames||
+      st.archive.stage2SourceVerified!==false||
+      st.archive.stage2SessionCalendarVerified!==false||
+      st.archive.stage2EligibleForPaper!==false)
+    throw Error("Unsafe Stage 2 admission");
+   const records={};
+   for(const tf of ["M15","H1","H4"]){
+    const v=qualityFrames[tf];
+    if(!v||!Number.isInteger(v.persistedClosed)||
+       v.persistedClosed!==frames[tf]||
+       !Number.isInteger(v.contiguousClosed)||
+       v.contiguousClosed!==consecutive[tf]||
+       !Number.isInteger(v.remainingUntil21)||
+       v.remainingUntil21!==Math.max(0,21-consecutive[tf])||
+       !Number.isInteger(v.unclassifiedGapPairs)||
+       v.unclassifiedGapPairs<0||v.unclassifiedGapPairs>frames[tf]||
+       !Number.isInteger(v.unclassifiedMissingSlots)||
+       v.unclassifiedMissingSlots<0||v.unclassifiedMissingSlots>4500000)
+     throw Error("Unsafe Stage 2 frame continuity");
+    records[tf]={remainingUntil21:v.remainingUntil21,
+      unclassifiedGapPairs:v.unclassifiedGapPairs,
+      unclassifiedMissingSlots:v.unclassifiedMissingSlots};
+   }
+   stage2Safe={status:qualityStatus,frames:records,
+     brokerRightsVerified:false,sessionCalendarVerified:false,
+     paperOrdersAllowed:false,signal:"WAIT"};
+  }
   safeBatch={mode:"GOLD_PRECISION_FOUR_STAGE_BATCH_READONLY_V1",
    signal:"WAIT",executable:false,paperOrdersAllowed:false,
    dataStatus:st.data.status,archiveStatus:st.archive.status,
@@ -286,7 +324,8 @@ function sanitize(input){
    frameCounts:countSafe,
    capacityStatus:cap,quoteSamplesRemaining:capRemaining,
    quoteSamplesHardCap:capLimit,
-   capacityExhausted:st.archive.archiveCapacityExhausted};
+   capacityExhausted:st.archive.archiveCapacityExhausted,
+   ...(stage2Safe?{stage2:stage2Safe}:{})};
  }
  return {status:"WAIT_EODHD_INTAKE",dataStatus:input.dataStatus,
   signal:"WAIT",executable:false,researchEligible:false,engineStatus:"NOT_INVOKED",
