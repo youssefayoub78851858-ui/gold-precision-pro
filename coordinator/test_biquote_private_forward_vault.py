@@ -112,6 +112,13 @@ class ForwardVault(unittest.TestCase):
         self.assertEqual(summary["forwardCoverage"]["M15"]["ageAtLastImportSeconds"],310)
         self.assertIs(summary["tradeSignalReady"],False)
         self.assertEqual(summary["researchCandidate"],"NONE")
+        self.assertEqual(summary["gapReference"]["status"],
+                         "REFERENCE_ONLY_NOT_BROKER_VERIFIED")
+        self.assertEqual(summary["gapReference"]["frames"]["M15"]["unclassifiedMissingSlots"],0)
+        self.assertFalse(summary["gapReference"]["independentBrokerCalendarVerified"])
+        self.assertFalse(summary["gapReference"]["sourceRightsVerified"])
+        self.assertFalse(summary["gapReference"]["paperOrdersAllowed"])
+        self.assertTrue(summary["gapReference"]["allGapsRemainUnclassified"])
         safe_json=json.dumps(summary)
         for private_key in ('"bid"','"ask"','"open"','"high"','"low"','"close"'):
             self.assertNotIn(private_key,safe_json)
@@ -154,6 +161,11 @@ class ForwardVault(unittest.TestCase):
         coverage=inspect_metadata(self.folder)["forwardCoverage"]["M15"]
         self.assertEqual(coverage["unclassifiedGapPairs"],1)
         self.assertEqual(coverage["unclassifiedMissingSlots"],1)
+        summary=inspect_metadata(self.folder)
+        self.assertEqual(summary["gapReference"]["frames"]["M15"]["unclassifiedMissingSlots"],1)
+        self.assertEqual(summary["gapReference"]["frames"]["M15"]["outsideVendorReferenceSlots"],1)
+        self.assertEqual(summary["gapReference"]["frames"]["M15"]["vendorPauseCandidateSlotsNotVerified"],0)
+        self.assertFalse(summary["gapReference"]["independentBrokerCalendarVerified"])
         self.assertLess(coverage["latestContiguousBars"],coverage["closedBars"])
         self.assertEqual(r["status"],"PRIVATE_FORWARD_CAPTURE_SAVED")
 
