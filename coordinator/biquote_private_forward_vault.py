@@ -25,6 +25,7 @@ import sys
 from biquote_offline_source_audit import FRAMES, _frame, _utc
 from biquote_overlap_evidence import diagnose_biquote_overlap
 from biquote_session_gap_audit import audit_closed_timestamp_reference
+from biquote_quote_mid_parity import audit_closed_quote_mid_parity
 
 UTC = dt.timezone.utc
 START = dt.datetime(2026, 11, 18, tzinfo=UTC)
@@ -458,6 +459,7 @@ def inspect_vault_metadata(v, *, now_utc=None):
             "closedFrameFreshness":closed_frame_freshness(
                 coverage,now_utc=now_utc),
             "gapReference":gap_reference,
+            "quoteCandleMidGeometry":audit_closed_quote_mid_parity(v),
             "coverageClassification":"GAPS_UNCLASSIFIED_WITHOUT_INDEPENDENT_BROKER_CALENDAR",
             "researchCandidate":"NONE",
             "tradeSignalReady":False,
