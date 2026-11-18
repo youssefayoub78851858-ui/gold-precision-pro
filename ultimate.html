@@ -232,7 +232,7 @@ document.addEventListener('DOMContentLoaded',function(){
 <div class="gpp-brand">♛ Gold Precision Pro Ultimate</div>
 <p class="gpp-tagline">تحليل الذهب الاحترافي · شاشة مراجعة للقراءة فقط</p>
 <nav class="gpp-tabs" aria-label="التنقل في النظام">
-<a href="#biquote-live-chart-panel">تحليل الذهب</a><a href="#gpp-simulator-details">الاختبارات</a><a href="#paper-statistics">السجل</a><a href="#gdc-gates">الإعدادات</a>
+<a href="#biquote-live-chart-panel">تحليل الذهب</a><a href="#paper-actions">الاختبارات</a><a href="#paper-statistics">السجل</a><a href="#gdc-gates">الإعدادات</a>
 </nav>
 <div class="gpp-quote"><div><div class="gpp-symbol">XAUUSD</div><div class="gpp-sub">الذهب / الدولار</div></div><div class="gpp-quote-main"><div id="gpp-dash-price" class="gpp-price">غير متاح</div><div id="gpp-dash-update" class="gpp-sub">آخر تحديث: غير متاح</div></div><div><span class="gpp-pill">BiQuote · مرصود</span><div class="gpp-sub">ليس بث MT5</div></div></div>
 <div class="gpp-grid"><div class="gpp-mini"><b>التحليل الفني</b><strong id="gpp-dash-technical">غير محسوم</strong><span>H4 / H1 / M15</span></div><div class="gpp-mini"><b>DXY</b><strong>غير متاح</strong><span>تأكيد مستقل مطلوب</span></div><div class="gpp-mini"><b>US02Y / US10Y</b><strong>غير متاح</strong><span>تحديث حي غير مثبت</span></div><div class="gpp-mini"><b>GC</b><strong>غير متاح</strong><span>بيانات مرخّصة مطلوبة</span></div></div>
@@ -397,6 +397,34 @@ document.addEventListener('DOMContentLoaded',function(){
  }
  [status,observed].concat(frames).forEach(function(el){if(el)new MutationObserver(refresh).observe(el,{childList:true,characterData:true,subtree:true})});
  refresh();
+});
+</script>
+
+<!-- GPP_REFERENCE_NAV_CLEANUP_20261118: correct navigation, keep advanced audit available below the main dashboard. -->
+<style>
+@media(max-width:700px){
+ #gpp-reference-dashboard .gpp-tabs a:focus-visible,#gpp-reference-dashboard .gpp-cta a:focus-visible{outline:2px solid #ffe2a1;outline-offset:2px}
+ #gpp-reference-dashboard .gpp-proof{font-size:.67rem!important;color:#b3c4d6!important}
+ #gpp-reference-dashboard .gpp-status p{line-height:1.5!important}
+ #biquote-mobile-observation{border-radius:12px!important}
+ #gold-decision-center{border-radius:12px!important}
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+ var tabs=document.querySelectorAll('#gpp-reference-dashboard .gpp-tabs a');
+ tabs.forEach(function(a){
+  var id=(a.getAttribute('href')||'').slice(1);
+  if(!id||!document.getElementById(id)){a.setAttribute('aria-disabled','true');a.setAttribute('title','هذا القسم غير متاح حالياً')}
+ });
+ var dash=document.getElementById('gpp-reference-dashboard');
+ var viewer=document.getElementById('biquote-viewer-guide');
+ if(dash&&viewer){
+  var a=document.createElement('a');a.href='#biquote-viewer-guide';a.textContent='إعدادات مشاهدة BiQuote';
+  a.style.cssText='display:block;text-align:center;margin:7px 0;padding:9px;color:#e9ce91;background:#14263a;border:1px solid #415b73;border-radius:10px;text-decoration:none;font-size:.78rem';
+  var status=dash.querySelector('.gpp-status');
+  if(status)status.insertAdjacentElement('afterend',a);
+ }
 });
 </script>
 <nav class="unified-mobile-nav" aria-label="أقسام نظام الذهب الموحد">
