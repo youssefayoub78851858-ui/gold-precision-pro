@@ -425,9 +425,11 @@ def closed_frame_freshness(coverage, *, now_utc=None):
             "frames":frames}
 
 
-def inspect_metadata(dirname, *, now_utc=None):
-    """Private counts, closed-bar continuity and last arrival; NO prices."""
-    v=load_vault(dirname)
+def inspect_vault_metadata(v, *, now_utc=None):
+    """Summarize an ALREADY checksum-validated in-memory vault; NO prices."""
+    if not isinstance(v, dict) or v.get("schema") != 1 or \
+            v.get("source") != "BIQUOTE_UNVERIFIED_UPSTREAM_MT5":
+        _fail("SEALED_VAULT_SNAPSHOT_INVALID")
     coverage={tf:_closed_coverage(v["closed"][tf],tf,v["lastImportedUTC"])
               for tf in FRAMES_ORDER}
     # Only aggregate closed timestamp gaps, never a broker calendar or prices.
@@ -461,6 +463,11 @@ def inspect_metadata(dirname, *, now_utc=None):
             "tradeSignalReady":False,
             "independentProfitabilityProven":False,
             "noTradingAdmission":True}
+
+
+def inspect_metadata(dirname, *, now_utc=None):
+    """Read ONCE and report safe price-free metadata (backward compatible)."""
+    return inspect_vault_metadata(load_vault(dirname), now_utc=now_utc)
 
 def main():
     # Use a long-lived private disk; no file/stdout with raw provider quotes.
