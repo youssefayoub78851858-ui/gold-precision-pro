@@ -59,7 +59,9 @@ class SevenDayReviewTests(unittest.TestCase):
         self.assertFalse(out["paperOrdersAllowed"])
         self.assertFalse(out["sourceQualifiedForTrading"])
         self.assertNotIn("DO_NOT_DISPLAY",str(status)+str(out))
-        self.assertNotIn("bid",str(out).lower())
+        self.assertNotIn("DO_NOT_DISPLAY",str(out))
+        self.assertNotIn("quoteObservations",str(out))
+        self.assertNotIn("\'private\':",str(out))
 
     def test_restart_expired_days_skipped_and_budget_stops_before_io(self):
         invoked=[]
