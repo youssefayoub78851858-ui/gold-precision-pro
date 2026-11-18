@@ -13,6 +13,7 @@ import subprocess
 import sys
 
 from biquote_private_forward_vault import START, FRAMES_ORDER, inspect_vault_metadata, load_vault, _stamp
+from biquote_quote_mid_parity import audit_closed_quote_mid_parity
 
 UTC = dt.timezone.utc
 MIN_CONTIGUOUS = 21
@@ -235,6 +236,21 @@ def shadow_review(dirname: str | pathlib.Path, *, runner=None,
     }
     if any(diagnostics[tf]["fullyCoveredDisagreed"] for tf in ("H1","H4")):
         safe["reasonCodes"].append("ARCHIVED_CROSS_FRAME_OHLC_DISAGREEMENT")
+        return safe
+    # Independent stored BID/ASK snapshots must NOT contradict same-feed
+    # closed MID candle ranges before frozen V3 can show a technical watch.
+    # Recalculate from the ONE sealed snapshot: precomputed caller-supplied
+    # metadata is not proof, and a provider cannot approve its own feed.
+    # Missing comparable samples remain unverified; this is NOT a trade gate.
+    quote_mid = audit_closed_quote_mid_parity(archive)
+    if metadata.get("quoteCandleMidGeometry") != quote_mid:
+        safe["reasonCodes"].append("QUOTE_CANDLE_MID_METADATA_MISMATCH")
+        return safe
+    if quote_mid["status"] == "INVALID_ARCHIVE_WAIT":
+        safe["reasonCodes"].append("QUOTE_CANDLE_MID_GEOMETRY_INVALID")
+        return safe
+    if quote_mid["status"] == "OBSERVED_MID_OUTSIDE_CLOSED_OHLC":
+        safe["reasonCodes"].append("QUOTE_MID_OUTSIDE_CLOSED_CANDLE_RANGE")
         return safe
     if received is None or not archive["quoteObservations"]:
         safe["reasonCodes"].append("NO_POST_HOLDOUT_CAPTURE")
