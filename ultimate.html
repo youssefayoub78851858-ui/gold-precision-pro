@@ -277,6 +277,23 @@ document.addEventListener('DOMContentLoaded',function(){
  if(decision)(observation||chart).insertAdjacentElement('afterend',decision);
 });
 </script>
+
+<!-- GPP_MOBILE_ENTRY_TOP_20261118: prevent returning mobile visitors to the legacy mid-page scroll position. -->
+<script>
+(function(){
+ try{if('scrollRestoration' in history)history.scrollRestoration='manual'}catch(e){}
+ function showDashboard(){
+   if(location.hash)return;
+   var dashboard=document.getElementById('gpp-reference-dashboard');
+   if(!dashboard)return;
+   if(dashboard.parentElement!==document.body)document.body.insertBefore(dashboard,document.body.firstElementChild);
+   window.scrollTo(0,0);
+ }
+ document.addEventListener('DOMContentLoaded',showDashboard);
+ window.addEventListener('load',function(){showDashboard();requestAnimationFrame(showDashboard)});
+ window.addEventListener('pageshow',showDashboard);
+})();
+</script>
 <nav class="unified-mobile-nav" aria-label="أقسام نظام الذهب الموحد">
 <a href="#gold-decision-center">القرار</a><a href="#biquote-live-chart-panel">شارت الذهب</a><a href="#paper-actions">تداول ورقي</a><a href="#paper-statistics">السجل</a>
 </nav>
