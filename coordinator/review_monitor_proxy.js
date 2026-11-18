@@ -164,6 +164,45 @@ function sanitize(input){
     tradeEligible:false,paperOrdersAllowed:false,researchEligible:false,
     tradeSignalReady:false,counts,quoteSamples:v.quoteSamples,
     lastImportedUTC:v.lastImportedUTC,forwardCoverage:coverage};
+   // Gap classification is a *vendor reference hypothesis*, not proof of
+   // an upstream broker schedule. Forward aggregated integers only, never
+   // timestamp arrays or market price payloads from the sealed vault.
+   if(v.gapReference!==undefined){
+    const g=v.gapReference,frameSummary={};
+    if(g?.mode!=="BIQUOTE_PRIVATE_REFERENCE_GAP_COUNTS_ONLY"||
+       g.status!=="REFERENCE_ONLY_NOT_BROKER_VERIFIED"||
+       g.signal!=="WAIT"||g.executable!==false||
+       g.researchEligible!==false||g.paperOrdersAllowed!==false||
+       g.liveOrdersAllowed!==false||
+       g.independentBrokerCalendarVerified!==false||
+       g.sourceRightsVerified!==false||
+       g.allGapsRemainUnclassified!==true)
+     throw Error("Unsafe source gap reference");
+    for(const tf of ["M15","H1","H4"]){
+     const x=g.frames?.[tf],f=coverage[tf],n=counts[tf];
+     if(!x||x.persistedClosed!==n||x.gapPairs!==f.unclassifiedGapPairs||
+        x.unclassifiedMissingSlots!==f.unclassifiedMissingSlots||
+        x.comparisonHasAtLeastTwoBars!==(n>=2)||
+        !Number.isInteger(x.vendorPauseCandidateSlotsNotVerified)||
+        !Number.isInteger(x.outsideVendorReferenceSlots)||
+        !Number.isInteger(x.unknownReferenceSlots)||
+        [x.vendorPauseCandidateSlotsNotVerified,x.outsideVendorReferenceSlots,
+         x.unknownReferenceSlots].some(v=>v<0||v>4500000)||
+        x.vendorPauseCandidateSlotsNotVerified+x.outsideVendorReferenceSlots+
+         x.unknownReferenceSlots!==x.unclassifiedMissingSlots)
+      throw Error("Forged or inconsistent source gap counts");
+     frameSummary[tf]={
+      unclassifiedMissingSlots:x.unclassifiedMissingSlots,
+      vendorPauseCandidateSlotsNotVerified:x.vendorPauseCandidateSlotsNotVerified,
+      outsideVendorReferenceSlots:x.outsideVendorReferenceSlots,
+      unknownReferenceSlots:x.unknownReferenceSlots};
+    }
+    safeForward.gapReference={
+     status:"REFERENCE_ONLY_NOT_BROKER_VERIFIED",
+     signal:"WAIT",executable:false,paperOrdersAllowed:false,
+     independentBrokerCalendarVerified:false,sourceRightsVerified:false,
+     allGapsRemainUnclassified:true,frames:frameSummary};
+   }
   }
  }
  // Only a fixed set of private V3 shadow diagnostics may cross into
