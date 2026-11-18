@@ -67,11 +67,17 @@ for(const id of ['biquote-mobile-observation','biquote-private-quote','biquote-p
                   'biquote-structure-summary','biquote-mtf-readiness','biquote-observed-ema','biquote-vendor-session',
                   'biquote-overlap','biquote-viewer-secret','biquote-refresh'])
  a(doc.includes('id="'+id+'"'),'Missing read-only BiQuote UI: '+id);
+a(doc.includes('src="/biquote-live-candle-preview.js"'));
+a(doc.indexOf('src="/biquote-live-candle-preview.js"')<doc.indexOf('src="/biquote-mobile-ui.js"'),"Preview must load before private chart controller");
 a(doc.includes('src="/biquote-mobile-ui.js"'));
-for(const id of ['biquote-live-chart-panel','biquote-live-canvas','biquote-live-caption'])
+for(const id of ['biquote-live-chart-panel','biquote-live-canvas','biquote-live-caption','biquote-forming-candle-note'])
  a(doc.includes('id="'+id+'"'),'Missing PRIVATE BiQuote chart UI: '+id);
 a(doc.includes('data-biq-frame="M15"')&&doc.includes('data-biq-frame="H1"')&&doc.includes('data-biq-frame="H4"'));
 a(doc.includes('شارت محاكاة ورقية XAUUSD'),'Paper replay chart must be unmistakably labelled');
+a(doc.includes('افتح شارت BiQuote الخاص للشمعة المتكوّنة من عينات الأسعار'),"Paper demo must direct user to the actual protected BiQuote chart");
+a(doc.includes('التحديث الدوري كل دقيقتين، مش لحظي'),"Forming candle must not be confused with MT5 tick stream");
+a(doc.includes('id="biquote-forming-candle-note"'),"Sampled forming candle must be marked partial");
+a(doc.includes('شمعة جزئية من عينات متفرقة'),"No forged true OHLC completeness");
 a(doc.includes('id="paper-chart-not-live"'),"H1 replay chart requires prominent no-live disclaimer");
 a(doc.includes('الشمعة المفتوحة ما عم تتحرك مع سوق الذهب الحقيقي'),"No claim that the demo plots live MT5 candles");
 a(doc.includes('هيدا شارت محاكاة، مش بث مباشر من MT5'),"Source difference is explicit");
