@@ -108,3 +108,82 @@ def audit_gap_times(frame_envelopes):
         result["error"]=str(exc)
         result["frameGaps"]={}
     return result
+
+
+def audit_closed_timestamp_reference(frames):
+    """Safe aggregate of *private closed-bar timestamps*, not broker certification.
+
+    Input is timestamps only. No prices, individual times, market recommendations,
+    session whitelist, file I/O or network requests ever leave this function.
+    Vendor-reference pause candidates ALWAYS remain unclassified for admission.
+    """
+    safe = {
+        "mode": "BIQUOTE_PRIVATE_REFERENCE_GAP_COUNTS_ONLY",
+        "status": "UNAVAILABLE",
+        "signal": "WAIT", "executable": False, "researchEligible": False,
+        "paperOrdersAllowed": False, "liveOrdersAllowed": False,
+        "independentBrokerCalendarVerified": False,
+        "sourceRightsVerified": False,
+        "allGapsRemainUnclassified": True,
+        "frames": {},
+    }
+    if not isinstance(frames, dict) or set(frames) != set(WIDTHS):
+        return {**safe, "reasonCode": "THREE_FRAMES_REQUIRED"}
+    try:
+        summaries = {}
+        for tf, width in WIDTHS.items():
+            values = frames[tf]
+            if not isinstance(values, list) or len(values) > 45000:
+                raise ValueError("CLOSED_TIMESTAMP_COUNT_INVALID")
+            timestamps = []
+            for value in values:
+                if (not isinstance(value, str) or not value.endswith("Z")
+                        or not value.startswith("20")
+                        or len(value) > 28):
+                    raise ValueError("CLOSED_TIMESTAMP_FORMAT_INVALID")
+                try:
+                    parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+                except ValueError:
+                    raise ValueError("CLOSED_TIMESTAMP_FORMAT_INVALID") from None
+                if (parsed.utcoffset() != dt.timedelta(0) or
+                        parsed.microsecond or int(parsed.timestamp()) % width != 0):
+                    raise ValueError("CLOSED_TIMESTAMP_UTC_GRID_INVALID")
+                timestamps.append(parsed)
+            if timestamps != sorted(set(timestamps)):
+                raise ValueError("CLOSED_TIMESTAMP_DUPLICATE_OR_REORDERED")
+            missing = pause = outside = unknown = pairs = 0
+            for before, after in zip(timestamps, timestamps[1:]):
+                count = int((after-before).total_seconds() // width) - 1
+                if count < 0:
+                    raise ValueError("CLOSED_TIMESTAMP_SEQUENCE_INVALID")
+                if count == 0:
+                    continue
+                pairs += 1
+                missing += count
+                # Cap diagnostics, not persisted data; large gaps stay UNKNOWN.
+                if count > MAX_MISSING:
+                    unknown += count
+                    continue
+                for index in range(1, count+1):
+                    candidate = reference_window_for_missing_slot(
+                        before + dt.timedelta(seconds=width*index), width)
+                    if candidate is True:
+                        pause += 1
+                    elif candidate is False:
+                        outside += 1
+                    else:
+                        unknown += 1
+            summaries[tf] = {
+                "persistedClosed": len(timestamps),
+                "gapPairs": pairs,
+                "unclassifiedMissingSlots": missing,
+                "vendorPauseCandidateSlotsNotVerified": pause,
+                "outsideVendorReferenceSlots": outside,
+                "unknownReferenceSlots": unknown,
+                "comparisonHasAtLeastTwoBars": len(timestamps) >= 2,
+            }
+        return {**safe, "status": "REFERENCE_ONLY_NOT_BROKER_VERIFIED",
+                "reasonCode": "UPSTREAM_BROKER_SESSION_AND_RIGHTS_UNVERIFIED",
+                "frames": summaries}
+    except (ValueError, TypeError, OverflowError):
+        return {**safe, "reasonCode": "PRIVATE_CLOSED_TIMESTAMPS_INVALID"}
