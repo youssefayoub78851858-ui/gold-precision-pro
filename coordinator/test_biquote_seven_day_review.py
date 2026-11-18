@@ -91,6 +91,74 @@ class SevenDayReviewTests(unittest.TestCase):
         self.assertNotIn("DO_NOT_LOG",str(printed))
         self.assertNotIn("quoteObservations",str(printed))
 
+    def test_new_closed_bar_emits_safe_counts_and_gaps_without_quotes(self):
+        events=[]
+        calls=[0]
+        def metadata(_):
+            calls[0]+=1
+            if calls[0]==1:
+                return meta()
+            result={**meta(2),"counts":{"M15":1,"H1":0,"H4":0}}
+            result["forwardCoverage"]={
+                "M15":{"closedBars":1,"latestContiguousBars":1,
+                       "unclassifiedGapPairs":0,"unclassifiedMissingSlots":0},
+                "H1":{"closedBars":0,"latestContiguousBars":0,
+                      "unclassifiedGapPairs":0,"unclassifiedMissingSlots":0},
+                "H4":{"closedBars":0,"latestContiguousBars":0,
+                      "unclassifiedGapPairs":0,"unclassifiedMissingSlots":0},
+            }
+            result["privateSecret"]="DO_NOT_LOG_BROKER_PASSWORD"
+            return result
+        def archive(_path,_sample,*,received_utc):
+            return {"newClosedBars":{"M15":1,"H1":0,"H4":0},
+                    "rawBid":987654.32}
+        def probe(*,private_snapshot_sink):
+            private_snapshot_sink({"secret":"DO_NOT_LOG_RAW_QUOTE"},
+                                  DAY+dt.timedelta(minutes=15))
+            return {"signal":"WAIT"}
+        def observer(_start,*,probe):
+            probe()
+            return {"signal":"WAIT","executable":False,"completed24hWindow":True}
+        with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+            result=run.run_seven_days(VAULT,clock=lambda:DAY+dt.timedelta(minutes=3),
+                metadata=metadata,archive=archive,source_probe=probe,
+                observer=observer,emit=events.append,days=1,environment=ENV)
+        self.assertEqual(result["windowsCompleted"],1)
+        progress=[x for x in events if x["event"]=="BIQUOTE_STAGE3_CLOSED_BAR_PROGRESS"]
+        self.assertEqual(len(progress),1)
+        self.assertEqual(progress[0]["frames"]["M15"]["persistedClosed"],1)
+        self.assertEqual(progress[0]["frames"]["H4"]["contiguousClosed"],0)
+        self.assertEqual(progress[0]["h4RemainingUntil21"],21)
+        self.assertFalse(progress[0]["v3TradeQualified"])
+        for secret in ("DO_NOT_LOG_RAW_QUOTE","DO_NOT_LOG_BROKER_PASSWORD","987654"):
+            self.assertNotIn(secret,str(events)+str(result))
+
+    def test_rejected_stage3_counter_metadata_fails_closed_without_leaks(self):
+        events=[]
+        calls=[0]
+        def metadata(_):
+            calls[0]+=1
+            if calls[0]==1:return meta()
+            return {**meta(),"privateSecret":"NO_PRINT_THIS",
+                "forwardCoverage":{"M15":{"closedBars":1,
+                    "latestContiguousBars":999,"unclassifiedGapPairs":0,
+                    "unclassifiedMissingSlots":0}}}
+        def archive(*_args,**_kwargs):
+            return {"newClosedBars":{"M15":1,"H1":0,"H4":0}}
+        def probe(*,private_snapshot_sink):
+            private_snapshot_sink({},DAY+dt.timedelta(minutes=15))
+            return {"signal":"WAIT"}
+        def observer(_start,*,probe):
+            probe()
+            return {"signal":"WAIT","executable":False,"completed24hWindow":True}
+        out=run.run_seven_days(VAULT,clock=lambda:DAY+dt.timedelta(minutes=3),
+            metadata=metadata,archive=archive,source_probe=probe,
+            observer=observer,emit=events.append,days=1,environment=ENV)
+        self.assertEqual(out["signal"],"WAIT")
+        self.assertTrue(any(x["event"]=="BIQUOTE_STAGE3_METADATA_UNAVAILABLE" for x in events))
+        self.assertFalse(any(x["event"]=="BIQUOTE_STAGE3_CLOSED_BAR_PROGRESS" for x in events))
+        self.assertNotIn("NO_PRINT_THIS",str(events))
+
     def test_corrupt_metadata_blocks_readonly_worker_before_any_feed_call(self):
         emitted=[]
         def must_not_call(*_a,**_k):
