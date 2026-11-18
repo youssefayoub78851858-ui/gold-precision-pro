@@ -570,7 +570,7 @@
      validateVendorSchedule(data.privateStructure.vendorDeclaredSession,acceptedChart):null;
    // Compute only from validated OWNER-ONLY quote UTC + Bid/Ask received
    // with the same existing 2-minute refresh. No new provider requests,
-   // no filled candles, no localStorage, no trades or strategy changes.
+   // no filled candles, no browser persistence, no trades or strategy changes.
    privateForming=acceptedChart&&window.GoldBiQuoteCandlePreview?
      window.GoldBiQuoteCandlePreview.update(privateForming,data,acceptedChart,Date.now()):null;
    const forming=privateForming?.[activeFrame];
