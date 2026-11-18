@@ -1,7 +1,7 @@
 """Offline-only session-reference hypotheses, not MT5 broker certifications."""
 import datetime as dt
 import unittest
-from biquote_session_gap_audit import audit_gap_times, reference_window_for_missing_slot
+from biquote_session_gap_audit import audit_gap_times, reference_window_for_missing_slot, audit_closed_timestamp_reference
 
 UTC=dt.timezone.utc
 def utc(s):
@@ -55,6 +55,65 @@ class TestSessionGapDiagnostic(unittest.TestCase):
         data["M15"]["bars"][0]["openTime"]="2026-11-17T10:00:00+02:00"
         self.assertEqual(audit_gap_times(data)["error"],"NON_UTC_CANDLE_TIME")
         self.assertFalse(audit_gap_times({})["sessionCalendarIndependentlyVerified"])
+
+    def test_private_aggregate_pause_cannot_certify_upstream_broker(self):
+        report=audit_closed_timestamp_reference({
+            "M15":["2026-11-16T21:45:00Z","2026-11-16T23:00:00Z"],
+            "H1":["2026-11-16T21:00:00Z","2026-11-16T23:00:00Z"],
+            "H4":["2026-11-16T20:00:00Z","2026-11-17T00:00:00Z"]})
+        self.assertEqual(report["status"],"REFERENCE_ONLY_NOT_BROKER_VERIFIED")
+        self.assertEqual(report["frames"]["M15"]["unclassifiedMissingSlots"],4)
+        self.assertEqual(report["frames"]["M15"]["vendorPauseCandidateSlotsNotVerified"],4)
+        self.assertEqual(report["frames"]["M15"]["outsideVendorReferenceSlots"],0)
+        self.assertEqual(report["frames"]["H1"]["vendorPauseCandidateSlotsNotVerified"],1)
+        self.assertEqual(report["frames"]["H4"]["gapPairs"],0)
+        self.assertFalse(report["independentBrokerCalendarVerified"])
+        self.assertTrue(report["allGapsRemainUnclassified"])
+        self.assertEqual(report["signal"],"WAIT")
+        self.assertFalse(report["executable"])
+        self.assertFalse(report["paperOrdersAllowed"])
+        self.assertFalse(report["liveOrdersAllowed"])
+        self.assertNotIn("2026-11-16T21",str(report))
+
+    def test_private_open_session_and_outside_reference_are_not_pause(self):
+        report=audit_closed_timestamp_reference({
+            "M15":["2026-11-17T10:00:00Z","2026-11-17T10:30:00Z"],
+            "H1":["2026-11-17T10:00:00Z","2026-11-17T12:00:00Z"],
+            "H4":["2026-11-17T04:00:00Z","2026-11-17T12:00:00Z"]})
+        for tf in ("M15","H1","H4"):
+            x=report["frames"][tf]
+            self.assertEqual(x["unclassifiedMissingSlots"],1)
+            self.assertEqual(x["outsideVendorReferenceSlots"],1)
+            self.assertEqual(x["vendorPauseCandidateSlotsNotVerified"],0)
+        old=audit_closed_timestamp_reference({
+            "M15":["2026-08-17T21:45:00Z","2026-08-17T23:00:00Z"],
+            "H1":[],"H4":[]})
+        self.assertEqual(old["frames"]["M15"]["unknownReferenceSlots"],4)
+        self.assertEqual(old["frames"]["M15"]["vendorPauseCandidateSlotsNotVerified"],0)
+
+    def test_private_bad_and_large_gaps_block_safely(self):
+        valid={"M15":[],"H1":[],"H4":[]}
+        self.assertEqual(audit_closed_timestamp_reference(valid)["status"],
+                         "REFERENCE_ONLY_NOT_BROKER_VERIFIED")
+        for bad in (
+            {"M15":["SECRET_BAD_TIMESTAMP"],"H1":[],"H4":[]},
+            {"M15":["2026-11-17T10:30:00Z","2026-11-17T10:00:00Z"],"H1":[],"H4":[]},
+            {"M15":["2026-11-17T10:00:00Z","2026-11-17T10:00:00Z"],"H1":[],"H4":[]},
+            {"M15":["2026-11-17T10:14:00Z"],"H1":[],"H4":[]},
+            {"M15":[],"H1":[]},
+        ):
+            result=audit_closed_timestamp_reference(bad)
+            self.assertEqual(result["status"],"UNAVAILABLE")
+            self.assertEqual(result["signal"],"WAIT")
+            self.assertFalse(result["paperOrdersAllowed"])
+            self.assertEqual(result["frames"],{})
+            self.assertNotIn("SECRET_BAD_TIMESTAMP",str(result))
+        big=audit_closed_timestamp_reference({
+            "M15":["2026-11-01T00:00:00Z","2026-12-01T00:00:00Z"],
+            "H1":[],"H4":[]})
+        self.assertEqual(big["status"],"REFERENCE_ONLY_NOT_BROKER_VERIFIED")
+        self.assertEqual(big["frames"]["M15"]["unknownReferenceSlots"],2879)
+        self.assertEqual(big["frames"]["M15"]["vendorPauseCandidateSlotsNotVerified"],0)
 
 if __name__=="__main__":
     unittest.main()
