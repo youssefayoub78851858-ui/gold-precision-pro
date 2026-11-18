@@ -30,7 +30,10 @@ jobs:
           grep -q 'Gold Precision Pro' "$html"
           grep -qi 'content-security-policy:.*frame-ancestors' "$headers"
           grep -qi 'cache-control: no-store' "$headers"
-          test "$(wc -c < "$html")" -lt 30000
+          # This is a byte ceiling, NOT an HTML version marker: the safe
+          # owner-only evidence panel grew past the old 30 KB allowance.
+          grep -q 'forward-mid-quote-parity' "$html"
+          test "$(wc -c < "$html")" -lt 80000
           echo 'PASS: review-only mobile HTML reachable over HTTPS, CSP and no-store present'
       - name: Confirm anonymous access is rejected without contacting paid providers
         shell: bash
