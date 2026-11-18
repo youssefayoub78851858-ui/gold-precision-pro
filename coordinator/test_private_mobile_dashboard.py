@@ -61,6 +61,19 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertNotIn("sessionStorage", PUBLIC)
         self.assertNotIn("OrderSend", PUBLIC)
 
+    def test_vendor_gap_reference_mobile_never_claims_broker_schedule(self):
+        self.assertIn('id="forward-gap-reference"',PUBLIC)
+        self.assertIn('vault.gapReference',PUBLIC)
+        self.assertIn('referenceSafe',PUBLIC)
+        self.assertIn('ref?.independentBrokerCalendarVerified===false',PUBLIC)
+        self.assertIn('ref?.sourceRightsVerified===false',PUBLIC)
+        self.assertIn('ref?.allGapsRemainUnclassified===true',PUBLIC)
+        self.assertIn('ref?.paperOrdersAllowed===false',PUBLIC)
+        self.assertIn('el("forward-gap-reference").textContent=',PUBLIC)
+        self.assertIn("لا تثبت اكتمال بيانات BiQuote أو صلاحية التداول",PUBLIC)
+        self.assertNotIn('vault.closed',PUBLIC)
+        self.assertNotIn('vault.quoteObservations',PUBLIC)
+
     def test_private_four_stage_batch_has_locked_mobile_evidence(self):
         for tag in ('id="four-stage-private-panel"', 'id="batch-readiness-state"',
                     'id="batch-data-state"', 'id="batch-archive-state"',
