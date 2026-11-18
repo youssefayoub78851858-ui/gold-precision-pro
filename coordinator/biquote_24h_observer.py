@@ -290,6 +290,60 @@ class QualityCounters:
         }
 
 
+
+# Fixed-count-only source geometry evidence. Never exposes quotes, OHLC,
+# timestamps, provider text, or a broker calendar verification claim.
+_GEOMETRY_FIELDS = (
+    "h1InternalM15Gaps", "h4InternalM15Gaps",
+    "h4RetentionEdgesIncomplete", "h4MissingM15VendorPauseCandidates",
+    "h4MissingM15OutsideVendorReference", "h4MissingM15ReferenceUnknown",
+    "h4PartialObservedPriceContradictions",
+    "h1CoveredOHLCDisagreements", "h4CoveredOHLCDisagreements",
+)
+
+def safe_sample_geometry_detail(result):
+    """Sanitize public observation down to bounded integers; fail closed."""
+    if not isinstance(result, dict) or result.get("allHttp200AndValidJson") is not True:
+        return {"status": "UNAVAILABLE"}
+    detail = result.get("qualityDiagnostic")
+    if (not isinstance(detail, dict) or
+            detail.get("mode") != "BIQUOTE_METADATA_FAILURE_DIAGNOSTICS_ONLY" or
+            detail.get("marketDataExposed") is not False or
+            detail.get("sourceRequestsMade") != 0 or
+            detail.get("tradingEnabled") is not False or
+            not isinstance(detail.get("endpoint"), dict) or
+            set(detail["endpoint"]) != {"quote", "M15", "H1", "H4"} or
+            any(detail["endpoint"][key] not in DIAGNOSTIC_CODES
+                for key in ("quote", "M15", "H1", "H4"))):
+        return {"status": "UNAVAILABLE"}
+    counts = {}
+    for field in _GEOMETRY_FIELDS:
+        value = detail.get(field)
+        if type(value) is not int or not 0 <= value <= 10000:
+            return {"status": "UNAVAILABLE"}
+        counts[field] = value
+    return {
+        "status": "COUNTS_ONLY_BROKER_CALENDAR_UNVERIFIED",
+        "sourceQualified": False,
+        "brokerSessionVerified": False,
+        "frames": {
+            "H1": {
+                "internalMissingM15Groups": counts["h1InternalM15Gaps"],
+                "fullyCoveredOHLCDisagreements": counts["h1CoveredOHLCDisagreements"],
+            },
+            "H4": {
+                "internalMissingM15Groups": counts["h4InternalM15Gaps"],
+                "retentionEdgeIncompleteGroups": counts["h4RetentionEdgesIncomplete"],
+                "vendorReferencePauseMissingSlots": counts["h4MissingM15VendorPauseCandidates"],
+                "outsideVendorReferenceMissingSlots": counts["h4MissingM15OutsideVendorReference"],
+                "unknownReferenceMissingSlots": counts["h4MissingM15ReferenceUnknown"],
+                "partialObservedOHLCContradictions": counts["h4PartialObservedPriceContradictions"],
+                "fullyCoveredOHLCDisagreements": counts["h4CoveredOHLCDisagreements"],
+            },
+        },
+    }
+
+
 def observe_24h(start_utc, *, probe=one_shot_probe, utc_now=None,
                 sleep=time.sleep, emit=None):
     """Bounded UTC-anchored 24h window: no makeup bursts or indefinite retries.
@@ -356,6 +410,7 @@ def observe_24h(start_utc, *, probe=one_shot_probe, utc_now=None,
                 "httpAllOk": result.get("allHttp200AndValidJson") is True,
                 "geometryChecksOk": result.get("structuralAudit", {}).get("ohlcStructuralChecksPassed") is True,
                 "geometryFailureClass": result.get("geometryFailureClass", "UNAVAILABLE"),
+                "geometryDetail": safe_sample_geometry_detail(result),
                 "archiveSavedSnapshotsSoFar": counters.archive_saved,
                 "archiveRejectedSnapshotsSoFar": counters.archive_failed,
                 "archiveRejectionClass": (classify_private_capture_failure(
