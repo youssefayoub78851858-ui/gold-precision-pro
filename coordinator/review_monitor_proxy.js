@@ -276,6 +276,18 @@ function sanitize(input){
      signal:"WAIT",paperOrdersAllowed:false,
      sourceRightsVerified:false,brokerCalendarVerified:false,frames:details};
   }
+  // A vendor/backend assertion of "frozen V3" alone is never enough
+  // to show even a research-only BUY/SELL watch on the Android monitor.
+  // Require observed closed-bar warmup AND separately checked OHLC parity.
+  // No inferred/generic session pause can fill missing constituent bars.
+  if(allowed && (
+    ["M15","H1","H4"].some(tf=>!counts[tf]||
+      counts[tf].contiguousClosed<21)||
+    !safeParity||
+    ["H1","H4"].some(tf=>
+      safeParity.frames[tf].fullyCoveredCompared<1||
+      safeParity.frames[tf].fullyCoveredDisagreed!==0)
+  ))throw Error("Frozen V3 watch missing archived warmup or parity proof");
   safeShadow={mode:"BIQUOTE_PRIVATE_FORWARD_V3_SHADOW_ONLY",
     signal:"WAIT",executable:false,paperOrdersAllowed:false,
     signalReady:false,approvedDirection:"NONE",
