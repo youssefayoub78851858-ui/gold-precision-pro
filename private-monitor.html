@@ -78,6 +78,7 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <h2 id="biquote-shadow-title">تحليل V3 من أرشيف BiQuote الخاص — بحث فقط</h2>
 <p id="biquote-shadow-state" role="status">WAIT — بانتظار شموع جديدة كافية لتقييم الاتجاه</p>
 <p id="biquote-shadow-coverage">M15 / H1 / H4: بانتظار شموع مغلقة متصلة</p>
+<p id="biquote-parity-state" role="status">WAIT — لم تتوفر مقارنة شموع M15 مع H1/H4</p>
 <p><small>التسجيل الأول المحدد بـ24 ساعة ما بكفّي وحده لتهيئة V3: الحد الأدنى 21 شمعة H4 مغلقة ومتتالية = 84 ساعة نظرياً، وقد تطول بسبب استراحات السوق. أي تمديد يحتاج تفعيل مستقل. لن ننقل شموعاً قديمة إلى فترة الاختبار الجديدة.</small></p>
 <p><small>BUY أو SELL إذا ظهرت هون تعني قراءة فنية أولية فقط، مش صفقة. لا يوجد دخول أو وقف خسارة أو أهداف معتمدة، ولا تداول ورقي أو حقيقي.</small></p>
 </section>
@@ -245,6 +246,31 @@ el("refresh").addEventListener("click",async()=>{
     else pieces.push(tf+": غير مؤكد");
   }
   el("biquote-shadow-coverage").textContent=pieces.join(" | ");
+  // Reference only: compare actually archived H1/H4 OHLC to complete M15
+  // constituents; uncovered groups are never counted as matching.
+  const proof=safeShadow?shadow.diagnosticCrossFrameParity:null;
+  let paritySafe=proof?.status==="CLOSED_ARCHIVE_GEOMETRY_ONLY_NOT_TRADE_PROOF"
+    &&proof?.signal==="WAIT"&&proof?.paperOrdersAllowed===false
+    &&proof?.sourceRightsVerified===false&&proof?.brokerCalendarVerified===false;
+  const checkedParts=[];
+  for(const tf of ["H1","H4"]){
+    const row=proof?.frames?.[tf],frame=shadow?.frames?.[tf];
+    const k=["higherClosedExamined","fullyCoveredCompared","fullyCoveredDisagreed","notFullyCovered"];
+    if(!paritySafe||!row||!frame||k.some(x=>!Number.isInteger(row[x])
+      ||row[x]<0||row[x]>48)||
+      row.higherClosedExamined!==frame.contiguousClosed||
+      row.fullyCoveredCompared+row.notFullyCovered!==row.higherClosedExamined||
+      row.fullyCoveredDisagreed>row.fullyCoveredCompared){
+      paritySafe=false;break;
+    }
+    checkedParts.push(tf+": مقارنة مكتملة "+row.fullyCoveredCompared
+      +"، اختلاف "+row.fullyCoveredDisagreed
+      +"، تغطية غير مكتملة "+row.notFullyCovered);
+  }
+  el("biquote-parity-state").textContent=paritySafe
+    ?"WAIT — فحص تطابق OHLC للشموع المغلقة: "+checkedParts.join(" | ")
+      +" | لا يثبت ترخيص المصدر أو صلاحية التداول"
+    :"WAIT — مقارنة M15 مع H1/H4 غير مثبتة؛ لا صفقات";
   const batch=data.ultimateFourStageBatch;
   const acceptedBatch=batch?.mode==="GOLD_PRECISION_FOUR_STAGE_BATCH_READONLY_V1"
    &&batch?.signal==="WAIT"&&batch?.executable===false
@@ -391,6 +417,7 @@ el("refresh").addEventListener("click",async()=>{
    el("biquote-shadow-state").textContent="WAIT — تعذّر التحقق من تحليل V3 الخاص";
    clearBatchDisplay();
    el("biquote-shadow-coverage").textContent="التغطية الفنية غير متاحة";
+   el("biquote-parity-state").textContent="WAIT — فحص تطابق M15 مع H1/H4 غير متاح";
    for(const id of ["forward-m15","forward-h1","forward-h4"])el(id).textContent="0";
    el("forward-last").textContent="آخر تسجيل: غير متاح";
    el("forward-coverage").textContent="التغطية الزمنية لم تتحقق";
