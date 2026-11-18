@@ -153,6 +153,54 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  for(const secret of ["987654","8888888","NEVER_LEAK","secretQuote"]){
    a.ok(!JSON.stringify(sanitized).includes(secret),"Private raw prices and secrets must not leak");
  }
+ // During H4 warmup the authenticated monitor may show real closed-bar
+ // comparisons, but never fabricate coverage or certify the broker.
+ const parity={
+  status:"CLOSED_ARCHIVE_GEOMETRY_ONLY_NOT_TRADE_PROOF",
+  signal:"WAIT",paperOrdersAllowed:false,sourceRightsVerified:false,
+  brokerCalendarVerified:false,
+  frames:{
+   H1:{higherClosedExamined:40,fullyCoveredCompared:10,
+       fullyCoveredDisagreed:0,notFullyCovered:30,
+       rawPrice:87654321},
+   H4:{higherClosedExamined:23,fullyCoveredCompared:2,
+       fullyCoveredDisagreed:0,notFullyCovered:21,
+       rawHigh:76543210}},
+  untrustedSecret:"PRIVATE_DO_NOT_FORWARD"
+ };
+ const withParity=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,biquoteForwardShadow:{...shadow,diagnosticCrossFrameParity:parity}
+ })});
+ a.equal(withParity.httpStatus,200);
+ const safeParity=withParity.body.biquoteForwardShadow.diagnosticCrossFrameParity;
+ a.equal(safeParity.status,"CLOSED_ARCHIVE_GEOMETRY_ONLY_NOT_TRADE_PROOF");
+ a.equal(safeParity.frames.H4.fullyCoveredCompared,2);
+ a.equal(safeParity.frames.H4.notFullyCovered,21);
+ a.equal(safeParity.frames.H1.fullyCoveredDisagreed,0);
+ a.equal(safeParity.paperOrdersAllowed,false);
+ a.equal(safeParity.brokerCalendarVerified,false);
+ for(const sensitive of ["PRIVATE_DO_NOT_FORWARD","87654321","76543210",
+                         "rawPrice","rawHigh"]){
+  a.ok(!JSON.stringify(withParity).includes(sensitive));
+ }
+ for(const forged of [
+  {...parity,brokerCalendarVerified:true},
+  {...parity,sourceRightsVerified:true},
+  {...parity,paperOrdersAllowed:true},
+  {...parity,frames:{...parity.frames,H4:{...parity.frames.H4,
+     fullyCoveredCompared:23,notFullyCovered:0}}},
+  {...parity,frames:{...parity.frames,H4:{...parity.frames.H4,
+     fullyCoveredDisagreed:1}}},
+  {...parity,frames:{...parity.frames,H1:{...parity.frames.H1,
+     notFullyCovered:0}}},
+  {...parity,frames:{...parity.frames,H1:{...parity.frames.H1,
+     fullyCoveredDisagreed:11}}}
+ ]){
+  const blocked=await relay(auth,{approved:true,fetchFn:async()=>mock({
+   ...expected,biquoteForwardShadow:{...shadow,diagnosticCrossFrameParity:forged}
+  })});
+  a.equal(blocked.httpStatus,503,"Forged H1/H4 OHLC evidence must fail closed");
+ }
  for(const delta of [{signal:"BUY"},{executable:true},{paperOrdersAllowed:true},
    {approvedDirection:"BUY"},{signalReady:true},{sourceRequestsMade:1},
    {reasonCodes:["<price>"]},{technicalWatch:"SELL",engineReview:"NOT_YET_READY"}]){
