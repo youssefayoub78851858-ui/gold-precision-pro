@@ -261,6 +261,23 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
         "outOfSampleNetExpectancyVerified":False,
         "archiveIntegrityObserved":archive_status=="FORWARD_CAPTURE_PRESENT_UNVERIFIED",
         "missingStrictClosedBarsUntil21":missing,
+        # Strict wall-clock contiguity is *not* the same as consecutive
+        # broker-tradable candles. An undocumented daily pause or weekend
+        # can reset raw-grid continuity; do not silently exempt any slot.
+        "sessionWarmupRisk":{
+            "mode":"STRICT_GRID_WARMUP_BROKER_CALENDAR_EVIDENCE_PENDING_V1",
+            "status":"BROKER_SESSION_PROOF_REQUIRED",
+            "signal":"WAIT","executable":False,
+            "brokerCalendarVerified":False,
+            "sessionAwareWarmupAllowed":False,
+            "missingCandleBridgingAllowed":False,
+            "futureContinuityGuaranteed":False,
+            "rawGridOnly":True,
+            "strictContiguous":tails,
+            "unclassifiedGapPairs":{
+                tf:stage2_frames[tf]["unclassifiedGapPairs"] for tf in FRAMES_ORDER},
+            "missingStrictClosedUntil21":missing,
+        },
         "remainingBlockerCodes":blockers,
     }
     union=source_reasons+analysis_codes+paper["reasonCodes"]
