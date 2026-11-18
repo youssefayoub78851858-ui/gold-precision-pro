@@ -276,6 +276,53 @@ function sanitize(input){
      signal:"WAIT",paperOrdersAllowed:false,
      sourceRightsVerified:false,brokerCalendarVerified:false,frames:details};
   }
+  // Sanitized *unverified* candle-continuity diagnostics. Persisted bars
+  // do not substitute for the latest consecutive run, and vendor reference
+  // pauses must never be treated as a broker-approved gap exemption.
+  let safeWarmup=null;
+  if(x.warmupContinuity!==undefined){
+   const w=x.warmupContinuity,details={};
+   if(!w||
+      w.status!=="STRICT_RAW_CLOSED_BARS_BROKER_CALENDAR_UNVERIFIED"||
+      w.signal!=="WAIT"||w.paperOrdersAllowed!==false||
+      w.brokerCalendarVerified!==false||w.sourceRightsVerified!==false||
+      w.gapBridgingAllowed!==false||
+      !counts.M15||!counts.H1||!counts.H4||
+      !w.frames||Object.keys(w.frames).sort().join(",")!=="H1,H4,M15")
+     throw Error("Unsafe V3 warmup continuity status");
+   for(const tf of ["M15","H1","H4"]){
+    const v=w.frames[tf],expected=counts[tf];
+    const fields=["persistedClosed","strictLatestContiguous","remainingUntil21",
+      "unclassifiedMissingSlots","vendorPauseCandidatesNotVerified",
+      "outsideVendorReferenceSlots","unknownReferenceSlots"];
+    if(!v||fields.some(f=>!Number.isSafeInteger(v[f])||v[f]<0||
+         v[f]>4500000)||
+       v.persistedClosed!==expected.persistedClosed||
+       v.strictLatestContiguous!==expected.contiguousClosed||
+       v.remainingUntil21!==Math.max(0,21-expected.contiguousClosed)||
+       v.vendorPauseCandidatesNotVerified+v.outsideVendorReferenceSlots+
+         v.unknownReferenceSlots!==v.unclassifiedMissingSlots||
+       typeof v.lastRunAfterUnclassifiedGap!=="boolean"||
+       v.lastRunAfterUnclassifiedGap!==(
+        v.unclassifiedMissingSlots>0&&expected.contiguousClosed<
+        expected.persistedClosed))
+      throw Error("Forged V3 warmup continuity counts");
+    details[tf]={
+      persistedClosed:expected.persistedClosed,
+      strictLatestContiguous:expected.contiguousClosed,
+      remainingUntil21:v.remainingUntil21,
+      unclassifiedMissingSlots:v.unclassifiedMissingSlots,
+      vendorPauseCandidatesNotVerified:v.vendorPauseCandidatesNotVerified,
+      outsideVendorReferenceSlots:v.outsideVendorReferenceSlots,
+      unknownReferenceSlots:v.unknownReferenceSlots,
+      lastRunAfterUnclassifiedGap:v.lastRunAfterUnclassifiedGap};
+   }
+   safeWarmup={
+     status:"STRICT_RAW_CLOSED_BARS_BROKER_CALENDAR_UNVERIFIED",
+     signal:"WAIT",brokerCalendarVerified:false,
+     sourceRightsVerified:false,gapBridgingAllowed:false,
+     paperOrdersAllowed:false,frames:details};
+  }
   // A vendor/backend assertion of "frozen V3" alone is never enough
   // to show even a research-only BUY/SELL watch on the Android monitor.
   // Require observed closed-bar warmup AND separately checked OHLC parity.
@@ -284,6 +331,7 @@ function sanitize(input){
     ["M15","H1","H4"].some(tf=>!counts[tf]||
       counts[tf].contiguousClosed<21)||
     !safeParity||
+    !safeWarmup||
     ["H1","H4"].some(tf=>
       safeParity.frames[tf].fullyCoveredCompared<1||
       safeParity.frames[tf].fullyCoveredDisagreed!==0)
@@ -296,6 +344,7 @@ function sanitize(input){
       "NOT_YET_READY",
     frames:counts,
     ...(safeParity?{diagnosticCrossFrameParity:safeParity}:{}),
+    ...(safeWarmup?{warmupContinuity:safeWarmup}:{}),
     reasonCodes:[...new Set(x.reasonCodes)].slice(0,30)};
  }
  // Four-stage owner-only status: fixed enums/counters ONLY. The full
