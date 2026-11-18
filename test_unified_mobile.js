@@ -15,6 +15,11 @@ a(doc.includes('تعذّر التحقق؛ العدد غير معروف'),"Failed
 a(doc.includes('أرشيف BiQuote الخاص: غير مؤكد على الشاشة العامة'),"No fabricated forward-vault status");
 a(doc.includes('مراقبة BiQuote المكتملة بتاريخ 17 نوفمبر 2026'),"Timestamped historical report, not current live feed");
 a(doc.includes('id="gdc-free-check-20261118"'),"Dated free one-shot evidence must show on mobile");
+a(doc.includes('id="gdc-reference-pause-forensics"'),"Owner sees historical vendor-pause classification");
+a(doc.includes('تفسير محتمل للأعطال، مش إثبات رسمي لجلسة وسيط MT5'),"Reference pause does not certify upstream broker");
+a(doc.includes('عمر السعر الأقصى 183.859 ثانية'),"Quote-age blocker cannot be silently dismissed");
+a(doc.includes('BIQUOTE-DECLARED-PAUSE-FORENSICS-20261118.md'),"Traceable forensic report required");
+
 a(doc.includes('4 من 4 وصلات صحيحة؛ عمر السعر وقتها 3.01 ثوانٍ'),"Recorded free quote snapshot is not a live quote");
 a(doc.includes('بقيت مجموعتا H4 ناقصتان'),"Partial H4 reference gap must remain visible");
 a(doc.includes('اسم وسيط MT5 الأصلي وحقوقه وجدول جلساته غير مثبتين'),"Do not certify unidentified broker");
