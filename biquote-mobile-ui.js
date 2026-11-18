@@ -16,6 +16,28 @@
  // No market data is written to storage or the paper-trade journal.
  let busy=false,activeFrame="M15",privateChart=null,privateForming=null,privateStructure=null,privateMtf=null,privateReferenceEma=null,privateVendorSchedule=null;
  const frameWidth={M15:900000,H1:3600000,H4:14400000};
+ // A quote is verified at request time, not indefinitely while the page is
+ // open. The 2-minute fetch cadence MUST NOT make a 30-second quote look live.
+ // Expiring here never contacts BiQuote, stores prices, or changes a trade.
+ let quoteValidUntilMs=0;
+ function invalidateExpiredQuote(){
+   if(!quoteValidUntilMs||Date.now()<=quoteValidUntilMs)return;
+   quoteValidUntilMs=0;
+   privateForming=null;
+   privateStructure=null;privateMtf=null;privateReferenceEma=null;privateVendorSchedule=null;
+   decisionCenterReset("WAIT — سعر BiQuote انتهت صلاحيته؛ الشموع المغلقة المعروضة تاريخية فقط");
+   for(const id of ["biquote-private-quote","biquote-private-spread"]){
+     const node=$(id);
+     if(node)node.textContent="غير متاح — السعر المرصود انتهت صلاحيته";
+   }
+   const note=$("biquote-forming-candle-note");
+   if(note)note.textContent="WAIT — أُخفيت الشمعة الذهبية لأن آخر عيّنة سعر تجاوزت 30 ثانية. الشموع المغلقة تاريخية فقط؛ لا بث MT5.";
+   const caption=$("biquote-live-caption");
+   if(caption)caption.textContent="WAIT — شموع BiQuote المغلقة من آخر فحص فقط؛ لا يوجد سعر أو شمعة مفتوحة حديثة.";
+   $("biquote-status").textContent="WAIT — انتهت صلاحية آخر سعر BiQuote؛ جاري انتظار الفحص التالي، دون افتراض أسعار جديدة.";
+   drawPrivateChart();
+   describeStructure();displayMtf();displayReferenceEma();displayVendorSchedule();
+ }
  function validPrivateChart(input){
    if(!input||typeof input!=="object"||Array.isArray(input))return null;
    const result={};
@@ -472,6 +494,7 @@
      "سبب WAIT: شارت BiQuote وحده لا يثبت الصفقات؛ ينقص GC وDXY والسندات والأخبار وOrder Flow وحقوق الوسيط وتكاليف التنفيذ واختبارات مستقلة.";
  }
  function reset(){
+  quoteValidUntilMs=0;
   decisionCenterReset();
   for(const id of ["biquote-private-quote","biquote-private-spread","biquote-observed",
     "biquote-m15","biquote-h1","biquote-h4","biquote-overlap"])
@@ -536,6 +559,15 @@
      throw Error("فشل وصول المصدر أو البيانات غير صالحة (HTTP "+response.status+")");
    }
    const data=await response.json();
+   // The browser may receive a response near its 30-second expiry. Never
+   // resurrect a stale quote just because the server accepted it earlier.
+   const quoteMs=Date.parse(data.quoteUTC),clientNow=Date.now();
+   if(!Number.isFinite(quoteMs)||quoteMs>clientNow+5000||
+      clientNow-quoteMs>30000||
+      typeof data.quoteAgeSeconds!=="number"||
+      !Number.isFinite(data.quoteAgeSeconds)||
+      data.quoteAgeSeconds<0||data.quoteAgeSeconds>30)
+     throw Error("QUOTE_TIME_EXPIRED");
    if(data.signal!=="WAIT"||data.executable!==false||
       data.researchEligible!==false||data.tradePlanExecutable!==false||
       data.paperOrdersAllowed!==false||data.orderEndpointsCalled!==false||
@@ -562,6 +594,7 @@
    const acceptedChart=data.rawQuoteShown===true&&data.privateChartReadOnly===true&&
      data.privateChartDataBasis==="MID_WITH_POSSIBLE_BID_SEED"
        ?validPrivateChart(data.privateChart):null;
+   quoteValidUntilMs=acceptedChart?quoteMs+30000:0;
    privateStructure=acceptedChart?validPrivateStructure(data.privateStructure,acceptedChart):null;
    privateMtf=privateStructure?validateMtf(data.privateStructure.multiFrame,privateStructure):null;
    privateReferenceEma=privateStructure?
@@ -635,5 +668,8 @@
  drawPrivateChart();
  button.addEventListener("click",refresh);
  window.addEventListener("pageshow",refresh);
+ // Offline expiry watch only: no new provider polling, and no price stays
+ // labeled fresh during the 90-second gap between scheduled observations.
+ setInterval(invalidateExpiredQuote,5000);
  setInterval(()=>{if(!document.hidden&&!busy)refresh();},120000);
 })();

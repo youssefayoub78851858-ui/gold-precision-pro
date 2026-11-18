@@ -9,6 +9,9 @@ const {evaluateFrames}=require("./coordinator/biquote_vendor_declared_session");
 const {makeMtfReadiness}=require("./coordinator/biquote_mtf_readiness");
 const widths={M15:900000,H1:3600000,H4:14400000};
 let candleDraws=0,blankMessages=0,formingDraws=0;
+let clientNow=NOW;
+const intervalCallbacks=[];
+class ClockDate extends Date {static now(){return clientNow;}}
 function makeCanvas(){
  const ctx={
    setTransform(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},
@@ -107,8 +110,10 @@ const document={getElementById:makeNode,querySelectorAll:sel=>{
 }};
 const window={devicePixelRatio:1,addEventListener(){},
  GoldBiQuoteCandlePreview:require("./biquote-live-candle-preview")};
-const context={window,document,Date,Number,Math,Object,Array,JSON,String,Boolean,
- AbortSignal:{timeout:()=>null},fetch,setInterval:()=>0,console};
+const context={window,document,Date:ClockDate,Number,Math,Object,Array,JSON,String,Boolean,
+ AbortSignal:{timeout:()=>null},fetch,
+ setInterval:(fn,ms)=>{intervalCallbacks.push({fn,ms});return intervalCallbacks.length;},
+ console};
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,"biquote-mobile-ui.js"),"utf8"),context,{timeout:2000});
 async function main(){
  assert.ok(blankMessages>=1,"Default real chart is blank, never a fabricated sample");
@@ -134,6 +139,21 @@ assert.equal(makeNode("gdc-quote").textContent,"","Never show a private quote be
  assert.match(makeNode("gdc-blocker").textContent,/لا صفقات/);
  assert.equal(sessionLogins,1,"Exactly one token exchange");
  assert.equal(makeNode("biquote-viewer-secret").value,"","Original viewer token cleared immediately");
+ // The sampled candle expires locally even when the next 2-minute provider
+ // fetch has not happened. Historical CLOSED bars may remain, never as live.
+ const expiryCheck=intervalCallbacks.find(x=>x.ms===5000);
+ assert.ok(expiryCheck,"A local no-network quote expiry check must run every 5 seconds");
+ const callsBeforeExpiry=requests.length;
+ clientNow=NOW+31000;
+ expiryCheck.fn();
+ assert.equal(requests.length,callsBeforeExpiry,"Quote expiry must not poll any provider");
+ assert.match(makeNode("biquote-forming-candle-note").textContent,/أُخفيت الشمعة الذهبية/);
+ assert.match(makeNode("biquote-live-caption").textContent,/المغلقة من آخر فحص/);
+ assert.match(makeNode("gdc-feed-status").textContent,/WAIT/);
+ assert.doesNotMatch(makeNode("gdc-quote").textContent,/3910/);
+ assert.doesNotMatch(makeNode("biquote-private-quote").textContent,/3910/);
+ assert.match(makeNode("biquote-status").textContent,/انتهت صلاحية/);
+ clientNow=NOW; // A subsequent valid fresh GET may restore the sample.
  const firstCookies=requests.length;
  await makeNode("biquote-refresh").click();
  assert.equal(sessionLogins,1,"Later refresh must use cookie, never resend token");
