@@ -9,6 +9,8 @@ on:
       - 'server.js'
       - 'ultimate.html'
       - 'biquote-mobile-ui.js'
+      - 'biquote-live-candle-preview.js'
+      - 'test_biquote_live_candle_preview.js'
       - 'test_biquote_live_chart_ui.js'
       - 'test_unified_mobile.js'
       - 'test_gold_decision_readiness.js'
@@ -27,6 +29,8 @@ jobs:
           node-version: '20'
       - name: Server-signed cookie, expiry, same-origin, session revocation
         run: node coordinator/test_biquote_viewer_session.js
+      - name: Fresh private BiQuote sampled forming candles, never real trading
+        run: node test_biquote_live_candle_preview.js
       - name: Browser simulation - token once, no storage, old data cleared
         run: node test_biquote_live_chart_ui.js
       - name: Unified mobile DOM with paper trading isolation
