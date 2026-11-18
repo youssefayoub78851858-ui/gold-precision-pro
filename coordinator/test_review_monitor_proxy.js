@@ -63,9 +63,9 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  a.ok(!JSON.stringify(withArchive).includes("989898"));
  a.ok(!JSON.stringify(withArchive).includes("999999"));
  a.ok(!JSON.stringify(withArchive).includes("quoteObservations"));
- // Price-free tick/candle parity from the owner-only sealed feed:
+ // Price-free tick/candle quoteParity from the owner-only sealed feed:
  // 10 quote observations are NOT 10 independent historic BID/ASK bars.
- const parity={
+ const quoteParity={
   mode:"PRIVATE_BIQUOTE_QUOTE_MID_CLOSED_OHLC_COUNTS_V1",
   status:"CONSISTENT_OBSERVED_SAMPLES_ONLY",signal:"WAIT",executable:false,
   researchEligible:false,paperOrdersAllowed:false,liveOrdersAllowed:false,
@@ -87,7 +87,7 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  };
  const withParity=await relay(auth,{approved:true,fetchFn:async()=>mock({
   ...expected,biquotePrivateForwardVault:{
-   ...freshArchive,quoteCandleMidGeometry:parity}
+   ...freshArchive,quoteCandleMidGeometry:quoteParity}
  })});
  a.equal(withParity.httpStatus,200);
  a.equal(withParity.body.biquotePrivateForwardVault.
@@ -102,17 +102,17 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
   {independentBrokerPriceParityVerified:true},
   {liveOrdersAllowed:true},{status:"SOURCE_VERIFIED"},
   {sourceQuoteSamples:11},
-  {frames:{...parity.frames,
-    M15:{...parity.frames.M15,comparableQuoteSamples:3}}},
-  {frames:{...parity.frames,
-    H4:{...parity.frames.H4,outsideClosedOHLC:1}}},
+  {frames:{...quoteParity.frames,
+    M15:{...quoteParity.frames.M15,comparableQuoteSamples:3}}},
+  {frames:{...quoteParity.frames,
+    H4:{...quoteParity.frames.H4,outsideClosedOHLC:1}}},
   {status:"OBSERVED_MID_OUTSIDE_CLOSED_OHLC"}
  ]){
   const denied=await relay(auth,{approved:true,fetchFn:async()=>mock({
    ...expected,biquotePrivateForwardVault:{
-    ...freshArchive,quoteCandleMidGeometry:{...parity,...bad}}
+    ...freshArchive,quoteCandleMidGeometry:{...quoteParity,...bad}}
   })});
-  a.equal(denied.httpStatus,503,"No fake source or quote parity proof");
+  a.equal(denied.httpStatus,503,"No fake source or quote quoteParity proof");
  }
  // Metadata liveness is based on the sealed quote receipt and UTC.
  // No numeric price/spread from private storage may reach the mobile relay.
