@@ -177,13 +177,42 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
       unclassifiedGapPairs:0,unclassifiedMissingSlots:0}])),
    stage2SourceVerified:false,stage2SessionCalendarVerified:false,
    stage2EligibleForPaper:false}}};
+ const stage3={status:"WAIT_CLOSED_BAR_WARMUP",signal:"WAIT",
+   minimumContiguousClosedEachFrame:21,framesWithWarmup:0,
+   h4ContiguousClosed:0,h4RemainingUntil21:21,
+   frozenV3Observed:false,crossFrameParityObserved:false,
+   brokerRightsVerified:false,brokerSessionCalendarVerified:false,
+   independentMacroOrderFlowVerified:false,
+   paperOrdersAllowed:false,liveOrdersAllowed:false};
+ const qualityWithV3={...quality,stages:{...quality.stages,
+   analysis:{...quality.stages.analysis,stage3}}};
  const withQuality=await relay(auth,{approved:true,fetchFn:async()=>mock({
-   ...expected,ultimateFourStageBatch:quality
+   ...expected,ultimateFourStageBatch:qualityWithV3
  })});
  a.equal(withQuality.httpStatus,200);
  a.equal(withQuality.body.ultimateFourStageBatch.stage2.signal,"WAIT");
  a.equal(withQuality.body.ultimateFourStageBatch.stage2.frames.H4.remainingUntil21,21);
  a.equal(withQuality.body.ultimateFourStageBatch.stage2.paperOrdersAllowed,false);
+ a.equal(withQuality.body.ultimateFourStageBatch.stage3.status,"WAIT_CLOSED_BAR_WARMUP");
+ a.equal(withQuality.body.ultimateFourStageBatch.stage3.h4RemainingUntil21,21);
+ for(const attempted3 of [
+   {status:"WAIT_INDEPENDENT_FEEDS_AND_RIGHTS"},
+   {framesWithWarmup:3},
+   {h4RemainingUntil21:0},
+   {frozenV3Observed:true},
+   {crossFrameParityObserved:true},
+   {brokerRightsVerified:true},
+   {paperOrdersAllowed:true},
+   {liveOrdersAllowed:true}
+ ]){
+   const bad=await relay(auth,{approved:true,fetchFn:async()=>mock({
+     ...expected,ultimateFourStageBatch:{...qualityWithV3,
+       stages:{...qualityWithV3.stages,
+         analysis:{...qualityWithV3.stages.analysis,
+           stage3:{...stage3,...attempted3}}}}
+   })});
+   a.equal(bad.httpStatus,503,"Forged Stage 3 readiness blocked");
+ }
  for(const attempted of [
   {stage2Status:"WAIT_INDEPENDENT_SOURCE_RIGHTS_AND_CALENDAR"},
   {stage2SourceVerified:true},
