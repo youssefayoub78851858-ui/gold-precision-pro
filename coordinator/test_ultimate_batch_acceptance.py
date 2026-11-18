@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from ultimate_batch_acceptance import review_batch
-from biquote_private_forward_vault import ingest, inspect_metadata
+from biquote_private_forward_vault import ingest, inspect_metadata, load_vault
 from biquote_forward_shadow_review import shadow_review
 from test_biquote_private_forward_vault import sample, iso
 from test_biquote_24h_final_verdict import fixture
@@ -179,7 +179,7 @@ class FourStageBatchAcceptance(unittest.TestCase):
         ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
         meta=inspect_metadata(self.folder)
         shadow=shadow_review(self.folder,now_utc=AFTER)
-        with patch("ultimate_batch_acceptance.inspect_metadata",
+        with patch("ultimate_batch_acceptance.load_vault",
                    side_effect=AssertionError("NO_EXTRA_VAULT_READ")),patch(
              "ultimate_batch_acceptance.shadow_review",
                    side_effect=AssertionError("NO_DUPLICATE_V3_RUN")):
@@ -217,6 +217,20 @@ class FourStageBatchAcceptance(unittest.TestCase):
             self.assertEqual(r["stages"]["archive"]["status"],"PRIVATE_VAULT_NOT_READABLE")
             self.assertEqual(r["stages"]["analysis"]["technicalWatch"],"NONE")
         self.assertFalse(self.folder.joinpath("fake-approval").exists())
+
+    def test_standalone_four_stages_read_only_one_verified_vault(self):
+        ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
+        with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+            with patch("ultimate_batch_acceptance.load_vault",
+                       wraps=load_vault) as one_read:
+                report=review_batch(self.folder,now_utc=AFTER)
+        self.assertEqual(one_read.call_count,1)
+        self.assert_blocked(report)
+        self.assertEqual(report["stages"]["analysis"]["status"],
+                         "FROZEN_V3_TECHNICAL_OBSERVATION_ONLY")
+        self.assertEqual(report["stages"]["archive"]["closedCounts"]["H4"],
+                         len(load_vault(self.folder)["closed"]["H4"]))
+        self.assertFalse(report["stages"]["paper"]["paperOrdersAllowed"])
 
     def test_stale_archive_never_leaks_a_buy_or_sell(self):
         ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
