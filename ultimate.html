@@ -197,6 +197,61 @@ document.addEventListener('DOMContentLoaded',function(){
   }
 });
 </script>
+
+<!-- GPP_REFERENCE_DASHBOARD_20261118: read-only visual dashboard; values never invented. -->
+<style id="gpp-reference-dashboard-style">
+#gpp-reference-dashboard{background:linear-gradient(145deg,#0c1b2c,#101f32);border:1px solid #8c7549;border-radius:17px;padding:12px;margin:12px 0;color:#e9f0f8;box-shadow:0 10px 30px #0008}
+#gpp-reference-dashboard *{box-sizing:border-box}
+#gpp-reference-dashboard .gpp-brand{text-align:center;font-size:1.22rem;font-weight:900;color:#eac77c;margin:3px 0 5px}
+#gpp-reference-dashboard .gpp-tagline{text-align:center;color:#b9c8d9;font-size:.77rem;margin:0 0 14px}
+#gpp-reference-dashboard .gpp-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:13px}
+#gpp-reference-dashboard .gpp-tabs a{background:#213750;color:#e5d2a2;border:1px solid #415c75;border-radius:10px;text-decoration:none;text-align:center;padding:11px 2px;font-size:.78rem;min-height:45px}
+#gpp-reference-dashboard .gpp-tabs a:first-child{background:linear-gradient(130deg,#f3d995,#cba052);color:#152237;font-weight:850}
+#gpp-reference-dashboard .gpp-quote{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #3b526a;border-radius:13px;background:#14273a;padding:12px}
+#gpp-reference-dashboard .gpp-symbol{font-weight:850;font-size:1.16rem}
+#gpp-reference-dashboard .gpp-sub{color:#aabdd1;font-size:.76rem;line-height:1.6}
+#gpp-reference-dashboard .gpp-quote-main{text-align:center;min-width:0}
+#gpp-reference-dashboard .gpp-price{font-size:1.05rem;color:#f3d78f;font-weight:800;overflow-wrap:anywhere}
+#gpp-reference-dashboard .gpp-pill{display:inline-block;border:1px solid #d2a85c;color:#f3d78f;background:#3b3024;border-radius:50px;padding:5px 9px;font-size:.73rem;font-weight:700}
+#gpp-reference-dashboard .gpp-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:10px 0}
+#gpp-reference-dashboard .gpp-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+#gpp-reference-dashboard .gpp-mini{border:1px solid #38536b;border-radius:11px;background:#14273b;padding:11px 6px;text-align:center;min-width:0}
+#gpp-reference-dashboard .gpp-mini b{display:block;color:#eacb84;font-size:.79rem;margin-bottom:7px}
+#gpp-reference-dashboard .gpp-mini strong{display:block;font-size:.81rem;overflow-wrap:anywhere;line-height:1.45}
+#gpp-reference-dashboard .gpp-mini span{display:block;color:#a8bdd0;font-size:.68rem;margin-top:5px}
+#gpp-reference-dashboard .gpp-status{border:1px solid #b27a6d;background:#32232c;border-radius:12px;padding:12px;margin-top:10px}
+#gpp-reference-dashboard .gpp-status strong{color:#f1cb80;font-size:1.04rem}
+#gpp-reference-dashboard .gpp-status p{font-size:.78rem;color:#e0c9c9;margin:6px 0 0}
+#gpp-reference-dashboard .gpp-cta{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+#gpp-reference-dashboard .gpp-cta a{display:block;text-align:center;text-decoration:none;padding:13px 5px;border:1px solid #d2aa63;border-radius:12px;background:linear-gradient(130deg,#f3d997,#c99c4b);color:#1b2635;font-weight:850;font-size:.85rem}
+#gpp-reference-dashboard .gpp-cta a:last-child{background:#1b2b3d;color:#b8c6d7;border-color:#52657b}
+#gpp-reference-dashboard .gpp-proof{color:#d9c38c;font-size:.74rem;margin-top:10px;line-height:1.6}
+@media(max-width:440px){#gpp-reference-dashboard{padding:10px}#gpp-reference-dashboard .gpp-tabs a{font-size:.69rem}#gpp-reference-dashboard .gpp-grid{gap:5px}#gpp-reference-dashboard .gpp-mini{padding:9px 3px}#gpp-reference-dashboard .gpp-mini b{font-size:.68rem}#gpp-reference-dashboard .gpp-mini strong{font-size:.73rem}}
+</style>
+<section id="gpp-reference-dashboard" aria-label="لوحة Gold Precision الرئيسية" dir="rtl">
+<div class="gpp-brand">♛ Gold Precision Pro Ultimate</div>
+<p class="gpp-tagline">تحليل الذهب الاحترافي · شاشة مراجعة للقراءة فقط</p>
+<nav class="gpp-tabs" aria-label="التنقل في النظام">
+<a href="#biquote-live-chart-panel">تحليل الذهب</a><a href="#gpp-simulator-details">الاختبارات</a><a href="#paper-statistics">السجل</a><a href="#gdc-gates">الإعدادات</a>
+</nav>
+<div class="gpp-quote"><div><div class="gpp-symbol">XAUUSD</div><div class="gpp-sub">الذهب / الدولار</div></div><div class="gpp-quote-main"><div id="gpp-dash-price" class="gpp-price">غير متاح</div><div id="gpp-dash-update" class="gpp-sub">آخر تحديث: غير متاح</div></div><div><span class="gpp-pill">BiQuote · مرصود</span><div class="gpp-sub">ليس بث MT5</div></div></div>
+<div class="gpp-grid"><div class="gpp-mini"><b>التحليل الفني</b><strong id="gpp-dash-technical">غير محسوم</strong><span>H4 / H1 / M15</span></div><div class="gpp-mini"><b>DXY</b><strong>غير متاح</strong><span>تأكيد مستقل مطلوب</span></div><div class="gpp-mini"><b>US02Y / US10Y</b><strong>غير متاح</strong><span>تحديث حي غير مثبت</span></div><div class="gpp-mini"><b>GC</b><strong>غير متاح</strong><span>بيانات مرخّصة مطلوبة</span></div></div>
+<div class="gpp-grid two"><div class="gpp-mini"><b>الأخبار الاقتصادية</b><strong>لا تأكيد حي</strong><span>لا تُفترض أخبار آنية</span></div><div class="gpp-mini"><b>Order Flow</b><strong>غير متاح حياً</strong><span>بيانات GC غير موصولة</span></div><div class="gpp-mini"><b>جودة البيانات</b><strong>غير مؤهّلة بعد</strong><span>فحص الفجوات والجلسات</span></div><div class="gpp-mini"><b>حقوق المصدر</b><strong>غير مثبتة</strong><span>مطلوب توثيق الترخيص</span></div></div>
+<div class="gpp-status" role="status"><strong>حالة النظام: WAIT</strong><p>executable = false · لا توجد صفقات فعلية معتمدة. لا تُستخدم بيانات الاختبار كإشارات حية.</p></div>
+<div class="gpp-cta"><a href="#paper-actions">التداول الورقي فقط</a><a href="#gdc-gates" aria-label="التداول الحقيقي غير متاح؛ عرض شروط الجاهزية">🔒 التداول الحقيقي مقفل</a></div>
+<div class="gpp-proof">الأرقام والإشارات غير المؤكدة تُعرض «غير متاح» بدل بيانات توضيحية. شارت BiQuote المرصود تحت هذه اللوحة مباشرة.</div>
+</section>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+ var panel=document.getElementById('gpp-reference-dashboard');
+ var chart=document.getElementById('biquote-live-chart-panel');
+ var decision=document.getElementById('gold-decision-center');
+ if(panel&&chart&&chart.parentNode){chart.parentNode.insertBefore(panel,chart); if(decision&&chart.nextElementSibling!==decision){chart.insertAdjacentElement('afterend',decision)}}
+ // Only copy text actually supplied by the existing observation pipeline.
+ var observed=document.getElementById('gdc-observed'),target=document.getElementById('gpp-dash-update');
+ if(observed&&target){var refresh=function(){var v=(observed.textContent||'').trim();target.textContent=v||'آخر تحديث: غير متاح'};refresh();new MutationObserver(refresh).observe(observed,{childList:true,characterData:true,subtree:true})}
+});
+</script>
 <nav class="unified-mobile-nav" aria-label="أقسام نظام الذهب الموحد">
 <a href="#gold-decision-center">القرار</a><a href="#biquote-live-chart-panel">شارت الذهب</a><a href="#paper-actions">تداول ورقي</a><a href="#paper-statistics">السجل</a>
 </nav>
