@@ -8,6 +8,7 @@ from unittest.mock import patch
 from biquote_24h_observer import (
     AUTHORIZATION_ENV, AUTHORIZATION_VALUE, INTERVAL_SECONDS, MAX_PUBLIC_REQUESTS,
     MAX_SAMPLES, QualityCounters, main, observe_24h,
+    PRIVATE_CAPTURE_CLASSES, classify_private_capture_failure,
 )
 
 UTC = dt.timezone.utc
@@ -94,6 +95,54 @@ class BiQuote24hOfflineTests(unittest.TestCase):
             self.assertNotIn("ask", event)
             self.assertNotIn("stagedBidFrames", event)
             self.assertNotIn("stagedAskFrames", event)
+
+    def test_private_archive_rejection_is_fixed_enum_not_provider_or_price(self):
+        self.assertEqual(classify_private_capture_failure("CLOSED_CANDLE_REVISED_H1"),
+                         "CLOSED_BAR_REVISION")
+        self.assertEqual(classify_private_capture_failure("QUOTE_STALE_OR_FUTURE"),
+                         "QUOTE_CLOCK_OR_MARKET")
+        self.assertEqual(classify_private_capture_failure("LATE_OR_OUT_OF_ORDER_BACKFILL_H4"),
+                         "LATE_HISTORY_BACKFILL")
+        self.assertEqual(classify_private_capture_failure("PRIVATE_PASSWORD_OR_PRICE_3872"),
+                         "OTHER_PRIVATE_CAPTURE_FAILURE")
+        self.assertEqual(classify_private_capture_failure(None),
+                         "OTHER_PRIVATE_CAPTURE_FAILURE")
+        self.assertEqual(set(PRIVATE_CAPTURE_CLASSES),
+                         {"NONE", "QUOTE_CLOCK_OR_MARKET", "QUOTE_PRICE_PARITY",
+                          "TICK_ORDER_OR_REVISION", "CLOSED_BAR_REVISION",
+                          "LATE_HISTORY_BACKFILL", "CLOSED_HISTORY_FRESHNESS",
+                          "CROSS_FRAME_PRICE_CONFLICT", "FRAME_STRUCTURE",
+                          "CAPACITY_LIMIT", "PRIVATE_STORAGE_SECURITY",
+                          "OTHER_PRIVATE_CAPTURE_FAILURE"})
+        clock=FakeClock(START+dt.timedelta(hours=23,minutes=58))
+        events=[]
+        fail=sample()
+        fail["privateArchive"]={"attempted":True,"saved":False,
+                                "blockedReason":"CLOSED_CANDLE_REVISED_H1"}
+        report=observe_24h(START, probe=lambda:fail,
+                           utc_now=clock.now, sleep=clock.sleep,
+                           emit=events.append)
+        self.assertEqual(report["signal"],"WAIT")
+        self.assertEqual(report["privateArchiveRejectedSnapshots"],1)
+        self.assertEqual(report["privateArchiveRejectedByClass"]["CLOSED_BAR_REVISION"],1)
+        self.assertEqual(events[0]["archiveRejectionClass"],"CLOSED_BAR_REVISION")
+        self.assertFalse(events[0]["executable"])
+        self.assertNotIn("blockedReason",str(events))
+        self.assertNotIn("privateArchive",str(events[0]))
+        self.assertNotIn('"bid"',str(events))
+        self.assertNotIn('"ask"',str(events))
+
+    def test_malicious_capture_rejection_not_logged_verbatim(self):
+        clock=FakeClock(START+dt.timedelta(hours=23,minutes=58))
+        events=[]
+        bad=sample()
+        bad["privateArchive"]={"attempted":True,"saved":False,
+                               "blockedReason":"SENSITIVE_VENDOR_PRIVATE_PASSWORD"}
+        observe_24h(START,probe=lambda:bad,utc_now=clock.now,
+                    sleep=clock.sleep,emit=events.append)
+        self.assertEqual(events[0]["archiveRejectionClass"],
+                         "OTHER_PRIVATE_CAPTURE_FAILURE")
+        self.assertNotIn("SENSITIVE_VENDOR_PRIVATE_PASSWORD",str(events))
 
     def test_diagnostics_distinguish_http_faults_from_h4_internal_gap(self):
         counters=QualityCounters()

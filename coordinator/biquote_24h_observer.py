@@ -26,6 +26,63 @@ MAX_PUBLIC_REQUESTS = MAX_SAMPLES * REQUESTS_PER_SAMPLE
 AUTHORIZATION_ENV = "GPP_BIQUOTE_PUBLIC_24H_REVIEW"
 AUTHORIZATION_VALUE = "APPROVED_READONLY_NO_TRADING"
 
+# Private capture failures are deliberately bucketed into fixed, price-free
+# labels. Raw error/provider text is never logged or forwarded to the demo.
+PRIVATE_CAPTURE_CLASSES = (
+    "NONE",
+    "QUOTE_CLOCK_OR_MARKET",
+    "QUOTE_PRICE_PARITY",
+    "TICK_ORDER_OR_REVISION",
+    "CLOSED_BAR_REVISION",
+    "LATE_HISTORY_BACKFILL",
+    "CLOSED_HISTORY_FRESHNESS",
+    "CROSS_FRAME_PRICE_CONFLICT",
+    "FRAME_STRUCTURE",
+    "CAPACITY_LIMIT",
+    "PRIVATE_STORAGE_SECURITY",
+    "OTHER_PRIVATE_CAPTURE_FAILURE",
+)
+
+def classify_private_capture_failure(code):
+    """Normalize a protected vault's rejection to a non-sensitive enum."""
+    if type(code) is not str or not 3 <= len(code) <= 72:
+        return "OTHER_PRIVATE_CAPTURE_FAILURE"
+    if code in ("QUOTE_STALE_OR_FUTURE", "QUOTE_NOT_VALID_FRESH_OPEN",
+                "OUT_OF_ORDER_TICK"):
+        return ("TICK_ORDER_OR_REVISION" if code == "OUT_OF_ORDER_TICK"
+                else "QUOTE_CLOCK_OR_MARKET")
+    if code in ("MID_PARITY_FAILED", "QUOTE_SPREAD_PARITY_FAILED"):
+        return "QUOTE_PRICE_PARITY"
+    if code == "SAME_TICK_REVISED":
+        return "TICK_ORDER_OR_REVISION"
+    if code in ("CLOSED_CANDLE_REVISED_M15", "CLOSED_CANDLE_REVISED_H1",
+                "CLOSED_CANDLE_REVISED_H4"):
+        return "CLOSED_BAR_REVISION"
+    if code in ("LATE_OR_OUT_OF_ORDER_BACKFILL_M15",
+                "LATE_OR_OUT_OF_ORDER_BACKFILL_H1",
+                "LATE_OR_OUT_OF_ORDER_BACKFILL_H4"):
+        return "LATE_HISTORY_BACKFILL"
+    if code in ("CLOSED_HISTORY_STALE_M15", "CLOSED_HISTORY_STALE_H1",
+                "CLOSED_HISTORY_STALE_H4"):
+        return "CLOSED_HISTORY_FRESHNESS"
+    if code in ("CROSS_FRAME_OHLC_MISMATCH",
+                "PARTIAL_CROSS_FRAME_OBSERVED_PRICE_BOUNDS_INVALID"):
+        return "CROSS_FRAME_PRICE_CONFLICT"
+    if code.startswith("FRAME_VALIDATION_"):
+        return "FRAME_STRUCTURE"
+    if code in ("QUOTE_OBSERVATION_CAP", "MAX_CANDLE_CAP_M15",
+                "MAX_CANDLE_CAP_H1", "MAX_CANDLE_CAP_H4",
+                "VAULT_STORAGE_BUDGET_REACHED", "VAULT_SIZE_EXCEEDED"):
+        return "CAPACITY_LIMIT"
+    if code in ("PRIVATE_ABSOLUTE_PATH_REQUIRED", "PRIVATE_DIR_REQUIRED",
+                "VAULT_DIR_NOT_OWNER_ONLY", "VAULT_DIR_OWNER_MISMATCH",
+                "VAULT_FILE_UNSAFE_PERMISSIONS_OR_SYMLINK",
+                "VAULT_FILE_OWNER_MISMATCH", "VAULT_FILE_UNSAFE_AFTER_OPEN",
+                "VAULT_TAMPER_OR_HASH_MISMATCH", "VAULT_UNREADABLE",
+                "VAULT_PROVENANCE_INVALID"):
+        return "PRIVATE_STORAGE_SECURITY"
+    return "OTHER_PRIVATE_CAPTURE_FAILURE"
+
 def _utc(value):
     if isinstance(value, dt.datetime) and value.tzinfo is not None and value.utcoffset() == dt.timedelta(0):
         return value.astimezone(UTC)
@@ -70,6 +127,7 @@ class QualityCounters:
         self.archive_attempts = 0
         self.archive_saved = 0
         self.archive_failed = 0
+        self.archive_failure_classes = {k: 0 for k in PRIVATE_CAPTURE_CLASSES if k != "NONE"}
         self.archive_new_bars = {tf: 0 for tf in ("M15", "H1", "H4")}
         # The previous 24-hour run had 29 failed snapshots but no per-endpoint
         # fault evidence. Future opt-in bounded observations distinguish them
@@ -150,6 +208,8 @@ class QualityCounters:
                         self.archive_new_bars[tf] += n
             elif private.get("blockedReason"):
                 self.archive_failed += 1
+                category = classify_private_capture_failure(private.get("blockedReason"))
+                self.archive_failure_classes[category] += 1
         if result.get("structuralAudit", {}).get("ohlcStructuralChecksPassed"):
             self.audit_ok += 1
         if result.get("dataGeometryConformance") == "SHAPE_CHECKS_FAILED_OR_INCOMPLETE":
@@ -220,6 +280,7 @@ class QualityCounters:
             "privateArchiveAttempts": self.archive_attempts,
             "privateArchiveSavedSnapshots": self.archive_saved,
             "privateArchiveRejectedSnapshots": self.archive_failed,
+            "privateArchiveRejectedByClass": dict(self.archive_failure_classes),
             "privateArchiveNewClosedBars": dict(self.archive_new_bars),
             "orderEndpointsCalled": False,
             "cloudIndependentRightsProven": False,
@@ -297,6 +358,11 @@ def observe_24h(start_utc, *, probe=one_shot_probe, utc_now=None,
                 "geometryFailureClass": result.get("geometryFailureClass", "UNAVAILABLE"),
                 "archiveSavedSnapshotsSoFar": counters.archive_saved,
                 "archiveRejectedSnapshotsSoFar": counters.archive_failed,
+                "archiveRejectionClass": (classify_private_capture_failure(
+                    result.get("privateArchive", {}).get("blockedReason"))
+                    if result.get("privateArchive", {}).get("attempted") is True
+                    and result.get("privateArchive", {}).get("blockedReason")
+                    else "NONE"),
                 "staleOrGapSamplesSoFar": counters.quote_stale + counters.missing_ohlc_overlap,
                 "requestsAttemptedSoFar": counters.requests_attempted})
     # The final scheduled sample occurs at T+23h58m. Continue observing
