@@ -138,6 +138,10 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
     closedCounts:{M15:0,H1:0,H4:0},
     consecutiveClosedCounts:{M15:0,H1:0,H4:0},
     dataSourceIndependentlyAuthenticated:false,sessionGapsProven:false,
+    automaticQuoteDeletionAllowed:false,
+    capacityStatus:"CAPACITY_HEADROOM",
+    quoteSamplesRemaining:10000,quoteSamplesHardCap:10000,
+    archiveCapacityExhausted:false,
     quoteSamples:[{ask:12346}]},
    analysis:{status:"WAIT_CLOSED_DATA_OR_CONTEXT",
     approvedDirection:"NONE",technicalWatch:"NONE",entry:null,
@@ -162,6 +166,9 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  a.equal(outBatch.body.ultimateFourStageBatch.analysisStatus,"WAIT_CLOSED_DATA_OR_CONTEXT");
  a.equal(outBatch.body.ultimateFourStageBatch.technicalWatch,"NONE");
  a.equal(outBatch.body.ultimateFourStageBatch.frameCounts.H4.contiguous,0);
+ a.equal(outBatch.body.ultimateFourStageBatch.capacityStatus,"CAPACITY_HEADROOM");
+ a.equal(outBatch.body.ultimateFourStageBatch.quoteSamplesRemaining,10000);
+ a.equal(outBatch.body.ultimateFourStageBatch.capacityExhausted,false);
  for(const secret of ["12345","12346","12347","12348","PRIVATE_SECRET_TOKEN",
                       "fakeProfit","rawCandles","unknownApiKey"]){
   a.ok(!JSON.stringify(outBatch).includes(secret),"No prices or secrets on mobile");
@@ -174,7 +181,13 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
    {stages:{...batch.stages,paper:{...batch.stages.paper,
     paperOrdersAllowed:true}}},
    {stages:{...batch.stages,archive:{...batch.stages.archive,
-    consecutiveClosedCounts:{M15:0,H1:0,H4:999}}}}]){
+    consecutiveClosedCounts:{M15:0,H1:0,H4:999}}}},
+   {stages:{...batch.stages,archive:{...batch.stages.archive,
+    capacityStatus:"CAPACITY_LIMIT_REACHED",archiveCapacityExhausted:false}}},
+   {stages:{...batch.stages,archive:{...batch.stages.archive,
+    quoteSamplesRemaining:-3}}},
+   {stages:{...batch.stages,archive:{...batch.stages.archive,
+    automaticQuoteDeletionAllowed:true}}}]){
    const bad=await relay(auth,{approved:true,fetchFn:async()=>mock({
     ...expected,ultimateFourStageBatch:{...batch,...change}})});
    a.equal(bad.httpStatus,503,"Forged batch readiness rejected");
