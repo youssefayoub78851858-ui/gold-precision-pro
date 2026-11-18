@@ -116,7 +116,11 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertIn('ref?.paperOrdersAllowed===false',PUBLIC)
         self.assertIn('el("forward-gap-reference").textContent=',PUBLIC)
         self.assertIn("لا تثبت اكتمال بيانات BiQuote أو صلاحية التداول",PUBLIC)
-        self.assertNotIn('vault.closed',PUBLIC)
+        # Safe metadata `vault.closedFrameFreshness` is allowed;
+        # the raw closed-candle collection must stay inaccessible.
+        for raw_collection in ('vault.closed[','vault.closed.','vault.closed?.',
+                               'vault.closed;','vault.quoteObservations'):
+            self.assertNotIn(raw_collection,PUBLIC)
         self.assertNotIn('vault.quoteObservations',PUBLIC)
 
     def test_mobile_shadow_parity_uses_only_safe_comparison_counts(self):
