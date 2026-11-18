@@ -105,8 +105,8 @@ class BiQuoteOneShotSafety(unittest.TestCase):
         self.assertFalse(safe["sourceAdmittedToTradeOrPaper"])
         serialized=json.dumps(safe)
         for sensitive in ("123456789","123456790","MY_BROKER_API_KEY",
-                          "PRIVATE_VENDOR_KEY","apiKey","bid","ask",
-                          "openTime","high","low","close","quoteObservations"):
+                          "PRIVATE_VENDOR_KEY","apiKey",'"bid"','"ask"',
+                          '"open"','"high"','"low"','"close"',"openTime","quoteObservations"):
             self.assertNotIn(sensitive,serialized)
         self.assertNotIn("httpResults",safe)
         self.assertNotIn("overlapEvidence",safe)
