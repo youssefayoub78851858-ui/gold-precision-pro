@@ -25,6 +25,7 @@ from biquote_session_gap_audit import audit_closed_timestamp_reference
 from biquote_forward_shadow_review import tail_contiguous, overlaps_match, WIDTH
 from private_forward_capacity_preflight import capacity_readiness
 from biquote_quote_mid_parity import audit_closed_quote_mid_parity
+from biquote_sampled_spread_buckets import audited_sampled_spread_buckets, BINS
 
 UTC = dt.timezone.utc
 DAYS = 7
@@ -190,6 +191,37 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
                  "tradeEligible":False,**SAFE})
         except (OSError,ValueError,TypeError,KeyError,OverflowError):
             log({"event":"BIQUOTE_STAGE3_QUOTE_MID_RANGE_UNAVAILABLE",
+                 "phase":phase,"dayIndex":index,**SAFE})
+        # Same sealed private archive, only six fixed spread-bucket counts.
+        # These sporadic quotes do NOT equal a continuous executable BBO
+        # stream, broker commission schedule, or matched historical spread.
+        try:
+            spread = audited_sampled_spread_buckets(original)
+            buckets = spread["buckets"]
+            n = spread["sourceQuoteSamples"]
+            if (spread["status"] not in ("OBSERVED_SPARSE_QUOTES_ONLY",
+                                        "NO_RECORDED_QUOTES") or
+                spread["mode"]!="BIQUOTE_PRIVATE_SAMPLED_SPREAD_COUNTS_V1" or
+                spread["signal"]!="WAIT" or spread["executable"] is not False or
+                spread["paperOrdersAllowed"] is not False or
+                spread["liveOrdersAllowed"] is not False or
+                spread["sourceRightsVerified"] is not False or
+                spread["brokerCommissionSlippageVerified"] is not False or
+                type(n) is not int or n!=len(original["quoteObservations"]) or
+                not isinstance(buckets,dict) or set(buckets)!=set(BINS) or
+                any(type(buckets[k]) is not int or buckets[k]<0 for k in BINS) or
+                sum(buckets.values())!=n):
+                raise ValueError("UNVERIFIED_OR_CONTRADICTORY_SPREAD_HISTOGRAM")
+            log({"event":"BIQUOTE_STAGE3_SAMPLED_SPREAD_BUCKETS",
+                 "phase":phase,"dayIndex":index,
+                 "status":spread["status"],
+                 "sourceQuoteSamples":n,"buckets":dict(buckets),
+                 "quoteSamplesSparseNotExecutionBBO":True,
+                 "brokerContractFeesVerified":False,
+                 "independentBrokerParityVerified":False,
+                 "tradeEligible":False,**SAFE})
+        except (OSError,ValueError,TypeError,KeyError,OverflowError):
+            log({"event":"BIQUOTE_STAGE3_SPREAD_BUCKETS_UNAVAILABLE",
                  "phase":phase,"dayIndex":index,**SAFE})
 
     completed = skipped = 0
