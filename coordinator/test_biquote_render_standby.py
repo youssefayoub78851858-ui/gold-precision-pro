@@ -32,6 +32,7 @@ class BiQuoteRenderStandbySafety(unittest.TestCase):
                      "ultimate_signal_quality_report.js","ultimate_shadow_admission.js"):
             self.assertIn(name,docker)
         self.assertIn("ultimate_batch_acceptance.py",docker)
+        self.assertIn("private_forward_capacity_preflight.py",docker)
         self.assertIn("biquote_24h_final_verdict.py",docker)
         self.assertIn('CMD ["python3", "/app/entrypoint.py"]', docker)
         self.assertIn('DATA_DIR=/var/data/gold-live', docker)
