@@ -24,6 +24,7 @@ import sys
 
 from biquote_offline_source_audit import FRAMES, _frame, _utc
 from biquote_overlap_evidence import diagnose_biquote_overlap
+from biquote_session_gap_audit import audit_closed_timestamp_reference
 
 UTC = dt.timezone.utc
 START = dt.datetime(2026, 11, 18, tzinfo=UTC)
@@ -333,12 +334,28 @@ def inspect_metadata(dirname):
     v=load_vault(dirname)
     coverage={tf:_closed_coverage(v["closed"][tf],tf,v["lastImportedUTC"])
               for tf in FRAMES_ORDER}
+    # Only aggregate closed timestamp gaps, never a broker calendar or prices.
+    # Derive the private, read-only vendor pause hypothesis from this SAME
+    # checksum-protected archive already loaded above. Fail closed on any
+    # inconsistent metadata; this can never promote source or trading rights.
+    gap_reference=audit_closed_timestamp_reference({
+        tf:[row["openTime"] for row in v["closed"][tf]] for tf in FRAMES_ORDER})
+    if gap_reference["status"]!="REFERENCE_ONLY_NOT_BROKER_VERIFIED":
+        _fail("SEALED_GAP_REFERENCE_NOT_RELIABLE")
+    for tf in FRAMES_ORDER:
+        if (gap_reference["frames"][tf]["persistedClosed"]!=len(v["closed"][tf])
+            or gap_reference["frames"][tf]["unclassifiedMissingSlots"]
+                !=coverage[tf]["unclassifiedMissingSlots"]
+            or gap_reference["frames"][tf]["gapPairs"]
+                !=coverage[tf]["unclassifiedGapPairs"]):
+            _fail("SEALED_GAP_REFERENCE_COUNTER_MISMATCH")
     return {**SAFE,
             "status":"PRIVATE_FORWARD_VAULT_METADATA_ONLY",
             "counts":{tf:len(v["closed"][tf]) for tf in FRAMES_ORDER},
             "quoteSamples":len(v["quoteObservations"]),
             "lastImportedUTC":v["lastImportedUTC"],
             "forwardCoverage":coverage,
+            "gapReference":gap_reference,
             "coverageClassification":"GAPS_UNCLASSIFIED_WITHOUT_INDEPENDENT_BROKER_CALENDAR",
             "researchCandidate":"NONE",
             "tradeSignalReady":False,
