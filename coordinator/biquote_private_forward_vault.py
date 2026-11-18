@@ -367,6 +367,64 @@ def capture_freshness(last_imported_utc, quote_samples, *, now_utc=None):
             "asOfUTC": asof}
 
 
+def closed_frame_freshness(coverage, *, now_utc=None):
+    """Price-free age of last truly sealed M15/H1/H4 closes vs UTC *now*.
+
+    A healthy quote does not prove the candle endpoints are updating.
+    Thresholds are diagnostic 2x each timeframe, NOT broker session hours.
+    Do not infer vendor rights, gap exemptions or signal eligibility here.
+    """
+    output={
+        "mode":"BIQUOTE_PRIVATE_CLOSED_FRAME_AGE_DIAGNOSTIC_ONLY",
+        "status":"UNAVAILABLE","signal":"WAIT","executable":False,
+        "sourceQualified":False,"paperOrdersAllowed":False,
+        "brokerCalendarVerified":False,"gapBridgingAllowed":False,
+        "asOfUTC":None,"frames":{}
+    }
+    current=dt.datetime.now(UTC) if now_utc is None else now_utc
+    if (not isinstance(current,dt.datetime) or current.tzinfo is None
+            or current.utcoffset()!=dt.timedelta(0)):
+        return output
+    asof=current.isoformat(timespec="milliseconds").replace("+00:00","Z")
+    if not isinstance(coverage,dict) or set(coverage)!=set(FRAMES_ORDER):
+        return {**output,"asOfUTC":asof}
+    frames={}
+    for tf in FRAMES_ORDER:
+        width=FRAMES[tf][1]
+        item=coverage[tf]
+        if not isinstance(item,dict):
+            return {**output,"asOfUTC":asof}
+        n=item.get("closedBars")
+        close=item.get("lastClosedUTC")
+        if type(n) is not int or not 0<=n<=MAX_CANDLES_PER_FRAME:
+            return {**output,"asOfUTC":asof}
+        if n==0:
+            if close is not None:
+                return {**output,"asOfUTC":asof}
+            frames[tf]={"status":"NO_CLOSED_BAR","ageSeconds":None,
+                        "thresholdSeconds":2*width}
+            continue
+        try:
+            recent_close=_stamp(close)
+        except (TypeError,ValueError):
+            return {**output,"asOfUTC":asof}
+        elapsed=(current-recent_close).total_seconds()
+        if not math.isfinite(elapsed):
+            return {**output,"asOfUTC":asof}
+        if elapsed<0:
+            frames[tf]={"status":"FUTURE_CLOSE_OR_CLOCK_SKEW","ageSeconds":None,
+                        "thresholdSeconds":2*width}
+        else:
+            frames[tf]={
+                "status":"RECENT_UNVERIFIED" if elapsed<=2*width else
+                         "CANDLE_STALE_OVER_TWO_FRAMES",
+                "ageSeconds":min(int(elapsed),31536000),
+                "thresholdSeconds":2*width,
+            }
+    return {**output,"status":"AGE_COUNTS_ONLY_UNVERIFIED","asOfUTC":asof,
+            "frames":frames}
+
+
 def inspect_metadata(dirname, *, now_utc=None):
     """Private counts, closed-bar continuity and last arrival; NO prices."""
     v=load_vault(dirname)
@@ -395,6 +453,8 @@ def inspect_metadata(dirname, *, now_utc=None):
             "captureFreshness":capture_freshness(
                 v["lastImportedUTC"], len(v["quoteObservations"]), now_utc=now_utc),
             "forwardCoverage":coverage,
+            "closedFrameFreshness":closed_frame_freshness(
+                coverage,now_utc=now_utc),
             "gapReference":gap_reference,
             "coverageClassification":"GAPS_UNCLASSIFIED_WITHOUT_INDEPENDENT_BROKER_CALENDAR",
             "researchCandidate":"NONE",
