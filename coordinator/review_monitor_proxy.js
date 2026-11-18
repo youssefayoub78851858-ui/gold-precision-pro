@@ -598,6 +598,23 @@ function sanitize(input){
       "DXY_US02Y_US10Y_AND_EVENT_CONTEXT_NOT_INDEPENDENTLY_LIVE",
       "EXECUTION_BID_ASK_SPREAD_SLIPPAGE_FEES_UNVERIFIED",
       "OUT_OF_SAMPLE_NET_EXPECTANCY_NOT_PROVEN");
+    const warm=a?.sessionWarmupRisk;
+    if(!warm||warm.mode!=="STRICT_GRID_WARMUP_BROKER_CALENDAR_EVIDENCE_PENDING_V1"||
+       warm.status!=="BROKER_SESSION_PROOF_REQUIRED"||
+       warm.signal!=="WAIT"||warm.executable!==false||
+       warm.brokerCalendarVerified!==false||
+       warm.sessionAwareWarmupAllowed!==false||
+       warm.missingCandleBridgingAllowed!==false||
+       warm.futureContinuityGuaranteed!==false||
+       warm.rawGridOnly!==true||
+       !warm.strictContiguous||!warm.unclassifiedGapPairs||
+       !warm.missingStrictClosedUntil21||
+       ["M15","H1","H4"].some(tf=>
+         warm.strictContiguous[tf]!==consecutive[tf]||
+         warm.missingStrictClosedUntil21[tf]!==missing[tf]||
+         warm.unclassifiedGapPairs[tf]!==(
+           stage2Safe?.frames?.[tf]?.unclassifiedGapPairs??0)))
+      throw Error("Unverified broker-session warmup risk or forged gap exemption");
     if(!a||a.mode!=="GOLD_PRECISION_ONE_BATCH_COMPLETION_GATE_V1"||
        a.status!=="WAIT_EXTERNAL_EVIDENCE_AND_FORWARD_DATA"||
        a.signal!=="WAIT"||a.executable!==false||
@@ -624,6 +641,18 @@ function sanitize(input){
       paperOrdersAllowed:false,liveOrdersAllowed:false,
       archiveIntegrityObserved:a.archiveIntegrityObserved,
       missingStrictClosedBarsUntil21:missing,
+      sessionWarmupRisk:{
+       mode:"STRICT_GRID_WARMUP_BROKER_CALENDAR_EVIDENCE_PENDING_V1",
+       status:"BROKER_SESSION_PROOF_REQUIRED",
+       signal:"WAIT",executable:false,rawGridOnly:true,
+       brokerCalendarVerified:false,sessionAwareWarmupAllowed:false,
+       missingCandleBridgingAllowed:false,futureContinuityGuaranteed:false,
+       strictContiguous:{...consecutive},
+       unclassifiedGapPairs:Object.fromEntries(
+        ["M15","H1","H4"].map(tf=>
+         [tf,stage2Safe?.frames?.[tf]?.unclassifiedGapPairs??0])),
+       missingStrictClosedUntil21:missing,
+      },
       remainingBlockerCodes:blockers};
    }
  }
