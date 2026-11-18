@@ -14,6 +14,8 @@ on:
       - 'coordinator/test_biquote_forward_integration.py'
       - 'coordinator/entrypoint.py'
       - 'coordinator/biquote_seven_day_review.py'
+      - 'coordinator/biquote_session_gap_audit.py'
+      - 'coordinator/test_biquote_session_gap_audit.py'
       - 'coordinator/test_biquote_seven_day_review.py'
       - 'coordinator/Dockerfile'
   workflow_dispatch:
@@ -30,7 +32,7 @@ jobs:
           python-version: '3.11'
       - name: Verify no network, private disk, closed-only time seal and archive integrity
         working-directory: coordinator
-        run: python -m unittest -v test_biquote_private_forward_vault test_biquote_forward_integration test_biquote_24h_observer test_biquote_public_one_shot test_biquote_render_standby test_biquote_seven_day_review
+        run: python -m unittest -v test_biquote_private_forward_vault test_biquote_forward_integration test_biquote_24h_observer test_biquote_public_one_shot test_biquote_render_standby test_biquote_seven_day_review test_biquote_session_gap_audit
       - name: Source audit and overlap compatibility unchanged (synthetic only)
         working-directory: coordinator
         run: python -m unittest -v test_biquote_offline_source_audit test_biquote_overlap_evidence
