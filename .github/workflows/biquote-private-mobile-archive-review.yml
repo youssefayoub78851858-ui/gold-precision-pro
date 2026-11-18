@@ -4,6 +4,8 @@ on:
     branches: [review/v2-portable-tests-20261109]
     paths:
       - 'coordinator/biquote_private_forward_vault.py'
+      - 'coordinator/private_forward_capacity_preflight.py'
+      - 'coordinator/test_private_forward_capacity_preflight.py'
       - 'coordinator/test_biquote_private_forward_vault.py'
       - 'coordinator/test_biquote_forward_integration.py'
       - 'coordinator/review_monitor_proxy.js'
@@ -31,7 +33,7 @@ jobs:
         run: node coordinator/test_review_monitor_proxy.js
       - name: Verify private disk archive integrity, continuity and single-poll bridge
         working-directory: coordinator
-        run: python -m unittest -v test_biquote_private_forward_vault test_biquote_forward_integration
+        run: python -m unittest -v test_biquote_private_forward_vault test_biquote_forward_integration test_private_forward_capacity_preflight
       - name: Verify public and private Android pages are readonly
         run: python -m unittest -v coordinator/test_private_mobile_dashboard.py
       - name: Check both embedded mobile scripts compile without fetch
