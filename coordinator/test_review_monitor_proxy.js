@@ -542,6 +542,58 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  a.equal(outBatch.body.ultimateFourStageBatch.capacityStatus,"CAPACITY_HEADROOM");
  a.equal(outBatch.body.ultimateFourStageBatch.quoteSamplesRemaining,10000);
  a.equal(outBatch.body.ultimateFourStageBatch.capacityExhausted,false);
+ // One-shot completion audit is a computed blocker contract,
+ // NEVER an all-green trade or order authorization.
+ const completionAudit={
+  mode:"GOLD_PRECISION_ONE_BATCH_COMPLETION_GATE_V1",
+  status:"WAIT_EXTERNAL_EVIDENCE_AND_FORWARD_DATA",
+  signal:"WAIT",executable:false,paperOrdersAllowed:false,
+  liveOrdersAllowed:false,providerRequestsMade:0,brokerOrdersSent:0,
+  independentMarketRightsVerified:false,brokerSessionDSTVerified:false,
+  GCOrderFlowLicensed:false,independentMacroFeedsVerified:false,
+  executionCostsVerified:false,outOfSampleNetExpectancyVerified:false,
+  archiveIntegrityObserved:false,
+  missingStrictClosedBarsUntil21:{M15:21,H1:21,H4:21},
+  remainingBlockerCodes:[
+   "NO_POST_HOLDOUT_CLOSED_CANDLES",
+   "STRICT_M15_CLOSED_WARMUP_INCOMPLETE",
+   "STRICT_H1_CLOSED_WARMUP_INCOMPLETE",
+   "STRICT_H4_CLOSED_WARMUP_INCOMPLETE",
+   "UNDERLYING_BROKER_MARKET_DATA_RIGHTS_UNCONFIRMED",
+   "BROKER_XAUUSD_SESSION_DST_UNCONFIRMED",
+   "GC_TRADES_MBO_MBP10_LICENSING_NOT_ESTABLISHED",
+   "DXY_US02Y_US10Y_AND_EVENT_CONTEXT_NOT_INDEPENDENTLY_LIVE",
+   "EXECUTION_BID_ASK_SPREAD_SLIPPAGE_FEES_UNVERIFIED",
+   "OUT_OF_SAMPLE_NET_EXPECTANCY_NOT_PROVEN"
+  ],
+  privateProviderApiKey:"MUST_NOT_ESCAPE_MOBILE"};
+ const withCompletion=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,ultimateFourStageBatch:{...batch,completionAudit}
+ })});
+ a.equal(withCompletion.httpStatus,200);
+ a.equal(withCompletion.body.signal,"WAIT");
+ a.equal(withCompletion.body.ultimateFourStageBatch.completionAudit.status,
+         "WAIT_EXTERNAL_EVIDENCE_AND_FORWARD_DATA");
+ a.equal(withCompletion.body.ultimateFourStageBatch.completionAudit.
+   missingStrictClosedBarsUntil21.H4,21);
+ a.equal(withCompletion.body.ultimateFourStageBatch.completionAudit.
+   remainingBlockerCodes.length,10);
+ a.ok(!JSON.stringify(withCompletion).includes("MUST_NOT_ESCAPE_MOBILE"));
+ for(const delta of [
+  {independentMarketRightsVerified:true},{GCOrderFlowLicensed:true},
+  {paperOrdersAllowed:true},{liveOrdersAllowed:true},
+  {status:"READY_TO_TRADE"},
+  {archiveIntegrityObserved:true},
+  {missingStrictClosedBarsUntil21:{M15:0,H1:21,H4:21}},
+  {remainingBlockerCodes:completionAudit.remainingBlockerCodes.slice(1)},
+  {providerRequestsMade:1}
+ ]){
+  const rejected=await relay(auth,{approved:true,fetchFn:async()=>mock({
+   ...expected,ultimateFourStageBatch:{...batch,
+    completionAudit:{...completionAudit,...delta}}
+  })});
+  a.equal(rejected.httpStatus,503,"Completion claims must remain WAIT only");
+ }
  const quality={...batch,
   stages:{...batch.stages,archive:{...batch.stages.archive,
    stage2Status:"WAIT_NO_FORWARD_CLOSED_BARS",
