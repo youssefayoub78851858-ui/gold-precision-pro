@@ -79,7 +79,7 @@ a(doc.includes('التحديث الدوري كل دقيقتين، مش لحظي'
 a(doc.includes('id="biquote-forming-candle-note"'),"Sampled forming candle must be marked partial");
 a(doc.includes('شمعة جزئية من عينات متفرقة'),"No forged true OHLC completeness");
 a(doc.includes('id="paper-chart-not-live"'),"H1 replay chart requires prominent no-live disclaimer");
-a(doc.includes('الشمعة المفتوحة ما عم تتحرك مع سوق الذهب الحقيقي'),"No claim that the demo plots live MT5 candles");
+a(doc.includes('ما في بث MT5 لحظي أو صفقات'),"No claim that the demo plots live MT5 candles");
 a(doc.includes('هيدا شارت محاكاة، مش بث مباشر من MT5'),"Source difference is explicit");
 
 a(doc.includes('شموع MID من BiQuote'),'Actual closed MID source must be labelled');
@@ -88,6 +88,7 @@ const server=fs.readFileSync('server.js','utf8');
 a(server.includes('paperPath==="/paper-terminal" || paperPath==="/paper-terminal.html"'));
 a(server.includes('"/api/v3/ultimate/biquote-observation"'));
 a(server.includes('"/biquote-mobile-ui.js":"biquote-mobile-ui.js"'));
+a(server.includes('"/biquote-live-candle-preview.js":"biquote-live-candle-preview.js"'));
 const script=fs.readFileSync('biquote-mobile-ui.js','utf8');
 a(script.includes('signal!=="WAIT"'));
 a(!script.includes('localStorage')&&!script.includes('sessionStorage'));
@@ -97,7 +98,7 @@ a(script.includes('validPrivateChart(data.privateChart)'));
 a(script.includes('setPrivateChart(null,'));
 a(!script.includes('window.GoldPaperCore')&&!script.includes('C.open('),
  'BiQuote live chart must never reach paper core trade execution');
-a(script.includes('privateChart=null,privateStructure=null,privateMtf=null'));
+a(script.includes('privateChart=null,privateForming=null,privateStructure=null,privateMtf=null'));
 a(script.includes('validateMtf(data.privateStructure.multiFrame,privateStructure)'));
 a(script.includes('displayMtf()'));
 a(script.includes('validateReferenceEma(data.privateStructure.referenceEmaResearch,acceptedChart)'));
