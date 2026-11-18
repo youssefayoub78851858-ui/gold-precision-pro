@@ -106,6 +106,23 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
                 type(coverage.get("unclassifiedMissingSlots")) is not int or
                 not 0<=coverage["unclassifiedMissingSlots"]<=4500000):
                 raise ValueError("INCONSISTENT_STAGE2_PRIVATE_CLOSED_HISTORY")
+        # Stage 3 is a strictly read-only frozen V3 qualification.
+        # A precomputed "evaluated" claim is only accepted when it agrees
+        # with 21 contiguous bars and independently computed M15/H1/H4
+        # overlap counts. These comparisons are NOT broker entitlement.
+        evaluated_claim=sh.get("engineReview")=="FROZEN_V3_COMPLETED_WITH_REAL_OBSERVED_CLOSED_BARS"
+        if evaluated_claim:
+            parity=sh.get("comparedCrossFrames")
+            if any(tails[tf]<21 for tf in FRAMES_ORDER) or not isinstance(parity,dict):
+                raise ValueError("INCONSISTENT_STAGE3_V3_WARMUP")
+            for tf in ("H1","H4"):
+                evidence=parity.get(tf)
+                if (not isinstance(evidence,dict) or
+                    type(evidence.get("fullyCoveredCompared")) is not int or
+                    evidence["fullyCoveredCompared"]<1 or
+                    type(evidence.get("fullyCoveredDisagreed")) is not int or
+                    evidence["fullyCoveredDisagreed"]!=0):
+                    raise ValueError("INCONSISTENT_STAGE3_FRAME_PARITY")
         stage2_frames={tf:{
             "persistedClosed":counts[tf],
             "contiguousClosed":tails[tf],
@@ -159,8 +176,27 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
     evaluated=(isinstance(sh,dict) and
                sh.get("engineReview")=="FROZEN_V3_COMPLETED_WITH_REAL_OBSERVED_CLOSED_BARS")
     analysis_codes=sh.get("reasonCodes",[]) if isinstance(sh,dict) else ["VAULT_UNAVAILABLE_OR_TAMPERED"]
+    ready_frames=sum(1 for tf in FRAMES_ORDER if tails[tf]>=21)
+    stage3_status=("WAIT_ARCHIVE_UNAVAILABLE" if m is None else
+                   "WAIT_CLOSED_BAR_WARMUP" if ready_frames<3 else
+                   "WAIT_INDEPENDENT_FEEDS_AND_RIGHTS" if evaluated else
+                   "WAIT_SHADOW_FRESHNESS_OR_PARITY")
+    stage3_safe={
+        "status":stage3_status,"signal":"WAIT",
+        "minimumContiguousClosedEachFrame":21,
+        "framesWithWarmup":ready_frames,
+        "h4ContiguousClosed":tails["H4"],
+        "h4RemainingUntil21":max(0,21-tails["H4"]),
+        "frozenV3Observed":evaluated,
+        "crossFrameParityObserved":evaluated,
+        "brokerRightsVerified":False,
+        "brokerSessionCalendarVerified":False,
+        "independentMacroOrderFlowVerified":False,
+        "paperOrdersAllowed":False,"liveOrdersAllowed":False,
+    }
     result["stages"]["analysis"]={
         "status":"FROZEN_V3_TECHNICAL_OBSERVATION_ONLY" if evaluated else "WAIT_CLOSED_DATA_OR_CONTEXT",
+        "stage3":stage3_safe,
         "technicalWatch":watch if evaluated else "NONE",
         "approvedDirection":"NONE", "entry":None,
         "stopLoss":None,"takeProfit":None, "winProbability":None,
