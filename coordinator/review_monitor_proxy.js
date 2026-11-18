@@ -248,6 +248,67 @@ function sanitize(input){
      brokerCalendarVerified:false,gapBridgingAllowed:false,
      asOfUTC:f.asOfUTC,frames};
    }
+   // Only counts of internal same-feed BID/ASK tick-mid versus CLOSED
+   // candle OHLC reach Android; no raw private prices or timestamps.
+   // This cannot establish rights, broker parity, fees, or profitability.
+   if(v.quoteCandleMidGeometry!==undefined){
+    const q=v.quoteCandleMidGeometry,frames={};
+    const validStatuses=new Set(["NO_COMPARABLE_CLOSED_SAMPLES",
+      "CONSISTENT_OBSERVED_SAMPLES_ONLY","OBSERVED_MID_OUTSIDE_CLOSED_OHLC",
+      "INVALID_ARCHIVE_WAIT"]);
+    if(!q||q.mode!=="PRIVATE_BIQUOTE_QUOTE_MID_CLOSED_OHLC_COUNTS_V1"||
+       !validStatuses.has(q.status)||q.signal!=="WAIT"||
+       q.executable!==false||q.researchEligible!==false||
+       q.paperOrdersAllowed!==false||q.liveOrdersAllowed!==false||
+       q.brokerRightsVerified!==false||
+       q.brokerSessionCalendarVerified!==false||
+       q.independentBrokerPriceParityVerified!==false||
+       q.historicalBidAskOHLCVerified!==false||
+       q.sourceCandleBasis!=="LIVE_MID_WITH_POSSIBLE_INITIAL_BID_SEED"||
+       !Number.isInteger(q.sourceQuoteSamples)||
+       q.sourceQuoteSamples<0||q.sourceQuoteSamples>v.quoteSamples||
+       !q.frames||typeof q.frames!=="object")
+     throw Error("Unsafe quote-to-closed-bar comparison");
+    if(q.status==="INVALID_ARCHIVE_WAIT"){
+     if(q.sourceQuoteSamples!==0||Object.keys(q.frames).length!==0)
+      throw Error("Invalid tick comparison not quarantined");
+    }else{
+     if(q.sourceQuoteSamples!==v.quoteSamples||
+        Object.keys(q.frames).sort().join(",")!=="H1,H4,M15")
+      throw Error("Quote-to-candle source count inconsistent");
+     for(const tf of ["M15","H1","H4"]){
+      const x=q.frames[tf];
+      const fields=["archivedClosedBars","comparableQuoteSamples",
+       "withinClosedOHLC","outsideClosedOHLC","notInArchivedClosedBars",
+       "distinctComparableClosedBars"];
+      if(!x||fields.some(k=>!Number.isInteger(x[k])||x[k]<0)||
+         x.archivedClosedBars!==counts[tf]||
+         x.comparableQuoteSamples+x.notInArchivedClosedBars!==v.quoteSamples||
+         x.withinClosedOHLC+x.outsideClosedOHLC!==x.comparableQuoteSamples||
+         x.distinctComparableClosedBars>Math.min(counts[tf],x.comparableQuoteSamples)||
+         x.comparableQuoteSamples>v.quoteSamples)
+       throw Error("Contradictory internal midpoint evidence");
+      frames[tf]={
+       comparableQuoteSamples:x.comparableQuoteSamples,
+       withinClosedOHLC:x.withinClosedOHLC,
+       outsideClosedOHLC:x.outsideClosedOHLC,
+       notInArchivedClosedBars:x.notInArchivedClosedBars,
+       distinctComparableClosedBars:x.distinctComparableClosedBars};
+     }
+     const sample=Object.values(frames).some(x=>x.comparableQuoteSamples>0),
+      conflict=Object.values(frames).some(x=>x.outsideClosedOHLC>0),
+      expected=conflict?"OBSERVED_MID_OUTSIDE_CLOSED_OHLC":
+       sample?"CONSISTENT_OBSERVED_SAMPLES_ONLY":"NO_COMPARABLE_CLOSED_SAMPLES";
+     if(q.status!==expected)throw Error("Forged midpoint verdict");
+    }
+    safeForward.quoteCandleMidGeometry={
+     mode:"PRIVATE_BIQUOTE_QUOTE_MID_CLOSED_OHLC_COUNTS_V1",
+     status:q.status,signal:"WAIT",executable:false,
+     paperOrdersAllowed:false,brokerRightsVerified:false,
+     brokerSessionCalendarVerified:false,
+     independentBrokerPriceParityVerified:false,
+     sourceQuoteSamples:q.sourceQuoteSamples,frames};
+   }
    // Gap classification is a *vendor reference hypothesis*, not proof of
    // an upstream broker schedule. Forward aggregated integers only, never
    // timestamp arrays or market price payloads from the sealed vault.
