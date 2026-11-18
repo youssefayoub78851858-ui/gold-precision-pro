@@ -7,7 +7,7 @@ import unittest
 import urllib.error
 from unittest.mock import patch
 
-from biquote_public_one_shot import ENDPOINTS, one_shot_probe
+from biquote_public_one_shot import ENDPOINTS, one_shot_probe, public_log_summary
 from test_biquote_offline_source_audit import NOW, make_samples, iso
 
 
@@ -82,6 +82,50 @@ class BiQuoteOneShotSafety(unittest.TestCase):
         self.assertIs(report["sessionGapReferenceOnly"]["executable"],False)
         self.assertEqual(report["sessionGapReferenceOnly"]["signal"],"WAIT")
         self.assertIn("MID_", report["structuralAudit"]["candlePriceBasis"])
+
+    def test_public_ci_summary_never_logs_quote_prices_or_secrets(self):
+        opener,_,packet=fake_setup()
+        output=one_shot_probe(opener,lambda:NOW)
+        self.assertTrue(output["allHttp200AndValidJson"])
+        output["unknownSecret"]="MY_BROKER_API_KEY"
+        output["httpResults"][0]["bid"]=123456789
+        output["httpResults"][0]["ask"]=123456790
+        output["qualityDiagnostic"]["providerApiKey"]="PRIVATE_VENDOR_KEY"
+        safe=public_log_summary(output)
+        self.assertEqual(safe["signal"],"WAIT")
+        self.assertFalse(safe["executable"])
+        self.assertFalse(safe["researchEligible"])
+        self.assertFalse(safe["paperOrdersAllowed"])
+        self.assertTrue(safe["allFourHttpAndJsonOk"])
+        self.assertEqual(set(safe["fixedEndpointCodes"]),
+                         {"quote","M15","H1","H4"})
+        self.assertEqual(safe["fixedEndpointCodes"]["quote"],"OK")
+        self.assertFalse(safe["brokerUpstreamRightsIndependentlyVerified"])
+        self.assertFalse(safe["brokerSessionCalendarVerified"])
+        self.assertFalse(safe["sourceAdmittedToTradeOrPaper"])
+        serialized=json.dumps(safe)
+        for sensitive in ("123456789","123456790","MY_BROKER_API_KEY",
+                          "PRIVATE_VENDOR_KEY","apiKey","bid","ask",
+                          "openTime","high","low","close","quoteObservations"):
+            self.assertNotIn(sensitive,serialized)
+        self.assertNotIn("httpResults",safe)
+        self.assertNotIn("overlapEvidence",safe)
+        self.assertNotIn("structuralAudit",safe)
+
+    def test_public_ci_summary_rejects_vendor_injected_diagnostic_labels(self):
+        packet={"qualityDiagnostic":{"endpoint":{
+            "quote":"NEVER_PRINT_PROVIDER_AUTH_SECRET",
+            "M15":"HTTP_429","H1":"INVALID_JSON_OR_ENVELOPE","H4":"OK"
+        }},
+        "allHttp200AndValidJson":False,
+        "structuralAudit":{"quoteAgeSeconds":float("nan")}}
+        safe=public_log_summary(packet)
+        self.assertEqual(safe["fixedEndpointCodes"]["quote"],"NO_HTTP_RESPONSE")
+        self.assertEqual(safe["fixedEndpointCodes"]["M15"],"HTTP_429")
+        self.assertIsNone(safe["independentQuoteAgeSeconds"])
+        self.assertFalse(safe["quoteAgeAcceptableAt30Seconds"])
+        self.assertFalse(safe["allFourHttpAndJsonOk"])
+        self.assertNotIn("NEVER_PRINT_PROVIDER_AUTH_SECRET",json.dumps(safe))
 
     def test_partial_internal_m15_gap_is_diagnosed_but_not_hidden(self):
         opener, _, packets = fake_setup()
