@@ -435,6 +435,99 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
   },
   unknownApiKey:"PRIVATE_SECRET_TOKEN"
  };
+ // JOINED snapshot regression: each individually valid panel MUST agree
+ // on precisely the same sealed counts and bounded last-contiguous tail.
+ // Fixtures are synthetic and never claim broker session/feed entitlements.
+ const minutesBefore=n=>new Date(Date.parse(currentIso)-n*60000).toISOString();
+ const combinedVault={...freshArchive,
+  counts:{M15:80,H1:40,H4:23},
+  lastImportedUTC:currentIso,
+  captureFreshness:freshStatus("RECENT_UNVERIFIED",0),
+  forwardCoverage:{
+   M15:{...freshArchive.forwardCoverage.M15,
+    closedBars:80,latestContiguousBars:48,
+    lastClosedUTC:minutesBefore(2),
+    unclassifiedMissingSlots:4,unclassifiedGapPairs:1},
+   H1:{...freshArchive.forwardCoverage.H1,
+    closedBars:40,latestContiguousBars:40,
+    lastClosedUTC:minutesBefore(30)},
+   H4:{...freshArchive.forwardCoverage.H4,
+    closedBars:23,latestContiguousBars:23,
+    firstClosedUTC:minutesBefore(360),
+    lastClosedUTC:minutesBefore(120)}},
+  gapReference:{...gapReference,frames:{
+   M15:{...refFrame(80),gapPairs:1,unclassifiedMissingSlots:4,
+    vendorPauseCandidateSlotsNotVerified:4},
+   H1:refFrame(40),H4:refFrame(23)}},
+  closedFrameFreshness:{
+   mode:"BIQUOTE_PRIVATE_CLOSED_FRAME_AGE_DIAGNOSTIC_ONLY",
+   status:"AGE_COUNTS_ONLY_UNVERIFIED",
+   signal:"WAIT",executable:false,paperOrdersAllowed:false,
+   sourceQualified:false,brokerCalendarVerified:false,
+   gapBridgingAllowed:false,asOfUTC:currentIso,
+   frames:{
+    M15:{status:"RECENT_UNVERIFIED",ageSeconds:120,thresholdSeconds:1800},
+    H1:{status:"RECENT_UNVERIFIED",ageSeconds:1800,thresholdSeconds:7200},
+    H4:{status:"RECENT_UNVERIFIED",ageSeconds:7200,thresholdSeconds:28800}}}};
+ const combinedBatch={...batch,stages:{...batch.stages,
+  archive:{...batch.stages.archive,
+   status:"FORWARD_CAPTURE_PRESENT_UNVERIFIED",
+   closedCounts:{M15:80,H1:40,H4:23},
+   consecutiveClosedCounts:{M15:48,H1:40,H4:23}},
+  analysis:{...batch.stages.analysis,
+   status:"FROZEN_V3_TECHNICAL_OBSERVATION_ONLY",
+   technicalWatch:"BUY"}}};
+ const joined=async(v=combinedVault,s=shadow,b=combinedBatch)=>relay(auth,{
+  approved:true,fetchFn:async()=>mock({...expected,
+   biquotePrivateForwardVault:v,biquoteForwardShadow:s,
+   ultimateFourStageBatch:b})});
+ const consistent=await joined();
+ a.equal(consistent.httpStatus,200);
+ a.equal(consistent.body.signal,"WAIT");
+ a.equal(consistent.body.biquoteForwardShadow.technicalWatch,"BUY");
+ a.equal(consistent.body.ultimateFourStageBatch.frameCounts.M15.contiguous,48);
+ a.equal(consistent.body.ultimateFourStageBatch.stage3,undefined);
+ a.equal(consistent.body.biquotePrivateForwardVault.counts.H4,23);
+ for(const [v,s,b] of [
+  [{...combinedVault,counts:{...combinedVault.counts,H4:22}},
+   shadow,combinedBatch],
+  [{...combinedVault,forwardCoverage:{...combinedVault.forwardCoverage,
+    M15:{...combinedVault.forwardCoverage.M15,latestContiguousBars:46}}},
+   shadow,combinedBatch],
+  [{...combinedVault,gapReference:{...combinedVault.gapReference,
+    frames:{...combinedVault.gapReference.frames,M15:{
+     ...combinedVault.gapReference.frames.M15,
+     vendorPauseCandidateSlotsNotVerified:0,outsideVendorReferenceSlots:4}}}},
+   shadow,combinedBatch],
+  [combinedVault,{...shadow,frames:{...shadow.frames,
+    H4:{...shadow.frames.H4,persistedClosed:22}}},combinedBatch],
+  [combinedVault,shadow,{...combinedBatch,stages:{
+   ...combinedBatch.stages,archive:{...combinedBatch.stages.archive,
+    consecutiveClosedCounts:{M15:48,H1:39,H4:23}}}}],
+  [combinedVault,shadow,{...combinedBatch,stages:{
+   ...combinedBatch.stages,analysis:{...combinedBatch.stages.analysis,
+    technicalWatch:"SELL"}}}],
+  [{...combinedVault,lastImportedUTC:tenMinBefore,
+    captureFreshness:freshStatus("STALE_OVER_5_MINUTES",600)},
+   shadow,combinedBatch],
+  [{...combinedVault,closedFrameFreshness:{
+    ...combinedVault.closedFrameFreshness,frames:{
+     ...combinedVault.closedFrameFreshness.frames,H4:{
+      status:"CANDLE_STALE_OVER_TWO_FRAMES",ageSeconds:30000,
+      thresholdSeconds:28800}},
+    asOfUTC:currentIso},forwardCoverage:{
+     ...combinedVault.forwardCoverage,H4:{
+      ...combinedVault.forwardCoverage.H4,
+      lastClosedUTC:new Date(Date.parse(currentIso)-30000000).toISOString()}}},
+   shadow,combinedBatch]
+ ]){
+  const rejected=await joined(v,s,b);
+  a.equal(rejected.httpStatus,503,
+    "Cross-panel mismatches or stale observations must fail closed");
+  a.equal(rejected.body.signal,"WAIT");
+  a.equal(rejected.body.biquoteForwardShadow,undefined);
+  a.equal(rejected.body.ultimateFourStageBatch,undefined);
+ }
  const outBatch=await relay(auth,{approved:true,fetchFn:async()=>mock({
   ...expected,ultimateFourStageBatch:batch
  })});
