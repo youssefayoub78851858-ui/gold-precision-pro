@@ -294,6 +294,28 @@ document.addEventListener('DOMContentLoaded',function(){
  window.addEventListener('pageshow',showDashboard);
 })();
 </script>
+
+<!-- GPP_EMBED_BIQUOTE_CHART_IN_DASHBOARD_20261118: preserve the original BiQuote chart and its live read-only handlers. -->
+<style>
+#gpp-reference-dashboard #biquote-live-chart-panel{margin:12px 0!important;max-width:100%;min-width:0}
+#gpp-reference-dashboard #biquote-live-chart-panel canvas,#gpp-reference-dashboard #biquote-live-chart-panel svg{max-width:100%}
+#gpp-reference-dashboard #biquote-live-title{font-size:.96rem;color:#eac77c}
+#gpp-reference-dashboard #biquote-live-chart-panel button{min-height:40px}
+</style>
+<script>
+(function(){
+ function embedExistingChart(){
+  var dashboard=document.getElementById('gpp-reference-dashboard');
+  var chart=document.getElementById('biquote-live-chart-panel');
+  var quote=dashboard&&dashboard.querySelector('.gpp-quote');
+  if(!dashboard||!chart||!quote)return;
+  if(chart.parentElement!==dashboard)quote.insertAdjacentElement('afterend',chart);
+ }
+ document.addEventListener('DOMContentLoaded',embedExistingChart);
+ window.addEventListener('load',embedExistingChart);
+ window.addEventListener('pageshow',embedExistingChart);
+})();
+</script>
 <nav class="unified-mobile-nav" aria-label="أقسام نظام الذهب الموحد">
 <a href="#gold-decision-center">القرار</a><a href="#biquote-live-chart-panel">شارت الذهب</a><a href="#paper-actions">تداول ورقي</a><a href="#paper-statistics">السجل</a>
 </nav>
