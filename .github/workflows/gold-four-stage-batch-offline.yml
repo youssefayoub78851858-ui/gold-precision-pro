@@ -5,6 +5,8 @@ on:
     paths:
       - 'coordinator/ultimate_batch_acceptance.py'
       - 'coordinator/test_ultimate_batch_acceptance.py'
+      - 'coordinator/private_forward_capacity_preflight.py'
+      - 'coordinator/test_private_forward_capacity_preflight.py'
       - 'coordinator/biquote_24h_final_verdict.py'
       - 'coordinator/biquote_private_forward_vault.py'
       - 'coordinator/biquote_forward_shadow_review.py'
@@ -28,7 +30,7 @@ jobs:
           node-version: '20'
       - name: Four-stage batch integration on verified isolated synthetic test data
         working-directory: coordinator
-        run: python -m unittest -v test_ultimate_batch_acceptance
+        run: python -m unittest -v test_ultimate_batch_acceptance test_private_forward_capacity_preflight
       - name: Frozen four-stage V3 research and no real signals
         run: node coordinator/test_ultimate_four_stage_review.js
       - name: Paper account cannot act on synthetic BUY or forged approval
