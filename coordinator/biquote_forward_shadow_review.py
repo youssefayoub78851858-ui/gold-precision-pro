@@ -129,6 +129,37 @@ def shadow_review(dirname: str | pathlib.Path, *, runner=None,
             "neededContiguous": MIN_CONTIGUOUS,
             "additionalContiguousNeeded": max(0, MIN_CONTIGUOUS - len(continuous)),
         }
+    # Independent OFFLINE geometry diagnostic, even during H4 warmup.
+    # Inspect only the tail of actual, closed, hash-sealed M15/H1/H4 bars.
+    # Count fully covered comparisons separately from uncovered higher bars.
+    # This NEVER certifies a broker session, source license or a trading setup.
+    checked={tf:tail_contiguous(rows[tf],WIDTH[tf]) for tf in FRAMES_ORDER}
+    parity=overlaps_match(checked)
+    diagnostics={}
+    for higher_tf in ("H1","H4"):
+        matches=parity[higher_tf]["fullyCoveredCompared"]
+        disagreements=parity[higher_tf]["fullyCoveredDisagreed"]
+        observed=len(checked[higher_tf])
+        if not 0<=disagreements<=matches<=observed:
+            safe["reasonCodes"].append("ARCHIVED_CROSS_FRAME_DIAGNOSTIC_UNAVAILABLE")
+            return safe
+        diagnostics[higher_tf]={
+            "higherClosedExamined":observed,
+            "fullyCoveredCompared":matches,
+            "fullyCoveredDisagreed":disagreements,
+            "notFullyCovered":observed-matches,
+        }
+    safe["diagnosticCrossFrameParity"]={
+        "status":"CLOSED_ARCHIVE_GEOMETRY_ONLY_NOT_TRADE_PROOF",
+        "frames":diagnostics,
+        "sourceRightsVerified":False,
+        "brokerCalendarVerified":False,
+        "paperOrdersAllowed":False,
+        "signal":"WAIT",
+    }
+    if any(diagnostics[tf]["fullyCoveredDisagreed"] for tf in ("H1","H4")):
+        safe["reasonCodes"].append("ARCHIVED_CROSS_FRAME_OHLC_DISAGREEMENT")
+        return safe
     if received is None or not archive["quoteObservations"]:
         safe["reasonCodes"].append("NO_POST_HOLDOUT_CAPTURE")
         return safe
@@ -165,9 +196,7 @@ def shadow_review(dirname: str | pathlib.Path, *, runner=None,
         if safe["frames"]["H4"]["contiguousClosed"] < MIN_CONTIGUOUS:
             safe["reasonCodes"].append("ONE_DAY_FORWARD_CAPTURE_CANNOT_WARM_UP_H4")
         return safe
-    closed_frames={tf: tail_contiguous(rows[tf], WIDTH[tf])
-                   for tf in FRAMES_ORDER}
-    parity=overlaps_match(closed_frames)
+    closed_frames=checked
     safe["comparedCrossFrames"]=parity
     if (any(parity[tf]["fullyCoveredCompared"] < 1 or
             parity[tf]["fullyCoveredDisagreed"] > 0
