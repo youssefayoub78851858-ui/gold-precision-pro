@@ -67,6 +67,10 @@ class PrivateMobileDashboardTests(unittest.TestCase):
                     'id="batch-analysis-state"', 'id="batch-paper-state"',
                     'id="batch-frames-state"'):
             self.assertIn(tag,PUBLIC)
+        self.assertIn('id="batch-capacity-state"',PUBLIC)
+        self.assertIn("batch.quoteSamplesRemaining",PUBLIC)
+        self.assertIn("CAPACITY_LIMIT_REACHED",PUBLIC)
+        self.assertIn("CAPACITY_METADATA_UNAVAILABLE",PUBLIC)
         self.assertIn("data.ultimateFourStageBatch",PUBLIC)
         self.assertIn('batch?.paperOrdersAllowed===false',PUBLIC)
         self.assertIn('batch?.liveOrdersAllowed===false',PUBLIC)
