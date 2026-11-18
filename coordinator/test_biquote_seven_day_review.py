@@ -296,6 +296,68 @@ class SevenDayReviewTests(unittest.TestCase):
                            "'bid'","'ask'","'openTime'"):
                 self.assertNotIn(secret,printed)
 
+    def test_sparse_spread_distribution_from_sealed_vault_not_broker_fees(self):
+        # Only sealed samples, no extra market requests or execution. Re-read
+        # one approved archive to report aggregated sampled spread buckets.
+        samples=[]
+        for minute,bid,ask in ((0,4000.,4000.2),(2,4001.,4001.4),
+                               (4,4002.,4003.5)):
+            t=(dt.datetime(2026,11,18,8,tzinfo=UTC)+
+               dt.timedelta(minutes=minute))
+            samples.append({
+                "tickUTC":t.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "observedUTC":(t+dt.timedelta(seconds=2)).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"),
+                "bid":bid,"ask":ask,"spread":round(ask-bid,8),
+                "privateKey":"NEVER_PRINT_A_REAL_BBO",
+            })
+        sealed={"schema":1,"source":"BIQUOTE_UNVERIFIED_UPSTREAM_MT5",
+                "closed":{"M15":[],"H1":[],"H4":[]},
+                "quoteObservations":samples, "raw":"SENSITIVE"}
+        for damaged in (False,True):
+            archive={"schema":sealed["schema"],"source":sealed["source"],
+                     "closed":sealed["closed"],
+                     "quoteObservations":[dict(q) for q in samples],
+                     "raw":"SENSITIVE"}
+            if damaged:
+                archive["quoteObservations"][1]["spread"]=9.9
+            output=[]
+            with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")),patch.object(
+                    run,"load_vault",return_value=archive):
+                result=run.run_seven_days(VAULT,clock=lambda:DAY+dt.timedelta(minutes=2),
+                    metadata=lambda _:meta(3),
+                    observer=lambda *_args,**_kwargs:{"signal":"WAIT",
+                        "executable":False,"completed24hWindow":True},
+                    emit=output.append,days=1,environment=ENV)
+            self.assertEqual(result["signal"],"WAIT")
+            self.assertFalse(result["paperOrdersAllowed"])
+            histogram=[x for x in output if
+                       x["event"]=="BIQUOTE_STAGE3_SAMPLED_SPREAD_BUCKETS"]
+            blocked=[x for x in output if
+                     x["event"]=="BIQUOTE_STAGE3_SPREAD_BUCKETS_UNAVAILABLE"]
+            if damaged:
+                self.assertEqual(len(histogram),0)
+                self.assertEqual(len(blocked),1)
+            else:
+                self.assertEqual(len(histogram),1)
+                self.assertEqual(len(blocked),0)
+                item=histogram[0]
+                self.assertEqual(item["status"],"OBSERVED_SPARSE_QUOTES_ONLY")
+                self.assertEqual(item["sourceQuoteSamples"],3)
+                self.assertEqual(item["buckets"]["LE_0_25"],1)
+                self.assertEqual(item["buckets"]["GT_0_25_LE_0_50"],1)
+                self.assertEqual(item["buckets"]["GT_1_LE_2"],1)
+                self.assertEqual(sum(item["buckets"].values()),3)
+                self.assertTrue(item["quoteSamplesSparseNotExecutionBBO"])
+                self.assertFalse(item["brokerContractFeesVerified"])
+                self.assertFalse(item["tradeEligible"])
+                self.assertFalse(item["liveOrdersAllowed"])
+            printed=str(output)+str(result)
+            for secret in ("NEVER_PRINT_A_REAL_BBO","SENSITIVE",
+                           "4000.2","4001.4","4003.5",
+                           "'bid'","'ask'","'tickUTC'"):
+                self.assertNotIn(secret, printed)
+
     def test_mismatched_sealed_reference_is_unavailable_without_promoting(self):
         events=[]
         forged={**meta(4),"counts":{"M15":2,"H1":0,"H4":0}}
