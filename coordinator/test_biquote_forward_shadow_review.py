@@ -148,6 +148,51 @@ class ForwardShadowTests(unittest.TestCase):
             shadow_review(self.folder,now_utc=EARLY,
                           sealed_vault=old)
 
+    def test_tick_mid_conflict_and_forged_parity_stop_frozen_v3(self):
+        # The quote was sampled inside an already-closed M15 candle, but
+        # its MID is outside that candle and corresponding H1/H4 highs.
+        # The most recent live quote stays fresh: a superficial freshness
+        # check alone must never hide this historical contradiction.
+        with patch.object(socket, "socket", side_effect=AssertionError("NO_NETWORK")):
+            ingest(self.folder, sample(AFTER), received_utc=iso(AFTER))
+            sealed = load_vault(self.folder)
+            opened = dt.datetime.fromisoformat(
+                sealed["closed"]["M15"][-2]["openTime"].replace("Z", "+00:00"))
+            tick = opened + dt.timedelta(minutes=5)
+            sealed["quoteObservations"].insert(0, {
+                "tickUTC": iso(tick),
+                "observedUTC": iso(tick + dt.timedelta(seconds=2)),
+                "bid": 9000.0, "ask": 9000.4, "spread": 0.4,
+            })
+            meta = inspect_vault_metadata(sealed, now_utc=AFTER)
+            self.assertEqual(meta["quoteCandleMidGeometry"]["status"],
+                             "OBSERVED_MID_OUTSIDE_CLOSED_OHLC")
+            self.assertGreater(meta["quoteCandleMidGeometry"]["frames"]
+                               ["M15"]["outsideClosedOHLC"], 0)
+            blocked = shadow_review(self.folder, now_utc=AFTER,
+                vault_metadata=meta, sealed_vault=sealed,
+                runner=lambda _: self.fail("Conflicting historical MID cannot reach V3"))
+        self.assertEqual(blocked["signal"], "WAIT")
+        self.assertEqual(blocked["technicalWatch"], "NONE")
+        self.assertIsNone(blocked.get("engineReview"))
+        self.assertFalse(blocked["paperOrdersAllowed"])
+        self.assertIn("QUOTE_MID_OUTSIDE_CLOSED_CANDLE_RANGE", blocked["reasonCodes"])
+        # A precomputed status may never conceal the disagreement from the
+        # *same* sealed vault. No raw quote values reach a browser or log.
+        tampered = {**meta, "quoteCandleMidGeometry": {
+            **meta["quoteCandleMidGeometry"],
+            "status": "CONSISTENT_OBSERVED_SAMPLES_ONLY"}}
+        forged = shadow_review(self.folder, now_utc=AFTER,
+            vault_metadata=tampered, sealed_vault=sealed,
+            runner=lambda _: self.fail("Forged parity cannot reach V3"))
+        self.assertIn("QUOTE_CANDLE_MID_METADATA_MISMATCH", forged["reasonCodes"])
+        self.assertEqual(forged["technicalWatch"], "NONE")
+        for report in (blocked, forged):
+            text = json.dumps(report)
+            for private in ('"bid"', '"ask"', '"open"', '"high"',
+                            '"low"', '"close"', '9000.0', '9000.4'):
+                self.assertNotIn(private, text)
+
     def test_stale_frame_metadata_never_reaches_frozen_v3(self):
         # The ingestion pipeline already rejects old closed bars at receipt.
         # Inject a *synthetic corrupted age report* to prove the secondary
