@@ -26,6 +26,7 @@ from biquote_forward_shadow_review import tail_contiguous, overlaps_match, WIDTH
 from private_forward_capacity_preflight import capacity_readiness
 from biquote_quote_mid_parity import audit_closed_quote_mid_parity
 from biquote_sampled_spread_buckets import audited_sampled_spread_buckets, BINS
+from biquote_quote_cadence import audit_quote_cadence, INTERVAL_BINS, LAG_BINS
 
 UTC = dt.timezone.utc
 DAYS = 7
@@ -222,6 +223,46 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
                  "tradeEligible":False,**SAFE})
         except (OSError,ValueError,TypeError,KeyError,OverflowError):
             log({"event":"BIQUOTE_STAGE3_SPREAD_BUCKETS_UNAVAILABLE",
+                 "phase":phase,"dayIndex":index,**SAFE})
+        # One sealed snapshot already in memory, no extra provider GETs.
+        # Quote receipt intervals may include legitimate closed-session pauses.
+        # We measure observed sampling cadence only; NEVER infer broker uptime.
+        try:
+            cadence = audit_quote_cadence(original)
+            bins=cadence["intervalBins"]
+            lag_bins=cadence["quoteReceiptLagBins"]
+            n=cadence["sourceQuoteSamples"]
+            gaps=cadence["observedIntervals"]
+            if (cadence["status"] not in ("SPARSE_RECEIPT_CADENCE_OBSERVED_ONLY",
+                                         "NO_RECORDED_QUOTES") or
+                cadence["mode"]!="BIQUOTE_PRIVATE_SAMPLED_QUOTE_CADENCE_COUNTS_V1" or
+                cadence["signal"]!="WAIT" or cadence["executable"] is not False or
+                cadence["paperOrdersAllowed"] is not False or
+                cadence["liveOrdersAllowed"] is not False or
+                cadence["brokerCalendarVerified"] is not False or
+                cadence["continuousMarketDataVerified"] is not False or
+                cadence["missingSamplesAreMarketOutageProof"] is not False or
+                type(n) is not int or n!=len(original["quoteObservations"]) or
+                type(gaps) is not int or gaps!=max(0,n-1) or
+                not isinstance(bins,dict) or set(bins)!=set(INTERVAL_BINS) or
+                not isinstance(lag_bins,dict) or set(lag_bins)!=set(LAG_BINS) or
+                any(type(v) is not int or v<0 for v in bins.values()) or
+                any(type(v) is not int or v<0 for v in lag_bins.values()) or
+                sum(bins.values())!=gaps or sum(lag_bins.values())!=n):
+                raise ValueError("UNVERIFIED_SAMPLED_QUOTE_CADENCE")
+            log({"event":"BIQUOTE_STAGE3_QUOTE_RECEIPT_CADENCE",
+                 "phase":phase,"dayIndex":index,
+                 "status":cadence["status"],
+                 "sourceQuoteSamples":n,
+                 "observedIntervals":gaps,
+                 "intervalBins":dict(bins),
+                 "quoteReceiptLagBins":dict(lag_bins),
+                 "brokerSessionVerified":False,
+                 "sampledQuotesNotContinuousMarketFeed":True,
+                 "missingSlotsNotBrokerOutageProof":True,
+                 "tradeEligible":False,**SAFE})
+        except (OSError,ValueError,TypeError,KeyError,OverflowError):
+            log({"event":"BIQUOTE_STAGE3_CADENCE_UNAVAILABLE",
                  "phase":phase,"dayIndex":index,**SAFE})
 
     completed = skipped = 0
