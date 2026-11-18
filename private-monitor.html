@@ -71,6 +71,7 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 </div>
 <p id="forward-last">آخر حفظ: غير مؤكد</p>
 <p id="forward-freshness" role="status">WAIT — حداثة آخر عينة BID/ASK غير مؤكدة</p>
+<p id="forward-candle-age" role="status">WAIT — حداثة الشموع المغلقة M15/H1/H4 غير مثبتة</p>
 <p id="forward-coverage">الفجوات والتغطية: غير مؤكدتين</p>
 <p id="forward-gap-reference" role="status">WAIT — مقارنة الفجوات مع استراحة السوق المعلنة غير متاحة</p>
 <p><small>أعداد من القرص الخاص فقط. أي فجوة تعتبر غير مصنّفة لحين توثيق جلسات الوسيط، ولا تعني الأعداد أن البيانات مرخّصة أو أن صفقة ممكنة.</small></p>
@@ -224,6 +225,36 @@ el("refresh").addEventListener("click",async()=>{
       freshnessText="WAIT — توقيت العينة أحدث من ساعة التحقق؛ يجب فحص الساعة";
   }
   el("forward-freshness").textContent=freshnessText;
+  // Last sealed candle age is evaluated SEPARATELY from quote freshness.
+  // A stale OHLC feed cannot be declared live by a fresh BID/ASK receipt.
+  // Thresholds 30m/2h/8h are unverified diagnostics, not broker sessions.
+  const bars=safeVault?vault.closedFrameFreshness:null;
+  let candleAgeSafe=bars?.mode==="BIQUOTE_PRIVATE_CLOSED_FRAME_AGE_DIAGNOSTIC_ONLY"
+    &&bars?.status==="AGE_COUNTS_ONLY_UNVERIFIED"
+    &&bars?.signal==="WAIT"&&bars?.executable===false
+    &&bars?.paperOrdersAllowed===false&&bars?.sourceQualified===false
+    &&bars?.brokerCalendarVerified===false&&bars?.gapBridgingAllowed===false;
+  const candleAgeParts=[];
+  for(const [tf,threshold] of [["M15",1800],["H1",7200],["H4",28800]]){
+    const v=bars?.frames?.[tf],n=vault?.counts?.[tf];
+    const valid=v&&v.thresholdSeconds===threshold&&
+      ((n===0&&v.status==="NO_CLOSED_BAR"&&v.ageSeconds===null)||
+       (n>0&&v.status==="FUTURE_CLOSE_OR_CLOCK_SKEW"&&v.ageSeconds===null)||
+       (n>0&&Number.isInteger(v.ageSeconds)&&v.ageSeconds>=0&&
+        v.ageSeconds<=31536000&&
+        ((v.status==="RECENT_UNVERIFIED"&&v.ageSeconds<=threshold)||
+         (v.status==="CANDLE_STALE_OVER_TWO_FRAMES"&&v.ageSeconds>threshold))));
+    if(!candleAgeSafe||!valid){candleAgeSafe=false;break;}
+    const word=v.status==="NO_CLOSED_BAR"?"لا شموع مغلقة"
+       :v.status==="FUTURE_CLOSE_OR_CLOCK_SKEW"?"مشكلة ساعة الشمعة"
+       :v.status==="CANDLE_STALE_OVER_TWO_FRAMES"?"متأخرة ("+
+         v.ageSeconds+" ثانية)":"محدّثة ضمن الفحص ("+v.ageSeconds+" ثانية)";
+    candleAgeParts.push(tf+": "+word);
+  }
+  el("forward-candle-age").textContent=candleAgeSafe
+    ?"WAIT — حداثة الشموع المغلقة: "+candleAgeParts.join(" | ")+
+      " — لا يثبت ساعات الوسيط أو حقوق البيانات"
+    :"WAIT — فحص حداثة الشموع غير متاح؛ لا نفترض وجود بث حي";
   el("forward-coverage").textContent=safeVault
    ?"فجوات زمنية غير مصنّفة في الأرشيف: "+missing+" — لا يعني صفر فجوات إثبات صلاحية الجلسات"
    :"التغطية الزمنية لم تتحقق بعد";
@@ -492,6 +523,7 @@ el("refresh").addEventListener("click",async()=>{
    el("status").textContent="WAIT — تعذّر فحص المراقبة";
    el("biquote-forward-state").textContent="WAIT — حالة أرشيف BiQuote غير متاحة";
    el("forward-freshness").textContent="WAIT — حداثة آخر عينة غير متاحة";
+   el("forward-candle-age").textContent="WAIT — فحص حداثة الشموع غير متاح";
    el("biquote-shadow-state").textContent="WAIT — تعذّر التحقق من تحليل V3 الخاص";
    clearBatchDisplay();
    el("biquote-shadow-coverage").textContent="التغطية الفنية غير متاحة";
