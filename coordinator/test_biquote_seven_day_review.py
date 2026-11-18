@@ -358,6 +358,65 @@ class SevenDayReviewTests(unittest.TestCase):
                            "'bid'","'ask'","'tickUTC'"):
                 self.assertNotIn(secret, printed)
 
+    def test_private_quote_receipt_cadence_logs_counts_only(self):
+        # A mock sealed archive has an observed two-minute cadence interrupted
+        # by unknown pauses. A pause is NOT a verified source outage/session.
+        start=dt.datetime(2026,11,18,8,tzinfo=UTC)
+        received=[]
+        for i, minute in enumerate((0,2,6,14,34,110)):
+            tick=start+dt.timedelta(minutes=minute)
+            arrival=tick+dt.timedelta(seconds=(1,10,26)[i%3])
+            bid=4000.0+i
+            ask=bid+0.2
+            received.append({
+                "tickUTC":tick.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "observedUTC":arrival.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "bid":bid,"ask":ask,"spread":round(ask-bid,8),
+                "privateSecret":"PRIVATE_PRICE_NEVER_LOG"})
+        for bad in (False,True):
+            sealed={"schema":1,"source":"BIQUOTE_UNVERIFIED_UPSTREAM_MT5",
+                    "closed":{tf:[] for tf in ("M15","H1","H4")},
+                    "quoteObservations":[dict(q) for q in received],
+                    "brokerApiKey":"UNSAFE_BROKER_TOKEN"}
+            if bad:
+                sealed["quoteObservations"][2]["observedUTC"]="2026-11-18T08:00:00Z"
+            events=[]
+            with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")),patch.object(
+                    run,"load_vault",return_value=sealed):
+                result=run.run_seven_days(VAULT,
+                    clock=lambda:DAY+dt.timedelta(minutes=2),
+                    metadata=lambda _:meta(6),
+                    observer=lambda *_args,**_kwargs:{"signal":"WAIT",
+                        "executable":False,"completed24hWindow":True},
+                    emit=events.append,days=1,environment=ENV)
+            self.assertEqual(result["signal"],"WAIT")
+            self.assertFalse(result["paperOrdersAllowed"])
+            valid=[x for x in events if
+                   x["event"]=="BIQUOTE_STAGE3_QUOTE_RECEIPT_CADENCE"]
+            denied=[x for x in events if
+                    x["event"]=="BIQUOTE_STAGE3_CADENCE_UNAVAILABLE"]
+            if bad:
+                self.assertEqual(len(valid),0)
+                self.assertEqual(len(denied),1)
+            else:
+                self.assertEqual(len(valid),1)
+                self.assertEqual(len(denied),0)
+                report=valid[0]
+                self.assertEqual(report["sourceQuoteSamples"],6)
+                self.assertEqual(report["observedIntervals"],5)
+                self.assertEqual(list(report["intervalBins"].values()),[1,1,1,1,1])
+                self.assertEqual(list(report["quoteReceiptLagBins"].values()),[2,2,2])
+                self.assertFalse(report["brokerSessionVerified"])
+                self.assertTrue(report["missingSlotsNotBrokerOutageProof"])
+                self.assertTrue(report["sampledQuotesNotContinuousMarketFeed"])
+                self.assertFalse(report["tradeEligible"])
+                self.assertFalse(report["liveOrdersAllowed"])
+            rendered=str(events)+str(result)
+            for secret in ("PRIVATE_PRICE_NEVER_LOG","UNSAFE_BROKER_TOKEN",
+                           "4000.0","4001.2","2026-11-18T08",
+                           "'bid'","'ask'","'observedUTC'"):
+                self.assertNotIn(secret,rendered)
+
     def test_mismatched_sealed_reference_is_unavailable_without_promoting(self):
         events=[]
         forged={**meta(4),"counts":{"M15":2,"H1":0,"H4":0}}
