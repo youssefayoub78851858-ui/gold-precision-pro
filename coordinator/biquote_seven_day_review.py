@@ -8,6 +8,7 @@ It cannot auto-rotate/delete data, fill missed market bars or submit orders.
 from __future__ import annotations
 
 import datetime as dt
+import json
 import os
 import pathlib
 import time
@@ -66,9 +67,15 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
         raise ValueError("HOLDOUT_ANCHOR_OR_WINDOW_INVALID")
     get_time = clock or (lambda: dt.datetime.now(UTC))
     do_sleep = sleep or time.sleep
-    log = emit or (lambda _: None)
+    # Default logs contain fixed metadata only. Private quote prices, source
+    # JSON and full vault paths never enter Render application logs.
+    def safe_log(record):
+        print("BIQUOTE_SEVEN_DAY_STATUS " +
+              json.dumps(record, separators=(",", ":"), sort_keys=True), flush=True)
+    log = safe_log if emit is None else emit
     completed = skipped = 0
     state = "BOUNDED_REVIEW_FINISHED"
+    startup_checked = False
     for index in range(days):
         start = START + dt.timedelta(days=index)
         end = start + dt.timedelta(seconds=WINDOW_SECONDS)
@@ -85,7 +92,26 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
             if next_time <= now:
                 raise ValueError("NON_ADVANCING_REVIEW_CLOCK")
             now = next_time
-        cap = capacity_readiness(metadata(str(folder)))
+        try:
+            # inspect_metadata loads the on-disk sealed content and checks the
+            # SHA-256 envelope and owner-only permissions on every restart.
+            cap = capacity_readiness(metadata(str(folder)))
+        except (OSError, ValueError, TypeError, KeyError):
+            state = "VAULT_METADATA_READ_BLOCKED"
+            log({"event": "BIQUOTE_SEVEN_DAY_VAULT_AUDIT_BLOCKED",
+                 "status": state, "dayIndex": index, **SAFE})
+            break
+        if not startup_checked:
+            startup_checked = True
+            # Only count fields already normalized by capacity_readiness.
+            counts = {tf: cap["closedBarHardCapEach"] -
+                      cap["closedBarsRemaining"][tf] for tf in ("M15","H1","H4")}
+            log({"event": "BIQUOTE_SEVEN_DAY_VAULT_REOPEN_AUDIT",
+                 "status": "SEALED_VAULT_READABLE",
+                 "dayIndex": index, "closedBarCounts": counts,
+                 "previouslyStoredQuoteSamples": cap["quoteSamplesUsed"],
+                 "previouslyStoredData": bool(cap["quoteSamplesUsed"] or any(counts.values())),
+                 "capacityStatus": cap["status"], **SAFE})
         if (cap["status"] == "CAPACITY_LIMIT_REACHED"
                 or cap["quoteSamplesRemaining"] < MAX_SAMPLES
                 or any(n < (96 if tf == "M15" else 24 if tf == "H1" else 6)

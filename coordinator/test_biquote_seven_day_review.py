@@ -62,6 +62,47 @@ class SevenDayReviewTests(unittest.TestCase):
         self.assertNotIn("DO_NOT_DISPLAY",str(out))
         self.assertNotIn("quoteObservations",str(out))
         self.assertNotIn("\'private\':",str(out))
+        audit=next(x for x in status if x["event"]=="BIQUOTE_SEVEN_DAY_VAULT_REOPEN_AUDIT")
+        self.assertEqual(audit["previouslyStoredQuoteSamples"],0)
+        self.assertFalse(audit["previouslyStoredData"])
+        self.assertEqual(audit["closedBarCounts"],{"M15":0,"H1":0,"H4":0})
+        self.assertEqual(audit["signal"],"WAIT")
+        self.assertFalse(audit["paperOrdersAllowed"])
+
+    def test_restarted_vault_counts_are_read_from_sealed_metadata_not_memory(self):
+        printed=[]
+        prior={**meta(37),"counts":{"M15":5,"H1":2,"H4":1},
+               "quoteObservations":[{"bid":91372.55,"ask":91372.75}],
+               "secretBrokerToken":"DO_NOT_LOG"}
+        def observer(start,*,probe):
+            self.assertEqual(start,DAY)
+            return {"signal":"WAIT","executable":False,"completed24hWindow":True}
+        with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+            result=run.run_seven_days(VAULT,clock=lambda:DAY+dt.timedelta(minutes=3),
+                observer=observer,metadata=lambda _:prior,emit=printed.append,
+                days=1,environment=ENV)
+        self.assertEqual(result["signal"],"WAIT")
+        audited=next(v for v in printed if v["event"]=="BIQUOTE_SEVEN_DAY_VAULT_REOPEN_AUDIT")
+        self.assertTrue(audited["previouslyStoredData"])
+        self.assertEqual(audited["previouslyStoredQuoteSamples"],37)
+        self.assertEqual(audited["closedBarCounts"],{"M15":5,"H1":2,"H4":1})
+        self.assertEqual(audited["capacityStatus"],"CAPACITY_HEADROOM")
+        self.assertNotIn("91372",str(printed))
+        self.assertNotIn("DO_NOT_LOG",str(printed))
+        self.assertNotIn("quoteObservations",str(printed))
+
+    def test_corrupt_metadata_blocks_readonly_worker_before_any_feed_call(self):
+        emitted=[]
+        def must_not_call(*_a,**_k):
+            self.fail("NO_NETWORK_OR_ORDER_ALLOWED_ON_BAD_STORAGE")
+        out=run.run_seven_days(VAULT,clock=lambda:DAY+dt.timedelta(minutes=3),
+            metadata=lambda _:{**meta(-1)},source_probe=must_not_call,
+            observer=must_not_call,days=1,environment=ENV,emit=emitted.append)
+        self.assertEqual(out["status"],"VAULT_METADATA_READ_BLOCKED")
+        self.assertEqual(out["signal"],"WAIT")
+        self.assertFalse(out["paperOrdersAllowed"])
+        self.assertEqual(emitted[0]["event"],"BIQUOTE_SEVEN_DAY_VAULT_AUDIT_BLOCKED")
+        self.assertNotIn("quoteSamples",str(emitted))
 
     def test_restart_expired_days_skipped_and_budget_stops_before_io(self):
         invoked=[]
