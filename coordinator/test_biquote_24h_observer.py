@@ -9,6 +9,7 @@ from biquote_24h_observer import (
     AUTHORIZATION_ENV, AUTHORIZATION_VALUE, INTERVAL_SECONDS, MAX_PUBLIC_REQUESTS,
     MAX_SAMPLES, QualityCounters, main, observe_24h,
     PRIVATE_CAPTURE_CLASSES, classify_private_capture_failure,
+    safe_sample_geometry_detail,
 )
 
 UTC = dt.timezone.utc
@@ -95,6 +96,79 @@ class BiQuote24hOfflineTests(unittest.TestCase):
             self.assertNotIn("ask", event)
             self.assertNotIn("stagedBidFrames", event)
             self.assertNotIn("stagedAskFrames", event)
+
+    def test_safe_geometry_detail_distinguishes_coverage_without_market_data(self):
+        diag={
+            "mode":"BIQUOTE_METADATA_FAILURE_DIAGNOSTICS_ONLY",
+            "endpoint":{tf:"OK" for tf in ("quote","M15","H1","H4")},
+            "marketDataExposed":False,"sourceRequestsMade":0,
+            "tradingEnabled":False,"h1InternalM15Gaps":0,
+            "h4InternalM15Gaps":3,"h4RetentionEdgesIncomplete":2,
+            "h4MissingM15VendorPauseCandidates":4,
+            "h4MissingM15OutsideVendorReference":1,
+            "h4MissingM15ReferenceUnknown":0,
+            "h4PartialObservedPriceContradictions":0,
+            "h1CoveredOHLCDisagreements":0,
+            "h4CoveredOHLCDisagreements":0,
+            "rawBid":9999999,
+            "providerSecret":"PRIVATE_QUOTE_NEVER_LOG"}
+        payload={**sample(),"qualityDiagnostic":diag}
+        safe=safe_sample_geometry_detail(payload)
+        self.assertEqual(safe["status"],"COUNTS_ONLY_BROKER_CALENDAR_UNVERIFIED")
+        self.assertEqual(safe["frames"]["H4"]["internalMissingM15Groups"],3)
+        self.assertEqual(safe["frames"]["H4"]["retentionEdgeIncompleteGroups"],2)
+        self.assertEqual(safe["frames"]["H4"]["vendorReferencePauseMissingSlots"],4)
+        self.assertEqual(safe["frames"]["H4"]["outsideVendorReferenceMissingSlots"],1)
+        self.assertEqual(safe["frames"]["H4"]["fullyCoveredOHLCDisagreements"],0)
+        self.assertEqual(safe["frames"]["H1"]["internalMissingM15Groups"],0)
+        self.assertIs(safe["brokerSessionVerified"],False)
+        self.assertIs(safe["sourceQualified"],False)
+        import json
+        txt=json.dumps(safe)
+        for secret in ("PRIVATE_QUOTE_NEVER_LOG","9999999","rawBid",
+                       "providerSecret","2026-11-18T"):
+            self.assertNotIn(secret,txt)
+        # A real read-only observer creates exactly one log per old slot.
+        clock=FakeClock(START+dt.timedelta(hours=23,minutes=58))
+        emitted=[]
+        report=observe_24h(START,probe=lambda:payload,
+            utc_now=clock.now,sleep=clock.sleep,emit=emitted.append)
+        self.assertEqual(report["signal"],"WAIT")
+        self.assertEqual(emitted[0]["geometryDetail"],safe)
+        self.assertFalse(emitted[0]["executable"])
+        self.assertNotIn("PRIVATE_QUOTE_NEVER_LOG",str(emitted))
+
+    def test_untrusted_geometry_detail_stays_unavailable_without_raw_leaks(self):
+        base={
+            "mode":"BIQUOTE_METADATA_FAILURE_DIAGNOSTICS_ONLY",
+            "endpoint":{tf:"OK" for tf in ("quote","M15","H1","H4")},
+            "marketDataExposed":False,"sourceRequestsMade":0,
+            "tradingEnabled":False}
+        base.update({k:0 for k in (
+            "h1InternalM15Gaps","h4InternalM15Gaps",
+            "h4RetentionEdgesIncomplete","h4MissingM15VendorPauseCandidates",
+            "h4MissingM15OutsideVendorReference","h4MissingM15ReferenceUnknown",
+            "h4PartialObservedPriceContradictions",
+            "h1CoveredOHLCDisagreements","h4CoveredOHLCDisagreements")})
+        bad=[
+            {**base,"h4InternalM15Gaps":999999999},
+            {**base,"h4InternalM15Gaps":True},
+            {**base,"h4InternalM15Gaps":-1},
+            {**base,"endpoint":{**base["endpoint"],
+               "H4":"SECRET_VENDOR_PAYLOAD"}},
+            {**base,"marketDataExposed":True},
+            {**base,"tradingEnabled":True},
+            {**base,"sourceRequestsMade":1},
+            {**base,"mode":"SPOOFED"}
+        ]
+        for fake in bad:
+            safe=safe_sample_geometry_detail({**sample(),"qualityDiagnostic":fake})
+            self.assertEqual(safe,{"status":"UNAVAILABLE"})
+        self.assertEqual(safe_sample_geometry_detail(sample()),
+                         {"status":"UNAVAILABLE"})
+        self.assertEqual(safe_sample_geometry_detail({
+            **sample(),"qualityDiagnostic":base,
+            "allHttp200AndValidJson":False}),{"status":"UNAVAILABLE"})
 
     def test_private_archive_rejection_is_fixed_enum_not_provider_or_price(self):
         self.assertEqual(classify_private_capture_failure("CLOSED_CANDLE_REVISED_H1"),
