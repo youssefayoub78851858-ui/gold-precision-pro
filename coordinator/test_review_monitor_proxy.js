@@ -120,6 +120,60 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
   })});
   a.equal(rejected.httpStatus,503,"Invalid quote freshness cannot pass relay");
  }
+ // A recent quote is independent of outdated M15 candles.
+ const barAge={
+  mode:"BIQUOTE_PRIVATE_CLOSED_FRAME_AGE_DIAGNOSTIC_ONLY",
+  status:"AGE_COUNTS_ONLY_UNVERIFIED",signal:"WAIT",executable:false,
+  paperOrdersAllowed:false,sourceQualified:false,
+  brokerCalendarVerified:false,gapBridgingAllowed:false,
+  asOfUTC:currentIso,
+  frames:{
+   M15:{status:"CANDLE_STALE_OVER_TWO_FRAMES",ageSeconds:3600,
+    thresholdSeconds:1800,secretPrice:98989898},
+   H1:{status:"RECENT_UNVERIFIED",ageSeconds:1000,thresholdSeconds:7200},
+   H4:{status:"NO_CLOSED_BAR",ageSeconds:null,thresholdSeconds:28800}
+  },providerSecret:"DO_NOT_COPY_CANDLE_PRICE"};
+ const barEnvelope={...recentEnvelope,forwardCoverage:{
+  ...recentEnvelope.forwardCoverage,
+  M15:{...recentEnvelope.forwardCoverage.M15,
+   lastClosedUTC:new Date(Date.parse(currentIso)-3600000).toISOString()},
+  H1:{...recentEnvelope.forwardCoverage.H1,
+   lastClosedUTC:new Date(Date.parse(currentIso)-1000000).toISOString()}},
+  closedFrameFreshness:barAge};
+ const aged=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,biquotePrivateForwardVault:barEnvelope
+ })});
+ a.equal(aged.httpStatus,200);
+ a.equal(aged.body.signal,"WAIT");
+ a.equal(aged.body.biquotePrivateForwardVault.captureFreshness.status,"RECENT_UNVERIFIED");
+ a.equal(aged.body.biquotePrivateForwardVault.closedFrameFreshness.frames.M15.status,
+         "CANDLE_STALE_OVER_TWO_FRAMES");
+ a.equal(aged.body.biquotePrivateForwardVault.closedFrameFreshness.frames.H1.status,
+         "RECENT_UNVERIFIED");
+ a.equal(aged.body.biquotePrivateForwardVault.closedFrameFreshness.frames.H4.status,
+         "NO_CLOSED_BAR");
+ for(const secret of ["98989898","DO_NOT_COPY_CANDLE_PRICE","secretPrice","providerSecret"])
+  a.ok(!JSON.stringify(aged).includes(secret));
+ for(const mutated of [
+  {...barAge,sourceQualified:true},
+  {...barAge,brokerCalendarVerified:true},
+  {...barAge,gapBridgingAllowed:true},
+  {...barAge,paperOrdersAllowed:true},
+  {...barAge,asOfUTC:"2020-01-01T00:00:00Z"},
+  {...barAge,frames:{...barAge.frames,M15:{
+   ...barAge.frames.M15,status:"RECENT_UNVERIFIED"}}},
+  {...barAge,frames:{...barAge.frames,M15:{
+   ...barAge.frames.M15,ageSeconds:1}}},
+  {...barAge,frames:{...barAge.frames,H4:{
+   ...barAge.frames.H4,status:"RECENT_UNVERIFIED"}}},
+  {...barAge,frames:{...barAge.frames,H1:{
+   ...barAge.frames.H1,thresholdSeconds:1800}}}
+ ]){
+  const bad=await relay(auth,{approved:true,fetchFn:async()=>mock({
+   ...expected,biquotePrivateForwardVault:{...barEnvelope,closedFrameFreshness:mutated}
+  })});
+  a.equal(bad.httpStatus,503,"Fake closed-bar freshness must fail closed");
+ }
  // Never trust upstream claims that a generic vendor pause certifies the
  // underlying broker's calendar, nor forward raw timestamps or BID/ASK.
  const refFrame=n=>({
