@@ -143,6 +143,60 @@ h1{font-size:1.37rem;margin:12px 0}
 @media(max-width:360px){#biquote-mobile-observation .biq-grid{grid-template-columns:1fr}.unified-mobile-nav a{font-size:.67rem}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 </style>
+
+<!-- GPP_APPROVED_MOBILE_LAYOUT_20261118_V2: visual grouping only; never alters quote processing, risk or order execution. -->
+<style id="gpp-mobile-layout-v2">
+@media(max-width:700px){
+  #unified-mobile-trading main{display:flex;flex-direction:column;gap:9px}
+  #unified-mobile-trading main>.heading{order:0}
+  #biquote-mobile-observation{order:1}
+  #biquote-live-chart-panel{order:2}
+  #gold-decision-center{order:3;margin:4px 0 8px!important}
+  #paper-overview{order:4}
+  #gpp-simulator-details{order:5}
+  #unified-mobile-trading .gpp-simulator-summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;min-height:54px;padding:12px 14px;background:linear-gradient(120deg,#243c55,#101d30);border:1px solid #c7a25a;border-radius:12px;color:#f1d48e;font-weight:750}
+  #gpp-simulator-details[open]>.gpp-simulator-summary{margin-bottom:12px}
+  #gpp-simulator-details{padding:7px;border:1px solid #485c73;border-radius:14px;background:#101c2d}
+  #biquote-mobile-observation{padding:12px}
+  #biquote-live-chart-panel{padding:12px}
+  #biquote-live-canvas{height:330px!important}
+  #gold-decision-center .gdc-columns{gap:7px}
+  #gold-decision-center .gdc-metric{min-width:0}
+  #unified-mobile-trading .heading h2{font-size:1.12rem}
+  #biquote-mobile-observation h2{font-size:1rem}
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  // Move existing DOM nodes, preserving their IDs, listeners, and live data bindings.
+  var main=document.querySelector('#unified-mobile-trading main');
+  var chart=document.getElementById('biquote-live-chart-panel');
+  var decision=document.getElementById('gold-decision-center');
+  if(!main||!chart||!decision)return;
+  chart.insertAdjacentElement('afterend',decision);
+  // Paper simulator stays functional, but is clearly separate from observed BiQuote.
+  var simulator=document.getElementById('paper-chart');
+  var paperActions=document.getElementById('paper-actions');
+  var paperStats=document.getElementById('paper-statistics');
+  if(!simulator||!paperActions||!paperStats||document.getElementById('gpp-simulator-details'))return;
+  var simSection=simulator.closest('section');
+  if(!simSection||simSection===main)return;
+  var details=document.createElement('details');
+  details.id='gpp-simulator-details';
+  var summary=document.createElement('summary');
+  summary.className='gpp-simulator-summary';
+  summary.textContent='الاختبارات والمحاكاة الورقية — بيانات غير حيّة';
+  details.appendChild(summary);
+  simSection.parentNode.insertBefore(details,simSection);
+  var current=simSection;
+  while(current){
+    var next=current.nextElementSibling;
+    details.appendChild(current);
+    if(current===paperStats)break;
+    current=next;
+  }
+});
+</script>
 <nav class="unified-mobile-nav" aria-label="أقسام نظام الذهب الموحد">
 <a href="#gold-decision-center">القرار</a><a href="#biquote-live-chart-panel">شارت الذهب</a><a href="#paper-actions">تداول ورقي</a><a href="#paper-statistics">السجل</a>
 </nav>
