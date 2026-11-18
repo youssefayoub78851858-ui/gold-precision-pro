@@ -74,6 +74,19 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertNotIn('vault.closed',PUBLIC)
         self.assertNotIn('vault.quoteObservations',PUBLIC)
 
+    def test_mobile_shadow_parity_uses_only_safe_comparison_counts(self):
+        self.assertIn('id="biquote-parity-state"',PUBLIC)
+        self.assertIn("shadow.diagnosticCrossFrameParity",PUBLIC)
+        self.assertIn('proof?.sourceRightsVerified===false',PUBLIC)
+        self.assertIn('proof?.brokerCalendarVerified===false',PUBLIC)
+        self.assertIn('proof?.paperOrdersAllowed===false',PUBLIC)
+        self.assertIn('row.fullyCoveredCompared+row.notFullyCovered',PUBLIC)
+        self.assertIn('row.fullyCoveredDisagreed>row.fullyCoveredCompared',PUBLIC)
+        self.assertIn('el("biquote-parity-state").textContent=',PUBLIC)
+        self.assertIn("لا يثبت ترخيص المصدر أو صلاحية التداول",PUBLIC)
+        self.assertNotIn("shadow.privateOHLC",PUBLIC)
+        self.assertNotIn("innerHTML",PUBLIC)
+
     def test_private_four_stage_batch_has_locked_mobile_evidence(self):
         for tag in ('id="four-stage-private-panel"', 'id="batch-readiness-state"',
                     'id="batch-data-state"', 'id="batch-archive-state"',
