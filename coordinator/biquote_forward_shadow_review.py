@@ -129,6 +129,56 @@ def shadow_review(dirname: str | pathlib.Path, *, runner=None,
             "neededContiguous": MIN_CONTIGUOUS,
             "additionalContiguousNeeded": max(0, MIN_CONTIGUOUS - len(continuous)),
         }
+    # Do not confuse total saved candles with the most recent strictly
+    # contiguous warmup. A vendor daily-pause hypothesis is not a verified
+    # MT5 broker calendar and NEVER permits bridging missing OHLC candles.
+    reference=metadata.get("gapReference",{})
+    if (not isinstance(reference,dict) or
+            reference.get("mode")!="BIQUOTE_PRIVATE_REFERENCE_GAP_COUNTS_ONLY" or
+            reference.get("status")!="REFERENCE_ONLY_NOT_BROKER_VERIFIED" or
+            reference.get("independentBrokerCalendarVerified") is not False or
+            reference.get("sourceRightsVerified") is not False or
+            reference.get("allGapsRemainUnclassified") is not True):
+        safe["reasonCodes"].append("FORWARD_GAP_REFERENCE_UNAVAILABLE")
+        return safe
+    continuity={}
+    for tf in FRAMES_ORDER:
+        item=reference.get("frames",{}).get(tf,{})
+        history=metadata["forwardCoverage"][tf]
+        total=safe["frames"][tf]["persistedClosed"]
+        tail=safe["frames"][tf]["contiguousClosed"]
+        missing=item.get("unclassifiedMissingSlots")
+        pause=item.get("vendorPauseCandidateSlotsNotVerified")
+        outside=item.get("outsideVendorReferenceSlots")
+        unknown=item.get("unknownReferenceSlots")
+        pairs=item.get("gapPairs")
+        if (any(type(v) is not int or v<0 or v>4500000
+                for v in (missing,pause,outside,unknown,pairs)) or
+                pause+outside+unknown!=missing or
+                item.get("persistedClosed")!=total or
+                history.get("closedBars")!=total or
+                history.get("unclassifiedMissingSlots")!=missing or
+                history.get("unclassifiedGapPairs")!=pairs or
+                not 0<=tail<=min(total,48)):
+            safe["reasonCodes"].append("FORWARD_GAP_REFERENCE_COUNTER_MISMATCH")
+            return safe
+        continuity[tf]={
+            "persistedClosed":total,
+            "strictLatestContiguous":tail,
+            "remainingUntil21":max(0,MIN_CONTIGUOUS-tail),
+            "unclassifiedMissingSlots":missing,
+            "vendorPauseCandidatesNotVerified":pause,
+            "outsideVendorReferenceSlots":outside,
+            "unknownReferenceSlots":unknown,
+            "lastRunAfterUnclassifiedGap":pairs>0 and tail<total,
+        }
+    safe["warmupContinuity"]={
+        "status":"STRICT_RAW_CLOSED_BARS_BROKER_CALENDAR_UNVERIFIED",
+        "signal":"WAIT","paperOrdersAllowed":False,
+        "brokerCalendarVerified":False,"sourceRightsVerified":False,
+        "gapBridgingAllowed":False,
+        "frames":continuity,
+    }
     # Independent OFFLINE geometry diagnostic, even during H4 warmup.
     # Inspect only the tail of actual, closed, hash-sealed M15/H1/H4 bars.
     # Count fully covered comparisons separately from uncovered higher bars.
