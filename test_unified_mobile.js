@@ -75,7 +75,7 @@ for(const id of ['biquote-live-chart-panel','biquote-live-canvas','biquote-live-
 a(doc.includes('data-biq-frame="M15"')&&doc.includes('data-biq-frame="H1"')&&doc.includes('data-biq-frame="H4"'));
 a(doc.includes('شارت محاكاة ورقية XAUUSD'),'Paper replay chart must be unmistakably labelled');
 a(doc.includes('افتح شارت BiQuote الخاص للشمعة المتكوّنة من عينات الأسعار'),"Paper demo must direct user to the actual protected BiQuote chart");
-a(doc.includes('التحديث الدوري كل دقيقتين، مش لحظي'),"Forming candle must not be confused with MT5 tick stream");
+a(doc.includes('التحديث التقريبي كل 20 ثانية والشاشة مفتوحة، مش تيكات MT5'),"Forming candle must not be confused with MT5 tick stream");
 a(doc.includes('id="biquote-forming-candle-note"'),"Sampled forming candle must be marked partial");
 a(doc.includes('شمعة جزئية من عينات متفرقة'),"No forged true OHLC completeness");
 a(doc.includes('id="paper-chart-not-live"'),"H1 replay chart requires prominent no-live disclaimer");
@@ -99,6 +99,8 @@ a(script.includes('setPrivateChart(null,'));
 a(!script.includes('window.GoldPaperCore')&&!script.includes('C.open('),
  'BiQuote live chart must never reach paper core trade execution');
 a(script.includes('privateChart=null,privateForming=null,privateStructure=null,privateMtf=null'));
+a(script.includes('setInterval(()=>{if(!document.hidden&&!busy)refresh();},20000)'),'Visible authenticated BiQuote preview must refresh at a bounded 20-second cadence');
+a(!script.includes('},120000)'),'Old two-minute polling must not leave preview stale for 90 seconds');
 a(script.includes('validateMtf(data.privateStructure.multiFrame,privateStructure)'));
 a(script.includes('displayMtf()'));
 a(script.includes('validateReferenceEma(data.privateStructure.referenceEmaResearch,acceptedChart)'));

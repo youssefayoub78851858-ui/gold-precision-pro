@@ -17,7 +17,7 @@
  let busy=false,activeFrame="M15",privateChart=null,privateForming=null,privateStructure=null,privateMtf=null,privateReferenceEma=null,privateVendorSchedule=null;
  const frameWidth={M15:900000,H1:3600000,H4:14400000};
  // A quote is verified at request time, not indefinitely while the page is
- // open. The 2-minute fetch cadence MUST NOT make a 30-second quote look live.
+ // open. The 20-second visible-page fetch cadence MUST NOT make a 30-second quote look live.
  // Expiring here never contacts BiQuote, stores prices, or changes a trade.
  let quoteValidUntilMs=0;
  function invalidateExpiredQuote(){
@@ -445,7 +445,7 @@
      drawPrivateChart();
      const note=$("biquote-forming-candle-note"),partial=privateForming?.[tf];
      if(note&&privateChart)note.textContent=partial?
-       "شمعة "+tf+" الذهبية: "+partial.samples+" عيّنات أسعار BiQuote مرصودة فقط، وليست تيكات MT5. تحديث كل دقيقتين · WAIT.":
+       "شمعة "+tf+" الذهبية: "+partial.samples+" عيّنات أسعار BiQuote مرصودة فقط، وليست تيكات MT5. تحديث تقريباً كل 20 ثانية · WAIT.":
        "لا توجد شمعة مفتوحة حديثة للفاصل "+tf+". يتم عرض الشموع المغلقة فقط؛ WAIT.";
      describeStructure();
    });
@@ -602,7 +602,7 @@
    privateVendorSchedule=privateStructure?
      validateVendorSchedule(data.privateStructure.vendorDeclaredSession,acceptedChart):null;
    // Compute only from validated OWNER-ONLY quote UTC + Bid/Ask received
-   // with the same existing 2-minute refresh. No new provider requests,
+   // with the existing read-only, visible-page polling. No extra quote endpoint,
    // no filled candles, no browser persistence, no trades or strategy changes.
    privateForming=acceptedChart&&window.GoldBiQuoteCandlePreview?
      window.GoldBiQuoteCandlePreview.update(privateForming,data,acceptedChart,Date.now()):null;
@@ -611,12 +611,12 @@
    if(formingNote)formingNote.textContent=forming?
      "شمعة "+activeFrame+" الذهبية مفتوحة: "+forming.samples+
        " عينات أسعار BiQuote موثّقة فقط، أول عيّنة "+local(new Date(forming.firstTickMs).toISOString())+
-       " بيروت. مش شمعة MT5 كاملة، والانتقال للساعة الجديدة ما بيملأ التيكات الناقصة. تحديث كل دقيقتين · WAIT.":
-     "ما في شمعة مفتوحة حديثة قابلة للعرض، أو جلسة BiQuote الخاصة مش متاحة. التحديث كل دقيقتين، ما في بث MT5 لحظي · WAIT.";
+       " بيروت. مش شمعة MT5 كاملة، والانتقال للساعة الجديدة ما بيملأ التيكات الناقصة. تحديث تقريباً كل 20 ثانية · WAIT.":
+     "ما في شمعة مفتوحة حديثة قابلة للعرض، أو جلسة BiQuote الخاصة مش متاحة. التحديث تقريباً كل 20 ثانية، ما في بث MT5 لحظي · WAIT.";
    if(acceptedChart)setPrivateChart(acceptedChart,
      "شموع BiQuote مغلقة + "+
        (forming?"شمعة "+activeFrame+" متكوّنة ذهبية (عينات فقط)":"ما في شمعة مفتوحة حديثة")+
-     " — عرض شخصي READ-ONLY، MID وربما بذرة BID، تحديث كل دقيقتين. "+
+     " — عرض شخصي READ-ONLY، MID وربما بذرة BID، تحديث تقريباً كل 20 ثانية. "+
      (data.status==="WAIT_CROSS_FRAME_GAPS"?
        "بعض H4 بتغطية M15 ناقصة، لا صفقات.":"مطابقة الفواصل لا تثبت الربحية أو حقوق الوسيط."));
    else{
@@ -671,5 +671,5 @@
  // Offline expiry watch only: no new provider polling, and no price stays
  // labeled fresh during the 90-second gap between scheduled observations.
  setInterval(invalidateExpiredQuote,5000);
- setInterval(()=>{if(!document.hidden&&!busy)refresh();},120000);
+ setInterval(()=>{if(!document.hidden&&!busy)refresh();},20000);
 })();

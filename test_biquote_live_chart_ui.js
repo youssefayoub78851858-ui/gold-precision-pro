@@ -139,8 +139,11 @@ assert.equal(makeNode("gdc-quote").textContent,"","Never show a private quote be
  assert.match(makeNode("gdc-blocker").textContent,/لا صفقات/);
  assert.equal(sessionLogins,1,"Exactly one token exchange");
  assert.equal(makeNode("biquote-viewer-secret").value,"","Original viewer token cleared immediately");
- // The sampled candle expires locally even when the next 2-minute provider
+ // The sampled candle expires locally even if the next scheduled provider
  // fetch has not happened. Historical CLOSED bars may remain, never as live.
+ const quoteRefresh=intervalCallbacks.find(x=>x.ms===20000);
+ assert.ok(quoteRefresh,"Preview needs a 20-second bounded visible-page refresh");
+ assert.equal(intervalCallbacks.some(x=>x.ms===120000),false);
  const expiryCheck=intervalCallbacks.find(x=>x.ms===5000);
  assert.ok(expiryCheck,"A local no-network quote expiry check must run every 5 seconds");
  const callsBeforeExpiry=requests.length;

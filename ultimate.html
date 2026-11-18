@@ -192,7 +192,7 @@
 </div>
 <div id="biquote-live-chart-panel" aria-labelledby="biquote-live-title">
 <h3 id="biquote-live-title">شارت الذهب المرصود — BiQuote (عرض خاص للقراءة فقط)</h3>
-<p id="biquote-forming-candle-note" role="status" class="overview-status" style="background:#293f4c;border:1px solid #8b9db5;border-radius:8px;padding:9px;color:#f4e3bb">شمعة H1 / M15 / H4 المفتوحة تظهر من عينات أسعار BiQuote المحمية عند وصولها، ومميّزة بلون ذهبي. هيدي شمعة جزئية من عينات متفرقة، **مش تيكات MT5 ولا OHLC كامل**. التحديث الدوري كل دقيقتين، مش لحظي؛ ولا تدخل بالتحليل أو الصفقات.</p>
+<p id="biquote-forming-candle-note" role="status" class="overview-status" style="background:#293f4c;border:1px solid #8b9db5;border-radius:8px;padding:9px;color:#f4e3bb">شمعة H1 / M15 / H4 المفتوحة تظهر من عينات أسعار BiQuote المحمية عند وصولها، ومميّزة بلون ذهبي. هيدي شمعة جزئية من عينات متفرقة، **مش تيكات MT5 ولا OHLC كامل**. التحديث التقريبي كل 20 ثانية والشاشة مفتوحة، مش تيكات MT5؛ ولا تدخل بالتحليل أو الصفقات.</p>
 <div class="biq-chart-tabs" role="group" aria-label="فاصل شارت BiQuote الحقيقي">
 <button type="button" data-biq-frame="M15" aria-pressed="true">M15</button>
 <button type="button" data-biq-frame="H1" aria-pressed="false">H1</button>
@@ -218,7 +218,7 @@
 <p class="overview-status">شموع MID من BiQuote، وقد تحتوي بداية التاريخ على BID. بعد أي فجوة غير مصنّفة، قد تظهر قراءة جزئية للقمم/القيعان من 7 شموع متصلة على الأقل؛ ATR14 يحتاج 15 وEMA20 يحتاج 20 شمعة متصلة. لا تُحسب أحداث BOS/FVG عبر الفجوات. الفجوة ليست إغلاق سوق مؤكداً لأن جدول جلسات الوسيط لم يُثبت. تظهر الفجوات كما هي، ولا يوجد تنفيذ أوامر أو ربط بالتداول الورقي. إذا صارت البيانات قديمة يُمسح الرسم، ويبقى القرار WAIT.</p>
 </div>
 
-<p class="overview-status">الفحص يتجدد كل دقيقتين عندما تكون الشاشة مفتوحة. عند إغلاق السوق كما يصرّح المصدر أو تأخر الشموع، لا تعرض اللوحة اتجاهاً قديماً على أنه حي. مراقبة الـ24 ساعة على خدمة Coordinator تعمل بشكل منفصل؛ هاللوحة لا تعرض إحصاءاتها التراكمية بعد. DXY والسندات وGC وOrder Flow والأخبار غير مكتملة، لذلك لا إشارات BUY/SELL.</p>
+<p class="overview-status">الفحص يتجدد تقريباً كل 20 ثانية عندما تكون الشاشة مفتوحة. عند إغلاق السوق كما يصرّح المصدر أو تأخر الشموع، لا تعرض اللوحة اتجاهاً قديماً على أنه حي. مراقبة الـ24 ساعة على خدمة Coordinator تعمل بشكل منفصل؛ هاللوحة لا تعرض إحصاءاتها التراكمية بعد. DXY والسندات وGC وOrder Flow والأخبار غير مكتملة، لذلك لا إشارات BUY/SELL.</p>
 </section>
 <section class="card" id="paper-overview"><div class="metric-grid">
 <div class="metric"><label>قرار النظام الحقيقي</label><strong id="live-decision" class="wait">WAIT</strong></div>
