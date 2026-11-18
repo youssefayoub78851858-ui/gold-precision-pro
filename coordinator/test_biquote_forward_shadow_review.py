@@ -43,6 +43,18 @@ class ForwardShadowTests(unittest.TestCase):
         self.assertFalse(short["researchWarmup"]["paperTradingAdmissible"])
         self.assertEqual(short["frames"]["H4"]["additionalContiguousNeeded"],
                          21-short["frames"]["H4"]["contiguousClosed"])
+        continuity=short["warmupContinuity"]
+        self.assertEqual(continuity["signal"],"WAIT")
+        self.assertEqual(continuity["status"],
+                         "STRICT_RAW_CLOSED_BARS_BROKER_CALENDAR_UNVERIFIED")
+        self.assertFalse(continuity["brokerCalendarVerified"])
+        self.assertFalse(continuity["sourceRightsVerified"])
+        self.assertFalse(continuity["gapBridgingAllowed"])
+        self.assertFalse(continuity["paperOrdersAllowed"])
+        self.assertEqual(continuity["frames"]["H4"]["persistedClosed"],
+                         short["frames"]["H4"]["persistedClosed"])
+        self.assertEqual(continuity["frames"]["H4"]["strictLatestContiguous"],
+                         short["frames"]["H4"]["contiguousClosed"])
         self.assertEqual(short["diagnosticCrossFrameParity"]["status"],
                          "CLOSED_ARCHIVE_GEOMETRY_ONLY_NOT_TRADE_PROOF")
         self.assertEqual(short["diagnosticCrossFrameParity"]["signal"],"WAIT")
@@ -108,6 +120,19 @@ class ForwardShadowTests(unittest.TestCase):
         self.assertIn("INSUFFICIENT_CONTIGUOUS_CLOSED_H4_H1_M15",report["reasonCodes"])
         self.assertGreater(report["frames"]["H4"]["unclassifiedGapPairs"],0)
         self.assertLess(report["frames"]["H4"]["contiguousClosed"],21)
+        proof=report["warmupContinuity"]["frames"]["H4"]
+        self.assertTrue(proof["lastRunAfterUnclassifiedGap"])
+        self.assertGreater(proof["persistedClosed"],proof["strictLatestContiguous"])
+        self.assertGreater(proof["unclassifiedMissingSlots"],0)
+        self.assertEqual(proof["remainingUntil21"],
+                         21-report["frames"]["H4"]["contiguousClosed"])
+        self.assertEqual(proof["unclassifiedMissingSlots"],
+                         proof["vendorPauseCandidatesNotVerified"]+
+                         proof["outsideVendorReferenceSlots"]+
+                         proof["unknownReferenceSlots"])
+        self.assertFalse(report["warmupContinuity"]["gapBridgingAllowed"])
+        for secret in ('"high"','"low"','"bid"','"ask"','"openTime"'):
+            self.assertNotIn(secret,json.dumps(report["warmupContinuity"]))
 
     def test_forged_engine_buy_or_synthetic_plan_never_promotes_trade(self):
         ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
