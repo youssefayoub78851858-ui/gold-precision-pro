@@ -119,6 +119,15 @@ class ForwardVault(unittest.TestCase):
         self.assertFalse(summary["gapReference"]["sourceRightsVerified"])
         self.assertFalse(summary["gapReference"]["paperOrdersAllowed"])
         self.assertTrue(summary["gapReference"]["allGapsRemainUnclassified"])
+        quote_check=summary["quoteCandleMidGeometry"]
+        self.assertEqual(quote_check["mode"],
+                         "PRIVATE_BIQUOTE_QUOTE_MID_CLOSED_OHLC_COUNTS_V1")
+        self.assertEqual(quote_check["sourceQuoteSamples"],1)
+        self.assertEqual(quote_check["status"],"NO_COMPARABLE_CLOSED_SAMPLES")
+        self.assertEqual(quote_check["signal"],"WAIT")
+        self.assertFalse(quote_check["brokerRightsVerified"])
+        self.assertFalse(quote_check["paperOrdersAllowed"])
+        self.assertFalse(quote_check["historicalBidAskOHLCVerified"])
         safe_json=json.dumps(summary)
         for private_key in ('"bid"','"ask"','"open"','"high"','"low"','"close"'):
             self.assertNotIn(private_key,safe_json)
