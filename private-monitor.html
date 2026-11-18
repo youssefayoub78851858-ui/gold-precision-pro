@@ -70,6 +70,7 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <div class="metric">H4<strong id="forward-h4">0</strong></div>
 </div>
 <p id="forward-last">آخر حفظ: غير مؤكد</p>
+<p id="forward-freshness" role="status">WAIT — حداثة آخر عينة BID/ASK غير مؤكدة</p>
 <p id="forward-coverage">الفجوات والتغطية: غير مؤكدتين</p>
 <p id="forward-gap-reference" role="status">WAIT — مقارنة الفجوات مع استراحة السوق المعلنة غير متاحة</p>
 <p><small>أعداد من القرص الخاص فقط. أي فجوة تعتبر غير مصنّفة لحين توثيق جلسات الوسيط، ولا تعني الأعداد أن البيانات مرخّصة أو أن صفقة ممكنة.</small></p>
@@ -195,6 +196,34 @@ el("refresh").addEventListener("click",async()=>{
   el("forward-last").textContent=typeof last==="string"&&
    /^20\d{2}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(last)
    ?"آخر تسجيل UTC: "+last:"آخر تسجيل: لا يوجد دليل محفوظ";
+  // Verified by the private relay against coordinator UTC and its own
+  // clock. Even a recent receipt is NOT an authenticated or licensed feed.
+  const fresh=safeVault?vault.captureFreshness:null;
+  const freshSafe=fresh?.mode==="BIQUOTE_PRIVATE_CAPTURE_LIVENESS_DIAGNOSTIC_ONLY"
+    &&fresh?.signal==="WAIT"&&fresh?.executable===false
+    &&fresh?.paperOrdersAllowed===false&&fresh?.sourceQualified===false
+    &&fresh?.brokerCalendarVerified===false
+    &&fresh?.captureVerifiedByBroker===false
+    &&typeof fresh?.asOfUTC==="string"
+    &&/^20\\d{2}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(?:\\.\\d{1,3})?Z$/.test(fresh.asOfUTC);
+  let freshnessText="WAIT — لم يُثبت وقت وصول آخر عينة BID/ASK";
+  if(freshSafe){
+    if(fresh.status==="RECENT_UNVERIFIED"&&
+       Number.isInteger(fresh.ageSeconds)&&fresh.ageSeconds>=0&&
+       fresh.ageSeconds<=300)
+      freshnessText="WAIT — آخر عينة BID/ASK حديثة عند الفحص ("+
+        fresh.ageSeconds+" ثانية)، لكنها غير معتمدة كمصدر تداول";
+    else if(fresh.status==="STALE_OVER_5_MINUTES"&&
+       Number.isInteger(fresh.ageSeconds)&&fresh.ageSeconds>300)
+      freshnessText="WAIT — آخر عينة BID/ASK متأخرة عند الفحص ("+
+        fresh.ageSeconds+" ثانية)، افحص استقبال البيانات";
+    else if(fresh.status==="NO_CAPTURE"&&fresh.ageSeconds===null)
+      freshnessText="WAIT — لا يوجد تسجيل لعينة BID/ASK بعد";
+    else if(fresh.status==="FUTURE_CAPTURE_OR_CLOCK_SKEW"&&
+       fresh.ageSeconds===null)
+      freshnessText="WAIT — توقيت العينة أحدث من ساعة التحقق؛ يجب فحص الساعة";
+  }
+  el("forward-freshness").textContent=freshnessText;
   el("forward-coverage").textContent=safeVault
    ?"فجوات زمنية غير مصنّفة في الأرشيف: "+missing+" — لا يعني صفر فجوات إثبات صلاحية الجلسات"
    :"التغطية الزمنية لم تتحقق بعد";
@@ -462,6 +491,7 @@ el("refresh").addEventListener("click",async()=>{
  }catch(e){
    el("status").textContent="WAIT — تعذّر فحص المراقبة";
    el("biquote-forward-state").textContent="WAIT — حالة أرشيف BiQuote غير متاحة";
+   el("forward-freshness").textContent="WAIT — حداثة آخر عينة غير متاحة";
    el("biquote-shadow-state").textContent="WAIT — تعذّر التحقق من تحليل V3 الخاص";
    clearBatchDisplay();
    el("biquote-shadow-coverage").textContent="التغطية الفنية غير متاحة";
