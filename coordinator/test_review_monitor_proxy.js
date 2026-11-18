@@ -554,6 +554,16 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
   executionCostsVerified:false,outOfSampleNetExpectancyVerified:false,
   archiveIntegrityObserved:false,
   missingStrictClosedBarsUntil21:{M15:21,H1:21,H4:21},
+  sessionWarmupRisk:{
+   mode:"STRICT_GRID_WARMUP_BROKER_CALENDAR_EVIDENCE_PENDING_V1",
+   status:"BROKER_SESSION_PROOF_REQUIRED",signal:"WAIT",
+   executable:false,brokerCalendarVerified:false,
+   sessionAwareWarmupAllowed:false,missingCandleBridgingAllowed:false,
+   futureContinuityGuaranteed:false,rawGridOnly:true,
+   strictContiguous:{M15:0,H1:0,H4:0},
+   unclassifiedGapPairs:{M15:0,H1:0,H4:0},
+   missingStrictClosedUntil21:{M15:21,H1:21,H4:21},
+   rawH4Candles:"DO_NOT_SEND_PRIVATE_RAW_PRICE"},
   remainingBlockerCodes:[
    "NO_POST_HOLDOUT_CLOSED_CANDLES",
    "STRICT_M15_CLOSED_WARMUP_INCOMPLETE",
@@ -579,6 +589,28 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  a.equal(withCompletion.body.ultimateFourStageBatch.completionAudit.
    remainingBlockerCodes.length,10);
  a.ok(!JSON.stringify(withCompletion).includes("MUST_NOT_ESCAPE_MOBILE"));
+ a.ok(!JSON.stringify(withCompletion).includes("DO_NOT_SEND_PRIVATE_RAW_PRICE"));
+ a.equal(withCompletion.body.ultimateFourStageBatch.completionAudit.
+   sessionWarmupRisk.brokerCalendarVerified,false);
+ a.equal(withCompletion.body.ultimateFourStageBatch.completionAudit.
+   sessionWarmupRisk.futureContinuityGuaranteed,false);
+ for(const badWarm of [
+  {brokerCalendarVerified:true},{sessionAwareWarmupAllowed:true},
+  {missingCandleBridgingAllowed:true},{futureContinuityGuaranteed:true},
+  {rawGridOnly:false},
+  {strictContiguous:{M15:21,H1:0,H4:0}},
+  {unclassifiedGapPairs:{M15:0,H1:0,H4:1}},
+  {missingStrictClosedUntil21:{M15:21,H1:21,H4:0}},
+ ]){
+  const denied=await relay(auth,{approved:true,fetchFn:async()=>mock({
+   ...expected,ultimateFourStageBatch:{...batch,completionAudit:{
+     ...completionAudit,sessionWarmupRisk:{
+      ...completionAudit.sessionWarmupRisk,...badWarm
+     }
+   }}
+  })});
+  a.equal(denied.httpStatus,503,"Broker session bypass must be blocked");
+ }
  for(const delta of [
   {independentMarketRightsVerified:true},{GCOrderFlowLicensed:true},
   {paperOrdersAllowed:true},{liveOrdersAllowed:true},
