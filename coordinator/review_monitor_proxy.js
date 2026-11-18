@@ -581,6 +581,57 @@ function sanitize(input){
    ...(stage2Safe?{stage2:stage2Safe}:{}),
    ...(stage3Safe?{stage3:stage3Safe}:{})};
  }
+ // One archived observation feeds the Android vault, V3 and four-stage
+ // panels. Mismatched closed-bar counts (or a research watch despite stale
+ // candle endpoints) must fail closed, not show a misleading BUY/SELL.
+ const frames3=["M15","H1","H4"];
+ if(safeForward?.status==="PRIVATE_FORWARD_VAULT_METADATA_ONLY"){
+  if(safeShadow?.frames&&Object.keys(safeShadow.frames).length>0){
+   for(const tf of frames3){
+    const frame=safeShadow.frames[tf],cv=safeForward.forwardCoverage[tf],
+      warm=safeShadow.warmupContinuity?.frames?.[tf],
+      gap=safeForward.gapReference?.frames?.[tf];
+    if(!frame||frame.persistedClosed!==safeForward.counts[tf]||
+       frame.contiguousClosed!==Math.min(48,cv.latestContiguousBars)||
+       (warm&&(warm.unclassifiedMissingSlots!==cv.unclassifiedMissingSlots||
+         warm.lastRunAfterUnclassifiedGap!==(
+          cv.unclassifiedMissingSlots>0&&frame.contiguousClosed<frame.persistedClosed)))||
+       (warm&&gap&&(
+         warm.vendorPauseCandidatesNotVerified!==gap.vendorPauseCandidateSlotsNotVerified||
+         warm.outsideVendorReferenceSlots!==gap.outsideVendorReferenceSlots||
+         warm.unknownReferenceSlots!==gap.unknownReferenceSlots)))
+     throw Error("Contradictory sealed archive versus frozen V3 counts");
+   }
+   if(safeShadow.technicalWatch!=="NONE"&&(
+      safeForward.captureFreshness?.status!=="RECENT_UNVERIFIED"||
+      !safeForward.closedFrameFreshness||
+      frames3.some(tf=>safeForward.closedFrameFreshness.frames[tf].status!==
+        "RECENT_UNVERIFIED")))
+    throw Error("Research watch with stale or missing quote/candle age");
+  }
+  if(safeBatch){
+   for(const tf of frames3){
+    const b=safeBatch.frameCounts[tf],cv=safeForward.forwardCoverage[tf],
+      stage2=safeBatch.stage2?.frames?.[tf];
+    if(!b||b.closed!==safeForward.counts[tf]||
+       b.contiguous!==Math.min(48,cv.latestContiguousBars)||
+       (stage2&&(stage2.unclassifiedGapPairs!==cv.unclassifiedGapPairs||
+        stage2.unclassifiedMissingSlots!==cv.unclassifiedMissingSlots)))
+     throw Error("Contradictory sealed archive versus four-stage counts");
+   }
+  }
+ }
+ if(safeShadow?.frames&&Object.keys(safeShadow.frames).length>0&&safeBatch){
+  for(const tf of frames3){
+   const frame=safeShadow.frames[tf],b=safeBatch.frameCounts[tf];
+   if(!frame||!b||frame.persistedClosed!==b.closed||
+      frame.contiguousClosed!==b.contiguous)
+    throw Error("Contradictory frozen V3 versus four-stage counts");
+  }
+  if(safeBatch.analysisStatus==="FROZEN_V3_TECHNICAL_OBSERVATION_ONLY"&&
+     safeBatch.technicalWatch!==safeShadow.technicalWatch)
+   throw Error("Contradictory V3 research watch across panels");
+ }
  return {status:"WAIT_EODHD_INTAKE",dataStatus:input.dataStatus,
   signal:"WAIT",executable:false,researchEligible:false,engineStatus:"NOT_INVOKED",
   paperRunning:false,closedBarCounts:safe,
