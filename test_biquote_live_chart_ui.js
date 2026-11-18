@@ -8,10 +8,11 @@ const {examine}=require("./coordinator/biquote_observed_ema_reference");
 const {evaluateFrames}=require("./coordinator/biquote_vendor_declared_session");
 const {makeMtfReadiness}=require("./coordinator/biquote_mtf_readiness");
 const widths={M15:900000,H1:3600000,H4:14400000};
-let candleDraws=0,blankMessages=0;
+let candleDraws=0,blankMessages=0,formingDraws=0;
 function makeCanvas(){
  const ctx={
    setTransform(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},
+   setLineDash(){},strokeRect(){formingDraws++;},
    fillRect(){candleDraws++;},fillText(t){if(t.includes("لا توجد شموع"))blankMessages++;},
    set fillStyle(_v){},set strokeStyle(_v){},set font(_v){},set textAlign(_v){}
  };
@@ -27,7 +28,7 @@ function makeNode(id){
  elements.set(id,node);return node;
 }
 const ids=["biquote-refresh","biquote-viewer-secret","biquote-viewer-logout","biquote-viewer-session-state","biquote-live-canvas",
-"biquote-live-caption","biquote-structure-summary","biquote-mtf-readiness","biquote-observed-ema","biquote-vendor-session","biquote-status","biquote-private-quote",
+"biquote-live-caption","biquote-forming-candle-note","biquote-structure-summary","biquote-mtf-readiness","biquote-observed-ema","biquote-vendor-session","biquote-status","biquote-private-quote",
 "biquote-private-spread","biquote-observed","biquote-m15","biquote-h1",
 "biquote-h4","biquote-overlap","gdc-decision","gdc-feed-status","gdc-observed",
 "gdc-quote","gdc-h4","gdc-h1","gdc-m15","gdc-blocker"];
@@ -57,6 +58,7 @@ function chart(){
  }));
 }
 const base={status:"WAIT_CROSS_FRAME_GAPS",signal:"WAIT",executable:false,
+ quoteUTC:new Date(NOW).toISOString(),
  researchEligible:false,tradePlanExecutable:false,paperOrdersAllowed:false,
  orderEndpointsCalled:false,observedUTC:new Date(NOW).toISOString(),
  quoteAgeSeconds:1,frameSummary,
@@ -103,7 +105,8 @@ async function fetch(url,opts){
 const document={getElementById:makeNode,querySelectorAll:sel=>{
  assert.equal(sel,"button[data-biq-frame]");return tabs;
 }};
-const window={devicePixelRatio:1,addEventListener(){}};
+const window={devicePixelRatio:1,addEventListener(){},
+ GoldBiQuoteCandlePreview:require("./biquote-live-candle-preview")};
 const context={window,document,Date,Number,Math,Object,Array,JSON,String,Boolean,
  AbortSignal:{timeout:()=>null},fetch,setInterval:()=>0,console};
 vm.runInNewContext(fs.readFileSync(path.join(__dirname,"biquote-mobile-ui.js"),"utf8"),context,{timeout:2000});
@@ -122,6 +125,8 @@ assert.equal(makeNode("gdc-quote").textContent,"","Never show a private quote be
  networkMode="authorized";
  await makeNode("biquote-refresh").click();
  assert.ok(candleDraws>before+20,"Authenticated closed MID candles must draw");
+ assert.ok(formingDraws>=1,"Only fresh private Bid/Ask may create a golden H1/M15/H4 sampled forming candle");
+ assert.match(makeNode("biquote-forming-candle-note").textContent,/عينات أسعار BiQuote/);
  assert.match(makeNode("gdc-feed-status").textContent,/WAIT/);
  assert.match(makeNode("gdc-quote").textContent,/3910/);
  assert.match(makeNode("gdc-h4").textContent,/وصفي فقط/);
@@ -173,6 +178,7 @@ assert.equal(makeNode("gdc-quote").textContent,"","Never show a private quote be
  await makeNode("biquote-refresh").click();
  assert.match(makeNode("biquote-live-caption").textContent,/WAIT/);
  assert.ok(blankMessages>=2,"Offline feed must clear live chart immediately");
+ assert.match(makeNode("biquote-forming-candle-note").textContent,/WAIT/);
  assert.match(makeNode("biquote-structure-summary").textContent,/WAIT/);
  assert.match(makeNode("biquote-mtf-readiness").textContent,/WAIT/);
  assert.match(makeNode("biquote-mtf-readiness").textContent,/محجوب/);
