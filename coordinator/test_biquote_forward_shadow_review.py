@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from biquote_forward_shadow_review import shadow_review, tail_contiguous, overlaps_match, BASE
-from biquote_private_forward_vault import ingest, load_vault
+from biquote_private_forward_vault import ingest, load_vault, inspect_metadata
 from test_biquote_private_forward_vault import sample, iso
 
 UTC=dt.timezone.utc
@@ -107,20 +107,26 @@ class ForwardShadowTests(unittest.TestCase):
         self.assertNotIn("3900",serialized)
         self.assertEqual(len(load_vault(self.folder)["quoteObservations"]),1)
 
-    def test_stale_h4_blocks_v3_even_when_quote_and_m15_h1_are_fresh(self):
-        # Synthetic quote at 03:59:30 is current. H4 last closes 20:00
-        # (the newest fully closed H4 bar was omitted by the source).
-        # The H4 age crosses 8h 40 seconds later, while quote stays fresh.
-        at=dt.datetime(2026,11,23,3,59,30,tzinfo=UTC)
-        payload=sample(at)
-        payload["frames"]["H4"]["bars"].pop(0)
+    def test_stale_frame_metadata_never_reaches_frozen_v3(self):
+        # The ingestion pipeline already rejects old closed bars at receipt.
+        # Inject a *synthetic corrupted age report* to prove the secondary
+        # V3 defense fails closed even when its BID/ASK receipt is fresh.
+        # No network and no broker execution.
         with patch.object(socket,"socket",side_effect=AssertionError("NO_EXTERNAL_REQUESTS")):
-            saved=ingest(self.folder,payload,received_utc=iso(at))
+            saved=ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
             self.assertEqual(saved["status"],"PRIVATE_FORWARD_CAPTURE_SAVED")
-            report=shadow_review(
-                self.folder,
-                runner=lambda _:self.fail("stale H4 must never invoke frozen V3"),
-                now_utc=at+dt.timedelta(seconds=40))
+            proof=inspect_metadata(self.folder,now_utc=AFTER)
+            self.assertEqual(
+                proof["closedFrameFreshness"]["frames"]["H4"]["status"],
+                "RECENT_UNVERIFIED")
+            proof["closedFrameFreshness"]["frames"]["H4"]={
+                "status":"CANDLE_STALE_OVER_TWO_FRAMES",
+                "ageSeconds":28801,"thresholdSeconds":28800}
+            with patch("biquote_forward_shadow_review.inspect_metadata",
+                       return_value=proof):
+                report=shadow_review(
+                    self.folder,runner=lambda _:self.fail(
+                        "stale H4 must never invoke frozen V3"),now_utc=AFTER)
         self.assertEqual(report["signal"],"WAIT")
         self.assertFalse(report["executable"])
         self.assertEqual(report["technicalWatch"],"NONE")
