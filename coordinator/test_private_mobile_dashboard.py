@@ -87,6 +87,23 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertNotIn("shadow.privateOHLC",PUBLIC)
         self.assertNotIn("innerHTML",PUBLIC)
 
+    def test_v3_mobile_watch_needs_full_closed_warmup_and_overlap(self):
+        # A BUY/SELL technical *watch* is not a trade, yet it still must
+        # never appear based only on a claimed frozen-engine result.
+        for phrase in (
+            'const watchSafe=safeShadow&&paritySafe',
+            'shadow.engineReview==="FROZEN_V3_COMPLETED_WITH_REAL_OBSERVED_CLOSED_BARS"',
+            '["M15","H1","H4"].every(tf=>',
+            'f.contiguousClosed>=21',
+            'p.fullyCoveredCompared>=1&&p.fullyCoveredDisagreed===0',
+            'const side=watchSafe?shadow.technicalWatch:"NONE"'
+        ):
+            self.assertIn(phrase,PUBLIC)
+        self.assertNotIn('const side=safeShadow?shadow.technicalWatch',PUBLIC)
+        self.assertIn('لم تكتمل الأدلة والشموع',PUBLIC)
+        self.assertNotIn('innerHTML',PUBLIC)
+        self.assertNotIn('localStorage',PUBLIC)
+
     def test_private_four_stage_batch_has_locked_mobile_evidence(self):
         for tag in ('id="four-stage-private-panel"', 'id="batch-readiness-state"',
                     'id="batch-data-state"', 'id="batch-archive-state"',
