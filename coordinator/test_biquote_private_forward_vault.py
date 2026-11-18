@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from biquote_private_forward_vault import (
-    FILE, START, ingest, inspect_metadata, load_vault
+    FILE, START, ingest, inspect_metadata, load_vault, capture_freshness
 )
 
 UTC=dt.timezone.utc
@@ -134,6 +134,42 @@ class ForwardVault(unittest.TestCase):
         self.safe(advanced)
         self.assertGreater(advanced["newClosedBars"]["M15"],0)
         self.assertEqual(len(load_vault(self.folder)["quoteObservations"]),2)
+
+    def test_quote_freshness_is_read_only_and_never_broker_entitlement(self):
+        # No external requests, no orders, only a known synthetic receipt.
+        no_capture=inspect_metadata(self.folder,now_utc=NOW)
+        self.assertEqual(no_capture["captureFreshness"]["status"],"NO_CAPTURE")
+        self.assertIsNone(no_capture["captureFreshness"]["ageSeconds"])
+        with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+            ingest(self.folder,self.s,received_utc=iso(NOW))
+            recent=inspect_metadata(self.folder,now_utc=NOW+dt.timedelta(seconds=299))
+            cutoff=inspect_metadata(self.folder,now_utc=NOW+dt.timedelta(seconds=300))
+            stale=inspect_metadata(self.folder,now_utc=NOW+dt.timedelta(seconds=301))
+            future=inspect_metadata(self.folder,now_utc=NOW-dt.timedelta(seconds=1))
+        self.assertEqual(recent["captureFreshness"]["status"],"RECENT_UNVERIFIED")
+        self.assertEqual(cutoff["captureFreshness"]["status"],"RECENT_UNVERIFIED")
+        self.assertEqual(stale["captureFreshness"]["status"],"STALE_OVER_5_MINUTES")
+        self.assertEqual(stale["captureFreshness"]["ageSeconds"],301)
+        self.assertEqual(future["captureFreshness"]["status"],
+                         "FUTURE_CAPTURE_OR_CLOCK_SKEW")
+        self.assertIsNone(future["captureFreshness"]["ageSeconds"])
+        self.assertEqual(
+            capture_freshness(iso(NOW),1,now_utc=dt.datetime(2026,11,19)),
+            {**capture_freshness(None,0,now_utc=dt.datetime(2026,11,19)),
+             "status":"UTC_CLOCK_UNVERIFIED"})
+        for report in (no_capture,recent,cutoff,stale,future):
+            f=report["captureFreshness"]
+            self.assertEqual(f["signal"],"WAIT")
+            self.assertFalse(f["sourceQualified"])
+            self.assertFalse(f["brokerCalendarVerified"])
+            self.assertFalse(f["captureVerifiedByBroker"])
+            self.assertFalse(f["paperOrdersAllowed"])
+            self.assertFalse(f["executable"])
+            self.assertEqual(report["tradeSignalReady"],False)
+            safe=json.dumps(f)
+            for secret in ('"bid"','"ask"','"spread"','"close"'):
+                self.assertNotIn(secret,safe)
+        self.assertEqual(len(load_vault(self.folder)["quoteObservations"]),1)
 
     def test_candle_revision_rejected_without_rewriting_archive(self):
         ingest(self.folder,self.s,received_utc=iso(NOW))
