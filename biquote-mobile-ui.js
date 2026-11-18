@@ -14,7 +14,7 @@
    MIXED:"اتجاه مختلط"};
  // Completely separate from paper-terminal-core.js and its simulator.
  // No market data is written to storage or the paper-trade journal.
- let busy=false,activeFrame="M15",privateChart=null,privateStructure=null,privateMtf=null,privateReferenceEma=null,privateVendorSchedule=null;
+ let busy=false,activeFrame="M15",privateChart=null,privateForming=null,privateStructure=null,privateMtf=null,privateReferenceEma=null,privateVendorSchedule=null;
  const frameWidth={M15:900000,H1:3600000,H4:14400000};
  function validPrivateChart(input){
    if(!input||typeof input!=="object"||Array.isArray(input))return null;
@@ -335,7 +335,13 @@
    canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
    ctx.setTransform(dpr,0,0,dpr,0,0);
    ctx.fillStyle="#0b1a2a";ctx.fillRect(0,0,w,h);
-   const rows=privateChart?.[activeFrame];
+   // The only live-forming layer is a VISUAL sampled overlay from the
+   // existing authenticated quote. It never modifies privateChart CLOSED
+   // bars or any technical/MTF/paper decision engine inputs.
+   const confirmedRows=privateChart?.[activeFrame];
+   const forming=privateForming?.[activeFrame]||null;
+   const rows=confirmedRows?.length
+     ?(forming?[...confirmedRows,forming]:confirmedRows):null;
    if(!rows?.length){
      ctx.fillStyle="#b9cae0";ctx.font="14px system-ui";ctx.textAlign="center";
      ctx.fillText("لا توجد شموع حقيقية مصرح بعرضها",w/2,h/2);
@@ -358,10 +364,27 @@
    const candleWidth=Math.max(2,Math.min(10,plotWidth/rows.length*0.58));
    for(const r of rows){
      const center=x(r.t),up=r.close>=r.open;
-     ctx.fillStyle=up?"#44cfb0":"#ea8292";ctx.strokeStyle=ctx.fillStyle;
-     ctx.beginPath();ctx.moveTo(center,y(r.high));ctx.lineTo(center,y(r.low));ctx.stroke();
-     ctx.fillRect(center-candleWidth/2,Math.min(y(r.open),y(r.close)),
-       candleWidth,Math.max(1,Math.abs(y(r.open)-y(r.close))));
+     if(r.partial===true){
+       // Distinct GOLD outline: no claim of a complete provider or MT5 OHLC.
+       ctx.strokeStyle="#f3d278";ctx.fillStyle="rgba(244,210,120,.18)";
+       ctx.lineWidth=2;ctx.setLineDash([3,2]);
+       ctx.beginPath();ctx.moveTo(center,y(r.high));ctx.lineTo(center,y(r.low));ctx.stroke();
+       ctx.setLineDash([]);
+       const y1=Math.min(y(r.open),y(r.close));
+       const bh=Math.max(2,Math.abs(y(r.open)-y(r.close)));
+       ctx.fillRect(center-candleWidth/2,y1,candleWidth,bh);
+       ctx.strokeRect(center-candleWidth/2,y1,candleWidth,bh);
+       ctx.lineWidth=1;
+     }else{
+       ctx.fillStyle=up?"#44cfb0":"#ea8292";ctx.strokeStyle=ctx.fillStyle;
+       ctx.beginPath();ctx.moveTo(center,y(r.high));ctx.lineTo(center,y(r.low));ctx.stroke();
+       ctx.fillRect(center-candleWidth/2,Math.min(y(r.open),y(r.close)),
+         candleWidth,Math.max(1,Math.abs(y(r.open)-y(r.close))));
+     }
+   }
+   if(forming){
+     ctx.fillStyle="#f3d278";ctx.font="11px system-ui";ctx.textAlign="left";
+     ctx.fillText("متكوّنة من "+forming.samples+" عيّنة سعر فقط",left,13);
    }
    // Show only AUTHENTICATED, time-aligned, confirmed research levels.
    // These are overlays, not entry/SL/TP recommendations.
@@ -398,6 +421,10 @@
      for(const b of document.querySelectorAll("button[data-biq-frame]"))
        b.setAttribute("aria-pressed",String(b.dataset.biqFrame===tf));
      drawPrivateChart();
+     const note=$("biquote-forming-candle-note"),partial=privateForming?.[tf];
+     if(note&&privateChart)note.textContent=partial?
+       "شمعة "+tf+" الذهبية: "+partial.samples+" عيّنات أسعار BiQuote مرصودة فقط، وليست تيكات MT5. تحديث كل دقيقتين · WAIT.":
+       "لا توجد شمعة مفتوحة حديثة للفاصل "+tf+". يتم عرض الشموع المغلقة فقط؛ WAIT.";
      describeStructure();
    });
  window.addEventListener("resize",drawPrivateChart,{passive:true});
@@ -449,6 +476,9 @@
   for(const id of ["biquote-private-quote","biquote-private-spread","biquote-observed",
     "biquote-m15","biquote-h1","biquote-h4","biquote-overlap"])
    $(id).textContent="غير متاح";
+  privateForming=null;
+  const formingNote=$("biquote-forming-candle-note");
+  if(formingNote)formingNote.textContent="WAIT — شمعة الساعة المفتوحة غير متاحة حالياً. ما في بث MT5 مباشر ولا أسعار محتفظ فيها.";
   privateStructure=null;privateMtf=null;privateReferenceEma=null;privateVendorSchedule=null;
   setPrivateChart(null,"WAIT — بيانات الشارت الحقيقي غير متاحة أو منتهية الصلاحية. لا تُعرض شموع قديمة.");
  }
@@ -538,10 +568,24 @@
      validateReferenceEma(data.privateStructure.referenceEmaResearch,acceptedChart):null;
    privateVendorSchedule=privateStructure?
      validateVendorSchedule(data.privateStructure.vendorDeclaredSession,acceptedChart):null;
+   // Compute only from validated OWNER-ONLY quote UTC + Bid/Ask received
+   // with the same existing 2-minute refresh. No new provider requests,
+   // no filled candles, no localStorage, no trades or strategy changes.
+   privateForming=acceptedChart&&window.GoldBiQuoteCandlePreview?
+     window.GoldBiQuoteCandlePreview.update(privateForming,data,acceptedChart,Date.now()):null;
+   const forming=privateForming?.[activeFrame];
+   const formingNote=$("biquote-forming-candle-note");
+   if(formingNote)formingNote.textContent=forming?
+     "شمعة "+activeFrame+" الذهبية مفتوحة: "+forming.samples+
+       " عينات أسعار BiQuote موثّقة فقط، أول عيّنة "+local(new Date(forming.firstTickMs).toISOString())+
+       " بيروت. مش شمعة MT5 كاملة، والانتقال للساعة الجديدة ما بيملأ التيكات الناقصة. تحديث كل دقيقتين · WAIT.":
+     "ما في شمعة مفتوحة حديثة قابلة للعرض، أو جلسة BiQuote الخاصة مش متاحة. التحديث كل دقيقتين، ما في بث MT5 لحظي · WAIT.";
    if(acceptedChart)setPrivateChart(acceptedChart,
-     "شموع BiQuote مغلقة — عرض خاص READ-ONLY، MID وربما بذرة BID. "+
+     "شموع BiQuote مغلقة + "+
+       (forming?"شمعة "+activeFrame+" متكوّنة ذهبية (عينات فقط)":"ما في شمعة مفتوحة حديثة")+
+     " — عرض شخصي READ-ONLY، MID وربما بذرة BID، تحديث كل دقيقتين. "+
      (data.status==="WAIT_CROSS_FRAME_GAPS"?
-       "بعض مجموعات H4 فيها تغطية M15 غير مكتملة، لا صفقات.":"مطابقة الأطر لا تثبت الترخيص أو الربحية."));
+       "بعض H4 بتغطية M15 ناقصة، لا صفقات.":"مطابقة الفواصل لا تثبت الربحية أو حقوق الوسيط."));
    else{
      privateStructure=null;privateMtf=null;privateReferenceEma=null;privateVendorSchedule=null;
      setPrivateChart(null,
