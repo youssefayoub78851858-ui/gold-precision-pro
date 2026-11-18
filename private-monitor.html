@@ -90,6 +90,7 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <div class="metric">الصفقات الورقية<strong id="batch-paper-state" style="font-size:.9rem">BLOCKED</strong></div>
 </div>
 <p id="batch-frames-state"><small>الشموع المتصلة في الأرشيف: غير متاحة</small></p>
+<p id="batch-capacity-state" role="status">سعة عينات السبريد/الاقتباسات: لم تُفحص على القرص الخاص بعد</p>
 <p><small>تُقرأ هذه الحالة من Coordinator الخاص فقط بعد نشره وإتاحة الأرشيف. نتائج الاختبارات البرمجية لا تثبت بيانات السوق الحقيقية أو ترخيص المصدر أو جاهزية التداول.</small></p>
 </section>
 <section id="audit-panel" aria-labelledby="audit-title">
@@ -116,6 +117,7 @@ function clearBatchDisplay(){
  el("batch-analysis-state").textContent="غير مؤكد";
  el("batch-paper-state").textContent="BLOCKED";
  el("batch-frames-state").textContent="لا توجد عدّادات شموع معتمدة حالياً";
+ el("batch-capacity-state").textContent="سعة الأرشيف: غير مؤكدة";
 }
 const labels={
  NOT_CONNECTED:"الوصلة الخاصة غير مفعّلة",
@@ -234,6 +236,25 @@ el("refresh").addEventListener("click",async()=>{
     parts.push(tf+": "+(Number.isInteger(n)&&n>=0?n:"غير معروف")+" شمعة متصلة");
    }
    el("batch-frames-state").textContent=parts.join(" | ");
+   const status=batch.capacityStatus;
+   const remaining=batch.quoteSamplesRemaining;
+   const limit=batch.quoteSamplesHardCap;
+   const safeCapacity=["CAPACITY_HEADROOM","CAPACITY_WARNING",
+     "CAPACITY_LIMIT_REACHED","CAPACITY_METADATA_UNAVAILABLE"].includes(status)
+     &&(status==="CAPACITY_METADATA_UNAVAILABLE"?
+        remaining===null&&limit===null:
+        Number.isInteger(remaining)&&remaining>=0&&remaining<=10000&&limit===10000)
+     &&batch.capacityExhausted===(status==="CAPACITY_LIMIT_REACHED"||
+       status==="CAPACITY_METADATA_UNAVAILABLE");
+   const capLabels={
+     CAPACITY_HEADROOM:"سعة متاحة، لكن الأرشيف غير مؤهّل بعد",
+     CAPACITY_WARNING:"إنذار مبكر: الأرشيف يقترب من السقف",
+     CAPACITY_LIMIT_REACHED:"توقّف: السقف وصل، بدنا قرار احتفاظ قبل أي تسجيل",
+     CAPACITY_METADATA_UNAVAILABLE:"ما في دليل آمن على سعة القرص"
+   };
+   el("batch-capacity-state").textContent=safeCapacity
+     ?capLabels[status]+(Number.isInteger(remaining)?" · باقي "+remaining+" من "+limit+" عينة":"")
+     :"WAIT — معلومات السعة مرفوضة";
   }else clearBatchDisplay();
   const audit=data.audit;
   const states={AUDIT_DISABLED:"المراقب الدوري متوقف",AUDIT_NOT_STARTED:"المراقب لم يسجّل أي فحص بعد",
