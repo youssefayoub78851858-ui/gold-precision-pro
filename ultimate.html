@@ -101,6 +101,48 @@
  #gold-decision-center .gdc-level{padding:7px 1px}
 }
 </style>
+<!-- GPP_APPROVED_MOBILE_DESIGN_20261118 -->
+<style id="gpp-approved-mobile-design">
+/* Presentation-only: no API, signal, price, execution or persistence changes. */
+:root{color-scheme:dark}
+body{background:radial-gradient(ellipse at 50% 0%,#15283c 0,#07111e 55%,#050b14 100%);color:#edf3fb}
+h1{font-weight:850;letter-spacing:.01em;text-align:center;color:#f0cd7d;text-shadow:0 2px 15px #a4772e35}
+.unified-intro{border:1px solid #6a593d;border-radius:13px;padding:12px;background:#142237;color:#e6d5b0;text-align:center}
+.unified-mobile-nav{border:1px solid #665739;background:#101c2df5;box-shadow:0 9px 25px #0009;padding:7px;gap:7px}
+.unified-mobile-nav a{background:linear-gradient(155deg,#263c57,#192c45);border:1px solid #486078;border-radius:12px;color:#f5d999;font-size:.83rem;min-height:51px}
+.unified-mobile-nav a:first-child{background:linear-gradient(145deg,#f4d994,#c8994a);color:#172438;border-color:#eac576}
+#gold-decision-center,#unified-mobile-trading{background:linear-gradient(145deg,#112139,#0a1627);border:1px solid #6d5a3d;box-shadow:0 12px 30px #0007;border-radius:20px}
+#gold-decision-center .gdc-top{padding-bottom:12px;border-bottom:1px solid #38485e}
+#gold-decision-center .gdc-wait{background:#352b22;border-color:#e0b75d;color:#ffdc85;box-shadow:0 0 16px #c9933838}
+#gold-decision-center .gdc-data,#gold-decision-center .gdc-metric{border-radius:13px}
+#unified-mobile-trading .heading{background:linear-gradient(90deg,#12253d,#1c3049);padding:12px;border:1px solid #465c76;border-radius:13px}
+#unified-mobile-trading .heading h2{color:#f4d58e}
+#unified-mobile-trading .card,#biquote-mobile-observation,#biquote-live-chart-panel{background:linear-gradient(155deg,#14283d,#0c1b2d);border:1px solid #3c526a;border-radius:16px;box-shadow:0 6px 17px #0004}
+#biquote-mobile-observation .biq-item{background:#0c1d30;border:1px solid #3b5067;border-radius:12px}
+#biquote-mobile-observation .biq-value{color:#f6d58c}
+#biquote-live-chart-panel{border-color:#aa8a4d}
+#biquote-live-chart-panel h3{font-weight:800;color:#f4d38b}
+#biquote-live-chart-panel .biq-chart-tabs button{border-radius:12px;background:#223b56}
+#biquote-live-chart-panel .biq-chart-tabs button[aria-pressed="true"]{background:linear-gradient(140deg,#f5d99c,#d5a958);color:#101e31;box-shadow:0 2px 13px #d4a35155}
+#biquote-live-canvas{height:330px;background:#071523;border:1px solid #364b63;border-radius:14px}
+#unified-mobile-trading button{border-radius:11px}
+#unified-mobile-trading button:focus-visible,.unified-mobile-nav a:focus-visible{outline:3px solid #f5d990;outline-offset:3px}
+@media(max-width:600px){
+body{margin:0 auto;padding:9px 8px 45px;font-size:15px}
+h1{font-size:1.37rem;margin:12px 0}
+.unified-mobile-nav{position:sticky;top:5px;z-index:25;grid-template-columns:repeat(4,minmax(0,1fr));margin:8px 0 13px}
+.unified-mobile-nav a{min-height:50px;font-size:.75rem;padding:6px 2px}
+#gold-decision-center{padding:12px;margin:12px 0}
+#gold-decision-center .gdc-top{align-items:flex-start}
+#gold-decision-center .gdc-wait{font-size:1.08rem;padding:9px 11px}
+#unified-mobile-trading main{padding:9px 8px 30px}
+#biquote-live-canvas{height:310px}
+#biquote-mobile-observation .biq-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+#biquote-mobile-observation .biq-item.wide{grid-column:1/-1}
+}
+@media(max-width:360px){#biquote-mobile-observation .biq-grid{grid-template-columns:1fr}.unified-mobile-nav a{font-size:.67rem}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
 <nav class="unified-mobile-nav" aria-label="أقسام نظام الذهب الموحد">
 <a href="#gold-decision-center">القرار</a><a href="#biquote-live-chart-panel">شارت الذهب</a><a href="#paper-actions">تداول ورقي</a><a href="#paper-statistics">السجل</a>
 </nav>
