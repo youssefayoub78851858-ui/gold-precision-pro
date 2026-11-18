@@ -227,6 +227,42 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
         "DXY":False,"US02Y":False,"US10Y":False,"GC":False,
         "calendar":False,"headlines":False,"licensedOrderFlow":False
     }
+    # One owner-only completion checklist for ALL unfinished stages.
+    # Derive blockers exclusively from observed sealed-bar counters and
+    # unverified source/risk flags; no simulated profit or broker authority.
+    missing={tf:max(0,21-tails[tf]) for tf in FRAMES_ORDER}
+    blockers=[]
+    if archive_status=="PRIVATE_VAULT_NOT_READABLE":
+        blockers.append("PRIVATE_VAULT_UNREADABLE")
+    elif archive_status=="NO_FORWARD_CAPTURE":
+        blockers.append("NO_POST_HOLDOUT_CLOSED_CANDLES")
+    for tf in FRAMES_ORDER:
+        if missing[tf]:
+            blockers.append("STRICT_"+tf+"_CLOSED_WARMUP_INCOMPLETE")
+    blockers.extend([
+        "UNDERLYING_BROKER_MARKET_DATA_RIGHTS_UNCONFIRMED",
+        "BROKER_XAUUSD_SESSION_DST_UNCONFIRMED",
+        "GC_TRADES_MBO_MBP10_LICENSING_NOT_ESTABLISHED",
+        "DXY_US02Y_US10Y_AND_EVENT_CONTEXT_NOT_INDEPENDENTLY_LIVE",
+        "EXECUTION_BID_ASK_SPREAD_SLIPPAGE_FEES_UNVERIFIED",
+        "OUT_OF_SAMPLE_NET_EXPECTANCY_NOT_PROVEN",
+    ])
+    result["completionAudit"]={
+        "mode":"GOLD_PRECISION_ONE_BATCH_COMPLETION_GATE_V1",
+        "status":"WAIT_EXTERNAL_EVIDENCE_AND_FORWARD_DATA",
+        "signal":"WAIT","executable":False,
+        "paperOrdersAllowed":False,"liveOrdersAllowed":False,
+        "providerRequestsMade":0,"brokerOrdersSent":0,
+        "independentMarketRightsVerified":False,
+        "brokerSessionDSTVerified":False,
+        "GCOrderFlowLicensed":False,
+        "independentMacroFeedsVerified":False,
+        "executionCostsVerified":False,
+        "outOfSampleNetExpectancyVerified":False,
+        "archiveIntegrityObserved":archive_status=="FORWARD_CAPTURE_PRESENT_UNVERIFIED",
+        "missingStrictClosedBarsUntil21":missing,
+        "remainingBlockerCodes":blockers,
+    }
     union=source_reasons+analysis_codes+paper["reasonCodes"]
     result["reasonCodes"]=list(dict.fromkeys(x for x in union
         if isinstance(x,str) and x.isupper() and x.replace("_","").isalnum()))[:60]
