@@ -85,17 +85,17 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
      distinctComparableClosedBars:0}
   },secretBid:98765.5
  };
- const withParity=await relay(auth,{approved:true,fetchFn:async()=>mock({
+ const withQuoteParity=await relay(auth,{approved:true,fetchFn:async()=>mock({
   ...expected,biquotePrivateForwardVault:{
    ...freshArchive,quoteCandleMidGeometry:quoteParity}
  })});
- a.equal(withParity.httpStatus,200);
- a.equal(withParity.body.biquotePrivateForwardVault.
+ a.equal(withQuoteParity.httpStatus,200);
+ a.equal(withQuoteParity.body.biquotePrivateForwardVault.
    quoteCandleMidGeometry.frames.M15.withinClosedOHLC,2);
- a.equal(withParity.body.biquotePrivateForwardVault.
+ a.equal(withQuoteParity.body.biquotePrivateForwardVault.
    quoteCandleMidGeometry.paperOrdersAllowed,false);
- a.ok(!JSON.stringify(withParity).includes("HIDE_PRIVATE_M15"));
- a.ok(!JSON.stringify(withParity).includes("98765.5"));
+ a.ok(!JSON.stringify(withQuoteParity).includes("HIDE_PRIVATE_M15"));
+ a.ok(!JSON.stringify(withQuoteParity).includes("98765.5"));
  for(const bad of [
   {brokerRightsVerified:true},{brokerSessionCalendarVerified:true},
   {historicalBidAskOHLCVerified:true},
