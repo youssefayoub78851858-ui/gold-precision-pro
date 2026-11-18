@@ -114,7 +114,7 @@ def shadow_review(dirname: str | pathlib.Path, *, runner=None,
                 "brokerSessionGapClassificationVerified": False,
                 "paperTradingAdmissible": False,
             }}
-    metadata = inspect_metadata(dirname)
+    metadata = inspect_metadata(dirname, now_utc=now_utc)
     archive = load_vault(dirname)
     rows = archive["closed"]
     received = archive["lastImportedUTC"]
@@ -252,6 +252,32 @@ def shadow_review(dirname: str | pathlib.Path, *, runner=None,
             parity[tf]["fullyCoveredDisagreed"] > 0
             for tf in ("H1","H4"))):
         safe["reasonCodes"].append("FORWARD_CROSS_FRAME_PARITY_NOT_PROVEN")
+        return safe
+    # An entirely fresh BID/ASK tick can coexist with a stalled candle
+    # endpoint. Never show even a V3 *technical watch* from such an archive.
+    # Thresholds (2x frame width) are conservative diagnostics, NOT an
+    # independent broker/session calendar or proof of feed entitlements.
+    frame_health=metadata.get("closedFrameFreshness")
+    if (not isinstance(frame_health,dict) or
+        frame_health.get("mode")!="BIQUOTE_PRIVATE_CLOSED_FRAME_AGE_DIAGNOSTIC_ONLY" or
+        frame_health.get("status")!="AGE_COUNTS_ONLY_UNVERIFIED" or
+        frame_health.get("signal")!="WAIT" or
+        frame_health.get("executable") is not False or
+        frame_health.get("paperOrdersAllowed") is not False or
+        frame_health.get("sourceQualified") is not False or
+        frame_health.get("brokerCalendarVerified") is not False or
+        frame_health.get("gapBridgingAllowed") is not False):
+        safe["reasonCodes"].append("FROZEN_V3_CLOSED_BAR_AGE_UNAVAILABLE")
+        return safe
+    frames_health=frame_health.get("frames")
+    if (not isinstance(frames_health,dict) or
+        set(frames_health)!=set(FRAMES_ORDER) or
+        any(not isinstance(frames_health[tf],dict) or
+            frames_health[tf].get("status")!="RECENT_UNVERIFIED" or
+            type(frames_health[tf].get("ageSeconds")) is not int or
+            not 0<=frames_health[tf]["ageSeconds"]<=2*WIDTH[tf]
+            for tf in FRAMES_ORDER)):
+        safe["reasonCodes"].append("FROZEN_V3_CLOSED_BAR_STALE_OR_UNVERIFIED")
         return safe
     packet = {"dataOrigin": "BIQUOTE_ARCHIVED_UNVERIFIED_NO_PAPER",
               "snapshot": {
