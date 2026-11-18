@@ -12,7 +12,7 @@ import json
 import pathlib
 
 from biquote_24h_final_verdict import verdict
-from biquote_private_forward_vault import FRAMES_ORDER, inspect_metadata
+from biquote_private_forward_vault import FRAMES_ORDER, inspect_vault_metadata, load_vault
 from biquote_forward_shadow_review import shadow_review
 from paper_admission_gate import assess_biquote_paper_gate
 from private_forward_capacity_preflight import capacity_readiness
@@ -70,8 +70,14 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
         if (vault_metadata is None) != (shadow_status is None):
             raise ValueError("INCOMPLETE_PRECOMPUTED_STATUS")
         if vault_metadata is None:
-            m=inspect_metadata(vault_dir)
-            sh=shadow_review(vault_dir,runner=shadow_runner,now_utc=now_utc)
+            # Standalone CLI and tests also use ONE SHA-checked private vault
+            # read. No race between metadata and shadow diagnostics when an
+            # atomic writer replaces the archive during evaluation.
+            sealed=load_vault(vault_dir)
+            m=inspect_vault_metadata(sealed,now_utc=now_utc)
+            sh=shadow_review(
+                vault_dir,runner=shadow_runner,now_utc=now_utc,
+                vault_metadata=m,sealed_vault=sealed)
         else:
             m=vault_metadata
             sh=shadow_status
