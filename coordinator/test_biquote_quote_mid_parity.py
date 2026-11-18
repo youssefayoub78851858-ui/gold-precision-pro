@@ -1,6 +1,7 @@
 """Synthetic-only checks for sealed BiQuote tick MID / closed OHLC geometry."""
 import copy
 import json
+import pathlib
 import socket
 import unittest
 from unittest.mock import patch
@@ -40,6 +41,14 @@ class QuoteMidParityTests(unittest.TestCase):
                      '2026-11-18T08'):
             self.assertNotIn(word,json.dumps(record))
         return record
+
+    def test_coordinator_docker_must_package_private_mid_parity_checker(self):
+        docker=(pathlib.Path(__file__).resolve().parent/"Dockerfile").read_text()
+        self.assertIn("biquote_quote_mid_parity.py",docker)
+        self.assertIn("biquote_private_forward_vault.py",docker)
+        vault=(pathlib.Path(__file__).resolve().parent/
+               "biquote_private_forward_vault.py").read_text()
+        self.assertIn("audit_closed_quote_mid_parity(v)",vault)
 
     def test_quote_mid_in_closed_candle_bounds_counts_only(self):
         with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
