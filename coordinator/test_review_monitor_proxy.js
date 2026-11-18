@@ -128,33 +128,6 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  a.equal(unavailable.httpStatus,200);
  a.equal(unavailable.body.biquotePrivateForwardVault.status,"VAULT_METADATA_UNAVAILABLE");
  a.ok(!JSON.stringify(unavailable).includes("secret-vault-token"));
- const shadow={
-  mode:"BIQUOTE_PRIVATE_FORWARD_V3_SHADOW_ONLY",
-  signal:"WAIT",executable:false,paperOrdersAllowed:false,
-  tradeEligible:false,researchEligible:false,brokerOrdersSent:0,
-  sourceRequestsMade:0,approvedDirection:"NONE",signalReady:false,
-  technicalWatch:"BUY",
-  engineReview:"FROZEN_V3_COMPLETED_WITH_REAL_OBSERVED_CLOSED_BARS",
-  reasonCodes:["UNDERLYING_BROKER_SESSION_UNVERIFIED",
-               "NO_REAL_SIGNAL_WITHOUT_INDEPENDENT_CONTEXT_AND_RISK"],
-  frames:{
-   M15:{persistedClosed:80,contiguousClosed:48,neededContiguous:21,bid:987654},
-   H1:{persistedClosed:40,contiguousClosed:40,neededContiguous:21},
-   H4:{persistedClosed:23,contiguousClosed:23,neededContiguous:21}},
-  spread:987654,entry:8888888,secretQuote:"NEVER_LEAK"}
- const sanitized=await relay(auth,{approved:true,fetchFn:async()=>mock({
-    ...expected,biquoteForwardShadow:shadow})});
- a.equal(sanitized.httpStatus,200);
- a.equal(sanitized.body.signal,"WAIT");
- a.equal(sanitized.body.biquoteForwardShadow.technicalWatch,"BUY");
- a.equal(sanitized.body.biquoteForwardShadow.approvedDirection,"NONE");
- a.equal(sanitized.body.biquoteForwardShadow.paperOrdersAllowed,false);
- a.equal(sanitized.body.biquoteForwardShadow.frames.H4.contiguousClosed,23);
- for(const secret of ["987654","8888888","NEVER_LEAK","secretQuote"]){
-   a.ok(!JSON.stringify(sanitized).includes(secret),"Private raw prices and secrets must not leak");
- }
- // During H4 warmup the authenticated monitor may show real closed-bar
- // comparisons, but never fabricate coverage or certify the broker.
  const parity={
   status:"CLOSED_ARCHIVE_GEOMETRY_ONLY_NOT_TRADE_PROOF",
   signal:"WAIT",paperOrdersAllowed:false,sourceRightsVerified:false,
@@ -168,6 +141,34 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
        rawHigh:76543210}},
   untrustedSecret:"PRIVATE_DO_NOT_FORWARD"
  };
+ const shadow={
+  mode:"BIQUOTE_PRIVATE_FORWARD_V3_SHADOW_ONLY",
+  signal:"WAIT",executable:false,paperOrdersAllowed:false,
+  tradeEligible:false,researchEligible:false,brokerOrdersSent:0,
+  sourceRequestsMade:0,approvedDirection:"NONE",signalReady:false,
+  technicalWatch:"BUY",
+  engineReview:"FROZEN_V3_COMPLETED_WITH_REAL_OBSERVED_CLOSED_BARS",
+  reasonCodes:["UNDERLYING_BROKER_SESSION_UNVERIFIED",
+               "NO_REAL_SIGNAL_WITHOUT_INDEPENDENT_CONTEXT_AND_RISK"],
+  frames:{
+   M15:{persistedClosed:80,contiguousClosed:48,neededContiguous:21,bid:987654},
+   H1:{persistedClosed:40,contiguousClosed:40,neededContiguous:21},
+   H4:{persistedClosed:23,contiguousClosed:23,neededContiguous:21}},
+  spread:987654,entry:8888888,secretQuote:"NEVER_LEAK",
+  diagnosticCrossFrameParity:parity}
+ const sanitized=await relay(auth,{approved:true,fetchFn:async()=>mock({
+    ...expected,biquoteForwardShadow:shadow})});
+ a.equal(sanitized.httpStatus,200);
+ a.equal(sanitized.body.signal,"WAIT");
+ a.equal(sanitized.body.biquoteForwardShadow.technicalWatch,"BUY");
+ a.equal(sanitized.body.biquoteForwardShadow.approvedDirection,"NONE");
+ a.equal(sanitized.body.biquoteForwardShadow.paperOrdersAllowed,false);
+ a.equal(sanitized.body.biquoteForwardShadow.frames.H4.contiguousClosed,23);
+ for(const secret of ["987654","8888888","NEVER_LEAK","secretQuote"]){
+   a.ok(!JSON.stringify(sanitized).includes(secret),"Private raw prices and secrets must not leak");
+ }
+ // During H4 warmup the authenticated monitor may show real closed-bar
+ // comparisons, but never fabricate coverage or certify the broker.
  const withParity=await relay(auth,{approved:true,fetchFn:async()=>mock({
   ...expected,biquoteForwardShadow:{...shadow,diagnosticCrossFrameParity:parity}
  })});
@@ -182,6 +183,32 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  for(const sensitive of ["PRIVATE_DO_NOT_FORWARD","87654321","76543210",
                          "rawPrice","rawHigh"]){
   a.ok(!JSON.stringify(withParity).includes(sensitive));
+ }
+ // Never show an apparently strong BUY/SELL research watch from a
+ // frozen-engine claim without both 21 closed bars AND archived H1/H4 parity.
+ for(const fake of [
+  {...shadow,diagnosticCrossFrameParity:undefined},
+  {...shadow,diagnosticCrossFrameParity:null},
+  {...shadow,frames:undefined},
+  {...shadow,frames:{...shadow.frames,H4:{
+    ...shadow.frames.H4,contiguousClosed:20}}},
+  {...shadow,frames:{...shadow.frames,H1:{
+    ...shadow.frames.H1,contiguousClosed:20}}},
+  {...shadow,frames:{...shadow.frames,M15:{
+    ...shadow.frames.M15,contiguousClosed:20}}},
+  {...shadow,diagnosticCrossFrameParity:{
+    ...parity,frames:{...parity.frames,H4:{
+      ...parity.frames.H4,fullyCoveredCompared:0,notFullyCovered:23}}}},
+  {...shadow,diagnosticCrossFrameParity:{
+    ...parity,frames:{...parity.frames,H1:{
+      ...parity.frames.H1,fullyCoveredCompared:0,notFullyCovered:40}}}},
+ ]){
+  const denied=await relay(auth,{approved:true,fetchFn:async()=>mock({
+   ...expected,biquoteForwardShadow:fake
+  })});
+  a.equal(denied.httpStatus,503,"Incomplete V3 research proof must fail closed");
+  a.equal(denied.body.signal,"WAIT");
+  a.equal(denied.body.biquoteForwardShadow,undefined);
  }
  for(const forged of [
   {...parity,brokerCalendarVerified:true},
@@ -210,7 +237,8 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  }
  const emptyShadow=await relay(auth,{approved:true,fetchFn:async()=>mock({
    ...expected,biquoteForwardShadow:{...shadow,technicalWatch:"NONE",
-    frames:undefined,engineReview:undefined}})});
+    frames:undefined,engineReview:undefined,
+    diagnosticCrossFrameParity:undefined}})});
  a.equal(emptyShadow.httpStatus,200);
  a.equal(emptyShadow.body.biquoteForwardShadow.technicalWatch,"NONE");
  const batch={
