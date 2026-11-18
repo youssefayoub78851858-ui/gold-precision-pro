@@ -34,7 +34,7 @@
    const tick=isoMs(packet.quoteUTC),observed=isoMs(packet.observedUTC);
    if(!Number.isFinite(tick)||!Number.isFinite(observed)||
       observed<tick||observed-tick>MAX_AGE_MS||
-      Math.abs((observed-tick)-packet.quoteAgeSeconds*1000)>1700||
+      packet.quoteAgeSeconds*1000+1700<observed-tick||
       !Number.isFinite(clientNowMs)||clientNowMs<tick-5000||
       clientNowMs-observed>MAX_AGE_MS) return empty;
    const mid=(packet.bid+packet.ask)/2;
