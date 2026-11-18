@@ -58,6 +58,24 @@ class FourStageBatchAcceptance(unittest.TestCase):
             self.assertIs(checklist[field],False,field)
         self.assertEqual(checklist["providerRequestsMade"],0)
         self.assertEqual(checklist["brokerOrdersSent"],0)
+        warm=checklist["sessionWarmupRisk"]
+        self.assertEqual(warm["mode"],
+                         "STRICT_GRID_WARMUP_BROKER_CALENDAR_EVIDENCE_PENDING_V1")
+        self.assertEqual(warm["status"],"BROKER_SESSION_PROOF_REQUIRED")
+        self.assertEqual(warm["signal"],"WAIT")
+        self.assertFalse(warm["executable"])
+        self.assertFalse(warm["brokerCalendarVerified"])
+        self.assertFalse(warm["sessionAwareWarmupAllowed"])
+        self.assertFalse(warm["missingCandleBridgingAllowed"])
+        self.assertFalse(warm["futureContinuityGuaranteed"])
+        self.assertTrue(warm["rawGridOnly"])
+        self.assertEqual(warm["strictContiguous"],
+                         report["stages"]["archive"]["consecutiveClosedCounts"])
+        self.assertEqual(warm["missingStrictClosedUntil21"],
+                         checklist["missingStrictClosedBarsUntil21"])
+        self.assertEqual(warm["unclassifiedGapPairs"],
+                         {tf:report["stages"]["archive"]["stage2Frames"][tf][
+                             "unclassifiedGapPairs"] for tf in ("M15","H1","H4")})
         self.assertEqual(
             checklist["archiveIntegrityObserved"],
             report["stages"]["archive"]["status"]==
