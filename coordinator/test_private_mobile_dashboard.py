@@ -190,6 +190,26 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertNotIn('innerHTML',PUBLIC)
         self.assertNotIn('localStorage',PUBLIC)
 
+    def test_unverified_broker_session_cannot_reclassify_raw_h4_warmup(self):
+        for phrase in (
+            'id="batch-session-warmup-state"',
+            'const risk=complete?.sessionWarmupRisk',
+            'STRICT_GRID_WARMUP_BROKER_CALENDAR_EVIDENCE_PENDING_V1',
+            'risk?.brokerCalendarVerified===false',
+            'risk?.sessionAwareWarmupAllowed===false',
+            'risk?.missingCandleBridgingAllowed===false',
+            'risk?.futureContinuityGuaranteed===false',
+            'risk?.rawGridOnly===true',
+            'risk.strictContiguous?.[tf]===batch.frameCounts?.[tf]?.contiguous',
+            'risk.missingStrictClosedUntil21?.[tf]===missing?.[tf]',
+            '&&riskSafe;',
+            'قد تعيد عداد الشموع من الصفر',
+        ):
+            self.assertIn(phrase,PUBLIC)
+        for phrase in ('risk.bid','risk.ask','risk.prices','innerHTML',
+                       'CUTOVER_MODE=live'):
+            self.assertNotIn(phrase,PUBLIC)
+
     def test_mobile_one_batch_completion_blockers_are_fail_closed(self):
         for phrase in (
             'id="batch-completion-state"',
