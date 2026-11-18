@@ -159,6 +159,58 @@ class SevenDayReviewTests(unittest.TestCase):
         self.assertFalse(any(x["event"]=="BIQUOTE_STAGE3_CLOSED_BAR_PROGRESS" for x in events))
         self.assertNotIn("NO_PRINT_THIS",str(events))
 
+    def test_restart_gap_reference_counts_are_metadata_only_and_not_approval(self):
+        events=[]
+        known={**meta(4),"counts":{"M15":2,"H1":2,"H4":2},
+               "sensitiveBid":912345.5,"secret":"PRIVATE_DO_NOT_DISPLAY"}
+        sealed={"closed":{
+            "M15":[{"openTime":"2026-11-16T21:45:00Z"},
+                   {"openTime":"2026-11-16T23:00:00Z"}],
+            "H1":[{"openTime":"2026-11-16T21:00:00Z"},
+                  {"openTime":"2026-11-16T23:00:00Z"}],
+            "H4":[{"openTime":"2026-11-16T20:00:00Z"},
+                  {"openTime":"2026-11-17T00:00:00Z"}]},
+            "quoteObservations":[{"secret":"DO_NOT_PRINT"}]}
+        with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")), patch.object(
+                run,"load_vault",return_value=sealed):
+            out=run.run_seven_days(VAULT,clock=lambda:DAY+dt.timedelta(minutes=2),
+                metadata=lambda _:known,
+                observer=lambda *_args,**_kwargs:{"signal":"WAIT",
+                    "executable":False,"completed24hWindow":True},
+                emit=events.append,days=1,environment=ENV)
+        self.assertEqual(out["windowsCompleted"],1)
+        gaps=[x for x in events if x["event"]=="BIQUOTE_STAGE3_VENDOR_REFERENCE_GAPS"]
+        self.assertEqual(len(gaps),1)
+        self.assertEqual(gaps[0]["phase"],"RESTART")
+        self.assertEqual(gaps[0]["frames"]["M15"]["unclassifiedMissingSlots"],4)
+        self.assertEqual(gaps[0]["frames"]["M15"]["vendorPauseCandidateSlotsNotVerified"],4)
+        self.assertEqual(gaps[0]["frames"]["H4"]["unclassifiedMissingSlots"],0)
+        self.assertFalse(gaps[0]["gapsApproved"])
+        self.assertFalse(gaps[0]["brokerSessionVerified"])
+        self.assertFalse(gaps[0]["paperOrdersAllowed"])
+        self.assertFalse(gaps[0]["liveOrdersAllowed"])
+        for marker in ("912345","DO_NOT_PRINT","PRIVATE_DO_NOT_DISPLAY",
+                       "2026-11-16T21"):
+            self.assertNotIn(marker,str(events)+str(out))
+
+    def test_mismatched_sealed_reference_is_unavailable_without_promoting(self):
+        events=[]
+        forged={**meta(4),"counts":{"M15":2,"H1":0,"H4":0}}
+        with patch.object(run,"load_vault",return_value={
+                "closed":{"M15":[],"H1":[],"H4":[]},
+                "secret":"NEVER_PRINT_THIS"}):
+            out=run.run_seven_days(VAULT,clock=lambda:DAY+dt.timedelta(minutes=2),
+                metadata=lambda _:forged,
+                observer=lambda *_args,**_kwargs:{"signal":"WAIT",
+                    "executable":False,"completed24hWindow":True},
+                emit=events.append,days=1,environment=ENV)
+        self.assertEqual(out["signal"],"WAIT")
+        self.assertTrue(any(x["event"]=="BIQUOTE_STAGE3_REFERENCE_UNAVAILABLE"
+                            for x in events))
+        self.assertFalse(any(x["event"]=="BIQUOTE_STAGE3_VENDOR_REFERENCE_GAPS"
+                             for x in events))
+        self.assertNotIn("NEVER_PRINT_THIS",str(events))
+
     def test_corrupt_metadata_blocks_readonly_worker_before_any_feed_call(self):
         emitted=[]
         def must_not_call(*_a,**_k):
