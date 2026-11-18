@@ -61,6 +61,27 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertNotIn("sessionStorage", PUBLIC)
         self.assertNotIn("OrderSend", PUBLIC)
 
+    def test_private_quote_freshness_is_explicitly_wait_and_broker_unverified(self):
+        for phrase in (
+            'id="forward-freshness"',
+            'vault.captureFreshness',
+            'BIQUOTE_PRIVATE_CAPTURE_LIVENESS_DIAGNOSTIC_ONLY',
+            'fresh?.sourceQualified===false',
+            'fresh?.brokerCalendarVerified===false',
+            'fresh?.captureVerifiedByBroker===false',
+            'RECENT_UNVERIFIED',
+            'STALE_OVER_5_MINUTES',
+            'FUTURE_CAPTURE_OR_CLOCK_SKEW',
+            'el("forward-freshness").textContent=freshnessText',
+            'لم يُثبت وقت وصول آخر عينة BID/ASK',
+            'غير معتمدة كمصدر تداول',
+        ):
+            self.assertIn(phrase,PUBLIC)
+        self.assertNotIn("fresh.bid",PUBLIC)
+        self.assertNotIn("fresh.ask",PUBLIC)
+        self.assertNotIn("innerHTML",PUBLIC)
+        self.assertNotIn("localStorage",PUBLIC)
+
     def test_vendor_gap_reference_mobile_never_claims_broker_schedule(self):
         self.assertIn('id="forward-gap-reference"',PUBLIC)
         self.assertIn('vault.gapReference',PUBLIC)
