@@ -14,6 +14,13 @@ a(doc.includes('متطلبات المصادر: 0 / 9 مكتملة حسب سجل 
 a(doc.includes('تعذّر التحقق؛ العدد غير معروف'),"Failed metadata check cannot default to fake readiness");
 a(doc.includes('أرشيف BiQuote الخاص: غير مؤكد على الشاشة العامة'),"No fabricated forward-vault status");
 a(doc.includes('مراقبة BiQuote المكتملة بتاريخ 17 نوفمبر 2026'),"Timestamped historical report, not current live feed");
+a(doc.includes('id="gdc-free-check-20261118"'),"Dated free one-shot evidence must show on mobile");
+a(doc.includes('4 من 4 وصلات صحيحة؛ عمر السعر وقتها 3.01 ثوانٍ'),"Recorded free quote snapshot is not a live quote");
+a(doc.includes('بقيت مجموعتا H4 ناقصتان'),"Partial H4 reference gap must remain visible");
+a(doc.includes('اسم وسيط MT5 الأصلي وحقوقه وجدول جلساته غير مثبتين'),"Do not certify unidentified broker");
+a(doc.includes('هيدي ليست بيانات COMEX GC Order Flow'),"Broker quote must not be mistaken for CME trades");
+a(doc.includes('actions/runs/44251654917'),"Dated evidence traceability is required");
+
 a(doc.includes('691 استجابة كاملة و29 عينة ناقصة HTTP/JSON'),"Show 720-slot quality failures");
 a(doc.includes('كلّها بين 22:03 و22:59 UTC'),"Failures are confined to dated vendor-declared reference break");
 a(doc.includes('من دون تأكيد مستقل لجلسة الوسيط'),"Never certify independent broker calendar by timing coincidence");
