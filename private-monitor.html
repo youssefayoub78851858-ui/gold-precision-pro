@@ -100,6 +100,7 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <p id="batch-capacity-state" role="status">سعة عينات السبريد/الاقتباسات: لم تُفحص على القرص الخاص بعد</p>
 <p id="batch-completion-state" role="status">WAIT — جاهزية المراحل الأربع لم تُثبت بعد</p>
 <ul id="batch-completion-blockers" aria-live="polite"></ul>
+<p id="batch-session-warmup-state" role="status">WAIT — جدول جلسات الوسيط غير مؤكد؛ تتابع الشموع قد ينقطع</p>
 <p><small>تُقرأ هذه الحالة من Coordinator الخاص فقط بعد نشره وإتاحة الأرشيف. نتائج الاختبارات البرمجية لا تثبت بيانات السوق الحقيقية أو ترخيص المصدر أو جاهزية التداول.</small></p>
 </section>
 <section id="audit-panel" aria-labelledby="audit-title">
@@ -131,6 +132,7 @@ function clearBatchDisplay(){
  el("batch-stage3-state").textContent="الخطوة الثالثة — WAIT: حالة V3 غير متاحة";
  el("batch-completion-state").textContent="WAIT — تقرير الإكمال غير متاح";
  el("batch-completion-blockers").replaceChildren();
+ el("batch-session-warmup-state").textContent="WAIT — فحص انقطاع الشموع غير متاح";
 }
 const labels={
  NOT_CONNECTED:"الوصلة الخاصة غير مفعّلة",
@@ -469,6 +471,21 @@ el("refresh").addEventListener("click",async()=>{
     EXECUTION_BID_ASK_SPREAD_SLIPPAGE_FEES_UNVERIFIED:"السبريد والعمولة والانزلاق الفعلي غير موثّقين",
     OUT_OF_SAMPLE_NET_EXPECTANCY_NOT_PROVEN:"الربحية لم تثبت على بيانات مستقلة"
    };
+   // Never confuse 17 remaining H4 wall-clock-grid bars with a
+   // guaranteed countdown: an unverified market pause may reset the run.
+   const risk=complete?.sessionWarmupRisk;
+   const riskSafe=risk?.mode==="STRICT_GRID_WARMUP_BROKER_CALENDAR_EVIDENCE_PENDING_V1"
+    &&risk?.status==="BROKER_SESSION_PROOF_REQUIRED"
+    &&risk?.signal==="WAIT"&&risk?.executable===false
+    &&risk?.brokerCalendarVerified===false
+    &&risk?.sessionAwareWarmupAllowed===false
+    &&risk?.missingCandleBridgingAllowed===false
+    &&risk?.futureContinuityGuaranteed===false&&risk?.rawGridOnly===true
+    &&["M15","H1","H4"].every(tf=>
+      risk.strictContiguous?.[tf]===batch.frameCounts?.[tf]?.contiguous
+      &&risk.missingStrictClosedUntil21?.[tf]===missing?.[tf]
+      &&Number.isInteger(risk.unclassifiedGapPairs?.[tf])
+      &&risk.unclassifiedGapPairs[tf]>=0);
    const completeSafe=complete?.mode==="GOLD_PRECISION_ONE_BATCH_COMPLETION_GATE_V1"
     &&complete?.status==="WAIT_EXTERNAL_EVIDENCE_AND_FORWARD_DATA"
     &&complete?.signal==="WAIT"&&complete?.executable===false
@@ -479,8 +496,14 @@ el("refresh").addEventListener("click",async()=>{
     &&complete.remainingBlockerCodes.every(code=>Object.hasOwn(blockerLabels,code))
     &&["M15","H1","H4"].every(tf=>Number.isInteger(missing?.[tf])
       &&missing[tf]>=0&&missing[tf]<=21
-      &&missing[tf]===Math.max(0,21-batch.frameCounts?.[tf]?.contiguous));
+      &&missing[tf]===Math.max(0,21-batch.frameCounts?.[tf]?.contiguous))
+    &&riskSafe;
    const todo=el("batch-completion-blockers");todo.replaceChildren();
+   el("batch-session-warmup-state").textContent=completeSafe
+    ?"WAIT — التتابع الخام H4: "+risk.strictContiguous.H4+
+      "؛ فجوات غير مصنّفة "+risk.unclassifiedGapPairs.H4+
+      "؛ أي استراحة غير موثّقة قد تعيد عداد الشموع من الصفر. لا تمديد بين الفجوات قبل إثبات جلسات الوسيط"
+    :"WAIT — فحص مخاطر انقطاع الشموع غير مكتمل";
    el("batch-completion-state").textContent=completeSafe
     ?"WAIT — المراحل الأربع تدققت دفعة واحدة؛ باقي "+complete.remainingBlockerCodes.length+" شروط قبل الصفقات"
     :"WAIT — شروط إكمال المراحل غير متوافقة أو غير موثقة";
