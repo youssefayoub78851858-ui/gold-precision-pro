@@ -19,8 +19,9 @@ from biquote_24h_observer import (
 )
 from biquote_public_one_shot import one_shot_probe
 from biquote_private_forward_vault import (
-    START, APPROVAL_ENV, APPROVAL, ingest, inspect_metadata,
+    START, APPROVAL_ENV, APPROVAL, ingest, inspect_metadata, load_vault,
 )
+from biquote_session_gap_audit import audit_closed_timestamp_reference
 from private_forward_capacity_preflight import capacity_readiness
 
 UTC = dt.timezone.utc
@@ -73,6 +74,37 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
         print("BIQUOTE_SEVEN_DAY_STATUS " +
               json.dumps(record, separators=(",", ":"), sort_keys=True), flush=True)
     log = safe_log if emit is None else emit
+
+    def log_gap_reference(phase, expected_counts, index):
+        # Reopen only the sealed private archive, never any provider endpoint.
+        # This is a GENERIC vendor-pause timing hypothesis, never broker
+        # calendar verification or a reason to promote a trading signal.
+        try:
+            original = load_vault(str(folder))
+            report = audit_closed_timestamp_reference({
+                tf: [row["openTime"] for row in original["closed"][tf]]
+                for tf in ("M15", "H1", "H4")})
+            if report["status"] != "REFERENCE_ONLY_NOT_BROKER_VERIFIED":
+                raise ValueError("BAD_REFERENCE_DIAGNOSTIC")
+            parts = {}
+            for tf in ("M15", "H1", "H4"):
+                row = report["frames"][tf]
+                if row["persistedClosed"] != expected_counts[tf]:
+                    raise ValueError("COUNTER_DIAGNOSTIC_MISMATCH")
+                parts[tf] = {
+                    "unclassifiedMissingSlots": row["unclassifiedMissingSlots"],
+                    "vendorPauseCandidateSlotsNotVerified":
+                        row["vendorPauseCandidateSlotsNotVerified"],
+                    "outsideVendorReferenceSlots": row["outsideVendorReferenceSlots"],
+                    "unknownReferenceSlots": row["unknownReferenceSlots"]}
+            log({"event": "BIQUOTE_STAGE3_VENDOR_REFERENCE_GAPS",
+                 "phase": phase, "dayIndex": index, "frames": parts,
+                 "genericVendorReferenceOnly": True,
+                 "brokerSessionVerified": False, "gapsApproved": False, **SAFE})
+        except (OSError, ValueError, TypeError, KeyError):
+            log({"event": "BIQUOTE_STAGE3_REFERENCE_UNAVAILABLE",
+                 "phase": phase, "dayIndex": index, **SAFE})
+
     completed = skipped = 0
     state = "BOUNDED_REVIEW_FINISHED"
     startup_checked = False
@@ -112,6 +144,7 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
                  "previouslyStoredQuoteSamples": cap["quoteSamplesUsed"],
                  "previouslyStoredData": bool(cap["quoteSamplesUsed"] or any(counts.values())),
                  "capacityStatus": cap["status"], **SAFE})
+            log_gap_reference("RESTART", counts, index)
         if (cap["status"] == "CAPACITY_LIMIT_REACHED"
                 or cap["quoteSamplesRemaining"] < MAX_SAMPLES
                 or any(n < (96 if tf == "M15" else 24 if tf == "H1" else 6)
@@ -166,6 +199,9 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
                                  "sourceRightsVerified": False,
                                  "independentBrokerSessionVerified": False,
                                  "v3TradeQualified": False, **SAFE})
+                            log_gap_reference("NEW_CLOSED_BAR", {
+                                tf: details[tf]["persistedClosed"]
+                                for tf in ("M15", "H1", "H4")}, index)
                         except (OSError, ValueError, TypeError, KeyError):
                             log({"event": "BIQUOTE_STAGE3_METADATA_UNAVAILABLE",
                                  "dayIndex": index, **SAFE})
