@@ -190,6 +190,31 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertNotIn('innerHTML',PUBLIC)
         self.assertNotIn('localStorage',PUBLIC)
 
+    def test_mobile_one_batch_completion_blockers_are_fail_closed(self):
+        for phrase in (
+            'id="batch-completion-state"',
+            'id="batch-completion-blockers"',
+            'batch.completionAudit',
+            'GOLD_PRECISION_ONE_BATCH_COMPLETION_GATE_V1',
+            'WAIT_EXTERNAL_EVIDENCE_AND_FORWARD_DATA',
+            'complete?.paperOrdersAllowed===false',
+            'complete?.liveOrdersAllowed===false',
+            'complete?.archiveIntegrityObserved===',
+            'complete.remainingBlockerCodes.every(code=>Object.hasOwn(blockerLabels,code))',
+            'missing[tf]===Math.max(0,21-batch.frameCounts?.[tf]?.contiguous)',
+            'BROKER_XAUUSD_SESSION_DST_UNCONFIRMED',
+            'GC_TRADES_MBO_MBP10_LICENSING_NOT_ESTABLISHED',
+            'OUT_OF_SAMPLE_NET_EXPECTANCY_NOT_PROVEN',
+            'el("batch-completion-blockers").replaceChildren()',
+            'todo.replaceChildren()',
+        ):
+            self.assertIn(phrase,PUBLIC)
+        self.assertNotIn("innerHTML",PUBLIC)
+        self.assertNotIn("localStorage",PUBLIC)
+        self.assertNotIn("complete.bid",PUBLIC)
+        self.assertNotIn("complete.ask",PUBLIC)
+        self.assertNotIn("complete.entry",PUBLIC)
+
     def test_private_four_stage_batch_has_locked_mobile_evidence(self):
         for tag in ('id="four-stage-private-panel"', 'id="batch-readiness-state"',
                     'id="batch-data-state"', 'id="batch-archive-state"',
