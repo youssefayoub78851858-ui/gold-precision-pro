@@ -78,6 +78,7 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <h2 id="biquote-shadow-title">تحليل V3 من أرشيف BiQuote الخاص — بحث فقط</h2>
 <p id="biquote-shadow-state" role="status">WAIT — بانتظار شموع جديدة كافية لتقييم الاتجاه</p>
 <p id="biquote-shadow-coverage">M15 / H1 / H4: بانتظار شموع مغلقة متصلة</p>
+<p id="biquote-warmup-gap" role="status">WAIT — فحص التتابع والانقطاع بحاجة لتأكيد من أرشيف الشموع</p>
 <p id="biquote-parity-state" role="status">WAIT — لم تتوفر مقارنة شموع M15 مع H1/H4</p>
 <p><small>التسجيل الأول المحدد بـ24 ساعة ما بكفّي وحده لتهيئة V3: الحد الأدنى 21 شمعة H4 مغلقة ومتتالية = 84 ساعة نظرياً، وقد تطول بسبب استراحات السوق. أي تمديد يحتاج تفعيل مستقل. لن ننقل شموعاً قديمة إلى فترة الاختبار الجديدة.</small></p>
 <p><small>BUY أو SELL إذا ظهرت هون تعني قراءة فنية أولية فقط، مش صفقة. لا يوجد دخول أو وقف خسارة أو أهداف معتمدة، ولا تداول ورقي أو حقيقي.</small></p>
@@ -267,10 +268,42 @@ el("refresh").addEventListener("click",async()=>{
     ?"WAIT — فحص تطابق OHLC للشموع المغلقة: "+checkedParts.join(" | ")
       +" | لا يثبت ترخيص المصدر أو صلاحية التداول"
     :"WAIT — مقارنة M15 مع H1/H4 غير مثبتة؛ لا صفقات";
+  // A missing candle is NEVER bridged by a generic vendor-session
+  // reference. Compare raw saved vs strict contiguous warmup, price-free.
+  const warmup=safeShadow?shadow.warmupContinuity:null;
+  let warmupOk=warmup?.status==="STRICT_RAW_CLOSED_BARS_BROKER_CALENDAR_UNVERIFIED"
+    &&warmup?.signal==="WAIT"&&warmup?.paperOrdersAllowed===false
+    &&warmup?.brokerCalendarVerified===false&&warmup?.sourceRightsVerified===false
+    &&warmup?.gapBridgingAllowed===false;
+  const lines=[];
+  for(const tf of ["M15","H1","H4"]){
+    const g=warmup?.frames?.[tf],f=shadow?.frames?.[tf];
+    const numbers=["persistedClosed","strictLatestContiguous","remainingUntil21",
+      "unclassifiedMissingSlots","vendorPauseCandidatesNotVerified",
+      "outsideVendorReferenceSlots","unknownReferenceSlots"];
+    if(!warmupOk||!g||!f||
+      numbers.some(k=>!Number.isSafeInteger(g[k])||g[k]<0)||
+      g.persistedClosed!==f.persistedClosed||
+      g.strictLatestContiguous!==f.contiguousClosed||
+      g.remainingUntil21!==Math.max(0,21-f.contiguousClosed)||
+      g.vendorPauseCandidatesNotVerified+g.outsideVendorReferenceSlots+
+        g.unknownReferenceSlots!==g.unclassifiedMissingSlots||
+      g.lastRunAfterUnclassifiedGap!==(
+        g.unclassifiedMissingSlots>0&&g.strictLatestContiguous<g.persistedClosed)){
+      warmupOk=false;break;
+    }
+    lines.push(tf+": محفوظ "+g.persistedClosed+"، متصل "+g.strictLatestContiguous+
+      "، ناقص "+g.remainingUntil21+"؛ خانات غائبة "+g.unclassifiedMissingSlots+
+      " (استراحة مرجعية غير مؤكدة "+g.vendorPauseCandidatesNotVerified+")");
+  }
+  el("biquote-warmup-gap").textContent=warmupOk
+    ?"WAIT — تهيئة V3 بدون تجاوز الفجوات: "+lines.join(" | ")+
+      " — ولا يُعتمد أي جدول جلسات قبل توثيقه من الوسيط"
+    :"WAIT — لم يثبت فحص تتابع الشموع، والربط بين الفجوات ممنوع";
   // Defense in depth: even a read-only BUY/SELL research watch can
   // appear only after 21 truly consecutive closed bars on EVERY frame,
   // a completed frozen engine review and both full M15 overlap checks.
-  const watchSafe=safeShadow&&paritySafe
+  const watchSafe=safeShadow&&paritySafe&&warmupOk
    &&shadow.engineReview==="FROZEN_V3_COMPLETED_WITH_REAL_OBSERVED_CLOSED_BARS"
    &&["M15","H1","H4"].every(tf=>{
      const f=shadow.frames?.[tf];
@@ -433,6 +466,7 @@ el("refresh").addEventListener("click",async()=>{
    clearBatchDisplay();
    el("biquote-shadow-coverage").textContent="التغطية الفنية غير متاحة";
    el("biquote-parity-state").textContent="WAIT — فحص تطابق M15 مع H1/H4 غير متاح";
+   el("biquote-warmup-gap").textContent="WAIT — فحص التتابع والانقطاع غير متاح";
    for(const id of ["forward-m15","forward-h1","forward-h4"])el(id).textContent="0";
    el("forward-last").textContent="آخر تسجيل: غير متاح";
    el("forward-coverage").textContent="التغطية الزمنية لم تتحقق";
