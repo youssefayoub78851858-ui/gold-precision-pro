@@ -123,7 +123,53 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
         def only_shared_probe():
             def private_sink(packet, received):
                 value = received.isoformat(timespec="milliseconds").replace("+00:00", "Z")
-                return archive(str(folder), packet, received_utc=value)
+                outcome = archive(str(folder), packet, received_utc=value)
+                # Metadata-only progress after a truly NEW closed bar.
+                # No second provider call, no OHLC, quotes, tokens, paths,
+                # raw exception messages, market decisions or orders in logs.
+                if isinstance(outcome, dict):
+                    additions = outcome.get("newClosedBars")
+                    if (isinstance(additions, dict) and
+                            set(additions) == {"M15", "H1", "H4"} and
+                            all(type(additions[tf]) is int and 0 <= additions[tf] <= 1000
+                                for tf in ("M15", "H1", "H4")) and
+                            any(additions.values())):
+                        try:
+                            fresh = metadata(str(folder))
+                            if (not isinstance(fresh, dict) or
+                                    fresh.get("status") != "PRIVATE_FORWARD_VAULT_METADATA_ONLY" or
+                                    fresh.get("signal") != "WAIT" or
+                                    fresh.get("executable") is not False or
+                                    fresh.get("tradeSignalReady") is not False):
+                                raise ValueError("UNTRUSTED_VAULT_METADATA")
+                            details = {}
+                            for tf in ("M15", "H1", "H4"):
+                                count = fresh["counts"][tf]
+                                cov = fresh["forwardCoverage"][tf]
+                                tail = cov["latestContiguousBars"]
+                                gaps = cov["unclassifiedGapPairs"]
+                                missing = cov["unclassifiedMissingSlots"]
+                                if (type(count) is not int or not 0 <= count <= 45000 or
+                                        type(tail) is not int or not 0 <= tail <= count or
+                                        type(gaps) is not int or not 0 <= gaps <= count or
+                                        type(missing) is not int or not 0 <= missing <= 4500000 or
+                                        cov["closedBars"] != count):
+                                    raise ValueError("INCONSISTENT_VAULT_COUNTERS")
+                                details[tf] = {
+                                    "persistedClosed": count,
+                                    "contiguousClosed": min(tail, 48),
+                                    "unclassifiedGapPairs": gaps,
+                                    "unclassifiedMissingSlots": missing}
+                            log({"event": "BIQUOTE_STAGE3_CLOSED_BAR_PROGRESS",
+                                 "dayIndex": index, "frames": details,
+                                 "h4RemainingUntil21": max(0, 21-details["H4"]["contiguousClosed"]),
+                                 "sourceRightsVerified": False,
+                                 "independentBrokerSessionVerified": False,
+                                 "v3TradeQualified": False, **SAFE})
+                        except (OSError, ValueError, TypeError, KeyError):
+                            log({"event": "BIQUOTE_STAGE3_METADATA_UNAVAILABLE",
+                                 "dayIndex": index, **SAFE})
+                return outcome
             return source_probe(private_snapshot_sink=private_sink)
 
         log({"event": "BIQUOTE_SEVEN_DAY_WINDOW_STARTED", "dayIndex": index, **SAFE})
