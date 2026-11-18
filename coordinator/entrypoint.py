@@ -25,6 +25,9 @@ from biquote_private_forward_vault import (
     inspect_metadata as inspect_forward_metadata,
 )
 from biquote_forward_shadow_review import shadow_review as forward_shadow_review
+from biquote_seven_day_review import (
+    run_seven_days, SEVEN_DAY_ENV, SEVEN_DAY_VALUE,
+)
 from ultimate_batch_acceptance import review_batch as four_stage_batch_review
 from xauusd_feed_gate import parse_utc
 class Handler(BaseHTTPRequestHandler):
@@ -93,6 +96,10 @@ forward_capture_enabled=(biquote_review_enabled
  and os.environ.get(FORWARD_APPROVAL_ENV)==FORWARD_APPROVAL
  and forward_vault_dir.startswith('/var/data/')
  and '..' not in pathlib.Path(forward_vault_dir).parts)
+# Seven-day review must be separately opted in; import or deployment alone
+# never starts capture, and it cannot alter the live trading cutover.
+biquote_seven_day_enabled=(forward_capture_enabled
+ and os.environ.get(SEVEN_DAY_ENV)==SEVEN_DAY_VALUE)
 def run_biquote_readonly_review():
  try:
   start=parse_utc(os.environ['GPP_BIQUOTE_REVIEW_START_UTC'])
@@ -100,6 +107,12 @@ def run_biquote_readonly_review():
           'mode':'READONLY_STANDBY','signal':'WAIT','executable':False}),flush=True)
   # Capture and review are ONE worker using the SAME four GETs per slot;
   # never run a second archive polling thread alongside the review thread.
+  if biquote_seven_day_enabled:
+   result=run_seven_days(forward_vault_dir,anchor=start)
+   print('BIQUOTE_SEVEN_DAY_REVIEW_FINISHED '+json.dumps({
+       'status':result['status'],'windowsCompleted':result['windowsCompleted'],
+       'signal':'WAIT','executable':False}),flush=True)
+   return
   if forward_capture_enabled:
    if start < FORWARD_START:
     raise ValueError('FORWARD_CAPTURE_START_BEFORE_HOLDOUT')
