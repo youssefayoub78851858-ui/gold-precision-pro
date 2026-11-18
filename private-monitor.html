@@ -98,6 +98,8 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <p id="batch-quality-state" role="status">الخطوة الثانية: فحص اتصال الشموع والفجوات — غير متاح بعد</p>
 <p id="batch-stage3-state" role="status">الخطوة الثالثة: فحص جاهزية V3 والتطابق — WAIT</p>
 <p id="batch-capacity-state" role="status">سعة عينات السبريد/الاقتباسات: لم تُفحص على القرص الخاص بعد</p>
+<p id="batch-completion-state" role="status">WAIT — جاهزية المراحل الأربع لم تُثبت بعد</p>
+<ul id="batch-completion-blockers" aria-live="polite"></ul>
 <p><small>تُقرأ هذه الحالة من Coordinator الخاص فقط بعد نشره وإتاحة الأرشيف. نتائج الاختبارات البرمجية لا تثبت بيانات السوق الحقيقية أو ترخيص المصدر أو جاهزية التداول.</small></p>
 </section>
 <section id="audit-panel" aria-labelledby="audit-title">
@@ -127,6 +129,8 @@ function clearBatchDisplay(){
  el("batch-capacity-state").textContent="سعة الأرشيف: غير مؤكدة";
  el("batch-quality-state").textContent="الخطوة الثانية: جاهزية الشموع غير مؤكدة — WAIT";
  el("batch-stage3-state").textContent="الخطوة الثالثة — WAIT: حالة V3 غير متاحة";
+ el("batch-completion-state").textContent="WAIT — تقرير الإكمال غير متاح";
+ el("batch-completion-blockers").replaceChildren();
 }
 const labels={
  NOT_CONNECTED:"الوصلة الخاصة غير مفعّلة",
@@ -449,6 +453,45 @@ el("refresh").addEventListener("click",async()=>{
        +" | فواصل مجهّزة "+stage3.framesWithWarmup+"/3"
        +" | باقي H4 "+stage3.h4RemainingUntil21+" شمعة متصلة"
      :"الخطوة الثالثة — WAIT: فحص V3 غير مؤكد، الصفقات محجوبة";
+   // Owner-only one-batch gate: display only validated fixed blockers.
+   const complete=batch.completionAudit;
+   const missing=complete?.missingStrictClosedBarsUntil21;
+   const blockerLabels={
+    PRIVATE_VAULT_UNREADABLE:"الأرشيف الخاص غير متاح",
+    NO_POST_HOLDOUT_CLOSED_CANDLES:"بعد ما تسجلت شموع جديدة مغلقة",
+    STRICT_M15_CLOSED_WARMUP_INCOMPLETE:"ناقص شموع M15 متصلة",
+    STRICT_H1_CLOSED_WARMUP_INCOMPLETE:"ناقص شموع H1 متصلة",
+    STRICT_H4_CLOSED_WARMUP_INCOMPLETE:"ناقص شموع H4 متصلة",
+    UNDERLYING_BROKER_MARKET_DATA_RIGHTS_UNCONFIRMED:"حقوق وسيط MT5 الأصلي غير مثبتة",
+    BROKER_XAUUSD_SESSION_DST_UNCONFIRMED:"جدول جلسات الوسيط والتوقيت الصيفي غير مثبت",
+    GC_TRADES_MBO_MBP10_LICENSING_NOT_ESTABLISHED:"ربط GC وOrder Flow وتراخيصه غير مثبت",
+    DXY_US02Y_US10Y_AND_EVENT_CONTEXT_NOT_INDEPENDENTLY_LIVE:"DXY والسندات والأخبار المباشرة غير مؤهلة",
+    EXECUTION_BID_ASK_SPREAD_SLIPPAGE_FEES_UNVERIFIED:"السبريد والعمولة والانزلاق الفعلي غير موثّقين",
+    OUT_OF_SAMPLE_NET_EXPECTANCY_NOT_PROVEN:"الربحية لم تثبت على بيانات مستقلة"
+   };
+   const completeSafe=complete?.mode==="GOLD_PRECISION_ONE_BATCH_COMPLETION_GATE_V1"
+    &&complete?.status==="WAIT_EXTERNAL_EVIDENCE_AND_FORWARD_DATA"
+    &&complete?.signal==="WAIT"&&complete?.executable===false
+    &&complete?.paperOrdersAllowed===false&&complete?.liveOrdersAllowed===false
+    &&complete?.archiveIntegrityObserved===(batch.archiveStatus==="FORWARD_CAPTURE_PRESENT_UNVERIFIED")
+    &&Array.isArray(complete?.remainingBlockerCodes)
+    &&complete.remainingBlockerCodes.length>=6&&complete.remainingBlockerCodes.length<=11
+    &&complete.remainingBlockerCodes.every(code=>Object.hasOwn(blockerLabels,code))
+    &&["M15","H1","H4"].every(tf=>Number.isInteger(missing?.[tf])
+      &&missing[tf]>=0&&missing[tf]<=21
+      &&missing[tf]===Math.max(0,21-batch.frameCounts?.[tf]?.contiguous));
+   const todo=el("batch-completion-blockers");todo.replaceChildren();
+   el("batch-completion-state").textContent=completeSafe
+    ?"WAIT — المراحل الأربع تدققت دفعة واحدة؛ باقي "+complete.remainingBlockerCodes.length+" شروط قبل الصفقات"
+    :"WAIT — شروط إكمال المراحل غير متوافقة أو غير موثقة";
+   if(completeSafe){
+    for(const code of complete.remainingBlockerCodes){
+     const item=document.createElement("li");
+     item.textContent=blockerLabels[code]+(code.startsWith("STRICT_")?
+       " (باقي "+missing[code.split("_")[1]]+" شمعة)":"");
+     todo.append(item);
+    }
+   }
    const status=batch.capacityStatus;
    const remaining=batch.quoteSamplesRemaining;
    const limit=batch.quoteSamplesHardCap;
