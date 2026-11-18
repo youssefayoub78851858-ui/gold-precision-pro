@@ -272,9 +272,11 @@ document.addEventListener('DOMContentLoaded',function(){
  if(!dashboard||!chart)return;
  // Original handlers can render as before. Only relocate the existing elements.
  document.body.insertBefore(dashboard,document.body.firstElementChild);
- dashboard.insertAdjacentElement('afterend',chart);
- if(observation)chart.insertAdjacentElement('afterend',observation);
- if(decision)(observation||chart).insertAdjacentElement('afterend',decision);
+ // The actual observed chart belongs inside the approved dashboard, directly after XAUUSD.
+ var quote=dashboard.querySelector('.gpp-quote');
+ if(quote)quote.insertAdjacentElement('afterend',chart);
+ if(observation)dashboard.insertAdjacentElement('afterend',observation);
+ if(decision)(observation||dashboard).insertAdjacentElement('afterend',decision);
 });
 </script>
 
