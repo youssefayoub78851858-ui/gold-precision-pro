@@ -252,6 +252,31 @@ document.addEventListener('DOMContentLoaded',function(){
  if(observed&&target){var refresh=function(){var v=(observed.textContent||'').trim();target.textContent=v||'آخر تحديث: غير متاح'};refresh();new MutationObserver(refresh).observe(observed,{childList:true,characterData:true,subtree:true})}
 });
 </script>
+
+<!-- GPP_REFERENCE_LAYOUT_TOP_FIX_20261118: arrange existing read-only dashboard as the first mobile view. -->
+<style id="gpp-reference-layout-top-fix">
+@media(max-width:700px){
+ body>h1,body>.unified-intro,body>.unified-mobile-nav{display:none!important}
+ #gpp-reference-dashboard{margin:4px 0 10px!important}
+ #biquote-mobile-observation{margin-top:8px!important}
+ #biquote-live-chart-panel{margin:9px 0!important}
+ #gold-decision-center{margin:9px 0!important}
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+ var dashboard=document.getElementById('gpp-reference-dashboard');
+ var chart=document.getElementById('biquote-live-chart-panel');
+ var observation=document.getElementById('biquote-mobile-observation');
+ var decision=document.getElementById('gold-decision-center');
+ if(!dashboard||!chart)return;
+ // Original handlers can render as before. Only relocate the existing elements.
+ document.body.insertBefore(dashboard,document.body.firstElementChild);
+ dashboard.insertAdjacentElement('afterend',chart);
+ if(observation)chart.insertAdjacentElement('afterend',observation);
+ if(decision)(observation||chart).insertAdjacentElement('afterend',decision);
+});
+</script>
 <nav class="unified-mobile-nav" aria-label="أقسام نظام الذهب الموحد">
 <a href="#gold-decision-center">القرار</a><a href="#biquote-live-chart-panel">شارت الذهب</a><a href="#paper-actions">تداول ورقي</a><a href="#paper-statistics">السجل</a>
 </nav>
