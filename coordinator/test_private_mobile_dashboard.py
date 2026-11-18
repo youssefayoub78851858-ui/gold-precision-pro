@@ -140,6 +140,25 @@ class PrivateMobileDashboardTests(unittest.TestCase):
             self.assertNotIn(raw_collection,PUBLIC)
         self.assertNotIn('vault.quoteObservations',PUBLIC)
 
+    def test_archived_quote_mid_to_closed_ohlc_is_counts_only(self):
+        for phrase in (
+            'id="forward-mid-quote-parity"',
+            'vault.quoteCandleMidGeometry',
+            'PRIVATE_BIQUOTE_QUOTE_MID_CLOSED_OHLC_COUNTS_V1',
+            'q?.brokerRightsVerified===false',
+            'q?.independentBrokerPriceParityVerified===false',
+            'OBSERVED_MID_OUTSIDE_CLOSED_OHLC',
+            'CONSISTENT_OBSERVED_SAMPLES_ONLY',
+            'el("forward-mid-quote-parity").textContent=',
+            'لا يثبت مصدر الوسيط أو ترخيصه أو صلاحية التداول',
+        ):
+            self.assertIn(phrase,PUBLIC)
+        for unsafe in (
+            'q.bid','q.ask','q.open','q.high','q.low','q.close',
+            'vault.quoteObservations','vault.closed[','innerHTML',
+        ):
+            self.assertNotIn(unsafe,PUBLIC)
+
     def test_mobile_shadow_parity_uses_only_safe_comparison_counts(self):
         self.assertIn('id="biquote-parity-state"',PUBLIC)
         self.assertIn("shadow.diagnosticCrossFrameParity",PUBLIC)
