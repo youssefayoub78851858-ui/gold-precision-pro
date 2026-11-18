@@ -82,6 +82,30 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertNotIn("innerHTML",PUBLIC)
         self.assertNotIn("localStorage",PUBLIC)
 
+    def test_stale_closed_candle_age_is_independent_from_bid_ask(self):
+        # This is diagnostic-only: NEVER interpret 2-frame thresholds
+        # as verified MT5 opening hours or live trade permission.
+        for part in (
+            'id="forward-candle-age"',
+            'vault.closedFrameFreshness',
+            'BIQUOTE_PRIVATE_CLOSED_FRAME_AGE_DIAGNOSTIC_ONLY',
+            'bars?.sourceQualified===false',
+            'bars?.brokerCalendarVerified===false',
+            'bars?.gapBridgingAllowed===false',
+            '["M15",1800],["H1",7200],["H4",28800]',
+            'CANDLE_STALE_OVER_TWO_FRAMES',
+            'FUTURE_CLOSE_OR_CLOCK_SKEW',
+            'NO_CLOSED_BAR',
+            'const bars=safeVault?vault.closedFrameFreshness:null',
+            'el("forward-candle-age").textContent=candleAgeSafe',
+            'لا يثبت ساعات الوسيط أو حقوق البيانات',
+        ):
+            self.assertIn(part,PUBLIC)
+        self.assertNotIn('bars.bid',PUBLIC)
+        self.assertNotIn('bars.ask',PUBLIC)
+        self.assertNotIn('bars.prices',PUBLIC)
+        self.assertNotIn('innerHTML',PUBLIC)
+
     def test_vendor_gap_reference_mobile_never_claims_broker_schedule(self):
         self.assertIn('id="forward-gap-reference"',PUBLIC)
         self.assertIn('vault.gapReference',PUBLIC)
