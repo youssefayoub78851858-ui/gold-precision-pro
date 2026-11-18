@@ -222,6 +222,11 @@ function sanitize(input){
     "FROZEN_V3_TECHNICAL_OBSERVATION_ONLY"]);
   const frames=st?.archive?.closedCounts;
   const consecutive=st?.archive?.consecutiveClosedCounts;
+  const cap=st?.archive?.capacityStatus;
+  const capAllowed=new Set(["CAPACITY_HEADROOM","CAPACITY_WARNING",
+    "CAPACITY_LIMIT_REACHED","CAPACITY_METADATA_UNAVAILABLE"]);
+  const capRemaining=st?.archive?.quoteSamplesRemaining;
+  const capLimit=st?.archive?.quoteSamplesHardCap;
   if(x?.mode!=="GOLD_PRECISION_FOUR_STAGE_BATCH_READONLY_V1"||
      x.signal!=="WAIT"||x.executable!==false||
      x.paperOrdersAllowed!==false||x.liveOrdersAllowed!==false||
@@ -240,6 +245,13 @@ function sanitize(input){
      !allowedArchive.has(st?.archive?.status)||
      st.archive.dataSourceIndependentlyAuthenticated!==false||
      st.archive.sessionGapsProven!==false||
+     st.archive.automaticQuoteDeletionAllowed!==false||
+     !capAllowed.has(cap)||
+     (cap==="CAPACITY_METADATA_UNAVAILABLE"
+      ?(capRemaining!==null||capLimit!==null||st.archive.archiveCapacityExhausted!==true)
+      :(!Number.isInteger(capRemaining)||capRemaining<0||capRemaining>10000||
+        capLimit!==10000||
+        st.archive.archiveCapacityExhausted!==(cap==="CAPACITY_LIMIT_REACHED")))||
      !allowedAnalysis.has(st?.analysis?.status)||
      (st.analysis.status!=="FROZEN_V3_TECHNICAL_OBSERVATION_ONLY"&&
       st.analysis.technicalWatch!=="NONE")||
@@ -271,7 +283,10 @@ function sanitize(input){
    independentlyQualified:false,liveOrdersAllowed:false,
    technicalWatch:st.analysis.status==="FROZEN_V3_TECHNICAL_OBSERVATION_ONLY"
      ?st.analysis.technicalWatch:"NONE",
-   frameCounts:countSafe};
+   frameCounts:countSafe,
+   capacityStatus:cap,quoteSamplesRemaining:capRemaining,
+   quoteSamplesHardCap:capLimit,
+   capacityExhausted:st.archive.archiveCapacityExhausted};
  }
  return {status:"WAIT_EODHD_INTAKE",dataStatus:input.dataStatus,
   signal:"WAIT",executable:false,researchEligible:false,engineStatus:"NOT_INVOKED",
