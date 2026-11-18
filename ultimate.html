@@ -365,6 +365,40 @@ document.addEventListener('DOMContentLoaded',function(){
  #gpp-reference-dashboard .gpp-cta a{border-radius:10px!important;font-size:.79rem!important}
 }
 </style>
+
+<!-- GPP_REFERENCE_OBSERVATION_BINDING_20261118: mirror observation labels only; no prices parsed from unverified quotes. -->
+<style>
+#gpp-reference-dashboard .gpp-observation-line{font-size:.72rem;color:#c5d5e6;text-align:center;padding:6px 7px;margin:7px 0;border:1px solid #334c62;border-radius:9px;background:#112236;overflow-wrap:anywhere}
+#gpp-reference-dashboard .gpp-observation-line strong{color:#e9cb83}
+@media(max-width:700px){#gpp-reference-dashboard .gpp-grid.two{gap:6px!important}#gpp-reference-dashboard .gpp-proof{line-height:1.45!important}}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+ var dash=document.getElementById('gpp-reference-dashboard');
+ if(!dash)return;
+ var quote=dash.querySelector('.gpp-quote');
+ if(quote&&!document.getElementById('gpp-observation-mirror')){
+  var line=document.createElement('div');line.id='gpp-observation-mirror';line.className='gpp-observation-line';
+  line.textContent='حالة مصدر BiQuote: بانتظار فحص المشاهدة';
+  quote.insertAdjacentElement('afterend',line);
+ }
+ var status=document.getElementById('biquote-status');
+ var observed=document.getElementById('biquote-observed');
+ var mirror=document.getElementById('gpp-observation-mirror');
+ var updated=document.getElementById('gpp-dash-update');
+ var technical=document.getElementById('gpp-dash-technical');
+ var frames=['biquote-h4','biquote-h1','biquote-m15'].map(function(id){return document.getElementById(id)});
+ function refresh(){
+  if(status&&mirror){var v=(status.textContent||'').trim();mirror.textContent='حالة BiQuote: '+(v||'غير متاح')}
+  if(observed&&updated){var v=(observed.textContent||'').trim();updated.textContent=v&&v!=='غير متاح'?v:'آخر تحديث: غير متاح'}
+  if(technical){var vals=frames.map(function(el){return el?(el.textContent||'').trim():''});
+   technical.textContent=vals.every(function(v){return v&&v!=='غير متاح'})?'فحص الفواصل متاح أدناه':'غير محسوم';
+  }
+ }
+ [status,observed].concat(frames).forEach(function(el){if(el)new MutationObserver(refresh).observe(el,{childList:true,characterData:true,subtree:true})});
+ refresh();
+});
+</script>
 <nav class="unified-mobile-nav" aria-label="أقسام نظام الذهب الموحد">
 <a href="#gold-decision-center">القرار</a><a href="#biquote-live-chart-panel">شارت الذهب</a><a href="#paper-actions">تداول ورقي</a><a href="#paper-statistics">السجل</a>
 </nav>
