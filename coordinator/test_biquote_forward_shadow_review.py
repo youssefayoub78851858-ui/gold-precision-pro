@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from biquote_forward_shadow_review import shadow_review, tail_contiguous, overlaps_match, BASE
-from biquote_private_forward_vault import ingest, load_vault, inspect_metadata
+from biquote_private_forward_vault import ingest, load_vault, inspect_metadata, inspect_vault_metadata
 from test_biquote_private_forward_vault import sample, iso
 
 UTC=dt.timezone.utc
@@ -107,6 +107,47 @@ class ForwardShadowTests(unittest.TestCase):
         self.assertNotIn("3900",serialized)
         self.assertEqual(len(load_vault(self.folder)["quoteObservations"]),1)
 
+    def test_preloaded_single_sealed_snapshot_matches_standalone_and_fails_closed(self):
+        # No new provider access. Simulate a writer updating disk while
+        # the coordinator is building an authenticated monitor response.
+        with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+            ingest(self.folder,sample(EARLY),received_utc=iso(EARLY))
+            old=load_vault(self.folder)
+            sealed_metadata=inspect_vault_metadata(old,now_utc=EARLY)
+            self.assertEqual(sealed_metadata,
+                             inspect_metadata(self.folder,now_utc=EARLY))
+            # Capture a newer full archive on disk AFTER this snapshot.
+            later=EARLY+dt.timedelta(minutes=20)
+            ingest(self.folder,sample(later),received_utc=iso(later))
+            with patch("biquote_forward_shadow_review.load_vault",
+                       side_effect=AssertionError("SECOND_DISK_READ_FORBIDDEN")):
+                watch=shadow_review(
+                    self.folder,now_utc=EARLY,
+                    vault_metadata=sealed_metadata,sealed_vault=old,
+                    runner=lambda _:self.fail("Incomplete H4 should stay WAIT"))
+        self.assertEqual(watch["signal"],"WAIT")
+        self.assertEqual(watch["technicalWatch"],"NONE")
+        self.assertFalse(watch["paperOrdersAllowed"])
+        self.assertFalse(watch["executable"])
+        self.assertEqual(watch["frames"]["M15"]["persistedClosed"],
+                         sealed_metadata["counts"]["M15"])
+        self.assertNotEqual(len(load_vault(self.folder)["closed"]["M15"]),
+                            watch["frames"]["M15"]["persistedClosed"])
+        self.assertFalse(watch["signalReady"])
+        self.assertNotIn('"open"',json.dumps(watch))
+        self.assertNotIn('"ask"',json.dumps(watch))
+        forged={**sealed_metadata,
+                "counts":{**sealed_metadata["counts"],"M15":999}}
+        with self.assertRaisesRegex(ValueError,"INCONSISTENT_SEALED_VAULT_SNAPSHOT"):
+            shadow_review(self.folder,now_utc=EARLY,
+                          vault_metadata=forged,sealed_vault=old)
+        with self.assertRaisesRegex(ValueError,"INCOMPLETE_SEALED_VAULT_SNAPSHOT"):
+            shadow_review(self.folder,now_utc=EARLY,
+                          vault_metadata=sealed_metadata)
+        with self.assertRaisesRegex(ValueError,"INCOMPLETE_SEALED_VAULT_SNAPSHOT"):
+            shadow_review(self.folder,now_utc=EARLY,
+                          sealed_vault=old)
+
     def test_stale_frame_metadata_never_reaches_frozen_v3(self):
         # The ingestion pipeline already rejects old closed bars at receipt.
         # Inject a *synthetic corrupted age report* to prove the secondary
@@ -122,7 +163,7 @@ class ForwardShadowTests(unittest.TestCase):
             proof["closedFrameFreshness"]["frames"]["H4"]={
                 "status":"CANDLE_STALE_OVER_TWO_FRAMES",
                 "ageSeconds":28801,"thresholdSeconds":28800}
-            with patch("biquote_forward_shadow_review.inspect_metadata",
+            with patch("biquote_forward_shadow_review.inspect_vault_metadata",
                        return_value=proof):
                 report=shadow_review(
                     self.folder,runner=lambda _:self.fail(
