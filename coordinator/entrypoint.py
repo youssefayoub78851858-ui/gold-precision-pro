@@ -22,7 +22,8 @@ from biquote_public_one_shot import one_shot_probe
 from biquote_private_forward_vault import (
     START as FORWARD_START, APPROVAL_ENV as FORWARD_APPROVAL_ENV,
     APPROVAL as FORWARD_APPROVAL, ingest as forward_ingest,
-    inspect_metadata as inspect_forward_metadata,
+    load_vault as load_forward_vault,
+    inspect_vault_metadata as inspect_forward_snapshot,
 )
 from biquote_forward_shadow_review import shadow_review as forward_shadow_review
 from biquote_seven_day_review import (
@@ -62,10 +63,16 @@ class Handler(BaseHTTPRequestHandler):
    body['fxcmReview']=read_fxcm_review_status()
    if forward_capture_enabled:
     try:
-     body['biquotePrivateForwardVault']=inspect_forward_metadata(forward_vault_dir)
-     # Owner-only offline V3 analysis of already archived, closed MID bars.
-     # This adds ZERO provider calls, trading permissions or raw price output.
-     body['biquoteForwardShadow']=forward_shadow_review(forward_vault_dir)
+     # One atomically replaced, checksum-verified owner-only snapshot.
+     # No raw price/quote record enters the HTTP response or Render logs.
+     sealed=load_forward_vault(forward_vault_dir)
+     metadata=inspect_forward_snapshot(sealed,now_utc=now)
+     body['biquotePrivateForwardVault']=metadata
+     # The V3 analysis and four-stage gate reuse the identical captured
+     # history, avoiding false "contradictory count" errors during writes.
+     body['biquoteForwardShadow']=forward_shadow_review(
+         forward_vault_dir,now_utc=now,
+         vault_metadata=metadata,sealed_vault=sealed)
      # Four-stage acceptance reuses the SAME owner-authenticated status.
      # No extra HTTP calls, vault writes, broker order or second V3 run.
      body['ultimateFourStageBatch']=four_stage_batch_review(
