@@ -233,10 +233,6 @@ el("refresh").addEventListener("click",async()=>{
     &&shadow?.paperOrdersAllowed===false&&shadow?.signalReady===false
     &&shadow?.approvedDirection==="NONE"
     &&["BUY","SELL","NONE"].includes(shadow?.technicalWatch);
-  const side=safeShadow?shadow.technicalWatch:"NONE";
-  el("biquote-shadow-state").textContent=side!=="NONE"
-    ?"WAIT — ملاحظة فنية V3: "+side+" (ليست صفقة، ممنوع التنفيذ)"
-    :"WAIT — لا يوجد اتجاه بحثي مؤهّل أو البيانات غير كافية";
   const pieces=[];
   for(const tf of ["M15","H1","H4"]){
     const x=safeShadow?shadow.frames?.[tf]:null;
@@ -271,6 +267,25 @@ el("refresh").addEventListener("click",async()=>{
     ?"WAIT — فحص تطابق OHLC للشموع المغلقة: "+checkedParts.join(" | ")
       +" | لا يثبت ترخيص المصدر أو صلاحية التداول"
     :"WAIT — مقارنة M15 مع H1/H4 غير مثبتة؛ لا صفقات";
+  // Defense in depth: even a read-only BUY/SELL research watch can
+  // appear only after 21 truly consecutive closed bars on EVERY frame,
+  // a completed frozen engine review and both full M15 overlap checks.
+  const watchSafe=safeShadow&&paritySafe
+   &&shadow.engineReview==="FROZEN_V3_COMPLETED_WITH_REAL_OBSERVED_CLOSED_BARS"
+   &&["M15","H1","H4"].every(tf=>{
+     const f=shadow.frames?.[tf];
+     return Number.isInteger(f?.contiguousClosed)&&f.contiguousClosed>=21&&
+       f.contiguousClosed<=48&&f.neededContiguous===21;
+   })
+   &&["H1","H4"].every(tf=>{
+     const p=proof.frames?.[tf];
+     return Number.isInteger(p?.fullyCoveredCompared)&&
+       p.fullyCoveredCompared>=1&&p.fullyCoveredDisagreed===0;
+   });
+  const side=watchSafe?shadow.technicalWatch:"NONE";
+  el("biquote-shadow-state").textContent=side!=="NONE"
+    ?"WAIT — ملاحظة فنية V3: "+side+" (ليست صفقة، ممنوع التنفيذ)"
+    :"WAIT — لا يوجد اتجاه بحثي مؤهّل أو لم تكتمل الأدلة والشموع";
   const batch=data.ultimateFourStageBatch;
   const acceptedBatch=batch?.mode==="GOLD_PRECISION_FOUR_STAGE_BATCH_READONLY_V1"
    &&batch?.signal==="WAIT"&&batch?.executable===false
