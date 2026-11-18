@@ -314,6 +314,36 @@ function sanitize(input){
      brokerRightsVerified:false,sessionCalendarVerified:false,
      paperOrdersAllowed:false,signal:"WAIT"};
   }
+  let stage3Safe=null;
+  const v3=st.analysis.stage3;
+  if(v3!==undefined){
+   const technical=st.analysis.status==="FROZEN_V3_TECHNICAL_OBSERVATION_ONLY";
+   const ready=["M15","H1","H4"].filter(tf=>consecutive[tf]>=21).length;
+   const expectedStatus=st.archive.status==="PRIVATE_VAULT_NOT_READABLE"
+     ?"WAIT_ARCHIVE_UNAVAILABLE":ready<3
+     ?"WAIT_CLOSED_BAR_WARMUP":technical
+     ?"WAIT_INDEPENDENT_FEEDS_AND_RIGHTS":"WAIT_SHADOW_FRESHNESS_OR_PARITY";
+   if(!v3||v3.status!==expectedStatus||v3.signal!=="WAIT"||
+      v3.minimumContiguousClosedEachFrame!==21||
+      v3.framesWithWarmup!==ready||
+      v3.h4ContiguousClosed!==consecutive.H4||consecutive.H4>48||
+      v3.h4RemainingUntil21!==Math.max(0,21-consecutive.H4)||
+      v3.frozenV3Observed!==technical||
+      v3.crossFrameParityObserved!==technical||
+      v3.brokerRightsVerified!==false||
+      v3.brokerSessionCalendarVerified!==false||
+      v3.independentMacroOrderFlowVerified!==false||
+      v3.paperOrdersAllowed!==false||v3.liveOrdersAllowed!==false)
+    throw Error("Unsafe Stage 3 readiness");
+   stage3Safe={status:expectedStatus,signal:"WAIT",
+     framesWithWarmup:ready,
+     h4ContiguousClosed:consecutive.H4,
+     h4RemainingUntil21:v3.h4RemainingUntil21,
+     frozenV3Observed:technical,crossFrameParityObserved:technical,
+     brokerRightsVerified:false,brokerSessionCalendarVerified:false,
+     independentMacroOrderFlowVerified:false,
+     paperOrdersAllowed:false,liveOrdersAllowed:false};
+  }
   safeBatch={mode:"GOLD_PRECISION_FOUR_STAGE_BATCH_READONLY_V1",
    signal:"WAIT",executable:false,paperOrdersAllowed:false,
    dataStatus:st.data.status,archiveStatus:st.archive.status,
@@ -325,7 +355,8 @@ function sanitize(input){
    capacityStatus:cap,quoteSamplesRemaining:capRemaining,
    quoteSamplesHardCap:capLimit,
    capacityExhausted:st.archive.archiveCapacityExhausted,
-   ...(stage2Safe?{stage2:stage2Safe}:{})};
+   ...(stage2Safe?{stage2:stage2Safe}:{}),
+   ...(stage3Safe?{stage3:stage3Safe}:{})};
  }
  return {status:"WAIT_EODHD_INTAKE",dataStatus:input.dataStatus,
   signal:"WAIT",executable:false,researchEligible:false,engineStatus:"NOT_INVOKED",
