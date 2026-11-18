@@ -12,7 +12,7 @@ import pathlib
 import subprocess
 import sys
 
-from biquote_private_forward_vault import START, FRAMES_ORDER, inspect_metadata, load_vault, _stamp
+from biquote_private_forward_vault import START, FRAMES_ORDER, inspect_vault_metadata, load_vault, _stamp
 
 UTC = dt.timezone.utc
 MIN_CONTIGUOUS = 21
@@ -96,7 +96,8 @@ def overlaps_match(frames: dict[str, list[dict]]) -> dict:
 
 
 def shadow_review(dirname: str | pathlib.Path, *, runner=None,
-                  now_utc: dt.datetime | None = None) -> dict:
+                  now_utc: dt.datetime | None = None,
+                  vault_metadata=None, sealed_vault=None) -> dict:
     """Read existing private vault; never write files or call an external feed.
 
     Only an in-process offline Node child sees OHLC. The caller receives
@@ -114,8 +115,33 @@ def shadow_review(dirname: str | pathlib.Path, *, runner=None,
                 "brokerSessionGapClassificationVerified": False,
                 "paperTradingAdmissible": False,
             }}
-    metadata = inspect_metadata(dirname, now_utc=now_utc)
-    archive = load_vault(dirname)
+    # One atomic sealed-vault snapshot may be shared by authenticated status,
+    # offline V3 shadow and four-stage gate. In standalone mode load it once.
+    # The price-bearing archive NEVER enters the HTTP response.
+    if (vault_metadata is None) != (sealed_vault is None):
+        raise ValueError("INCOMPLETE_SEALED_VAULT_SNAPSHOT")
+    if sealed_vault is None:
+        archive = load_vault(dirname)
+        metadata = inspect_vault_metadata(archive, now_utc=now_utc)
+    else:
+        archive, metadata = sealed_vault, vault_metadata
+        if (not isinstance(archive, dict) or
+                archive.get("source") != "BIQUOTE_UNVERIFIED_UPSTREAM_MT5" or
+                archive.get("schema") != 1 or
+                not isinstance(metadata, dict) or
+                metadata.get("status") != "PRIVATE_FORWARD_VAULT_METADATA_ONLY" or
+                metadata.get("signal") != "WAIT" or
+                metadata.get("executable") is not False or
+                metadata.get("paperOrdersAllowed") is not False or
+                metadata.get("noTradingAdmission") is not True or
+                metadata.get("lastImportedUTC") != archive.get("lastImportedUTC") or
+                not isinstance(archive.get("closed"),dict) or
+                not isinstance(archive.get("quoteObservations"),list) or
+                metadata.get("quoteSamples") != len(archive["quoteObservations"]) or
+                any(not isinstance(archive["closed"].get(tf),list) or
+                    metadata.get("counts",{}).get(tf) != len(archive["closed"][tf])
+                    for tf in FRAMES_ORDER)):
+            raise ValueError("INCONSISTENT_SEALED_VAULT_SNAPSHOT")
     rows = archive["closed"]
     received = archive["lastImportedUTC"]
     for tf in FRAMES_ORDER:
