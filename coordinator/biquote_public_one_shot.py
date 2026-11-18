@@ -249,9 +249,64 @@ def one_shot_probe(opener=None, clock=None, *, private_snapshot_sink=None):
     return result
 
 
+def public_log_summary(report):
+    """Small, allowlisted CI output. No BID/ASK, candles or provider text.
+
+    Only the four fixed endpoint names and failure classes, independent quote
+    age, and aggregate data-quality counters may reach public GitHub logs.
+    A live one-shot observation never authorizes research or trading.
+    """
+    labels=("quote","M15","H1","H4")
+    allowed=set(DIAGNOSTIC_CODES)
+    raw=report.get("qualityDiagnostic",{})
+    outcomes=raw.get("endpoint",{}) if isinstance(raw,dict) else {}
+    categories={
+        tf:(outcomes.get(tf) if outcomes.get(tf) in allowed else "NO_HTTP_RESPONSE")
+        for tf in labels
+    }
+    overlap=report.get("overlapEvidence",{})
+    levels=overlap.get("overlap",{}) if isinstance(overlap,dict) else {}
+    def count(tf,key):
+        n=levels.get(tf,{}).get(key) if isinstance(levels.get(tf),dict) else None
+        return n if type(n) is int and 0<=n<=10000 else None
+    age=report.get("structuralAudit",{}).get("quoteAgeSeconds")
+    import math
+    age=round(age,2) if type(age) in (int,float) and math.isfinite(age) and -3600<=age<=86400 else None
+    summary={
+        "mode":"BIQUOTE_SINGLE_PUBLIC_GET_DIAGNOSTIC_NO_TRADING",
+        "signal":"WAIT","executable":False,"paperOrdersAllowed":False,
+        "researchEligible":False,"subscriptionsActivated":False,
+        "providerRequestsAttempted":4,"providerRequestsAllowedMaximum":4,
+        "noPersistentCapture":True,
+        "allFourHttpAndJsonOk":report.get("allHttp200AndValidJson") is True,
+        "fixedEndpointCodes":categories,
+        "independentQuoteAgeSeconds":age,
+        "quoteAgeAcceptableAt30Seconds":age is not None and 0<=age<=30,
+        "allStructuralChecksPassed":report.get("structuralAudit",{}).get("ohlcStructuralChecksPassed") is True,
+        "H1":{
+            "fullyCoveredCompared":count("H1","fullyCoveredCompared"),
+            "fullyCoveredPriceConflicts":count("H1","fullyCoveredOHLCDisagree"),
+            "missingM15Groups":count("H1","internalM15ConstituentGaps"),
+            "observedPartialPriceConflicts":count("H1","partialObservedOHLCBoundDisagreements"),
+        },
+        "H4":{
+            "fullyCoveredCompared":count("H4","fullyCoveredCompared"),
+            "fullyCoveredPriceConflicts":count("H4","fullyCoveredOHLCDisagree"),
+            "missingM15Groups":count("H4","internalM15ConstituentGaps"),
+            "observedPartialPriceConflicts":count("H4","partialObservedOHLCBoundDisagreements"),
+            "missingM15ReferencePauseCandidates":count("H4","partialMissingM15ReferencePauseCandidates"),
+            "missingM15OutsideReferenceTime":count("H4","partialMissingM15OutsideReferenceTradingTime"),
+            "retentionEdgesIncomplete":count("H4","oldestOrNewestWindowEdgeIncomplete"),
+        },
+        "brokerSessionCalendarVerified":False,
+        "brokerUpstreamRightsIndependentlyVerified":False,
+        "sourceAdmittedToTradeOrPaper":False,
+    }
+    return summary
+
 if __name__ == "__main__":
     report = one_shot_probe()
-    print("BIQUOTE_ONE_SHOT_PUBLIC_READONLY " + json.dumps(report, sort_keys=True,
-                                                         separators=(",", ":")))
+    print("BIQUOTE_ONE_SHOT_PUBLIC_READONLY " +
+          json.dumps(public_log_summary(report),sort_keys=True,separators=(",", ":")))
     # A partial or blocked public API is a failed data probe, not a passed feed.
     raise SystemExit(0 if report["allHttp200AndValidJson"] else 2)
