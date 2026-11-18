@@ -164,6 +164,44 @@ function sanitize(input){
     tradeEligible:false,paperOrdersAllowed:false,researchEligible:false,
     tradeSignalReady:false,counts,quoteSamples:v.quoteSamples,
     lastImportedUTC:v.lastImportedUTC,forwardCoverage:coverage};
+   // Receipt freshness is not a feed SLA. Validate the coordinator's
+   // timestamp against this relay clock and the sealed arrival time.
+   // A forged "recent" flag must never revive a stale observation.
+   if(v.captureFreshness!==undefined){
+    const f=v.captureFreshness;
+    if(!f||f.mode!=="BIQUOTE_PRIVATE_CAPTURE_LIVENESS_DIAGNOSTIC_ONLY"||
+       f.signal!=="WAIT"||f.executable!==false||
+       f.paperOrdersAllowed!==false||f.sourceQualified!==false||
+       f.brokerCalendarVerified!==false||
+       f.captureVerifiedByBroker!==false)
+     throw Error("Unsafe capture freshness contract");
+    const asofSafe=typeof f.asOfUTC==="string"&&utc(f.asOfUTC)&&
+      Math.abs(Date.now()-Date.parse(f.asOfUTC))<=120000;
+    if(!asofSafe)throw Error("Unverified capture status UTC");
+    const noCapture=v.quoteSamples===0||v.lastImportedUTC===null;
+    let expected,age=null;
+    if(noCapture){
+     expected="NO_CAPTURE";
+    }else{
+     const diff=(Date.parse(f.asOfUTC)-Date.parse(v.lastImportedUTC))/1000;
+     if(!Number.isFinite(diff))throw Error("Invalid capture clock delta");
+     if(diff<0)expected="FUTURE_CAPTURE_OR_CLOCK_SKEW";
+     else{
+      age=Math.min(Math.floor(diff),31536000);
+      expected=diff<=300?"RECENT_UNVERIFIED":"STALE_OVER_5_MINUTES";
+     }
+    }
+    if(f.status!==expected||
+       !(age===null?f.ageSeconds===null:
+         Number.isInteger(f.ageSeconds)&&Math.abs(f.ageSeconds-age)<=1))
+     throw Error("Forged capture liveness");
+    safeForward.captureFreshness={
+     mode:"BIQUOTE_PRIVATE_CAPTURE_LIVENESS_DIAGNOSTIC_ONLY",
+     status:expected,signal:"WAIT",executable:false,
+     paperOrdersAllowed:false,sourceQualified:false,
+     brokerCalendarVerified:false,captureVerifiedByBroker:false,
+     asOfUTC:f.asOfUTC,ageSeconds:age};
+   }
    // Gap classification is a *vendor reference hypothesis*, not proof of
    // an upstream broker schedule. Forward aggregated integers only, never
    // timestamp arrays or market price payloads from the sealed vault.
