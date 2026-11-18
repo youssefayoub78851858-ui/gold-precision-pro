@@ -87,6 +87,26 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertNotIn("shadow.privateOHLC",PUBLIC)
         self.assertNotIn("innerHTML",PUBLIC)
 
+    def test_v3_mobile_shows_saved_vs_strict_and_vendor_pause_unverified(self):
+        for phrase in (
+            'id="biquote-warmup-gap"',
+            'shadow.warmupContinuity',
+            'STRICT_RAW_CLOSED_BARS_BROKER_CALENDAR_UNVERIFIED',
+            'warmup?.brokerCalendarVerified===false',
+            'warmup?.sourceRightsVerified===false',
+            'warmup?.gapBridgingAllowed===false',
+            'g.strictLatestContiguous!==f.contiguousClosed',
+            'g.remainingUntil21!==Math.max(0,21-f.contiguousClosed)',
+            'g.vendorPauseCandidatesNotVerified+g.outsideVendorReferenceSlots',
+            'const watchSafe=safeShadow&&paritySafe&&warmupOk',
+            'ولا يُعتمد أي جدول جلسات قبل توثيقه من الوسيط'
+        ):
+            self.assertIn(phrase,PUBLIC)
+        self.assertIn('el("biquote-warmup-gap").textContent=',PUBLIC)
+        self.assertNotIn('shadow.closed',PUBLIC)
+        self.assertNotIn('shadow.privateOHLC',PUBLIC)
+        self.assertNotIn('innerHTML',PUBLIC)
+
     def test_v3_mobile_watch_needs_full_closed_warmup_and_overlap(self):
         # A BUY/SELL technical *watch* is not a trade, yet it still must
         # never appear based only on a claimed frozen-engine result.
