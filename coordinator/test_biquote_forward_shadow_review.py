@@ -107,6 +107,35 @@ class ForwardShadowTests(unittest.TestCase):
         self.assertNotIn("3900",serialized)
         self.assertEqual(len(load_vault(self.folder)["quoteObservations"]),1)
 
+    def test_stale_h4_blocks_v3_even_when_quote_and_m15_h1_are_fresh(self):
+        # Synthetic quote at 03:59:30 is current. H4 last closes 20:00
+        # (the newest fully closed H4 bar was omitted by the source).
+        # The H4 age crosses 8h 40 seconds later, while quote stays fresh.
+        at=dt.datetime(2026,11,23,3,59,30,tzinfo=UTC)
+        payload=sample(at)
+        payload["frames"]["H4"]["bars"].pop(0)
+        with patch.object(socket,"socket",side_effect=AssertionError("NO_EXTERNAL_REQUESTS")):
+            saved=ingest(self.folder,payload,received_utc=iso(at))
+            self.assertEqual(saved["status"],"PRIVATE_FORWARD_CAPTURE_SAVED")
+            report=shadow_review(
+                self.folder,
+                runner=lambda _:self.fail("stale H4 must never invoke frozen V3"),
+                now_utc=at+dt.timedelta(seconds=40))
+        self.assertEqual(report["signal"],"WAIT")
+        self.assertFalse(report["executable"])
+        self.assertEqual(report["technicalWatch"],"NONE")
+        self.assertFalse(report["paperOrdersAllowed"])
+        self.assertFalse(report["signalReady"])
+        self.assertEqual(report.get("approvedDirection"),"NONE")
+        self.assertIn("FROZEN_V3_CLOSED_BAR_STALE_OR_UNVERIFIED",
+                      report["reasonCodes"])
+        self.assertGreaterEqual(report["frames"]["H4"]["contiguousClosed"],21)
+        self.assertEqual(report["frames"]["H4"]["additionalContiguousNeeded"],0)
+        self.assertNotIn("FROZEN_V3_COMPLETED_WITH_REAL_OBSERVED_CLOSED_BARS",
+                         str(report.get("engineReview")))
+        for key in ('"bid"','"ask"','"spread"','"open"','"high"','"low"','"close"'):
+            self.assertNotIn(key,json.dumps(report))
+
     def test_gaps_reset_shadow_warmup_and_never_bridge_unknown_sessions(self):
         history=sample(AFTER)
         # Drop one H4 candle close to the end; do not invent session hours.
