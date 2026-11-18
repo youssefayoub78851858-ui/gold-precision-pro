@@ -32,6 +32,23 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertNotIn("api_token=",HTML)
         self.assertNotIn("CUTOVER_MODE=live",HTML)
 
+    def test_authenticated_monitor_uses_one_sealed_vault_snapshot(self):
+        # Concurrent data capture may write a new vault while the mobile
+        # status is evaluated. Three panels must share one sealed snapshot.
+        self.assertIn("sealed=load_forward_vault(forward_vault_dir)",ENTRY)
+        self.assertIn("inspect_forward_snapshot(sealed,now_utc=now)",ENTRY)
+        self.assertIn("vault_metadata=metadata,sealed_vault=sealed",ENTRY)
+        self.assertIn("now_utc=now",ENTRY)
+        self.assertIn("vault_metadata=body['biquotePrivateForwardVault']",ENTRY)
+        self.assertIn("shadow_status=body['biquoteForwardShadow']",ENTRY)
+        self.assertNotIn("inspect_forward_metadata(forward_vault_dir)",ENTRY)
+        self.assertNotIn("body['biquoteForwardShadow']=forward_shadow_review(forward_vault_dir)",ENTRY)
+        self.assertNotIn("body['sealed']",ENTRY)
+        self.assertNotIn("body['quoteObservations']",ENTRY)
+        self.assertNotIn("body['closed']",ENTRY)
+        self.assertIn("'signal':'WAIT'",ENTRY)
+        self.assertIn("'paperOrdersAllowed':False",ENTRY)
+
     def test_public_android_viewer_uses_readonly_token_and_safe_archive(self):
         self.assertIn("MONITOR_READONLY_TOKEN", PUBLIC)
         self.assertIn('href="/ultimate#unified-mobile-trading"', PUBLIC)
