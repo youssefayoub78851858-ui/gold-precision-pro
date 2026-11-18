@@ -45,6 +45,10 @@ class FourStageBatchAcceptance(unittest.TestCase):
         self.assertFalse(report["stages"]["paper"]["forwardNetPerformanceEstablished"])
         self.assertEqual(report["stages"]["context"]["status"],
                          "INDEPENDENT_SOURCE_CONFIRMATIONS_REQUIRED")
+        self.assertFalse(report["stages"]["archive"]["automaticQuoteDeletionAllowed"])
+        self.assertIn(report["stages"]["archive"]["capacityStatus"],
+                      ("CAPACITY_HEADROOM","CAPACITY_WARNING","CAPACITY_LIMIT_REACHED",
+                       "CAPACITY_METADATA_UNAVAILABLE"))
 
     def test_empty_source_and_vault_fail_closed_no_network(self):
         with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
@@ -54,6 +58,9 @@ class FourStageBatchAcceptance(unittest.TestCase):
         self.assertFalse(out["stages"]["data"]["reviewWindowCompleted"])
         self.assertEqual(out["stages"]["archive"]["status"],"NO_FORWARD_CAPTURE")
         self.assertEqual(out["stages"]["archive"]["closedCounts"]["H4"],0)
+        self.assertEqual(out["stages"]["archive"]["capacityStatus"],"CAPACITY_HEADROOM")
+        self.assertEqual(out["stages"]["archive"]["quoteSamplesRemaining"],10000)
+        self.assertFalse(out["stages"]["archive"]["archiveCapacityExhausted"])
         self.assertEqual(out["stages"]["analysis"]["technicalWatch"],"NONE")
         self.assertIn("NO_POST_HOLDOUT_CAPTURE",out["reasonCodes"])
         self.assertFalse(self.folder.exists(),"Read-only must not make even an empty vault")
@@ -111,6 +118,8 @@ class FourStageBatchAcceptance(unittest.TestCase):
                          "FORWARD_CAPTURE_PRESENT_UNVERIFIED")
         self.assertGreaterEqual(
             out["stages"]["archive"]["consecutiveClosedCounts"]["H4"],21)
+        self.assertEqual(out["stages"]["archive"]["capacityStatus"],"CAPACITY_HEADROOM")
+        self.assertEqual(out["stages"]["archive"]["quoteSamplesRemaining"],9999)
         self.assertEqual(out["stages"]["analysis"]["status"],
                          "FROZEN_V3_TECHNICAL_OBSERVATION_ONLY")
         self.assertIn(out["stages"]["analysis"]["technicalWatch"],
@@ -166,6 +175,8 @@ class FourStageBatchAcceptance(unittest.TestCase):
         r=review_batch(self.folder,final_report={"signal":"BUY"})
         self.assert_blocked(r)
         self.assertEqual(r["stages"]["archive"]["status"],"PRIVATE_VAULT_NOT_READABLE")
+        self.assertEqual(r["stages"]["archive"]["capacityStatus"],"CAPACITY_METADATA_UNAVAILABLE")
+        self.assertTrue(r["stages"]["archive"]["archiveCapacityExhausted"])
         self.assertEqual(r["stages"]["analysis"]["technicalWatch"],"NONE")
         self.assertIn("REPORT_NOT_VERIFIED",r["stages"]["data"]["blockers"])
         forged=fixture()
