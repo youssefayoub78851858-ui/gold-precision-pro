@@ -63,6 +63,63 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
  a.ok(!JSON.stringify(withArchive).includes("989898"));
  a.ok(!JSON.stringify(withArchive).includes("999999"));
  a.ok(!JSON.stringify(withArchive).includes("quoteObservations"));
+ // Metadata liveness is based on the sealed quote receipt and UTC.
+ // No numeric price/spread from private storage may reach the mobile relay.
+ const currentIso=new Date().toISOString();
+ const freshStatus=(status,ageSeconds,asOfUTC=currentIso)=>({
+  mode:"BIQUOTE_PRIVATE_CAPTURE_LIVENESS_DIAGNOSTIC_ONLY",
+  status,ageSeconds,asOfUTC,signal:"WAIT",executable:false,
+  paperOrdersAllowed:false,sourceQualified:false,
+  brokerCalendarVerified:false,captureVerifiedByBroker:false,
+  providerSecret:"NOT_IN_MOBILE_FRESHNESS"});
+ const recentEnvelope={...freshArchive,lastImportedUTC:currentIso,
+  captureFreshness:freshStatus("RECENT_UNVERIFIED",0)};
+ const liveResult=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,biquotePrivateForwardVault:recentEnvelope
+ })});
+ a.equal(liveResult.httpStatus,200);
+ a.equal(liveResult.body.biquotePrivateForwardVault.captureFreshness.status,
+         "RECENT_UNVERIFIED");
+ a.equal(liveResult.body.biquotePrivateForwardVault.captureFreshness.ageSeconds,0);
+ a.equal(liveResult.body.biquotePrivateForwardVault.captureFreshness.paperOrdersAllowed,false);
+ a.ok(!JSON.stringify(liveResult).includes("NOT_IN_MOBILE_FRESHNESS"));
+ const tenMinBefore=new Date(Date.parse(currentIso)-600000).toISOString();
+ const staleEnvelope={...freshArchive,lastImportedUTC:tenMinBefore,
+  captureFreshness:freshStatus("STALE_OVER_5_MINUTES",600)};
+ const staleResult=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,biquotePrivateForwardVault:staleEnvelope
+ })});
+ a.equal(staleResult.httpStatus,200);
+ a.equal(staleResult.body.biquotePrivateForwardVault.captureFreshness.status,
+         "STALE_OVER_5_MINUTES");
+ a.equal(staleResult.body.biquotePrivateForwardVault.captureFreshness.ageSeconds,600);
+ a.equal(staleResult.body.signal,"WAIT");
+ const futureStamp=new Date(Date.parse(currentIso)+60000).toISOString();
+ const futureResult=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,biquotePrivateForwardVault:{
+    ...freshArchive,lastImportedUTC:futureStamp,
+    captureFreshness:freshStatus("FUTURE_CAPTURE_OR_CLOCK_SKEW",null)}
+ })});
+ a.equal(futureResult.httpStatus,200);
+ a.equal(futureResult.body.biquotePrivateForwardVault.captureFreshness.status,
+         "FUTURE_CAPTURE_OR_CLOCK_SKEW");
+ for(const [env,mut] of [
+  [recentEnvelope,{status:"STALE_OVER_5_MINUTES"}],
+  [staleEnvelope,{status:"RECENT_UNVERIFIED"}],
+  [staleEnvelope,{ageSeconds:0}],
+  [recentEnvelope,{sourceQualified:true}],
+  [recentEnvelope,{brokerCalendarVerified:true}],
+  [recentEnvelope,{paperOrdersAllowed:true}],
+  [recentEnvelope,{captureVerifiedByBroker:true}],
+  [recentEnvelope,{asOfUTC:"2020-01-01T00:00:00Z"}],
+  [recentEnvelope,{ageSeconds:9999999}]
+ ]){
+  const rejected=await relay(auth,{approved:true,fetchFn:async()=>mock({
+    ...expected,biquotePrivateForwardVault:{...env,
+     captureFreshness:{...env.captureFreshness,...mut}}
+  })});
+  a.equal(rejected.httpStatus,503,"Invalid quote freshness cannot pass relay");
+ }
  // Never trust upstream claims that a generic vendor pause certifies the
  // underlying broker's calendar, nor forward raw timestamps or BID/ASK.
  const refFrame=n=>({
