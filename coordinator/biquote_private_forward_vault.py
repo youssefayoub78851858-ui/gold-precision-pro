@@ -329,7 +329,45 @@ def _closed_coverage(rows, tf, last_imported):
             "ageAtLastImportSeconds":age if age is not None and age>=0 else None}
 
 
-def inspect_metadata(dirname):
+def capture_freshness(last_imported_utc, quote_samples, *, now_utc=None):
+    """Observation liveness from sealed metadata; NEVER source authorization.
+
+    Only a stored quote receipt is eligible, not a recent candle timestamp,
+    a public GET or Render's HTTP/health status. This never fetches, persists,
+    opens an order, or treats a vendor pause as an approved market closure.
+    """
+    result = {
+        "mode": "BIQUOTE_PRIVATE_CAPTURE_LIVENESS_DIAGNOSTIC_ONLY",
+        "status": "NO_CAPTURE", "signal": "WAIT", "executable": False,
+        "paperOrdersAllowed": False, "sourceQualified": False,
+        "brokerCalendarVerified": False, "captureVerifiedByBroker": False,
+        "asOfUTC": None, "ageSeconds": None,
+    }
+    current = dt.datetime.now(UTC) if now_utc is None else now_utc
+    if (not isinstance(current, dt.datetime) or current.tzinfo is None
+            or current.utcoffset() != dt.timedelta(0)):
+        return {**result, "status": "UTC_CLOCK_UNVERIFIED"}
+    asof = current.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    if type(quote_samples) is not int or not 0 <= quote_samples <= MAX_QUOTE_SAMPLES:
+        return {**result, "status": "CAPTURE_COUNT_INVALID", "asOfUTC": asof}
+    if quote_samples == 0 or last_imported_utc is None:
+        return {**result, "asOfUTC": asof}
+    try:
+        received = _stamp(last_imported_utc)
+    except (TypeError, ValueError):
+        return {**result, "status": "CAPTURE_TIMESTAMP_INVALID", "asOfUTC": asof}
+    age = (current-received).total_seconds()
+    if not math.isfinite(age) or age < 0:
+        return {**result, "status": "FUTURE_CAPTURE_OR_CLOCK_SKEW",
+                "asOfUTC": asof}
+    return {**result,
+            "status": "RECENT_UNVERIFIED" if age <= 300 else
+                      "STALE_OVER_5_MINUTES",
+            "ageSeconds": min(int(age), 31536000),
+            "asOfUTC": asof}
+
+
+def inspect_metadata(dirname, *, now_utc=None):
     """Private counts, closed-bar continuity and last arrival; NO prices."""
     v=load_vault(dirname)
     coverage={tf:_closed_coverage(v["closed"][tf],tf,v["lastImportedUTC"])
@@ -354,6 +392,8 @@ def inspect_metadata(dirname):
             "counts":{tf:len(v["closed"][tf]) for tf in FRAMES_ORDER},
             "quoteSamples":len(v["quoteObservations"]),
             "lastImportedUTC":v["lastImportedUTC"],
+            "captureFreshness":capture_freshness(
+                v["lastImportedUTC"], len(v["quoteObservations"]), now_utc=now_utc),
             "forwardCoverage":coverage,
             "gapReference":gap_reference,
             "coverageClassification":"GAPS_UNCLASSIFIED_WITHOUT_INDEPENDENT_BROKER_CALENDAR",
