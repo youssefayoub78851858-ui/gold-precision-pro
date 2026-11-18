@@ -91,6 +91,7 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 </div>
 <p id="batch-frames-state"><small>الشموع المتصلة في الأرشيف: غير متاحة</small></p>
 <p id="batch-quality-state" role="status">الخطوة الثانية: فحص اتصال الشموع والفجوات — غير متاح بعد</p>
+<p id="batch-stage3-state" role="status">الخطوة الثالثة: فحص جاهزية V3 والتطابق — WAIT</p>
 <p id="batch-capacity-state" role="status">سعة عينات السبريد/الاقتباسات: لم تُفحص على القرص الخاص بعد</p>
 <p><small>تُقرأ هذه الحالة من Coordinator الخاص فقط بعد نشره وإتاحة الأرشيف. نتائج الاختبارات البرمجية لا تثبت بيانات السوق الحقيقية أو ترخيص المصدر أو جاهزية التداول.</small></p>
 </section>
@@ -120,6 +121,7 @@ function clearBatchDisplay(){
  el("batch-frames-state").textContent="لا توجد عدّادات شموع معتمدة حالياً";
  el("batch-capacity-state").textContent="سعة الأرشيف: غير مؤكدة";
  el("batch-quality-state").textContent="الخطوة الثانية: جاهزية الشموع غير مؤكدة — WAIT";
+ el("batch-stage3-state").textContent="الخطوة الثالثة — WAIT: حالة V3 غير متاحة";
 }
 const labels={
  NOT_CONNECTED:"الوصلة الخاصة غير مفعّلة",
@@ -261,6 +263,27 @@ el("refresh").addEventListener("click",async()=>{
       qualityValid&&!flagged
       ?"الخطوة الثانية — WAIT: "+qualityStates[stage2.status]+" | "+frameDetails.join(" | ")
       :"الخطوة الثانية — WAIT: معلومات الفواصل غير مؤكدة";
+   const stage3=batch.stage3;
+   const stage3Labels={
+     WAIT_ARCHIVE_UNAVAILABLE:"تعذّر فحص الأرشيف الخاص",
+     WAIT_CLOSED_BAR_WARMUP:"بعد ما اكتملت 21 شمعة مغلقة متصلة بكل فاصل",
+     WAIT_SHADOW_FRESHNESS_OR_PARITY:"توقيت الشموع أو تطابق H1/H4 مع M15 غير مثبت",
+     WAIT_INDEPENDENT_FEEDS_AND_RIGHTS:"التحليل الفني قيد المراقبة؛ حقوق المصدر وDXY/GC والأخبار بعدن غير مثبتين"
+   };
+   const v3Safe=stage3?.signal==="WAIT"&&stage3?.paperOrdersAllowed===false
+     &&stage3?.liveOrdersAllowed===false&&stage3?.brokerRightsVerified===false
+     &&stage3?.brokerSessionCalendarVerified===false
+     &&stage3?.independentMacroOrderFlowVerified===false
+     &&Number.isInteger(stage3?.framesWithWarmup)
+     &&stage3.framesWithWarmup>=0&&stage3.framesWithWarmup<=3
+     &&Number.isInteger(stage3?.h4RemainingUntil21)
+     &&stage3.h4RemainingUntil21>=0&&stage3.h4RemainingUntil21<=21
+     &&Object.hasOwn(stage3Labels,stage3?.status);
+   el("batch-stage3-state").textContent=v3Safe
+     ?"الخطوة الثالثة — WAIT: "+stage3Labels[stage3.status]
+       +" | فواصل مجهّزة "+stage3.framesWithWarmup+"/3"
+       +" | باقي H4 "+stage3.h4RemainingUntil21+" شمعة متصلة"
+     :"الخطوة الثالثة — WAIT: فحص V3 غير مؤكد، الصفقات محجوبة";
    const status=batch.capacityStatus;
    const remaining=batch.quoteSamplesRemaining;
    const limit=batch.quoteSamplesHardCap;
