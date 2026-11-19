@@ -5,6 +5,9 @@
  * Inputs are existing point-in-time and count-only evidence reports.
  */
 const MODE="GOLD_PRECISION_PRE_SIGNAL_MILESTONES_V1";
+const START=Date.parse("2026-11-18T00:00:00Z");
+const WIDTH=Object.freeze({M15:900000,H1:3600000,H4:14400000});
+const FRAMES=Object.keys(WIDTH);
 const NUM=x=>Number.isSafeInteger(x)&&x>=0&&x<=20000000;
 const ISO=/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/;
 const utc=x=>typeof x==="string"&&ISO.test(x)&&Number.isFinite(Date.parse(x))&&
@@ -14,6 +17,41 @@ const hardWait=()=>({mode:MODE,signal:"WAIT",executable:false,
  liveOrdersAllowed:false,brokerOrdersSent:0,providerRequestsMade:0,
  sourceRightsVerified:false,upstreamBrokerScheduleVerified:false,
  independentHoldoutValidated:false});
+// Check the COMPLETE receipt counter contract, not just the H4 headline.
+// A forged "50 H4" cannot pass when other frames or receipts are missing.
+function validPointFrames(p){
+ const asOf=Date.parse(p.asOfUTC);
+ if(!Number.isFinite(asOf)||asOf<START)return false;
+ return FRAMES.every(tf=>{
+  const stored=p.storedClosedCounts?.[tf],
+   observed=p.observedAtDecision?.[tf],
+   legacy=p.legacyWithoutFirstSeen?.[tf],
+   future=p.firstSeenAfterDecision?.[tf],
+   tail=p.contiguousObservedClosed?.[tf],
+   warm=p.technicalWarmupMissing?.[tf],
+   paper=p.paperHistoryMissing?.[tf],
+   maximum=Math.floor((asOf-START)/WIDTH[tf]);
+  return [stored,observed,legacy,future,tail,warm,paper].every(NUM)&&
+   stored<=maximum&&observed+legacy+future===stored&&tail<=observed&&
+   warm===Math.max(0,21-tail)&&paper===Math.max(0,50-tail);
+ });
+}
+function validCountLedger(q){
+ if(q?.mode!=="BIQUOTE_H4_EVIDENCE_QUALITY_LEDGER_COUNTS_ONLY"||
+    q?.status!=="NOT_READY_COUNT_ONLY"||
+    q?.signal!=="WAIT"||q?.executable!==false||
+    q?.tradeEligible!==false||q?.paperOrdersAllowed!==false||
+    q?.perCandleFirstSeenVerified!==false||
+    q?.h4LatestConstituentsProven!==false||
+    q?.independentHoldoutValidated!==false||
+    q?.sourceRightsVerified!==false||!utc(q?.stage3ReportAtUTC))
+  return false;
+ return FRAMES.every(tf=>NUM(q.storedClosed?.[tf])&&
+   NUM(q.contiguousClosed?.[tf])&&
+   q.contiguousClosed[tf]<=q.storedClosed[tf])&&
+   q.h4WarmupDeficit===Math.max(0,21-q.contiguousClosed.H4)&&
+   q.h4PaperHistoryDeficit===Math.max(0,50-q.contiguousClosed.H4);
+}
 function summarize(input){
  const p=input?.pointInTime,q=input?.countEvidence;
  const validPoint=p?.mode==="BIQUOTE_LOCAL_POINT_IN_TIME_DATA_GATE_V1"&&
@@ -26,16 +64,20 @@ function summarize(input){
   NUM(p?.technicalWarmupMissing?.H4)&&
   NUM(p?.paperHistoryMissing?.H4)&&
   p.technicalWarmupMissing.H4===Math.max(0,21-p.contiguousObservedClosed.H4)&&
-  p.paperHistoryMissing.H4===Math.max(0,50-p.contiguousObservedClosed.H4);
- const validCounts=q?.mode==="BIQUOTE_H4_EVIDENCE_QUALITY_LEDGER_COUNTS_ONLY"&&
-  q?.signal==="WAIT"&&q?.executable===false&&q?.tradeEligible===false&&
-  q?.perCandleFirstSeenVerified===false&&q?.h4LatestConstituentsProven===false&&
-  q?.independentHoldoutValidated===false&&q?.sourceRightsVerified===false;
+  p.paperHistoryMissing.H4===Math.max(0,50-p.contiguousObservedClosed.H4)&&
+  validPointFrames(p)&&NUM(p.warmupCrossFrameMatchedH4)&&
+  p.warmupCrossFrameMatchedH4<=21;
+ const validCounts=validCountLedger(q);
+ const sameCycle=!!(validCounts&&validPoint&&q.stage3ReportAtUTC===p.asOfUTC&&
+  FRAMES.every(tf=>q.storedClosed[tf]===p.storedClosedCounts[tf]&&
+   q.contiguousClosed[tf]===p.contiguousObservedClosed[tf]));
  const h4=validPoint?p.contiguousObservedClosed.H4:null;
- const local21=validPoint&&p.technicalWarmupMissing.H4===0&&
+ const local21=validPoint&&p.status==="LOCAL_GEOMETRY_ONLY_NOT_TRADE_READY"&&
+  p.technicalWarmupMissing.H4===0&&p.warmupCrossFrameMatchedH4===21&&
   p.warmupCrossFrameFullyVerified===true&&
-  p.latestExpectedUTCGridClosedObservedAtDecision?.H4===true&&
-  p.latestEligibleClosedObservedAtDecision?.H4===true&&
+  p.localTimingAndParityCheck==="LOCAL_ONLY_NOT_INDEPENDENT"&&
+  FRAMES.every(tf=>p.latestExpectedUTCGridClosedObservedAtDecision?.[tf]===true&&
+   p.latestEligibleClosedObservedAtDecision?.[tf]===true)&&
   p.localGeometryObserved===true;
  const local50=local21&&p.paperHistoryMissing.H4===0;
  const stages=[
@@ -48,7 +90,8 @@ function summarize(input){
    observedContiguousH4:h4,remainingToTechnicalH4:h4===null?null:Math.max(0,21-h4),
    remainingToPaperH4:h4===null?null:Math.max(0,50-h4),
    localWarmupCrossFrameVerified:local21,
-   independentPerBarParityProven:false,countOnlyLedgerRecognized:validCounts},
+   independentPerBarParityProven:false,countOnlyLedgerRecognized:validCounts,
+   countLedgerSameDecisionCycle:sameCycle,countLedgerCanAuthorizeTrades:false},
   {id:"MACRO_GC_ORDER_FLOW",state:"REALTIME_PROVENANCE_AND_SYNC_UNVERIFIED",complete:false,
    reason:"NO_LICENSED_SYNCHRONIZED_DXY_YIELDS_GC_AND_NEWS_EVIDENCE"},
   {id:"PROSPECTIVE_PAPER_HOLDOUT",state:"UNTOUCHED_AFTER_COST_RESULTS_REQUIRED",complete:false,
