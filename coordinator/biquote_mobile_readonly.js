@@ -11,6 +11,7 @@ const {analyzeChart}=require("./biquote_private_structure");
 const {makeMtfReadiness}=require("./biquote_mtf_readiness");
 const {examine:observeReferenceEma}=require("./biquote_observed_ema_reference");
 const {evaluateFrames:evaluateProviderSchedule}=require("./biquote_vendor_declared_session");
+const {observe:researchWatch}=require("./biquote_private_v3_watch");
 const URLS=Object.freeze({
  quote:"https://biquote.io/api/XAUUSD?allowStale=false",
  M15:"https://biquote.io/api/XAUUSD/ohlc?interval=15m&limit=200",
@@ -221,6 +222,13 @@ async function snapshot({fetchFn=globalThis.fetch,nowMs=Date.now,authorization="
     ...(viewer?{bid:rawPrivateQuote.bid,ask:rawPrivateQuote.ask,
       spread:rawPrivateQuote.spread,privateChart:rawPrivateChart,
       privateStructure:rawPrivateStructure,
+      // Reuses in-memory private OHLC; no second quote request and never
+      // adds a trade plan or executable recommendation.
+      privateTechnicalWatch:researchWatch({
+        origin:"AUTHENTICATED_PERSONAL_BIQUOTE_PRIVATE_CHART",
+        priceBasis:"MID_WITH_POSSIBLE_BID_SEED",
+        asOfUTC:sample.observedUTC,chart:rawPrivateChart
+      }),
       privateChartReadOnly:true,privateChartDataBasis:"MID_WITH_POSSIBLE_BID_SEED"}:{})}};
 }
 function resetForTests(){cache=null;expires=0;pending=null;}
