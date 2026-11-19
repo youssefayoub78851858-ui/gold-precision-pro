@@ -95,7 +95,8 @@ function audit(input){
   prevProgress=t;
  }
  const first=stamp(samples[0].asOfUTC);
- const covered=first-begin<=PERIOD+30000&&end-previous.t<=PERIOD+30000;
+ // A missing first or last 120-second slot must not count as covered.
+ const covered=first-begin<=60000&&end-previous.t<=60000;
  const recentProgress=!!latest&&latest.t<=previous.t&&
                       previous.t-latest.t<=1800000;
  const blockers=[...FIXED];
