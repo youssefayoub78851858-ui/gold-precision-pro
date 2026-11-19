@@ -51,6 +51,8 @@ const good=reconcile({records:fixture});safe(good);
 assert.equal(good.status,"CONSISTENT_COUNTS_ONLY_NOT_MARKET_PROOF");
 assert.equal(good.matchedEventCount,4);
 assert.deepEqual(good.persistedClosed,{M15:138,H1:34,H4:8});
+assert.deepEqual(good.contiguousClosed,{M15:48,H1:12,H4:8});
+assert.equal(good.latestProgressAtUTC,"2026-11-19T11:30:02.907797Z");
 assert.deepEqual(good.unclassifiedMissingSlots,{M15:4,H1:1,H4:0});
 assert.deepEqual(good.fullyCoveredDisagreements,{H1:0,H4:0});
 assert.deepEqual(good.comparedClosed,{H1:11,H4:2});
@@ -63,6 +65,7 @@ assert.equal(incomplete.status,"INCOMPLETE");
 assert.equal(incomplete.matchedEventCount,3);
 // The report cannot claim zero disagreements without an examined group.
 assert.equal(incomplete.fullyCoveredDisagreements.H4,null);
+assert.equal(incomplete.contiguousClosed.H4,8);
 const bad=[
  xs=>{xs[0].observedIntervals=749;},
  xs=>{xs[0].intervalBins.LE_150_SECONDS=735;},
@@ -113,6 +116,8 @@ assert.equal(twice.checkedProgressEvents,2);
 assert.equal(twice.checkedQuoteCadenceEvents,2);
 assert.equal(twice.sourceQuoteSamples,759);
 assert.equal(twice.persistedClosed.M15,139);
+assert.equal(twice.contiguousClosed.H4,8);
+assert.equal(twice.latestProgressAtUTC,"2026-11-19T11:46:02.907797Z");
 // Latest healthy counts may never hide a *previous* quote counter regression.
 const futureRollback=structuredClone(newerCycle);
 const afterRollback=futureRollback.find(x=>x.event==="BIQUOTE_STAGE3_QUOTE_RECEIPT_CADENCE");
