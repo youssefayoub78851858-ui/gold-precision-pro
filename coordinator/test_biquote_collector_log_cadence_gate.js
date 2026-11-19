@@ -14,7 +14,8 @@ const input={
  samples:Array.from({length:7},(_,i)=>({
   asOfUTC:iso(START+i*120000+3000),slot:330+i,
   archiveSavedSnapshotsSoFar:324+i,archiveRejectedSnapshotsSoFar:7,
-  signal:"WAIT",executable:false,httpAllOk:true,geometryChecksOk:false
+  signal:"WAIT",executable:false,httpAllOk:true,geometryChecksOk:false,
+  geometryFailureClass:"UNCLASSIFIED_M15_COVERAGE_GAP"
  })),
  progress:[{atUTC:iso(START+3016),frames,signal:"WAIT",executable:false,
             paperOrdersAllowed:false,brokerOrdersSent:0}]
@@ -44,6 +45,9 @@ assert.equal(good.recordedArchiveRejectionsIncrease,0);
 assert.equal(good.collectorSlotsWithoutRecordedArchiveOutcome,0);
 assert.equal(good.httpNonOkSamples,0);
 assert.equal(good.geometryNotOkSamples,7);
+assert.equal(good.geometryFailureClassCounts.UNCLASSIFIED_M15_COVERAGE_GAP,7);
+assert.equal(good.geometryFailureClassCounts.OHLC_PRICE_DISAGREEMENT,0);
+assert(good.blockerCodes.includes("REPORTED_M15_CONSTITUENT_COVERAGE_GAP"));
 assert(good.blockerCodes.includes("COLLECTOR_OHLC_GEOMETRY_NOT_PROVEN"));
 assert.equal(good.latestSavedSnapshots,330);
 assert.equal(good.latestRejectedSnapshots,7);
@@ -94,6 +98,7 @@ const corruption=[
  x=>{x.samples[4].signal="BUY";},
  x=>{delete x.samples[4].httpAllOk;},
  x=>{x.samples[4].geometryChecksOk="true";},
+ x=>{x.samples[4].geometryFailureClass="PRIVATE_PRICE_SECRET";},
  x=>{x.samples[4].executable=true;},
  x=>{x.progress[0].brokerOrdersSent=1;},
  x=>{x.progress[0].frames.H4.contiguousClosed=21;},
