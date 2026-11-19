@@ -46,6 +46,8 @@ class ChronologicalPrivate(unittest.TestCase):
                 for tf in ("M15","H1","H4")})
             self.assertEqual(gate["legacyWithoutFirstSeen"],
                              {"M15":0,"H1":0,"H4":0})
+            self.assertEqual(gate["firstSeenAfterDecision"],
+                             {"M15":0,"H1":0,"H4":0})
             for tf in ("M15","H1","H4"):
                 contiguous=gate["contiguousObservedClosed"][tf]
                 self.assertLessEqual(contiguous,gate["observedAtDecision"][tf])
@@ -117,6 +119,7 @@ class ChronologicalPrivate(unittest.TestCase):
             gated=report["pointInTimeDataAudit"]
             self.assertEqual(gated["status"],"RECEIPTS_UNAVAILABLE")
             self.assertEqual(gated["observedAtDecision"],{"M15":0,"H1":0,"H4":0})
+            self.assertEqual(gated["firstSeenAfterDecision"],{"M15":0,"H1":0,"H4":0})
             self.assertEqual(gated["legacyWithoutFirstSeen"],{
                 tf:len(old["closed"][tf]) for tf in ("M15","H1","H4")})
             # Legacy timestamps are never manufactured using the last import.
