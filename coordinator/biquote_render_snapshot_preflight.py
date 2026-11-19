@@ -25,7 +25,7 @@ def blocked(why):
 
 def _stamp(s):
     if not isinstance(s,str) or not re.fullmatch(
-        r"20\\d{2}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?Z",s
+        r"20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z",s
     ): raise ValueError("TIMESTAMP_NOT_UTC")
     return dt.datetime.fromisoformat(s.replace("Z","+00:00"))
 
