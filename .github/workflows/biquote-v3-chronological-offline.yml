@@ -1,0 +1,26 @@
+name: BiQuote V3 chronological replay gate (offline only)
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - 'coordinator/biquote_v3_chronological_replay.js'
+      - 'coordinator/test_biquote_v3_chronological_replay.js'
+      - 'coordinator/ultimate_four_stage_review.js'
+      - 'coordinator/v3_ultimate.js'
+      - '.github/workflows/biquote-v3-chronological-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  chronological-v3-offline-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify no future OHLC, no broker orders, no fictional net PnL
+        run: node coordinator/test_biquote_v3_chronological_replay.js
+      - name: Verify frozen V3 four-stage safety still WAIT
+        run: node coordinator/test_ultimate_four_stage_review.js
