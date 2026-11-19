@@ -173,8 +173,12 @@
   blank("WAIT — لا توجد شموع خاصة موثقة");
  }
  function draw(){
-  if(!state||Date.now()>expiry){
-   blank("WAIT — انتهت صلاحية المشاهدة");return;
+  if(!state){blank("WAIT — لا توجد شموع مؤهلة");return;}
+  // Mobile browsers often throttle background timers. Selecting a new
+  // timeframe MUST synchronously clear the price and WATCH when expired.
+  if(Date.now()>expiry){
+   reset("WAIT — انتهت صلاحية سعر المشاهدة؛ اضغط تحديث للتحقق من جديد");
+   return;
   }
   const rows=state.chart[frame].slice(-45),svg=$("candles");
   if(rows.length<2)return blank("WAIT — لا توجد شموع كافية");
@@ -259,6 +263,24 @@
   }finally{pending=false;refresh.disabled=false;}
  });
  // Presentation-only expiry: NO background quote calls, no stored prices.
+ // Clear on background/navigation as well: Android may defer the timer, and
+ // BFCache/back navigation must not resurrect a private market snapshot.
+ if(typeof document.addEventListener==="function")
+  document.addEventListener("visibilitychange",()=>{
+   if(document.visibilityState==="hidden"&&state)
+    reset("WAIT — خرجت من شاشة المشاهدة؛ اضغط تحديث لتحقق جديد");
+   else if(expiry&&Date.now()>expiry)
+    reset("WAIT — انتهت صلاحية السعر المرصود؛ اضغط تحديث");
+  });
+ if(typeof window!=="undefined"&&typeof window.addEventListener==="function"){
+  window.addEventListener("pagehide",()=>{
+   if(state)reset("WAIT — انتهت جلسة عرض البيانات على الصفحة");
+  });
+  window.addEventListener("focus",()=>{
+   if(expiry&&Date.now()>expiry)
+    reset("WAIT — انتهت صلاحية البيانات بعد الرجوع للصفحة");
+  });
+ }
  setInterval(()=>{
   if(expiry&&Date.now()>expiry)
    reset("WAIT — انتهت صلاحية السعر المرصود. اضغط تحديث لطلب فحص جديد");
