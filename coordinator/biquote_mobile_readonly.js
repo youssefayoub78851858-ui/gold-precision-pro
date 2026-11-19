@@ -228,7 +228,9 @@ async function snapshot({fetchFn=globalThis.fetch,nowMs=Date.now,authorization="
       privateTechnicalWatch:researchWatch({
         origin:"AUTHENTICATED_PERSONAL_BIQUOTE_PRIVATE_CHART",
         priceBasis:"MID_WITH_POSSIBLE_BID_SEED",
-        asOfUTC:sample.observedUTC,chart:rawPrivateChart
+        asOfUTC:sample.observedUTC,chart:rawPrivateChart,
+        sourceSnapshotStatus:sample.status,
+        sourceCrossFrameComparisons:sample.crossFrameComparisons
       }),
       // Independent, count-only research diagnostic across provider-
       // declared weekend pauses. This can NEVER change V3's strict
