@@ -36,6 +36,23 @@ class ChronologicalPrivate(unittest.TestCase):
                 {k:len(v) for k,v in stored["closed"].items()})
             self.assertEqual(report["retrospectiveDecisionCount"],
                              sum(report["technicalWatchCounts"].values()))
+            gate=report["pointInTimeDataAudit"]
+            self.assertEqual(gate["signal"],"WAIT")
+            self.assertFalse(gate["sourceRightsVerified"])
+            self.assertFalse(gate["independentAvailabilityVerified"])
+            self.assertFalse(gate["brokerSessionCalendarVerified"])
+            self.assertEqual(gate["observedAtDecision"],{
+                tf:len(stored["firstObservedClosedUTC"][tf])
+                for tf in ("M15","H1","H4")})
+            self.assertEqual(gate["legacyWithoutFirstSeen"],
+                             {"M15":0,"H1":0,"H4":0})
+            for tf in ("M15","H1","H4"):
+                contiguous=gate["contiguousObservedClosed"][tf]
+                self.assertLessEqual(contiguous,gate["observedAtDecision"][tf])
+                self.assertEqual(gate["technicalWarmupMissing"][tf],
+                                 max(0,21-contiguous))
+                self.assertEqual(gate["paperHistoryMissing"][tf],
+                                 max(0,50-contiguous))
             receipts=report["localFirstSeenAudit"]
             self.assertEqual(receipts["signal"],"WAIT")
             self.assertFalse(receipts["paperOrdersAllowed"])
@@ -54,6 +71,18 @@ class ChronologicalPrivate(unittest.TestCase):
                 self.assertNotIn(private,safe)
             self.assertFalse(any(x.suffix in (".db",".sqlite",".sqlite3")
                                  for x in directory.rglob("*")))
+            # Tampered runner claims must not be passed to authenticated UI.
+            forged=inspect_private_vault(directory,runner=lambda packet:
+                json.dumps({**json.loads(
+                    __import__("subprocess").run(
+                        ["node",str(pathlib.Path(__file__).with_name(
+                            "biquote_v3_chronological_replay.js"))],
+                        input=json.dumps(packet),capture_output=True,
+                        text=True,check=True).stdout),
+                    "signalDataReadiness":{"status":"LOCAL_GEOMETRY_ONLY_NOT_TRADE_READY",
+                                           "signal":"BUY"}}))
+            self.assertEqual(forged["status"],"BLOCKED")
+            self.assertNotIn("pointInTimeDataAudit",forged)
             # A compromised runner cannot assert success, leak pricing,
             # promote orders, or fake a first-seen market replay.
             fake={**report,"status":"RETROSPECTIVE_WATCH_COUNTS_ONLY",
@@ -85,6 +114,14 @@ class ChronologicalPrivate(unittest.TestCase):
                 tf:len(old["closed"][tf]) for tf in ("M15","H1","H4")})
             self.assertEqual(report["signal"],"WAIT")
             self.assertFalse(report["paperOrdersAllowed"])
+            gated=report["pointInTimeDataAudit"]
+            self.assertEqual(gated["status"],"RECEIPTS_UNAVAILABLE")
+            self.assertEqual(gated["observedAtDecision"],{"M15":0,"H1":0,"H4":0})
+            self.assertEqual(gated["legacyWithoutFirstSeen"],{
+                tf:len(old["closed"][tf]) for tf in ("M15","H1","H4")})
+            # Legacy timestamps are never manufactured using the last import.
+            self.assertEqual(gated["contiguousObservedClosed"],{
+                "M15":0,"H1":0,"H4":0})
 
     def test_missing_vault_does_not_generate_market_candles(self):
         with tempfile.TemporaryDirectory() as tmp:
