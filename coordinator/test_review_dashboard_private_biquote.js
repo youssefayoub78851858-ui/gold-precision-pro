@@ -18,8 +18,12 @@ function packet(){
    lastClosedUTC:new Date(latestOpen+width).toISOString(),
    priceBasis:"MID_WITH_POSSIBLE_BID_SEED"};
  }
- const c={completeMatches:4,completeMismatches:0,
-   incompleteM15Groups:0,outsideRetentionWindow:61};
+ // 48 M15 bars contain 11 full H1 and 2 full H4 windows.
+ // Source-wide summaries may cover more than the private display window.
+ const h1={completeMatches:11,completeMismatches:0,
+   incompleteM15Groups:0,outsideRetentionWindow:54};
+ const h4={completeMatches:2,completeMismatches:0,
+   incompleteM15Groups:0,outsideRetentionWindow:63};
  return {signal:"WAIT",executable:false,researchEligible:false,
   tradePlanExecutable:false,paperOrdersAllowed:false,
   orderEndpointsCalled:false,status:"OBSERVED_READONLY_UNVERIFIED",
@@ -29,7 +33,7 @@ function packet(){
   quoteAgeSeconds:1.5,observedUTC:new Date(NOW).toISOString(),
   quoteUTC:new Date(NOW-1500).toISOString(),privateChart:chart,
   frameSummary:summary,
-  crossFrameComparisons:{H1:{...c},H4:{...c}},
+  crossFrameComparisons:{H1:{...h1},H4:{...h4}},
   privateTechnicalWatch:{
    mode:"PRIVATE_FROZEN_V3_TECHNICAL_WATCH_ONLY",
    status:"TECHNICAL_WATCH_ONLY_NOT_TRADE_READY",
@@ -53,7 +57,26 @@ const good=mod.validateSnapshot(packet(),NOW);
 a(good,"full private valid snapshot");
 a.equal(good.chart.M15.length,48);
 a.equal(mod.localLatestParity(good.chart),true);
+const completeAudit=mod.localCoveredParityAudit(good.chart);
+a.deepEqual(completeAudit,{
+ H1:{fullyCovered:11,disagreed:0},
+ H4:{fullyCovered:2,disagreed:0}
+});
 a.match(mod.researchWatch(good),/^WAIT · WATCH_BUY/);
+// Even an older fully covered H1 or H4 disagreement, outside the last
+// H1/H4 but inside the private M15 snapshot, MUST suppress WATCH.
+for(const mutate of [
+ x=>{x.privateChart.H1[45].high=2004;},
+ x=>{x.privateChart.H4[46].high=2004;},
+ x=>{x.privateChart.M15[25].high=2004;}
+]){
+ const x=packet();mutate(x);
+ const checked=mod.validateSnapshot(x,NOW);
+ a(checked);a.equal(mod.localLatestParity(checked.chart),true);
+ const audit=mod.localCoveredParityAudit(checked.chart);
+ a(audit.H1.disagreed+audit.H4.disagreed>0);
+ a(!mod.researchWatch(checked).includes("WATCH_BUY"));
+}
 // Even perfectly clean (but forged) source-wide overlap counters must
 // not override a price conflict in the latest closed H1, last H4, or
 // one of the H1 constituents of the last H4 in the private local chart.
@@ -96,7 +119,7 @@ for(const mutate of [
  x=>{x.privateChart.H4[47].time=new Date(NOW).toISOString();},
  x=>{x.spread=5;},
  x=>{x.spread="0.3";},
- x=>{x.crossFrameComparisons.H4.outsideRetentionWindow=60;},
+ x=>{x.crossFrameComparisons.H4.outsideRetentionWindow=62;},
  x=>{x.frameSummary.H1.closedCount=66;},
  x=>{x.status="WAIT_CROSS_FRAME_GAPS";},
  x=>{x.frameSummary.H4.lastClosedUTC="2026-11-10T00:00:00.000Z";},
@@ -112,10 +135,10 @@ for(const mutate of [
 for(const mutate of [
  x=>{x.status="WAIT_CROSS_FRAME_GAPS";
        x.crossFrameComparisons.H1.incompleteM15Groups=1;
-       x.crossFrameComparisons.H1.outsideRetentionWindow=60;},
+       x.crossFrameComparisons.H1.outsideRetentionWindow=53;},
  x=>{x.status="WAIT_CROSS_FRAME_GAPS";
        x.crossFrameComparisons.H4.completeMismatches=1;
-       x.crossFrameComparisons.H4.outsideRetentionWindow=60;},
+       x.crossFrameComparisons.H4.outsideRetentionWindow=62;},
  x=>{x.privateTechnicalWatch.entry=2000;},
  x=>{x.privateTechnicalWatch.paperOrdersAllowed=true;},
  x=>{x.privateTechnicalWatch.requiredM15ToReconcile21H4=48;}
