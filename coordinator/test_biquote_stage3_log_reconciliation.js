@@ -56,6 +56,9 @@ assert.equal(good.latestProgressAtUTC,"2026-11-19T11:30:02.907797Z");
 assert.deepEqual(good.unclassifiedMissingSlots,{M15:4,H1:1,H4:0});
 assert.deepEqual(good.fullyCoveredDisagreements,{H1:0,H4:0});
 assert.deepEqual(good.comparedClosed,{H1:11,H4:2});
+assert.deepEqual(good.notFullyCoveredClosed,{H1:1,H4:6});
+assert.deepEqual(good.comparedCoverageRegressions,{H1:0,H4:0});
+assert.equal(good.latestContiguousH4M15ParityVerified,false);
 assert.equal(good.sourceQuoteSamples,751);
 assert(good.blockers.includes("UNCLASSIFIED_CLOSED_CANDLE_GAPS"));
 assert(good.blockers.includes("PARTIAL_M15_OVERLAP_NOT_VERIFIED"));
@@ -118,6 +121,58 @@ assert.equal(twice.sourceQuoteSamples,759);
 assert.equal(twice.persistedClosed.M15,139);
 assert.equal(twice.contiguousClosed.H4,8);
 assert.equal(twice.latestProgressAtUTC,"2026-11-19T11:46:02.907797Z");
+assert.deepEqual(twice.comparedCoverageRegressions,{H1:0,H4:0});
+// Actual-shaped Stage3 rolling-window effect: between 12:02 and 12:46
+// H4 remained 9 stored, but 3 comparable H4 declined to 2, while
+// not fully covered increased from 6 to 7. This is NOT permission to
+// treat all nine as proven contiguous market history.
+const earlierCoverage=structuredClone(fixture).map(x=>{
+ x.atUTC=x.atUTC.replace("11:30:02","12:02:02");
+ if(x.event==="BIQUOTE_STAGE3_CLOSED_BAR_PROGRESS"){
+  x.frames.M15.persistedClosed=140;
+  x.frames.H1.persistedClosed=35;
+  x.frames.H4.persistedClosed=9;
+  x.frames.H4.contiguousClosed=9;
+ }
+ if(x.event==="BIQUOTE_STAGE3_ARCHIVE_OHLC_OVERLAP"){
+  x.frames.H1={fullyCoveredCompared:12,fullyCoveredDisagreed:0,
+    higherClosedExamined:13,notFullyCovered:1};
+  x.frames.H4={fullyCoveredCompared:3,fullyCoveredDisagreed:0,
+    higherClosedExamined:9,notFullyCovered:6};
+ }
+ if(x.event==="BIQUOTE_STAGE3_QUOTE_RECEIPT_CADENCE"){
+  x.sourceQuoteSamples=765;x.observedIntervals=764;
+  x.intervalBins.LE_150_SECONDS=750;
+ }
+ return x;
+});
+const laterCoverage=structuredClone(earlierCoverage).map(x=>{
+ x.atUTC=x.atUTC.replace("12:02:02","12:46:02");
+ if(x.event==="BIQUOTE_STAGE3_CLOSED_BAR_PROGRESS")
+  x.frames.M15.persistedClosed=143;
+ if(x.event==="BIQUOTE_STAGE3_ARCHIVE_OHLC_OVERLAP"){
+  x.frames.H1={fullyCoveredCompared:11,fullyCoveredDisagreed:0,
+    higherClosedExamined:13,notFullyCovered:2};
+  x.frames.H4={fullyCoveredCompared:2,fullyCoveredDisagreed:0,
+    higherClosedExamined:9,notFullyCovered:7};
+ }
+ if(x.event==="BIQUOTE_STAGE3_QUOTE_RECEIPT_CADENCE"){
+  x.sourceQuoteSamples=788;x.observedIntervals=787;
+  x.intervalBins.LE_150_SECONDS=773;
+ }
+ return x;
+});
+const coverageLoss=reconcile({records:[...laterCoverage,...earlierCoverage]});
+safe(coverageLoss);
+assert.equal(coverageLoss.status,"CONSISTENT_COUNTS_ONLY_NOT_MARKET_PROOF");
+assert.deepEqual(coverageLoss.persistedClosed,{M15:143,H1:35,H4:9});
+assert.deepEqual(coverageLoss.contiguousClosed,{M15:48,H1:12,H4:9});
+assert.deepEqual(coverageLoss.comparedClosed,{H1:11,H4:2});
+assert.deepEqual(coverageLoss.notFullyCoveredClosed,{H1:2,H4:7});
+assert.deepEqual(coverageLoss.comparedCoverageRegressions,{H1:1,H4:1});
+assert.equal(coverageLoss.latestContiguousH4M15ParityVerified,false);
+assert(coverageLoss.blockers.includes("H4_ROLLING_M15_OVERLAP_COMPARABILITY_DECREASED"));
+assert(coverageLoss.blockers.includes("H1_ROLLING_M15_OVERLAP_COMPARABILITY_DECREASED"));
 // Latest healthy counts may never hide a *previous* quote counter regression.
 const futureRollback=structuredClone(newerCycle);
 const afterRollback=futureRollback.find(x=>x.event==="BIQUOTE_STAGE3_QUOTE_RECEIPT_CADENCE");
