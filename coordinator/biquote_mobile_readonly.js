@@ -13,6 +13,7 @@ const {examine:observeReferenceEma}=require("./biquote_observed_ema_reference");
 const {evaluateFrames:evaluateProviderSchedule}=require("./biquote_vendor_declared_session");
 const {observe:observeVendorH4Tail}=require("./biquote_vendor_h4_session_tail");
 const {observe:researchWatch}=require("./biquote_private_v3_watch");
+const {assess:assessSnapshotCapacity}=require("./biquote_snapshot_capacity_gate");
 const URLS=Object.freeze({
  quote:"https://biquote.io/api/XAUUSD?allowStale=false",
  M15:"https://biquote.io/api/XAUUSD/ohlc?interval=15m&limit=200",
@@ -171,6 +172,7 @@ async function collect(fetchFn,nowMs){
   rawPrivateStructure:privateStructure,
   frameSummary:Object.fromEntries(FRAMES.map(tf=>[tf,processed[tf].view])),
   crossFrameComparisons:comparisons,
+  snapshotParityCapacity:assessSnapshotCapacity(),
   blockerCodes:["BROKER_SESSION_CALENDAR_UNVERIFIED","UPSTREAM_MT5_BROKER_RIGHTS_NOT_WARRANTED",
     "GC_DXY_US_YIELDS_ORDERFLOW_AND_NEWS_NOT_COMPLETE","HISTORICAL_BID_ASK_NOT_PROVIDED"],
   ...WAIT
