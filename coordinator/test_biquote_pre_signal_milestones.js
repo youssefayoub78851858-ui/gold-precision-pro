@@ -56,4 +56,6 @@ a.equal(countReport.stages[1].independentPerBarParityProven,false);
 const inconsistent=summarize({pointInTime:{...point(50,true),
  paperHistoryMissing:{H4:30}}});
 safe(inconsistent);a.equal(inconsistent.stages[1].observedContiguousH4,null);
+const injected=summarize({pointInTime:{...point(21,true),asOfUTC:"VERY_PRIVATE_QUOTE"}});
+safe(injected);a.equal(injected.asOfUTC,null);
 console.log("PASS four-stage milestone report: counted H4 receipts, no private prices, no BUY SELL or paper/live orders");
