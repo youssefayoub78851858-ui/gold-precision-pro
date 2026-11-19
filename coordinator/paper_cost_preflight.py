@@ -85,6 +85,13 @@ def synthetic_scenario_cost(values: dict) -> dict:
             - values["dailyLossUsedUsd"]),
     )
     total_loss = gross_stop + friction
+    # These are HYPOTHETICAL fee assumptions, not MT5 broker evidence.
+    # Even a zero-distance stop cannot fit the loss cap when friction alone
+    # exceeds the budget; a negative stop allowance must never be presented
+    # as an eligible order. Preserve the zero boundary as INELIGIBLE too.
+    stop_allowance = max(0.0, risk_budget - friction)
+    maximum_stop_distance = stop_allowance / ounces
+    friction_blocks_min_lot = friction >= risk_budget
     result = {
         "mode": "OFFLINE_SYNTHETIC_COST_SCENARIO",
         "dataOrigin": "SYNTHETIC_TEST_ONLY",
@@ -98,6 +105,9 @@ def synthetic_scenario_cost(values: dict) -> dict:
         "totalFrictionUsd": round(friction, 8),
         "lossAtStopInclCostsUsd": round(total_loss, 8),
         "riskBudgetUsd": round(risk_budget, 8),
+        "frictionConsumesFullRiskBudget": friction_blocks_min_lot,
+        "maximumStopDistanceAfterCostsUsdPerOunce": round(maximum_stop_distance, 8),
+        "positiveStopDistanceAffordable": (maximum_stop_distance > 0),
         "targetGrossUsdToNet": round(values["targetNetUsd"] + friction, 8),
         "priceMoveUsdPerOunceToNetTarget":
             round((values["targetNetUsd"] + friction) / ounces, 8),

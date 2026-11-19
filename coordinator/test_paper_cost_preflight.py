@@ -42,6 +42,9 @@ class CostTests(unittest.TestCase):
         self.assertAlmostEqual(x["priceMoveUsdPerOunceToNetTarget"], 5.67)
         self.assertAlmostEqual(x["lossAtStopInclCostsUsd"], 5.67)
         self.assertAlmostEqual(x["riskBudgetUsd"], .25)
+        self.assertTrue(x["frictionConsumesFullRiskBudget"])
+        self.assertAlmostEqual(x["maximumStopDistanceAfterCostsUsdPerOunce"], 0)
+        self.assertFalse(x["positiveStopDistanceAffordable"])
         self.assertFalse(x["hypotheticalRiskWithinBudget"])
         self.assertEqual(x["status"], "BLOCKED")
         self.assertEqual(x["signal"], "WAIT")
@@ -54,6 +57,9 @@ class CostTests(unittest.TestCase):
         x = synthetic_scenario_cost({**VALUES, "equityUsd": 5000.0})
         self.assertAlmostEqual(x["spreadRoundTripUsd"], .4)
         self.assertTrue(x["hypotheticalRiskWithinBudget"])
+        self.assertFalse(x["frictionConsumesFullRiskBudget"])
+        self.assertGreater(x["maximumStopDistanceAfterCostsUsdPerOunce"], 5)
+        self.assertTrue(x["positiveStopDistanceAffordable"])
         self.assertFalse(x["ordersAllowed"])
 
     def test_missing_broker_fields_price_or_invalid_values_block(self):
@@ -80,6 +86,20 @@ class CostTests(unittest.TestCase):
                 synthetic_scenario_cost({**VALUES,"dataOrigin":bad_origin})
         with self.assertRaises(ValueError):
             synthetic_scenario_cost({**VALUES,"apiKey":"not acceptable"})
+
+    def test_costs_alone_at_budget_limit_cannot_create_zero_stop_trade(self):
+        # At the exact fee/loss-budget boundary, a nominally zero stop
+        # has no safety allowance; a positive stop is always required.
+        exact={**VALUES, "spreadUsdPerOunce":0,
+               "entrySlippageUsdPerOunce":0, "exitSlippageUsdPerOunce":0,
+               "commissionRoundTripUsdPerLot":25, "stopDistanceUsdPerOunce":0.001}
+        v=synthetic_scenario_cost(exact)
+        self.assertAlmostEqual(v["totalFrictionUsd"],.25)
+        self.assertTrue(v["frictionConsumesFullRiskBudget"])
+        self.assertFalse(v["positiveStopDistanceAffordable"])
+        self.assertAlmostEqual(v["maximumStopDistanceAfterCostsUsdPerOunce"],0)
+        self.assertFalse(v["hypotheticalRiskWithinBudget"])
+        self.assertFalse(v["ordersAllowed"])
 
     def test_calculation_has_no_network_or_account(self):
         with patch.object(socket,"socket",side_effect=AssertionError("Network forbidden")):
