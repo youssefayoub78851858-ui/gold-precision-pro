@@ -26,7 +26,10 @@ const safe=(state,reason,extra={})=>({
  firstSeenPerClosedBarVerified:false,profitabilityProven:false,
  collectorRestarted:false,deployTriggered:false,
  sampleCount:0,reviewedProgressCount:0,missingLogSlots:0,
- recordedArchiveIncrease:0,unclassifiedFrameGaps:{M15:null,H1:null,H4:null},
+ recordedArchiveIncrease:0,recordedArchiveRejectionsIncrease:0,
+ collectorSlotsWithoutRecordedArchiveOutcome:0,
+ httpNonOkSamples:0,geometryNotOkSamples:0,
+ unclassifiedFrameGaps:{M15:null,H1:null,H4:null},
  blockerCodes:[...FIXED,...(reason?[reason]:[])],...extra
 });
 function stamp(v){
@@ -46,28 +49,39 @@ function audit(input){
  if(!Array.isArray(samples)||!samples.length||samples.length>MAX||
     !Array.isArray(progress)||progress.length>MAX)
   return safe("BLOCKED","INVALID_LOG_ARRAYS");
- let previous=null,missing=0,archiveIncrease=0;
+ let previous=null,missing=0,archiveIncrease=0,rejectionsIncrease=0;
+ let unaccounted=0,httpNonOk=0,geometryNotOk=0;
  for(const rec of samples){
   if(!rec||typeof rec!=="object"||Array.isArray(rec))
    return safe("BLOCKED","MALFORMED_SAMPLE");
   const t=stamp(rec.asOfUTC);
   if(!Number.isFinite(t)||t<begin||t>end||
      rec.signal!=="WAIT"||rec.executable!==false||
+     typeof rec.httpAllOk!=="boolean"||
+     typeof rec.geometryChecksOk!=="boolean"||
      !int(rec.slot)||!int(rec.archiveSavedSnapshotsSoFar)||
      !int(rec.archiveRejectedSnapshotsSoFar))
    return safe("BLOCKED","UNSAFE_OR_INVALID_SAMPLE");
   if(previous){
    const slots=rec.slot-previous.slot;
    const time=t-previous.t;
+   const savedDelta=rec.archiveSavedSnapshotsSoFar-previous.saved;
+   const rejectedDelta=rec.archiveRejectedSnapshotsSoFar-previous.rejected;
    if(slots<=0||time<=0||time<slots*60000||time>slots*180000||
       rec.archiveSavedSnapshotsSoFar<previous.saved||
       rec.archiveRejectedSnapshotsSoFar<previous.rejected||
-      rec.archiveSavedSnapshotsSoFar-previous.saved>slots||
-      rec.archiveRejectedSnapshotsSoFar-previous.rejected>slots)
+      savedDelta>slots||rejectedDelta>slots||
+      savedDelta+rejectedDelta>slots)
     return safe("BLOCKED","NONMONOTONIC_OR_CONTRADICTORY_SAMPLE_SERIES");
    missing+=slots-1;
-   archiveIncrease+=rec.archiveSavedSnapshotsSoFar-previous.saved;
+   archiveIncrease+=savedDelta;
+   rejectionsIncrease+=rejectedDelta;
+   // A collector slot without an archived outcome is a gap in evidence,
+   // NOT necessarily a provider outage. Never count it as captured data.
+   unaccounted+=slots-savedDelta-rejectedDelta;
   }
+  if(!rec.httpAllOk)httpNonOk++;
+  if(!rec.geometryChecksOk)geometryNotOk++;
   previous={t,slot:rec.slot,saved:rec.archiveSavedSnapshotsSoFar,
             rejected:rec.archiveRejectedSnapshotsSoFar};
  }
@@ -102,10 +116,13 @@ function audit(input){
  const blockers=[...FIXED];
  if(!covered)blockers.push("LOG_QUERY_EDGE_NOT_COVERED");
  if(missing)blockers.push("MISSING_COLLECTOR_LOG_SLOTS");
+ if(unaccounted)blockers.push("COLLECTOR_SLOTS_WITHOUT_ARCHIVE_OUTCOME");
+ if(httpNonOk)blockers.push("HTTP_NON_OK_COLLECTOR_LOG_SAMPLES");
+ if(geometryNotOk)blockers.push("COLLECTOR_OHLC_GEOMETRY_NOT_PROVEN");
  if(!recentProgress)blockers.push("CLOSED_BAR_PROGRESS_NOT_RECENT_IN_LOG_WINDOW");
  if(latest&&TFS.some(tf=>latest.gaps[tf]>0))
   blockers.push("UNCLASSIFIED_CLOSED_BAR_TIME_GAPS_PRESENT");
- return safe(covered&&!missing&&recentProgress?
+ return safe(covered&&!missing&&!unaccounted&&recentProgress?
    "OBSERVED_LOG_CADENCE_ONLY_NOT_MARKET_PROOF":"PARTIAL_LOG_COVERAGE_NOT_PROOF",
    null,{
     windowStartUTC:input.startUTC,windowEndUTC:input.endUTC,
@@ -113,6 +130,9 @@ function audit(input){
     lastObservedLogUTC:samples.at(-1).asOfUTC,
     sampleCount:samples.length,reviewedProgressCount:progress.length,
     missingLogSlots:missing,recordedArchiveIncrease:archiveIncrease,
+    recordedArchiveRejectionsIncrease:rejectionsIncrease,
+    collectorSlotsWithoutRecordedArchiveOutcome:unaccounted,
+    httpNonOkSamples:httpNonOk,geometryNotOkSamples:geometryNotOk,
     latestSavedSnapshots:previous.saved,latestRejectedSnapshots:previous.rejected,
     unclassifiedFrameGaps:latest?latest.gaps:{M15:null,H1:null,H4:null},
     logWindowEdgesObserved:covered,recentClosedProgressObserved:recentProgress,
