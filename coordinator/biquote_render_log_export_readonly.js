@@ -64,6 +64,7 @@ function extract(input){
     asOfUTC:embedded.iso,slot:x.slot,
     archiveSavedSnapshotsSoFar:x.archiveSavedSnapshotsSoFar,
     archiveRejectedSnapshotsSoFar:x.archiveRejectedSnapshotsSoFar,
+    archiveRejectionClass:x.archiveRejectionClass,
     httpAllOk:x.httpAllOk,geometryChecksOk:x.geometryChecksOk,
     geometryFailureClass:x.geometryFailureClass,
     signal:x.signal,executable:x.executable
