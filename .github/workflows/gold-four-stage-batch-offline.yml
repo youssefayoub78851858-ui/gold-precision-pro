@@ -29,6 +29,8 @@ on:
       - 'biquote-mobile-ui.js'
       - 'ultimate.html'
       - 'review-dashboard.html'
+      - 'review-dashboard.js'
+      - 'coordinator/test_review_dashboard_private_biquote.js'
       - 'index.html'
       - 'server.js'
       - 'coordinator/test_review_dashboard_route.js'
@@ -83,7 +85,10 @@ jobs:
       - name: Frozen V3 chronological research replay cannot leak tomorrow or place paper orders
         run: node coordinator/test_biquote_v3_chronological_replay.js
       - name: Real local review HTTP route serves new mobile UI, no credential, broker or paid feed
-        run: node coordinator/test_review_dashboard_route.js
+        run: |
+          node coordinator/test_review_dashboard_route.js
+          node coordinator/test_review_dashboard_private_biquote.js
+          node --check review-dashboard.js
       - name: Private mobile dashboard shows contiguous, not raw H4 trade history
         run: node coordinator/test_private_monitor_signal_readiness.js
       - name: Paper account cannot act on synthetic BUY or forged approval
