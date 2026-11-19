@@ -128,7 +128,8 @@ const server = http.createServer(async (req, res) => {
         researchEligible:false,status:"WAIT_READONLY_OBSERVATION_FAILED"});
     }
   }
-  const paperFiles={"/paper-terminal-core.js":"paper-terminal-core.js",
+  const paperFiles={"/review-dashboard.js":"review-dashboard.js",
+     "/paper-terminal-core.js":"paper-terminal-core.js",
     "/paper-terminal-ui.js":"paper-terminal-ui.js",
     "/biquote-mobile-ui.js":"biquote-mobile-ui.js",
     "/biquote-live-candle-preview.js":"biquote-live-candle-preview.js"};
@@ -437,7 +438,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200,{"Content-Type":"text/html; charset=utf-8",
       "Cache-Control":"no-store","X-Content-Type-Options":"nosniff",
       "Referrer-Policy":"no-referrer",
-      "Content-Security-Policy":"frame-ancestors 'none'"});
+      "Content-Security-Policy":"default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"});
     return res.end(fs.readFileSync(path.join(__dirname,"review-dashboard.html")));
   }
 
