@@ -1,8 +1,9 @@
 "use strict";
 /*
  * RETROSPECTIVE diagnostics of sealed archive candle snapshots only.
- * This is NOT a prospective point-in-time test: schema v1 does not record
- * when each historical OHLC candle first became available to the collector.
+ * This is NOT an independently verified prospective point-in-time test.
+ * Only newly appended archive bars may have LOCAL first-seen receipts;
+ * legacy OHLC remains UNKNOWN and broker publication is not attested.
  * No network, orders, broker fills, simulated equity or price-bearing output.
  */
 const {reviewFourStages}=require("./ultimate_four_stage_review");
@@ -23,6 +24,12 @@ function stamp(value){
  if(typeof value!=="string"||!/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(value))return NaN;
  const t=Date.parse(value);
  return Number.isFinite(t)&&new Date(t).toISOString().replace(".000Z","Z")===value?t:NaN;
+}
+// Receipt/decision clocks can carry milliseconds; candle openings cannot.
+function cutoffStamp(value){
+ if(typeof value!=="string"||!/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(value))return NaN;
+ const t=Date.parse(value);
+ return Number.isFinite(t)&&new Date(t).toISOString().slice(0,19)===value.slice(0,19)?t:NaN;
 }
 function parseRows(rows,width){
  if(!Array.isArray(rows)||rows.length>MAX_BARS)throw Error("INVALID_ARCHIVE_FRAME");
@@ -167,7 +174,7 @@ function inspect(input){
  const origin=input?.dataOrigin;
  if(!["SYNTHETIC_TEST_ONLY","BIQUOTE_ARCHIVED_UNVERIFIED_NO_PAPER"].includes(origin))
   return blocked("UNVERIFIED_ARCHIVE_ORIGIN");
- const cutoff=input?.decisionCutoffUTC===undefined?Infinity:stamp(input.decisionCutoffUTC);
+ const cutoff=input?.decisionCutoffUTC===undefined?Infinity:cutoffStamp(input.decisionCutoffUTC);
  if(Number.isNaN(cutoff)||cutoff<START)return blocked("INVALID_DECISION_CUTOFF");
  let parsed;
  try{parsed=Object.fromEntries(Object.entries(WIDTH).map(([tf,width])=>
@@ -220,7 +227,7 @@ function inspect(input){
   firstSeenReceiptAudit:receiptAudit,
   signalDataReadiness,
   noFutureCandlesUsed:true,replayOnlyNotPointInTime:true,
-  explanation:"Final OHLC archive is retrospectively filtered by close time. Per-bar FIRST-SEEN times, broker quotes, rights and costs are missing; do not call this an untouched prospective test."};
+  explanation:"Final OHLC is retrospectively filtered by close time. Only NEW bars may have local first-seen receipts; older bars remain unknown. Broker publication, rights, fills and costs are unverified; not an untouched prospective test."};
 }
 module.exports={inspect,stamp,parseRows,suffix,parity,observedReceiptAudit};
 if(require.main===module){
