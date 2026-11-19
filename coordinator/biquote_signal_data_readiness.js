@@ -18,6 +18,7 @@ const FIXED=Object.freeze([
 ]);
 const TIME=/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/;
 const ZERO=()=>({M15:0,H1:0,H4:0});
+const FALSE=()=>({M15:false,H1:false,H4:false});
 function utc(s){
  if(typeof s!=="string"||!TIME.test(s))return NaN;
  const n=Date.parse(s);
@@ -34,6 +35,7 @@ function base(status,extra={}){
   blockers:[...FIXED],storedClosedCounts:ZERO(),observedAtDecision:ZERO(),
   legacyWithoutFirstSeen:ZERO(),firstSeenAfterDecision:ZERO(),
   contiguousObservedClosed:ZERO(),
+  latestEligibleClosedObservedAtDecision:FALSE(),
   technicalWarmupMissing:{M15:WARMUP,H1:WARMUP,H4:WARMUP},
   paperHistoryMissing:{M15:PAPER,H1:PAPER,H4:PAPER},
   localTimingAndParityCheck:"NOT_PROVEN",localGeometryObserved:false,...extra};
@@ -103,6 +105,7 @@ function assess(input){
   return base("BLOCKED",{storedClosedCounts:counts,
    blockers:[...FIXED,"INVALID_RECEIPT_MAP"]});
  const available={},observed={},unknown={},afterDecision={},tail={},warm={},paper={},lastAge={};
+ const latestEligibleObserved={};
  for(const tf of Object.keys(WIDTH)){
   const map=receipts[tf],bars=frames[tf],width=WIDTH[tf];
   if(!map||typeof map!=="object"||Array.isArray(map))
@@ -133,6 +136,12 @@ function assess(input){
   warm[tf]=Math.max(0,WARMUP-tail[tf]);
   paper[tf]=Math.max(0,PAPER-tail[tf]);
   const last=known.at(-1);
+  // An older H4 can be fresh enough (<5h) and satisfy 21-bar warmup
+  // while a *newer already closed* H4 has an UNKNOWN/FUTURE receipt.
+  // Never present that earlier H4 as the latest closed at decision time.
+  const latestClosed=bars.filter(b=>b.t+width<=asOf).at(-1);
+  latestEligibleObserved[tf]=!!latestClosed&&!!last&&
+   latestClosed.t===last.t;
   lastAge[tf]=last?asOf-(last.t+width):null;
  }
  const blockers=[...FIXED];
@@ -143,10 +152,13 @@ function assess(input){
    blockers.push(tf+"_CLOSED_CANDLE_STALE_OR_UNOBSERVED");
   if(unknown[tf]>0)blockers.push(tf+"_LEGACY_UNTIMED_BARS_EXCLUDED");
   if(afterDecision[tf]>0)blockers.push(tf+"_FUTURE_RECEIPTS_EXCLUDED_FROM_DECISION");
+  if(!latestEligibleObserved[tf])
+   blockers.push(tf+"_LATEST_ELIGIBLE_CLOSED_BAR_NOT_OBSERVED_AT_DECISION");
  }
  const parity=latestParity(available);
  if(!parity)blockers.push("LATEST_CLOSED_M15_H1_H4_OHLC_PARITY_UNPROVEN");
  const localReady=Object.values(warm).every(n=>n===0)&&
+  Object.values(latestEligibleObserved).every(Boolean)&&
   Object.values(lastAge).every((n,i)=>Number.isFinite(n)&&
    n>=0&&n<=MAX_AGE[Object.keys(WIDTH)[i]])&&parity;
  return base(localReady?"LOCAL_GEOMETRY_ONLY_NOT_TRADE_READY":"INSUFFICIENT_EVIDENCE",{
@@ -154,6 +166,7 @@ function assess(input){
   storedClosedCounts:counts,observedAtDecision:observed,
   legacyWithoutFirstSeen:unknown,firstSeenAfterDecision:afterDecision,
   contiguousObservedClosed:tail,
+  latestEligibleClosedObservedAtDecision:latestEligibleObserved,
   technicalWarmupMissing:warm,paperHistoryMissing:paper,
   localTimingAndParityCheck:localReady?"LOCAL_ONLY_NOT_INDEPENDENT":"NOT_PROVEN",
   blockers,
