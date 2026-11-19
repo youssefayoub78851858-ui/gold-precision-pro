@@ -285,6 +285,24 @@
    });
    if(response.status===401||response.status===403)throw Error("SESSION_REQUIRED");
    if(response.status===429)throw Error("RATE_LIMITED");
+   if(response.status===503){
+    // The read-only endpoint exposes fixed, non-sensitive reason codes.
+    // Never treat any unavailable observation as a trading signal.
+    let code="";
+    try{
+     if(/^application\/json(?:\s*;|\s*$)/i.test(response.headers.get("content-type")||"")){
+      const unavailable=await response.json();
+      const allowed=["PROVIDER_REPORTED_CLOSED","CLOSED_CANDLE_STALE",
+       "QUOTE_STALE_OR_UNVERIFIED","PUBLIC_HTTP_UNAVAILABLE",
+       "PUBLIC_FEED_INVALID_STALE_OR_UNAVAILABLE","LATEST_QUOTE_NO_LONGER_FRESH"];
+      if(unavailable?.signal==="WAIT"&&unavailable?.executable===false&&
+         Array.isArray(unavailable.blockerCodes)&&
+         allowed.includes(unavailable.blockerCodes[0]))
+       code=unavailable.blockerCodes[0];
+     }
+    }catch(_ignored){}
+    throw Error(code||"DATA_UNAVAILABLE");
+   }
    if(response.status!==200)throw Error("DATA_UNAVAILABLE");
    if(!/^application\/json(?:\s*;|\s*$)/i.test(response.headers.get("content-type")||""))
     throw Error("INVALID_RESPONSE_TYPE");
@@ -314,9 +332,18 @@
      " | التوصيات المعتمدة محجوبة بسبب حقوق الوسيط وGC والأخبار والتكاليف واختبار الأداء";
    $("decision").textContent="WAIT";draw();
   }catch(error){
+   const reason={
+    PROVIDER_REPORTED_CLOSED:"WAIT — مزوّد BiQuote أعلن إغلاق السوق؛ لا نعرض شموعاً أو توصيات.",
+    CLOSED_CANDLE_STALE:"WAIT — الشموع المغلقة قديمة؛ يجب انتظار تحديث M15/H1/H4.",
+    QUOTE_STALE_OR_UNVERIFIED:"WAIT — سعر BID/ASK قديم أو غير مؤكد.",
+    PUBLIC_HTTP_UNAVAILABLE:"WAIT — مزوّد البيانات لا يستجيب حالياً.",
+    PUBLIC_FEED_INVALID_STALE_OR_UNAVAILABLE:"WAIT — البيانات غير مكتملة أو غير صالحة للتحليل.",
+    LATEST_QUOTE_NO_LONGER_FRESH:"WAIT — انتهت صلاحية أحدث سعر قبل إتمام الفحص.",
+    RATE_LIMITED:"WAIT — الطلبات محدودة مؤقتاً؛ جرّب لاحقاً."
+   };
    reset(error.message==="SESSION_REQUIRED"
     ?"WAIT — جلسة المشاهدة الخاصة غير مفعّلة في هذا المتصفح. افتح Ultimate وأدخل الرمز هناك، ثم ارجع واضغط تحديث."
-    :"WAIT — تعذّر التحقق من بيانات BiQuote الحديثة أو الجلسة. افتح Ultimate للتأكد من الجلسة، ثم أعد المحاولة.");
+    :reason[error.message]||"WAIT — تعذّر التحقق من بيانات BiQuote الحديثة أو الجلسة. افتح Ultimate للتأكد من الجلسة، ثم أعد المحاولة.");
   }finally{pending=false;refresh.disabled=false;}
  });
  // Presentation-only expiry: NO background quote calls, no stored prices.
