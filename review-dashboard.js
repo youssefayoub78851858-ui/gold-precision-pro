@@ -69,6 +69,37 @@
   }
   return {at,chart,d,comparisons};
  }
+ // Frontend defense-in-depth on ALREADY private, already-fetched closed bars.
+ // A clean server counter alone cannot justify WATCH if the current
+ // authenticated chart's latest H1/H4 or H1 parts contradict M15.
+ // Nothing here upgrades market rights, first-seen or execution readiness.
+ function localLatestParity(chart){
+  if(!chart||!chart.M15||!chart.H1||!chart.H4)return false;
+  const maps=Object.fromEntries(["M15","H1"].map(tf=>
+    [tf,new Map(chart[tf].map(x=>[x.t,x]))]));
+  const near=(x,y)=>Number.isFinite(x)&&Number.isFinite(y)&&
+    Math.abs(x-y)<=Math.max(.00001,Math.abs(y)*1e-8);
+  function match(whole,parts){
+   return Boolean(whole)&&parts.length>0&&parts.every(Boolean)&&
+     near(whole.open,parts[0].open)&&
+     near(whole.high,Math.max(...parts.map(x=>x.high)))&&
+     near(whole.low,Math.min(...parts.map(x=>x.low)))&&
+     near(whole.close,parts.at(-1).close);
+  }
+  const h1=chart.H1.at(-1),h4=chart.H4.at(-1);
+  if(!h1||!h4)return false;
+  const m15h1=Array.from({length:4},(_,i)=>
+    maps.M15.get(h1.t+i*WIDTH.M15));
+  const m15h4=Array.from({length:16},(_,i)=>
+    maps.M15.get(h4.t+i*WIDTH.M15));
+  const h1h4=Array.from({length:4},(_,i)=>
+    maps.H1.get(h4.t+i*WIDTH.H1));
+  if(!match(h1,m15h1)||!match(h4,m15h4)||
+     !match(h4,h1h4))return false;
+  return h1h4.every(hour=>match(hour,
+    Array.from({length:4},(_,i)=>
+      maps.M15.get(hour.t+i*WIDTH.M15))));
+ }
  function researchWatch(result){
   const d=result.d,v=d.privateTechnicalWatch,c=result.comparisons;
   if(!v||v.mode!=="PRIVATE_FROZEN_V3_TECHNICAL_WATCH_ONLY"||
@@ -85,6 +116,7 @@
      v.full21H4CrossFrameAuditPossibleFromPrivateSnapshot!==false)
    return "WAIT — فحص V3 غير مؤكد";
   const clean=d.status==="OBSERVED_READONLY_UNVERIFIED"&&
+    localLatestParity(result.chart)===true&&
     ["H1","H4"].every(tf=>c[tf].completeMatches>=1&&
       c[tf].completeMismatches===0&&c[tf].incompleteM15Groups===0);
   if(clean&&v.status==="TECHNICAL_WATCH_ONLY_NOT_TRADE_READY"&&
@@ -96,7 +128,7 @@
  }
  // Pure validators are exposed only to local Node offline tests.
  if(typeof module!=="undefined"&&module.exports)
-  module.exports={validateChart,validateSnapshot,researchWatch};
+  module.exports={validateChart,validateSnapshot,localLatestParity,researchWatch};
  if(typeof document==="undefined")return;
  const $=id=>document.getElementById(id);
  let frame="M15",state=null,pending=false,expiry=0;
