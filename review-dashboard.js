@@ -151,6 +151,10 @@
   $("source").textContent="لا أسعار عامة؛ افتح جلسة المشاهدة الخاصة أولاً";
   $("reason").textContent=message||"WAIT — لا توجد توصية قابلة للتنفيذ";
   $("quality-status").textContent="WAIT — البيانات غير مؤهّلة";
+  $("data-state").textContent="● غير متصل / غير متحقق";
+  $("trend-status").textContent="غير متاح";
+  $("watch-status").textContent="WAIT";
+  $("parity-status").textContent="تطابق الفريمات: غير متحقق";
   $("chart-status").textContent="لا تُعرض أسعار غير متحققة أو شموع مفتوحة";
   blank("WAIT — لا توجد شموع خاصة موثقة");
  }
@@ -171,16 +175,16 @@
   // Chart grid and truthful price-axis labels; no synthetic candles.
   for(let tick=0;tick<=4;tick++){
    const y=40+tick*55;
-   add("line",{x1:12,y1:y,x2:660,y2:y,stroke:"#32435a","stroke-width":.8,"stroke-dasharray":"4 5"});
+   add("line",{x1:12,y1:y,x2:625,y2:y,stroke:"#32435a","stroke-width":.8,"stroke-dasharray":"4 5"});
    const label=document.createElementNS("http://www.w3.org/2000/svg","text");
-   label.setAttribute("x","658");label.setAttribute("y",String(y-5));
+   label.setAttribute("x","665");label.setAttribute("y",String(y-5));
    label.setAttribute("text-anchor","end");label.setAttribute("fill","#b6c3d3");
    label.setAttribute("font-size","11");
    label.textContent=format(hi-tick*range/4);
    svg.appendChild(label);
   }
   rows.forEach((x,i)=>{
-   const at=18+i*644/rows.length,w=Math.max(3,644/rows.length*.55),
+   const at=18+i*600/rows.length,w=Math.max(3,600/rows.length*.55),
      y=p=>260-(p-lo)/range*220,
      color=x.close>=x.open?"#24d2a0":"#f26879";
    add("line",{x1:at,y1:y(x.high),x2:at,y2:y(x.low),
@@ -221,6 +225,12 @@
    $("timestamp").textContent="إغلاق M15 المرصود: "+
      clock(latest.t+WIDTH.M15)+" بيروت · آخر فحص "+clock(verified.at);
    $("source").textContent="BiQuote XAUUSD خاص للبحث فقط · MID وربما تاريخ BID · ليس سعر MT5 لحظي ولا سعر تنفيذ";
+   $("data-state").textContent="● BiQuote · مشاهدة خاصة متحققة مؤقتاً";
+   $("trend-status").textContent="غير مؤهل لإشارة";
+   $("watch-status").textContent="WAIT · مراقبة";
+   $("parity-status").textContent=localLatestParity(verified.chart)
+     ?"تطابق أحدث M15 / H1 / H4: متحقق محلياً (لا يثبت اكتمال التاريخ)"
+     :"تطابق أحدث M15 / H1 / H4: غير متحقق — WAIT";
    $("quality-status").textContent="M15 "+packet.frameSummary.M15.closedCount+
      " | H1 "+packet.frameSummary.H1.closedCount+
      " | H4 "+packet.frameSummary.H4.closedCount+
