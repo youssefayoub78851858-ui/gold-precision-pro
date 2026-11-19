@@ -146,7 +146,10 @@ def inspect_private_vault(dirname, *, runner=None):
             or point.get("providerRequestsMade")!=0
             or point.get("storedClosedCounts")!=counts
             or point.get("legacyWithoutFirstSeen")!=legacy_counts
-            or point.get("observedAtDecision")!=receipt_counts):
+            or point.get("observedAtDecision")!=receipt_counts
+            # Local sealed archive cutoff is its LAST import: no receipt may
+            # be in the future of that decision clock.
+            or point.get("firstSeenAfterDecision")!={tf:0 for tf in FRAMES_ORDER}):
             return result
         continuous=point.get("contiguousObservedClosed")
         warm=point.get("technicalWarmupMissing")
@@ -196,6 +199,7 @@ def inspect_private_vault(dirname, *, runner=None):
                     "localTimingAndParityCheck":point["localTimingAndParityCheck"],
                     "observedAtDecision":receipt_counts,
                     "legacyWithoutFirstSeen":legacy_counts,
+                    "firstSeenAfterDecision":{tf:0 for tf in FRAMES_ORDER},
                     "contiguousObservedClosed":continuous,
                     "technicalWarmupMissing":warm,
                     "paperHistoryMissing":paper},
