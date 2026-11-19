@@ -64,6 +64,7 @@ async function main(){
  assert.equal(result.body.rawPrivateChart,undefined);
  assert.equal(result.body.privateStructure,undefined);
  assert.equal(result.body.privateTechnicalWatch,undefined);
+ assert.equal(result.body.privateVendorH4Tail,undefined);
  assert.equal(result.body.rawPrivateStructure,undefined);
  assert.equal(result.body.vendorDeclaredSession,undefined);
  assert.equal(result.body.privateMtf,undefined);
@@ -90,6 +91,23 @@ async function main(){
  assert.equal(privateData.body.privateChartReadOnly,true);
  assert.equal(privateData.body.privateStructure.mode,"PRIVATE_READONLY_TECHNICAL_OBSERVATIONS");
  assert.equal(privateData.body.privateStructure.signal,"WAIT");
+ const privateH4Session=privateData.body.privateVendorH4Tail;
+ assert.equal(privateH4Session.mode,"BIQUOTE_VENDOR_DECLARED_H4_ADJACENCY_RESEARCH_ONLY");
+ assert.equal(privateH4Session.signal,"WAIT");
+ assert.equal(privateH4Session.executable,false);
+ assert.equal(privateH4Session.paperOrdersAllowed,false);
+ assert.equal(privateH4Session.liveOrdersAllowed,false);
+ assert.equal(privateH4Session.brokerOrdersSent,0);
+ assert.equal(privateH4Session.providerRequestsMade,0);
+ assert.equal(privateH4Session.originalBrokerCalendarVerified,false);
+ assert.equal(privateH4Session.brokerMarketDataRightsVerified,false);
+ assert.equal(privateH4Session.perBarFirstSeenVerified,false);
+ assert.equal(privateH4Session.all21H4M15ParityVerified,false);
+ assert.equal(privateH4Session.researchWarmupApproved,false);
+ assert.equal(privateH4Session.missingCandlesSynthesized,0);
+ assert.ok(privateH4Session.strictUtcH4Tail<=privateH4Session.observedClosedH4Bars);
+ assert.ok(privateH4Session.providerDeclaredSessionAdjacentH4Tail<=
+    privateH4Session.observedClosedH4Bars);
  const privateWatch=privateData.body.privateTechnicalWatch;
  assert.equal(privateWatch.mode,"PRIVATE_FROZEN_V3_TECHNICAL_WATCH_ONLY");
  assert.equal(privateWatch.signal,"WAIT");
@@ -186,6 +204,7 @@ async function main(){
  assert.equal(invalid.body.rawQuoteShown,false);
  assert.equal(invalid.body.privateChart,undefined);
  assert.equal(invalid.body.privateStructure,undefined);
+ assert.equal(invalid.body.privateVendorH4Tail,undefined);
  // Regression: provider quote can be fresh for 30 seconds, but the
  // old 90-second cache silently caused 503 between seconds 30 and 90.
  // Refresh with a newly timestamped quote BEFORE the validation limit.
@@ -249,6 +268,9 @@ async function main(){
  assert.equal(accepted.httpStatus,200);secure(accepted.body);
  assert.equal(accepted.body.privateStructure.sessionCalendarVerified,false);
  assert.equal(accepted.body.privateStructure.multiFrame.alignment,"NOT_ASSESSABLE");
+ assert.equal(accepted.body.privateVendorH4Tail.signal,"WAIT");
+ assert.equal(accepted.body.privateVendorH4Tail.executable,false);
+ assert.equal(accepted.body.privateVendorH4Tail.providerScenarioReached21H4,false);
  assert.equal(accepted.body.privateStructure.multiFrame.signal,"WAIT");
  assert.equal(accepted.body.privateStructure.multiFrame.tradeEligible,false);
  for(const tf of ["H1","H4"]){
