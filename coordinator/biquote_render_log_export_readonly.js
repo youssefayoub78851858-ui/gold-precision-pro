@@ -7,6 +7,7 @@
 const {audit}=require("./biquote_collector_log_cadence_gate");
 const {reconcile}=require("./biquote_stage3_log_reconciliation");
 const {assessWindow}=require("./biquote_capture_h4_horizon_gate");
+const {assessEvidence}=require("./biquote_h4_evidence_quality_gate");
 const MAX=11000;
 const ISO=/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,9})?Z$/;
 const waiting=reason=>({
@@ -146,12 +147,16 @@ function extract(input){
     persistedClosedCounts:stage.persistedClosed,
     contiguousClosedCounts:stage.contiguousClosed
    }):null;
+ const h4EvidenceQuality=h4CaptureHorizon?assessEvidence({
+  origin:"SANITIZED_STAGE3_AND_CAPTURE_HORIZON_UNATTESTED",
+  stage3Consistency:stage,h4CaptureHorizon
+ }):null;
  const report=audit({
   origin:"RENDER_SANITIZED_COLLECTOR_LOGS_UNATTESTED",
   startUTC:input.startUTC,endUTC:input.endUTC,samples,progress
  });
  return {...report,stage3Consistency:stage,
-  h4CaptureHorizon,
+  h4CaptureHorizon,h4EvidenceQuality,
   h4CaptureHorizonUnavailability:wantsHorizon&&!h4CaptureHorizon?
    "STAGE3_CYCLE_INCOMPLETE_NO_H4_HORIZON":null,
   renderLogEventsParsed:relevant,renderLogEventsIgnored:ignored,
