@@ -101,6 +101,42 @@ safe(delayedNewestH4Result);
 a.equal(delayedNewestH4Result.firstSeenAfterDecision.H4,1);
 a.equal(delayedNewestH4Result.latestEligibleClosedObservedAtDecision.H4,false);
 a.equal(delayedNewestH4Result.localGeometryObserved,false);
+// Missing the entire latest closed H4 is more dangerous than an unknown
+// receipt: the previous H4 remains <5h old, 21 closed H4s remain and
+// M15-to-that-old-H4 OHLC can match, but the expected 4-hour slot is absent.
+const grid=fixture(352),gridOK=assess(grid);
+safe(gridOK);a.equal(gridOK.localGeometryObserved,true);
+a.equal(gridOK.latestExpectedUTCGridClosedObservedAtDecision.H4,true);
+const missingFullH4=structuredClone(grid);
+const removedH4=missingFullH4.frames.H4.pop();
+delete missingFullH4.firstObservedClosedUTC.H4[removedH4.datetime];
+const missingFullH4Result=assess(missingFullH4);
+safe(missingFullH4Result);
+a.equal(missingFullH4Result.technicalWarmupMissing.H4,0);
+a.equal(missingFullH4Result.latestEligibleClosedObservedAtDecision.H4,true);
+a.equal(missingFullH4Result.latestExpectedUTCGridClosedObservedAtDecision.H4,false);
+a.equal(missingFullH4Result.localGeometryObserved,false);
+a(missingFullH4Result.blockers.includes("H4_EXPECTED_UTC_CLOSED_SLOT_NOT_OBSERVED"));
+// Same issue on H1: the previous hour still satisfies the 75-minute age
+// allowance, and its OHLC can match all retained M15 constituents.
+const missingFullH1=structuredClone(grid);
+const removedH1=missingFullH1.frames.H1.pop();
+delete missingFullH1.firstObservedClosedUTC.H1[removedH1.datetime];
+const missingFullH1Result=assess(missingFullH1);
+safe(missingFullH1Result);
+a.equal(missingFullH1Result.technicalWarmupMissing.H1,0);
+a.equal(missingFullH1Result.latestEligibleClosedObservedAtDecision.H1,true);
+a.equal(missingFullH1Result.latestExpectedUTCGridClosedObservedAtDecision.H1,false);
+a.equal(missingFullH1Result.localGeometryObserved,false);
+a(missingFullH1Result.blockers.includes("H1_EXPECTED_UTC_CLOSED_SLOT_NOT_OBSERVED"));
+// A paused market does not authorize synthesizing candles to pass the
+// clock grid. The lack of authenticated broker session means WAIT.
+const paused=structuredClone(grid);
+paused.asOfUTC=iso(Date.parse(grid.asOfUTC)+4*WIDTH.H1);
+const pausedReport=assess(paused);
+safe(pausedReport);
+a.equal(pausedReport.latestExpectedUTCGridClosedObservedAtDecision.H4,false);
+a(pausedReport.blockers.includes("H4_EXPECTED_UTC_CLOSED_SLOT_NOT_OBSERVED"));
 // Legacy bars are unknown, NOT automatically assigned a receipt.
 const legacy=structuredClone(mature);
 delete legacy.firstObservedClosedUTC;
