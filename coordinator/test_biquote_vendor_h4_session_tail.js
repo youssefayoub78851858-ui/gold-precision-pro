@@ -35,6 +35,16 @@ function safe(x){
  for(const prop of ['"open"','"high"','"low"','"close"','"bid"','"ask"'])
   a(!JSON.stringify(x).includes(prop),prop);
 }
+// A bogus weekend bar must not be counted as a real session candle.
+const impossibleWeekend=fixture();
+impossibleWeekend.h4.splice(10,0,{
+ time:"2026-11-14T04:00:00.000Z",
+ open:2000,high:2001,low:1999,close:2000.5
+});
+const implausible=observe(impossibleWeekend);safe(implausible);
+a.equal(implausible.status,"WAIT_SOURCE_SCHEDULE_CONTRADICTION");
+a.equal(implausible.reason,"OBSERVED_H4_INSIDE_PROVIDER_DECLARED_FULL_CLOSURE");
+a.equal(implausible.providerScenarioReached21H4,false);
 const actual=observe(fixture());safe(actual);
 a.equal(actual.status,"PROVIDER_DECLARED_PAUSE_SCENARIO_NOT_TRADING_PROOF");
 a.equal(actual.observedClosedH4Bars,25);
