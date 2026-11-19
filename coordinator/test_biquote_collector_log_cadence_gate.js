@@ -14,6 +14,7 @@ const input={
  samples:Array.from({length:7},(_,i)=>({
   asOfUTC:iso(START+i*120000+3000),slot:330+i,
   archiveSavedSnapshotsSoFar:324+i,archiveRejectedSnapshotsSoFar:7,
+  archiveRejectionClass:"NONE",
   signal:"WAIT",executable:false,httpAllOk:true,geometryChecksOk:false,
   geometryFailureClass:"UNCLASSIFIED_M15_COVERAGE_GAP"
  })),
@@ -42,6 +43,8 @@ assert.equal(good.sampleCount,7);
 assert.equal(good.missingLogSlots,0);
 assert.equal(good.recordedArchiveIncrease,6);
 assert.equal(good.recordedArchiveRejectionsIncrease,0);
+assert.equal(good.newlyRejectedArchiveClasses.CLOSED_HISTORY_FRESHNESS,0);
+assert.equal(good.newRejectionsWithUnknownClass,0);
 assert.equal(good.collectorSlotsWithoutRecordedArchiveOutcome,0);
 assert.equal(good.httpNonOkSamples,0);
 assert.equal(good.geometryNotOkSamples,7);
@@ -81,6 +84,40 @@ const http=structuredClone(input);http.samples[4].httpAllOk=false;
 const httpReport=audit(http);checked(httpReport);
 assert.equal(httpReport.httpNonOkSamples,1);
 assert(httpReport.blockerCodes.includes("HTTP_NON_OK_COLLECTOR_LOG_SAMPLES"));
+// Actual-shaped 11:58/12:00 collector counters: archive rejects a
+// stale closed candle while HTTP succeeds, but no market order can follow.
+const freshness=structuredClone(input);
+freshness.startUTC="2026-11-19T11:58:00Z";
+freshness.endUTC="2026-11-19T12:00:13Z";
+freshness.samples=[
+ {asOfUTC:"2026-11-19T11:58:03Z",slot:359,
+  archiveSavedSnapshotsSoFar:353,archiveRejectedSnapshotsSoFar:7,
+  archiveRejectionClass:"NONE",
+  signal:"WAIT",executable:false,httpAllOk:true,
+  geometryChecksOk:false,geometryFailureClass:"UNCLASSIFIED_M15_COVERAGE_GAP"},
+ {asOfUTC:"2026-11-19T12:00:03Z",slot:360,
+  archiveSavedSnapshotsSoFar:353,archiveRejectedSnapshotsSoFar:8,
+  archiveRejectionClass:"CLOSED_HISTORY_FRESHNESS",
+  signal:"WAIT",executable:false,httpAllOk:true,
+  geometryChecksOk:false,geometryFailureClass:"UNCLASSIFIED_M15_COVERAGE_GAP"}
+];
+freshness.progress=[{atUTC:"2026-11-19T11:58:03Z",frames,
+ signal:"WAIT",executable:false,paperOrdersAllowed:false,brokerOrdersSent:0}];
+const freshnessResult=audit(freshness);checked(freshnessResult);
+assert.equal(freshnessResult.status,"OBSERVED_LOG_CADENCE_ONLY_NOT_MARKET_PROOF");
+assert.equal(freshnessResult.recordedArchiveIncrease,0);
+assert.equal(freshnessResult.recordedArchiveRejectionsIncrease,1);
+assert.equal(freshnessResult.newlyRejectedArchiveClasses.CLOSED_HISTORY_FRESHNESS,1);
+assert.equal(freshnessResult.newRejectionsWithUnknownClass,0);
+assert(freshnessResult.blockerCodes.includes("ARCHIVE_CLOSED_HISTORY_FRESHNESS_REJECTED"));
+const forgedReason=structuredClone(freshness);
+forgedReason.samples[1].archiveRejectionClass="NONE";
+const reasonBlocked=audit(forgedReason);checked(reasonBlocked);
+assert.equal(reasonBlocked.status,"BLOCKED");
+const phantomReject=structuredClone(input);
+phantomReject.samples[4].archiveRejectionClass="CLOSED_HISTORY_FRESHNESS";
+const phantomBlocked=audit(phantomReject);checked(phantomBlocked);
+assert.equal(phantomBlocked.status,"BLOCKED");
 // HTTP 200 does NOT imply price or closed-candle geometry validation.
 assert.equal(good.geometryNotOkSamples,good.sampleCount);
 // A caller cannot infer continuous collection from an unbounded or truncated query.
@@ -99,6 +136,7 @@ const corruption=[
  x=>{delete x.samples[4].httpAllOk;},
  x=>{x.samples[4].geometryChecksOk="true";},
  x=>{x.samples[4].geometryFailureClass="PRIVATE_PRICE_SECRET";},
+ x=>{x.samples[4].archiveRejectionClass="PRIVATE_PROVIDER_MESSAGE";},
  x=>{x.samples[4].executable=true;},
  x=>{x.progress[0].brokerOrdersSent=1;},
  x=>{x.progress[0].frames.H4.contiguousClosed=21;},
