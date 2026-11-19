@@ -6,6 +6,8 @@ on:
       - 'coordinator/biquote_private_forward_vault.py'
       - 'coordinator/biquote_collector_log_cadence_gate.js'
       - 'coordinator/test_biquote_collector_log_cadence_gate.js'
+      - 'coordinator/biquote_render_log_export_readonly.js'
+      - 'coordinator/test_biquote_render_log_export_readonly.js'
       - 'coordinator/test_biquote_private_forward_vault.py'
       - 'coordinator/test_biquote_first_seen_collector_cutover.py'
       - 'coordinator/biquote_collector_backup_preflight.py'
@@ -46,6 +48,8 @@ jobs:
           node-version: '24'
       - name: Sanitized Render collector log continuity only, WAIT, no provider or vault access
         run: node coordinator/test_biquote_collector_log_cadence_gate.js
+      - name: Render log-export adapter never exposes private candle values or market authority
+        run: node coordinator/test_biquote_render_log_export_readonly.js
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
