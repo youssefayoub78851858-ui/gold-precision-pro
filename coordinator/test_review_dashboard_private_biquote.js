@@ -247,5 +247,52 @@ a.equal(nodes.price.textContent,"غير متاح");
  a.equal(nodes.price.textContent,"غير متاح");
  a.equal(nodes.decision.textContent,"WAIT");
  a(!nodes.reason.textContent.includes("WATCH_BUY"));
- console.log("PASS secure on-demand private mobile candles; anonymous, stale, forged data WAIT; no background fetch, token, paper or broker orders");
+ // STAGE 2: Android BFCache/pagehide during the network fetch. The late
+ // success is discarded even if the response was fully valid at request time.
+ let finishFetch;let delayedRequests=0;
+ context.fetch=()=>{delayedRequests++;
+   return new Promise(resolve=>{finishFetch=resolve;});};
+ const pendingPagehide=nodes.refresh.handlers.click();
+ a.equal(typeof finishFetch,"function");
+ windowEvents.pagehide();
+ finishFetch({status:200,
+  headers:{get:()=> "application/json; charset=utf-8"},
+  json:async()=>packet()});
+ await pendingPagehide;
+ a.equal(nodes.price.textContent,"غير متاح");
+ a.equal(nodes["watch-status"].textContent,"WAIT");
+ a(!nodes.reason.textContent.includes("WATCH_BUY"));
+ a.equal(delayedRequests,1);
+ // STAGE 3: the fetch completes, but the JSON body is still resolving
+ // when a user hides then shows the app again. The old generation may
+ // never fill the private chart or WATCH, even if the tab is now visible.
+ let finishJSON;
+ context.fetch=()=>{delayedRequests++;
+   return Promise.resolve({status:200,
+    headers:{get:()=> "application/json; charset=utf-8"},
+    json:()=>new Promise(resolve=>{finishJSON=resolve;})});
+ };
+ const pendingHidden=nodes.refresh.handlers.click();
+ for(let i=0;i<6&&!finishJSON;i++)await Promise.resolve();
+ a.equal(typeof finishJSON,"function");
+ document.visibilityState="hidden";
+ documentEvents.visibilitychange();
+ document.visibilityState="visible";
+ finishJSON(packet());
+ await pendingHidden;
+ a.equal(nodes.price.textContent,"غير متاح");
+ a.equal(nodes.decision.textContent,"WAIT");
+ a(!nodes.reason.textContent.includes("WATCH_BUY"));
+ a.equal(delayedRequests,2);
+ // A NEW user click can still fetch; old replies never linger after it.
+ context.fetch=async()=>({status:200,
+  headers:{get:()=> "application/json; charset=utf-8"},
+  json:async()=>packet()});
+ await nodes.refresh.handlers.click();
+ a(nodes.price.textContent.includes("2,000"));
+ a(nodes.reason.textContent.startsWith("WAIT"));
+ a.equal(nodes.decision.textContent,"WAIT");
+ windowEvents.pagehide();
+ a.equal(nodes.price.textContent,"غير متاح");
+ console.log("PASS private mobile candle data gates, older H4 parity, Android BFCache/in-flight cancellation, no background requests and zero orders");
 })().catch(e=>{console.error(e);process.exitCode=1;});
