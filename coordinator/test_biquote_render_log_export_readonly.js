@@ -101,6 +101,8 @@ const evidence=extract(full);safe(evidence);
 a.equal(evidence.status,"OBSERVED_LOG_CADENCE_ONLY_NOT_MARKET_PROOF");
 a.equal(evidence.stage3Consistency.status,"CONSISTENT_COUNTS_ONLY_NOT_MARKET_PROOF");
 a.equal(evidence.stage3Consistency.persistedClosed.M15,137);
+a.deepEqual(evidence.stage3Consistency.contiguousClosed,{M15:49,H1:12,H4:8});
+a.equal(evidence.stage3Consistency.latestProgressAtUTC,iso(start+16*60000+3016));
 a.equal(evidence.stage3Consistency.checkedCompleteCycles,2);
 a.equal(evidence.stage3Consistency.unclassifiedMissingSlots.M15,4);
 a.equal(evidence.stage3Consistency.fullyCoveredDisagreements.H4,0);
