@@ -32,7 +32,8 @@ function base(status,extra={}){
   brokerCostsVerified:false,profitabilityProven:false,
   minTechnicalBarsPerFrame:WARMUP,minPaperBarsPerFrame:PAPER,
   blockers:[...FIXED],storedClosedCounts:ZERO(),observedAtDecision:ZERO(),
-  legacyWithoutFirstSeen:ZERO(),contiguousObservedClosed:ZERO(),
+  legacyWithoutFirstSeen:ZERO(),firstSeenAfterDecision:ZERO(),
+  contiguousObservedClosed:ZERO(),
   technicalWarmupMissing:{M15:WARMUP,H1:WARMUP,H4:WARMUP},
   paperHistoryMissing:{M15:PAPER,H1:PAPER,H4:PAPER},
   localTimingAndParityCheck:"NOT_PROVEN",localGeometryObserved:false,...extra};
@@ -101,7 +102,7 @@ function assess(input){
    Object.keys(receipts).sort().join(",")!=="H1,H4,M15")
   return base("BLOCKED",{storedClosedCounts:counts,
    blockers:[...FIXED,"INVALID_RECEIPT_MAP"]});
- const available={},observed={},unknown={},tail={},warm={},paper={},lastAge={};
+ const available={},observed={},unknown={},afterDecision={},tail={},warm={},paper={},lastAge={};
  for(const tf of Object.keys(WIDTH)){
   const map=receipts[tf],bars=frames[tf],width=WIDTH[tf];
   if(!map||typeof map!=="object"||Array.isArray(map))
@@ -112,7 +113,7 @@ function assess(input){
    return base("BLOCKED",{storedClosedCounts:counts,
     blockers:[...FIXED,"RECEIPT_UNKNOWN_"+tf+"_BAR"]});
   const known=[];
-  let previous=-Infinity,knownCount=0;
+  let previous=-Infinity,knownCount=0,lateCount=0;
   for(const bar of bars){
    const raw=map[bar.datetime];
    if(raw===undefined)continue;
@@ -122,10 +123,12 @@ function assess(input){
      blockers:[...FIXED,"INVALID_OR_NONMONOTONIC_"+tf+"_RECEIPT"]});
    previous=t;knownCount++;
    if(t<=asOf&&bar.t+width<=asOf)known.push(bar);
+   else lateCount++;
   }
   available[tf]=known;
   observed[tf]=known.length;
   unknown[tf]=bars.length-knownCount;
+  afterDecision[tf]=lateCount;
   tail[tf]=contiguous(known,tf).length;
   warm[tf]=Math.max(0,WARMUP-tail[tf]);
   paper[tf]=Math.max(0,PAPER-tail[tf]);
@@ -139,6 +142,7 @@ function assess(input){
   if(lastAge[tf]===null||lastAge[tf]>MAX_AGE[tf])
    blockers.push(tf+"_CLOSED_CANDLE_STALE_OR_UNOBSERVED");
   if(unknown[tf]>0)blockers.push(tf+"_LEGACY_UNTIMED_BARS_EXCLUDED");
+  if(afterDecision[tf]>0)blockers.push(tf+"_FUTURE_RECEIPTS_EXCLUDED_FROM_DECISION");
  }
  const parity=latestParity(available);
  if(!parity)blockers.push("LATEST_CLOSED_M15_H1_H4_OHLC_PARITY_UNPROVEN");
@@ -148,7 +152,8 @@ function assess(input){
  return base(localReady?"LOCAL_GEOMETRY_ONLY_NOT_TRADE_READY":"INSUFFICIENT_EVIDENCE",{
   asOfUTC:new Date(asOf).toISOString().replace(".000Z","Z"),
   storedClosedCounts:counts,observedAtDecision:observed,
-  legacyWithoutFirstSeen:unknown,contiguousObservedClosed:tail,
+  legacyWithoutFirstSeen:unknown,firstSeenAfterDecision:afterDecision,
+  contiguousObservedClosed:tail,
   technicalWarmupMissing:warm,paperHistoryMissing:paper,
   localTimingAndParityCheck:localReady?"LOCAL_ONLY_NOT_INDEPENDENT":"NOT_PROVEN",
   blockers,
