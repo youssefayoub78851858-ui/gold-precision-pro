@@ -4,6 +4,8 @@ on:
     branches: [review/v2-portable-tests-20261109]
     paths:
       - 'coordinator/biquote_v3_chronological_replay.js'
+      - 'coordinator/biquote_signal_data_readiness.js'
+      - 'coordinator/test_biquote_signal_data_readiness.js'
       - 'coordinator/test_biquote_v3_chronological_replay.js'
       - 'coordinator/biquote_v3_chronological_private.py'
       - 'coordinator/test_biquote_v3_chronological_private.py'
@@ -22,6 +24,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - name: Offline point-in-time XAUUSD frame and first-seen readiness must remain WAIT
+        run: node coordinator/test_biquote_signal_data_readiness.js
       - name: Verify no future OHLC, no broker orders, no fictional net PnL
         run: node coordinator/test_biquote_v3_chronological_replay.js
       - uses: actions/setup-python@v5
