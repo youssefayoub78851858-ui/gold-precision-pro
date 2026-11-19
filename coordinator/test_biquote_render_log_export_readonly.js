@@ -8,7 +8,9 @@ for(let i=0;i<9;i++){
  const t=start+i*120000;
  const rec={archiveRejectedSnapshotsSoFar:7,archiveSavedSnapshotsSoFar:324+i,
   asOfUTC:iso(t+3033),event:"BIQUOTE_REVIEW24H_SAMPLE",slot:330+i,
-  httpAllOk:true,geometryChecksOk:false,signal:"WAIT",executable:false,
+  httpAllOk:true,geometryChecksOk:false,
+  geometryFailureClass:"UNCLASSIFIED_M15_COVERAGE_GAP",
+  signal:"WAIT",executable:false,
   geometryDetail:{privateQuotePrice:"SENSITIVE_NEVER_RETURN"}};
  logs.push({timestamp:iso(t+3033.4),message:JSON.stringify(rec)});
 }
@@ -50,6 +52,9 @@ a.equal(good.latestSavedSnapshots,332);
 a.equal(good.renderLogEventsParsed,11);
 a.equal(good.renderLogEventsIgnored,1);
 a.equal(good.geometryNotOkSamples,9);
+a.equal(good.geometryFailureClassCounts.UNCLASSIFIED_M15_COVERAGE_GAP,9);
+a.equal(good.geometryFailureClassCounts.OHLC_PRICE_DISAGREEMENT,0);
+a(good.blockerCodes.includes("REPORTED_M15_CONSTITUENT_COVERAGE_GAP"));
 a.equal(good.httpNonOkSamples,0);
 a.equal(good.renderLogExportAuthenticated,false);
 a.equal(good.privateVaultRead,false);
@@ -71,6 +76,9 @@ for(const mutate of [
  p=>{p.logs.find(x=>x.message.includes('"slot":335')).timestamp="2026-11-19T13:00:00Z";},
  p=>{let x=p.logs.find(x=>x.message.includes('"slot":335'));
      let v=JSON.parse(x.message);v.signal="BUY";x.message=JSON.stringify(v);},
+ p=>{let x=p.logs.find(x=>x.message.includes('"slot":335'));
+     let v=JSON.parse(x.message);v.geometryFailureClass="PRIVATE_SPREAD";
+     x.message=JSON.stringify(v);},
  p=>{let x=p.logs.find(x=>x.message.includes('"slot":335'));
      let v=JSON.parse(x.message);v.archiveRejectedSnapshotsSoFar=8;x.message=JSON.stringify(v);},
  p=>{let x=p.logs.find(x=>x.message.includes("BIQUOTE_STAGE3_CLOSED_BAR_PROGRESS"));
