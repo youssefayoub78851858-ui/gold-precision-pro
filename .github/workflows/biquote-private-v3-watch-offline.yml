@@ -6,6 +6,8 @@ on:
       - 'coordinator/biquote_private_v3_watch.js'
       - 'coordinator/test_biquote_private_v3_watch.js'
       - 'coordinator/test_biquote_watch_wait_explanation_ui.js'
+      - 'coordinator/biquote_snapshot_capacity_gate.js'
+      - 'coordinator/test_biquote_snapshot_capacity_gate.js'
       - 'coordinator/biquote_vendor_h4_session_tail.js'
       - 'coordinator/test_biquote_vendor_h4_session_tail.js'
       - 'coordinator/biquote_mobile_readonly.js'
@@ -31,12 +33,16 @@ jobs:
         run: node coordinator/test_biquote_vendor_h4_session_tail.js
       - name: OWNER-ONLY WAIT panel shows exact historical mismatch counts without prices
         run: node coordinator/test_biquote_watch_wait_explanation_ui.js
+      - name: Single BiQuote snapshot capacity cannot prove 21 H4 cross-frame parity
+        run: node coordinator/test_biquote_snapshot_capacity_gate.js
       - name: Authenticated BiQuote read-only snapshot, anonymous isolation, no extra provider calls
         run: node coordinator/test_biquote_mobile_readonly.js
       - name: Mobile script syntax and private research panel wiring
         run: |
           node --check biquote-mobile-ui.js
           node --check coordinator/biquote_mobile_readonly.js
+          node --check coordinator/biquote_snapshot_capacity_gate.js
+          grep -Fq 'snapshotParityCapacity:assessSnapshotCapacity()' coordinator/biquote_mobile_readonly.js
           node --check coordinator/biquote_private_v3_watch.js
           node --check coordinator/biquote_vendor_h4_session_tail.js
           grep -q 'id="biquote-h4-vendor-session-tail"' ultimate.html
