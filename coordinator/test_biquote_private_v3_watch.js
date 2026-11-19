@@ -34,6 +34,10 @@ function secure(x){
  a.equal(x.brokerBidAskCostsVerified,false);
  a.equal(x.forwardPerformanceProven,false);
  a.equal(x.retrospectiveOnly,true);
+ a.equal(x.requiredM15ToReconcile21H4,336);
+ a.equal(x.requiredH1ToReconcile21H4,84);
+ a.equal(x.privateChartMaxBarsPerFrame,48);
+ a.equal(x.full21H4CrossFrameAuditPossibleFromPrivateSnapshot,false);
  for(const p of ["entry","stopLoss","takeProfit"])a.equal(x[p],null);
  const encoded=JSON.stringify(x);
  for(const privateData of ['"open"','"high"','"low"','"close"','"bid"',
