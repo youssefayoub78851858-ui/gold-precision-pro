@@ -35,7 +35,10 @@ function fail(status,why,extra={}){
   matchedEventCount:0,checkedProgressEvents:0,sourceQuoteSamples:null,
   persistedClosed:FRAMEZERO(),contiguousClosed:FRAMEZERO(),
   unclassifiedMissingSlots:FRAMEZERO(),latestProgressAtUTC:null,
-  comparedClosed:{H1:0,H4:0},fullyCoveredDisagreements:{H1:null,H4:null},
+  comparedClosed:{H1:0,H4:0},notFullyCoveredClosed:{H1:null,H4:null},
+  fullyCoveredDisagreements:{H1:null,H4:null},
+  comparedCoverageRegressions:{H1:0,H4:0},
+  latestContiguousH4M15ParityVerified:false,
   blockers:["LEGACY_COLLECTOR_FIRST_SEEN_UNKNOWN",
             "SOURCE_RIGHTS_AND_BROKER_CALENDAR_UNVERIFIED",
             "SPARSE_QUOTES_NOT_EXECUTION_EVIDENCE",
@@ -108,7 +111,9 @@ function reconcile({records}={}){
  // events, not reports from a prior or subsequent iteration sharing dayIndex.
  // Cross-day matches, pre-progress events, and reuse of one event are forbidden.
  let completeCycles=0,latest=null,counts=null,contiguousCounts=null,missing=null,
-     disagreements=null,compared=null,quoteCount=null,latestOverlap=null;
+     disagreements=null,compared=null,notCovered=null,quoteCount=null,latestOverlap=null;
+ let priorCompared=null;
+ const coverageRegressions={H1:0,H4:0};
  for(let i=0;i<progresses.length;i++){
   const p=progresses[i],next=progresses[i+1]||null;
   const matches={};
@@ -150,7 +155,7 @@ function reconcile({records}={}){
       gap.frames[tf].unclassifiedMissingSlots!==currentMissing[tf])
     return fail("BLOCKED","STAGE3_REFERENCE_AND_PROGRESS_GAP_MISMATCH");
   }
-  const currentDisagreements={},currentCompared={};
+  const currentDisagreements={},currentCompared={},currentNotCovered={};
   for(const tf of ["H1","H4"]){
    const x=over.frames[tf];
    if(!x||!ints(x.fullyCoveredCompared)||
@@ -162,15 +167,24 @@ function reconcile({records}={}){
     return fail("BLOCKED","STAGE3_OHLC_COVERAGE_COUNTERS_CONTRADICTORY");
    currentDisagreements[tf]=x.fullyCoveredDisagreed;
    currentCompared[tf]=x.fullyCoveredCompared;
+   currentNotCovered[tf]=x.notFullyCovered;
   }
   if(BIN_KEYS.some(k=>!ints(quote.intervalBins[k]))||
      BIN_KEYS.reduce((sum,k)=>sum+quote.intervalBins[k],0)!==
        quote.observedIntervals)
    return fail("BLOCKED","STAGE3_QUOTE_INTERVAL_COUNTS_CONTRADICTORY");
+  // An archive can preserve an H4 candle yet lose its constituent
+  // M15 coverage from a rolling source window. The aggregate count does
+  // not identify which H4 was covered and NEVER proves the latest tail.
+  for(const tf of ["H1","H4"])
+   if(priorCompared&&currentCompared[tf]<priorCompared[tf])
+    coverageRegressions[tf]++;
+  priorCompared=currentCompared;
   completeCycles++;
   latest=p;counts=currentCounts;contiguousCounts=currentContiguous;
   missing=currentMissing;
   disagreements=currentDisagreements;compared=currentCompared;
+  notCovered=currentNotCovered;
   quoteCount=quote.sourceQuoteSamples;latestOverlap=over;
  }
  const blockers=["LEGACY_COLLECTOR_FIRST_SEEN_UNKNOWN",
@@ -181,6 +195,10 @@ function reconcile({records}={}){
   blockers.push("OBSERVED_CROSS_FRAME_OHLC_MISMATCH");
  if(["H1","H4"].some(tf=>latestOverlap.frames[tf].notFullyCovered>0))
   blockers.push("PARTIAL_M15_OVERLAP_NOT_VERIFIED");
+ if(coverageRegressions.H4)
+  blockers.push("H4_ROLLING_M15_OVERLAP_COMPARABILITY_DECREASED");
+ if(coverageRegressions.H1)
+  blockers.push("H1_ROLLING_M15_OVERLAP_COMPARABILITY_DECREASED");
  return fail("CONSISTENT_COUNTS_ONLY_NOT_MARKET_PROOF",null,{
   checkedProgressEvents:progresses.length,checkedCompleteCycles:completeCycles,
   checkedQuoteCadenceEvents:checkedQuoteEvents,matchedEventCount:4,
@@ -189,6 +207,8 @@ function reconcile({records}={}){
   latestProgressAtUTC:latest.atUTC,
   unclassifiedMissingSlots:missing,
   fullyCoveredDisagreements:disagreements,comparedClosed:compared,
+  notFullyCoveredClosed:notCovered,
+  comparedCoverageRegressions:coverageRegressions,
   blockers
  });
 }
