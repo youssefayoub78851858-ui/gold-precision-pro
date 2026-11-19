@@ -2,8 +2,8 @@
 
 Never calls a market provider or opens a paper account. Reads one already
 SHA-checked private archive, supplies OHLC over local Node stdin only, and
-emits count-only WAIT metadata. Not a point-in-time holdout; schema v1
-has no per-candle first-availability receipts or executable spread history.
+emits count-only WAIT metadata. New bars can have locally observed receipts;
+legacy bars do not. Neither proves broker first availability or executable fills.
 """
 from __future__ import annotations
 import json
@@ -43,6 +43,10 @@ def inspect_private_vault(dirname, *, runner=None):
             return result
         counts=meta["counts"]
         packet={"dataOrigin":"BIQUOTE_ARCHIVED_UNVERIFIED_NO_PAPER","frames":{}}
+        # Snapshot at the last LOCAL sealed-vault import; never infer a clock
+        # from candle opening/closing, file mtime, or wall-clock now.
+        if sealed.get("lastImportedUTC") is not None:
+            packet["decisionCutoffUTC"]=sealed["lastImportedUTC"]
         for tf in FRAMES_ORDER:
             packet["frames"][tf]=[
                 {"datetime":b["openTime"],"open":b["open"],"high":b["high"],
@@ -63,6 +67,7 @@ def inspect_private_vault(dirname, *, runner=None):
         count=out.get("retrospectiveDecisionCount")
         stored=out.get("storedClosedCounts")
         audit=out.get("firstSeenReceiptAudit")
+        point=out.get("signalDataReadiness")
         receipt_counts={tf:len(sealed.get("firstObservedClosedUTC",{}).get(tf,{}))
                         for tf in FRAMES_ORDER}
         legacy_counts={tf:counts[tf]-receipt_counts[tf] for tf in FRAMES_ORDER}
@@ -123,12 +128,77 @@ def inspect_private_vault(dirname, *, runner=None):
             or sum(watches.values())!=count
             or (out["status"]=="BLOCKED")!=(count==0)):
             return result
+        # Validate all count-only point-in-time metadata BEFORE exposing it.
+        # A JSON runner cannot self-authorize market rights or paper/live orders.
+        if (not isinstance(point,dict)
+            or point.get("mode")!="BIQUOTE_LOCAL_POINT_IN_TIME_DATA_GATE_V1"
+            or point.get("status") not in (
+                "RECEIPTS_UNAVAILABLE","INSUFFICIENT_EVIDENCE",
+                "LOCAL_GEOMETRY_ONLY_NOT_TRADE_READY")
+            or point.get("signal")!="WAIT"
+            or point.get("researchCandidate")!="NONE"
+            or any(point.get(k) is not False for k in (
+                "executable","tradeEligible","paperOrdersAllowed",
+                "liveOrdersAllowed","sourceRightsVerified",
+                "brokerSessionCalendarVerified","independentAvailabilityVerified",
+                "brokerCostsVerified","profitabilityProven"))
+            or point.get("brokerOrdersSent")!=0
+            or point.get("providerRequestsMade")!=0
+            or point.get("storedClosedCounts")!=counts
+            or point.get("legacyWithoutFirstSeen")!=legacy_counts
+            or point.get("observedAtDecision")!=receipt_counts):
+            return result
+        continuous=point.get("contiguousObservedClosed")
+        warm=point.get("technicalWarmupMissing")
+        paper=point.get("paperHistoryMissing")
+        if (not all(isinstance(v,dict) and set(v)==set(FRAMES_ORDER)
+                    for v in (continuous,warm,paper))
+            or any(type(continuous[tf]) is not int
+                   or not 0<=continuous[tf]<=receipt_counts[tf]
+                   or type(warm[tf]) is not int
+                   or warm[tf]!=max(0,21-continuous[tf])
+                   or type(paper[tf]) is not int
+                   or paper[tf]!=max(0,50-continuous[tf])
+                   for tf in FRAMES_ORDER)):
+            return result
+        local=point.get("status")=="LOCAL_GEOMETRY_ONLY_NOT_TRADE_READY"
+        if (point.get("localGeometryObserved") is not local
+            or point.get("localTimingAndParityCheck")!=(
+                "LOCAL_ONLY_NOT_INDEPENDENT" if local else "NOT_PROVEN")
+            or (local and any(warm.values()))
+            or (("firstObservedClosedUTC" not in sealed)!=
+                (point.get("status")=="RECEIPTS_UNAVAILABLE"))):
+            return result
+        # The exact local lastImport time is passed to Node. Its result can
+        # canonicalize .000Z, but may never assert a different decision clock.
+        if "firstObservedClosedUTC" in sealed:
+            import datetime as dt
+            try:
+                observed_clock=dt.datetime.fromisoformat(
+                    point["asOfUTC"].replace("Z","+00:00"))
+                archived_clock=dt.datetime.fromisoformat(
+                    sealed["lastImportedUTC"].replace("Z","+00:00"))
+            except (TypeError,ValueError,KeyError,AttributeError):
+                return result
+            if observed_clock!=archived_clock:
+                return result
         return {**BASE,
                 "status":"RETROSPECTIVE_ONLY_NOT_TRADE_PROOF" if count else "BLOCKED",
                 "reason":"MISSING_PER_BAR_FIRST_SEEN_BROKER_QUOTES_AND_COSTS",
                 "closedCounts":{tf:counts[tf] for tf in FRAMES_ORDER},
                 "retrospectiveDecisionCount":count,
                 "technicalWatchCounts":{key:watches[key] for key in ("BUY","SELL","NONE")},
+                "pointInTimeDataAudit":{
+                    "status":point["status"],"signal":"WAIT",
+                    "sourceRightsVerified":False,
+                    "independentAvailabilityVerified":False,
+                    "brokerSessionCalendarVerified":False,
+                    "localTimingAndParityCheck":point["localTimingAndParityCheck"],
+                    "observedAtDecision":receipt_counts,
+                    "legacyWithoutFirstSeen":legacy_counts,
+                    "contiguousObservedClosed":continuous,
+                    "technicalWarmupMissing":warm,
+                    "paperHistoryMissing":paper},
                 "localFirstSeenAudit":{
                     "status":audit["status"],"signal":"WAIT",
                     "paperOrdersAllowed":False,
