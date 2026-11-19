@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gold Precision Pro Ultimate — لوحة المراجعة</title>
+<style>
+:root{color-scheme:dark;--gold:#e9bb62;--border:#59472a;--bg:#080c13}*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#f1eee8;font:15px system-ui,Tahoma,sans-serif}
+main{max-width:900px;margin:auto;padding:14px}.head{text-align:center;padding:18px 4px;border-bottom:1px solid var(--border)}
+h1{color:var(--gold);font-size:clamp(21px,5vw,30px);margin:4px}h2{font-size:17px;margin:0 0 12px;color:#f5d79b}
+small,.muted{color:#aeb5c0}.nav,.frames{display:flex;gap:8px;overflow:auto;padding:12px 0}
+a,button{font:inherit;cursor:pointer}a{color:#f4d18e}.nav a,.frames button{white-space:nowrap;padding:11px 14px;border-radius:12px;border:1px solid #455268;background:#162132;color:#f2f3f7;text-decoration:none}
+.frames button[aria-pressed=true]{background:linear-gradient(#f5d993,#c7953d);color:#15100b;font-weight:800;border-color:#e8b961}
+.card{background:linear-gradient(145deg,#172333,#0d1725);border:1px solid #39495c;border-radius:17px;padding:15px;margin:11px 0;box-shadow:0 7px 25px #0005}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid .card{margin:0}
+.price{font-size:30px;font-weight:800;direction:ltr;display:inline-block}.gold{color:var(--gold)}.green{color:#55d7a1}.warn{color:#ffcc79}
+.label{font-size:13px;color:#a9b5c7}.value{font-weight:700;font-size:18px;overflow-wrap:anywhere}
+.chart{width:100%;height:auto;display:block;background:#09121e;border-radius:12px;border:1px solid #26394c}
+button.primary{border:1px solid #f1d18c;background:linear-gradient(#f7d88e,#b78336);color:#15100a;border-radius:12px;padding:12px 18px;font-weight:800;width:100%}
+button:disabled{opacity:.6;cursor:wait}.wait{border-color:#8a573d;background:#281b20}.wait strong{color:#ffd06e;font-size:25px}
+.footer{display:flex;gap:8px;justify-content:space-between;position:sticky;bottom:0;background:#0d1723ed;border-top:1px solid var(--border);padding:12px 5px}
+.footer a{font-size:12px;text-decoration:none;text-align:center}.fine{font-size:12px;line-height:1.7}
+@media(min-width:680px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+</style></head>
+<body><main>
+<header class="head"><div class="gold">♛</div><h1>Gold Precision Pro Ultimate</h1><div class="muted">لوحة مراجعة بحثية للذهب XAUUSD — بدون تنفيذ تداول</div></header>
+<nav class="nav" aria-label="الأقسام"><a href="#chart">تحليل الذهب</a><a href="#context">السياق</a><a href="#quality">جودة البيانات</a><a href="#signal">التوصيات</a><a href="index.html">الواجهة السابقة</a></nav>
+<section class="card"><div class="label">XAUUSD — آخر إغلاق شمعة متحققة</div><div id="price" class="price">غير متاح</div><div id="timestamp" class="fine muted">لم يُطلب تحديث البيانات بعد</div><div id="source" class="fine warn">المصدر غير متحقق — لا يُعرض سعر مباشر</div></section>
+<section id="chart" class="card"><h2>شارت الشموع المغلقة</h2><div class="frames" role="group" aria-label="الفريم"><button data-frame="15min" aria-pressed="true">M15</button><button data-frame="1h" aria-pressed="false">H1</button><button data-frame="4h" aria-pressed="false">H4</button></div>
+<svg id="candles" class="chart" viewBox="0 0 680 300" role="img" aria-label="شارت الشموع المغلقة"><text x="340" y="145" text-anchor="middle" fill="#aab5c4">لا توجد شموع موثقة للعرض</text></svg><p id="chart-status" class="fine muted">لن تُرسم شموع افتراضية أو مفتوحة.</p><button id="refresh" class="primary">تحديث بيانات المراجعة عند الطلب</button></section>
+<section id="context" class="grid" aria-label="السياق"><div class="card"><div class="label">التحليل الفني</div><div class="value">غير متاح</div></div><div class="card"><div class="label">DXY</div><div class="value">غير مربوط</div></div><div class="card"><div class="label">US02Y / US10Y</div><div class="value">غير مربوط</div></div><div class="card"><div class="label">GC COMEX</div><div class="value">غير مرخّص</div></div><div class="card"><div class="label">Order Flow</div><div class="value">غير متاح</div></div><div class="card"><div class="label">الأخبار الاقتصادية</div><div class="value">غير متحقق</div></div><div class="card"><div class="label">جلسات السوق</div><div class="value">تقويم الوسيط غير مثبت</div></div><div class="card"><div class="label">السبريد والتنفيذ</div><div class="value">تكلفة التنفيذ غير مثبتة</div></div></section>
+<section id="quality" class="grid"><div class="card"><h2>جودة البيانات</h2><p id="quality-status" class="muted">بانتظار الفحص</p><p class="fine">فجوات M15/H1/H4 وحقوق المصدر تتطلب تحققاً مستقلاً.</p></div><div class="card"><h2>حقوق المصدر</h2><p class="warn">غير مثبتة للاستخدام التجاري أو التنفيذ</p><p class="fine">BiQuote لا يثبت حقوق وسيط MT5.</p></div></section>
+<section id="signal" class="card wait"><h2>حالة النظام</h2><strong id="decision">WAIT</strong><span class="warn"> — executable = false</span><p id="reason" class="fine">لا توجد إشارة قابلة للتنفيذ؛ بيانات السياق والحقوق والاختبارات غير مكتملة.</p></section>
+<section class="grid"><div class="card"><h2>التداول الورقي</h2><p>غير مفعّل تلقائياً</p></div><div class="card"><h2>التداول الحقيقي</h2><p>🔒 مقفل</p></div><div class="card"><h2>سجل الإشارات</h2><p>غير معروض — لا نتائج مفترضة</p></div><div class="card"><h2>الاختبارات</h2><p>الربحية غير مثبتة</p></div></section>
+<p class="fine muted">هذه لوحة قراءة فقط. التحديث يتم عند الطلب، ولا تُرسل أوامر تداول ولا تُستخدم بيانات خارجية غير مصرّح بها.</p>
+<nav class="footer"><a href="#chart">⌁ الشارت</a><a href="#context">▤ التحليل</a><a href="#quality">✓ الجودة</a><a href="#signal">⌛ WAIT</a><a href="index.html">⌂ السابقة</a></nav>
+</main><script>
+"use strict";
+(function(){
+const $=id=>document.getElementById(id);
+let frame="15min",last=null,pending=false;
+const frames={"15min":"M15","1h":"H1","4h":"H4"};
+document.querySelectorAll("[data-frame]").forEach(button=>button.addEventListener("click",()=>{
+frame=button.dataset.frame;
+document.querySelectorAll("[data-frame]").forEach(b=>b.setAttribute("aria-pressed",String(b===button)));
+draw(last?.candles?.[frame]);
+}));
+function clearChart(message){const svg=$("candles");svg.replaceChildren();const t=document.createElementNS("http://www.w3.org/2000/svg","text");t.setAttribute("x","340");t.setAttribute("y","150");t.setAttribute("text-anchor","middle");t.setAttribute("fill","#aab5c4");t.textContent=message;svg.appendChild(t);}
+function draw(value){
+const raw=Array.isArray(value)?value: value&&Array.isArray(value.values)?value.values:null;
+if(!raw){clearChart("لا توجد سلسلة شموع مغلقة موثقة");$("chart-status").textContent="المصدر لا يقدّم سلسلة موثقة لهذا الفريم";return;}
+const rows=raw.filter(c=>c&&Number.isFinite(+c.open)&&Number.isFinite(+c.high)&&Number.isFinite(+c.low)&&Number.isFinite(+c.close)&&+c.high>=Math.max(+c.open,+c.close)&&+c.low<=Math.min(+c.open,+c.close)&&c.closed===true).slice(-45);
+if(rows.length<2){clearChart("الشموع المغلقة غير كافية");$("chart-status").textContent="لا نرسم الشموع إلا مع إثبات إغلاقها";return;}
+const lo=Math.min(...rows.map(c=>+c.low)),hi=Math.max(...rows.map(c=>+c.high)),range=Math.max(hi-lo,.01),svg=$("candles");svg.replaceChildren();
+const add=(tag,attrs)=>{const n=document.createElementNS("http://www.w3.org/2000/svg",tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,String(v)));svg.appendChild(n);};
+rows.forEach((c,i)=>{const x=18+i*644/rows.length,w=Math.max(3,644/rows.length*.55),y=p=>260-(p-lo)/range*220,color=+c.close>=+c.open?"#24d2a0":"#f26879";add("line",{x1:x,y1:y(+c.high),x2:x,y2:y(+c.low),stroke:color,"stroke-width":1.5});add("rect",{x:x-w/2,y:Math.min(y(+c.open),y(+c.close)),width:w,height:Math.max(1,Math.abs(y(+c.close)-y(+c.open))),fill:color});});
+$("chart-status").textContent=frames[frame]+" — "+rows.length+" شمعة مغلقة موثقة";
+}
+$("refresh").addEventListener("click",async()=>{
+if(pending)return;pending=true;$("refresh").disabled=true;$("quality-status").textContent="جارٍ فحص المراجعة...";
+try{
+const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);let response;
+try{response=await fetch("/api/v3/research",{cache:"no-store",signal:controller.signal});}finally{clearTimeout(timeout);}
+const d=await response.json();
+if(!response.ok||d.engine!=="V3"||d.signal!=="WAIT"||d.executable!==false||!["FRESH","STALE","INVALID","UNAVAILABLE","MARKET_CLOSED","STANDBY"].includes(d.dataStatus))throw Error("استجابة بحثية غير متحققة");
+last=d;$("decision").textContent="WAIT";$("reason").textContent=typeof d.reason==="string"?d.reason:"لا توجد توصية قابلة للتنفيذ";
+$("quality-status").textContent=d.dataStatus;
+const c=d.dataStatus==="FRESH"?d.candles?.["15min"]:null;
+if(c&&Number.isFinite(c.close)&&c.close>0&&typeof c.closeUTC==="string"){$("price").textContent=c.close.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});$("timestamp").textContent="إغلاق M15: "+c.closeUTC;$("source").textContent="إغلاق شمعة بحثية — ليس سعر تنفيذ حي";}
+else{$("price").textContent="غير متاح";$("timestamp").textContent="لا يوجد إغلاق متحقق";$("source").textContent="لا يُعرض سعر افتراضي";}
+draw(d.candles?.[frame]);
+}catch(e){last=null;$("price").textContent="غير متاح";$("quality-status").textContent="تعذّر التحقق";$("reason").textContent="WAIT — فشل فحص المصدر";clearChart("لا توجد بيانات موثقة");$("chart-status").textContent="البيانات غير متاحة";}
+finally{pending=false;$("refresh").disabled=false;}
+});
+})();
+</script></body></html>
