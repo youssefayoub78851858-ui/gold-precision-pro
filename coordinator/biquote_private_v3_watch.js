@@ -54,11 +54,37 @@ function parity(whole,parts){
   near(whole.low,Math.min(...parts.map(x=>x.low)))&&
   near(whole.close,parts.at(-1).close);
 }
+function validateCrossFrameEvidence(input){
+ // The source summary covers all returned, closed H1/H4 candles that
+ // overlap the M15 window. An older incomplete/mismatched higher bar
+ // must not be concealed by checking only the latest aligned H4.
+ // This is still NOT per-bar first-seen or independent broker proof.
+ if(input?.sourceSnapshotStatus!=="OBSERVED_READONLY_UNVERIFIED")
+  return "SOURCE_HAS_UNRESOLVED_CROSS_FRAME_GAPS";
+ const c=input.sourceCrossFrameComparisons;
+ if(!c||typeof c!=="object"||Array.isArray(c)||
+    Object.keys(c).sort().join(",")!=="H1,H4")
+  return "CROSS_FRAME_SUMMARY_MISSING";
+ for(const tf of ["H1","H4"]){
+  const v=c[tf];
+  if(!v||typeof v!=="object"||Array.isArray(v)||
+     !["completeMatches","completeMismatches",
+       "incompleteM15Groups","outsideRetentionWindow"].every(k=>
+       Number.isSafeInteger(v[k])&&v[k]>=0&&v[k]<=1000))
+   return "CROSS_FRAME_SUMMARY_INVALID";
+  if(v.completeMatches<1||v.completeMismatches>0||
+     v.incompleteM15Groups>0)
+   return "HISTORICAL_CROSS_FRAME_GAPS_OR_PRICE_MISMATCH";
+ }
+ return null;
+}
 function observe(input){
  if(input?.origin!=="AUTHENTICATED_PERSONAL_BIQUOTE_PRIVATE_CHART")
   return safe("BLOCKED","NOT_AUTHENTICATED_PERSONAL_CHART");
  if(input.priceBasis!=="MID_WITH_POSSIBLE_BID_SEED")
   return safe("BLOCKED","MIXED_OR_UNVERIFIED_PRICE_BASIS");
+ const sourceIssue=validateCrossFrameEvidence(input);
+ if(sourceIssue)return safe("WAIT_CROSS_FRAME_EVIDENCE",sourceIssue);
  const asOf=Date.parse(input.asOfUTC);
  if(typeof input.asOfUTC!=="string"||!Number.isFinite(asOf)||
     !input.asOfUTC.endsWith("Z"))
