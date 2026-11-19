@@ -14,6 +14,13 @@ function fixture(){
   })]));
  return {origin:"AUTHENTICATED_PERSONAL_BIQUOTE_PRIVATE_CHART",
   priceBasis:"MID_WITH_POSSIBLE_BID_SEED",asOfUTC:ASOF,chart,
+  sourceSnapshotStatus:"OBSERVED_READONLY_UNVERIFIED",
+  sourceCrossFrameComparisons:{
+   H1:{completeMatches:12,completeMismatches:0,
+       incompleteM15Groups:0,outsideRetentionWindow:12},
+   H4:{completeMatches:2,completeMismatches:0,
+       incompleteM15Groups:0,outsideRetentionWindow:25}
+  },
   secret:"DO_NOT_LEAK",brokerSignal:"BUY",riskApproved:true};
 }
 function secure(x){
@@ -38,6 +45,40 @@ a.equal(yes.status,"TECHNICAL_WATCH_ONLY_NOT_TRADE_READY");
 a.equal(yes.technicalCandidate,"BUY");
 a.equal(yes.watchLabel,"WATCH_BUY");
 a.equal(yes.lastCrossFrameParityObserved,true);
+// An OLD H4 or H1 mismatch discovered by the whole source window must
+// veto WATCH even if the latest 16 M15 bars and the last H4 agree.
+for(const tf of ["H1","H4"]){
+ const earlierBad=fixture();
+ earlierBad.sourceSnapshotStatus="WAIT_CROSS_FRAME_GAPS";
+ earlierBad.sourceCrossFrameComparisons[tf].completeMismatches=1;
+ earlierBad.sourceCrossFrameComparisons[tf].completeMatches=1;
+ const veto=observe(earlierBad);secure(veto);
+ a.equal(veto.technicalCandidate,"NONE");
+ a.equal(veto.watchLabel,"WAIT");
+ a.equal(veto.status,"WAIT_CROSS_FRAME_EVIDENCE");
+ a.equal(veto.reason,"SOURCE_HAS_UNRESOLVED_CROSS_FRAME_GAPS");
+ const forgedClear=fixture();
+ forgedClear.sourceCrossFrameComparisons[tf].completeMismatches=1;
+ const vetoSource=observe(forgedClear);secure(vetoSource);
+ a.equal(vetoSource.watchLabel,"WAIT");
+ a.equal(vetoSource.reason,"HISTORICAL_CROSS_FRAME_GAPS_OR_PRICE_MISMATCH");
+}
+const missingOld=fixture();
+missingOld.sourceCrossFrameComparisons.H4.incompleteM15Groups=1;
+const missingOldResult=observe(missingOld);secure(missingOldResult);
+a.equal(missingOldResult.watchLabel,"WAIT");
+a.equal(missingOldResult.reason,"HISTORICAL_CROSS_FRAME_GAPS_OR_PRICE_MISMATCH");
+for(const mutated of [
+ x=>{delete x.sourceCrossFrameComparisons;},
+ x=>{x.sourceCrossFrameComparisons.H1.completeMatches=-1;},
+ x=>{x.sourceCrossFrameComparisons.H4.completeMismatches="0";},
+ x=>{x.sourceCrossFrameComparisons.H4.extra=999;},
+ x=>{x.sourceCrossFrameComparisons.H4.completeMatches=0;}
+]){
+ const v=fixture();mutated(v);const blocked=observe(v);secure(blocked);
+ a.equal(blocked.watchLabel,"WAIT");
+}
+
 const down=fixture();
 for(const tf of Object.keys(W)){
  const row=down.chart[tf];
