@@ -76,6 +76,33 @@ function reconcile({records}={}){
    return fail("BLOCKED","NONMONOTONIC_STAGE3_PROGRESS");
   previous=p;
  }
+ // Long-running log exports can contain several Stage-3 cycles. A valid
+ // latest snapshot MUST NOT hide a regression or impossible cadence counter
+ // in an earlier cycle. Missing historical cycles remain unknown rather than
+ // inferred, but all supplied cadence records must be internally consistent.
+ let lastQuote=null;
+ let checkedQuoteEvents=0;
+ for(const q of normalized.filter(x=>x.event===TYPES[3])){
+  if(!q.intervalBins||typeof q.intervalBins!=="object"||
+     Array.isArray(q.intervalBins)||
+     Object.keys(q.intervalBins).sort().join(",")!==
+        BIN_KEYS.slice().sort().join(",")||
+     !ints(q.sourceQuoteSamples)||q.sourceQuoteSamples<1||
+     !ints(q.observedIntervals)||
+     q.observedIntervals!==q.sourceQuoteSamples-1||
+     BIN_KEYS.some(k=>!ints(q.intervalBins[k]))||
+     BIN_KEYS.reduce((sum,k)=>sum+q.intervalBins[k],0)!==
+        q.observedIntervals)
+   return fail("BLOCKED","HISTORICAL_STAGE3_QUOTE_CADENCE_CONTRADICTORY");
+  if(lastQuote&&
+    (q.dayIndex<lastQuote.dayIndex||
+     q.sourceQuoteSamples<lastQuote.sourceQuoteSamples||
+     q.observedIntervals<lastQuote.observedIntervals||
+     BIN_KEYS.some(k=>q.intervalBins[k]<lastQuote.intervalBins[k])))
+   return fail("BLOCKED","HISTORICAL_STAGE3_QUOTE_CADENCE_REGRESSION");
+  lastQuote=q;
+  checkedQuoteEvents++;
+ }
  const latest=progresses.at(-1),matches={};
  for(const type of TYPES.slice(1)){
   const eligible=normalized.filter(x=>x.event===type&&
@@ -131,7 +158,8 @@ function reconcile({records}={}){
  if(["H1","H4"].some(tf=>over.frames[tf].notFullyCovered>0))
   blockers.push("PARTIAL_M15_OVERLAP_NOT_VERIFIED");
  return fail("CONSISTENT_COUNTS_ONLY_NOT_MARKET_PROOF",null,{
-  checkedProgressEvents:progresses.length,matchedEventCount:4,
+  checkedProgressEvents:progresses.length,checkedQuoteCadenceEvents:checkedQuoteEvents,
+  matchedEventCount:4,
   sourceQuoteSamples:quote.sourceQuoteSamples,
   persistedClosed:counts,unclassifiedMissingSlots:missing,
   fullyCoveredDisagreements:disagreements,comparedClosed:compared,
