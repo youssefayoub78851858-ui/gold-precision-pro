@@ -184,7 +184,8 @@ const olderFutureReceipt=structuredClone(backfillFixture);
 olderFutureReceipt.firstObservedClosedUTC.M15[historicalM15]=
  iso(Date.parse(olderFutureReceipt.asOfUTC)+600000);
 const oldFutureResult=assess(olderFutureReceipt);safe(oldFutureResult);
-a.equal(oldFutureResult.firstSeenAfterDecision.M15,1);
+a.equal(oldFutureResult.status,"BLOCKED");
+a(oldFutureResult.blockers.includes("INVALID_OR_NONMONOTONIC_M15_RECEIPT"));
 a.equal(oldFutureResult.warmupCrossFrameFullyVerified,false);
 a.equal(oldFutureResult.localGeometryObserved,false);
 // Legacy bars are unknown, NOT automatically assigned a receipt.
