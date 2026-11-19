@@ -8,6 +8,9 @@ on:
       - 'coordinator/biquote_mobile_readonly.js'
       - 'biquote-mobile-ui.js'
       - 'ultimate.html'
+      - 'review-dashboard.html'
+      - 'index.html'
+      - 'server.js'
   workflow_dispatch:
 
 jobs:
@@ -35,6 +38,28 @@ jobs:
           grep -q 'forward-mid-quote-parity' "$html"
           test "$(wc -c < "$html")" -lt 80000
           echo 'PASS: review-only mobile HTML reachable over HTTPS, CSP and no-store present'
+      - name: Verify new mobile dashboard route and review link on deployed HTTPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://gold-precision-v3-review-demo.onrender.com'
+          page="$(mktemp)"
+          headers="$(mktemp)"
+          code="$(curl -sSL --retry 4 --retry-delay 4 --retry-all-errors --connect-timeout 12 --max-time 45 \
+            -D "$headers" -o "$page" -w '%{http_code}' "$base/review-dashboard.html")"
+          [ "$code" = 200 ]
+          grep -qi 'content-type: text/html' "$headers"
+          grep -qi 'cache-control: no-store' "$headers"
+          grep -qi 'content-security-policy:.*frame-ancestors' "$headers"
+          grep -q 'Gold Precision Pro Ultimate' "$page"
+          grep -q 'id="decision"' "$page"
+          grep -q 'executable = false' "$page"
+          ! grep -q 'MONITOR_READONLY_TOKEN' "$page"
+          [ "$(curl -sS --connect-timeout 12 --max-time 25 -o /dev/null -w '%{http_code}' -X POST "$base/review-dashboard.html")" = 405 ]
+          review="$(mktemp)"
+          curl -fsSL --connect-timeout 12 --max-time 35 -o "$review" "$base/review"
+          grep -q 'href="review-dashboard.html"' "$review"
+          echo 'PASS new mobile read-only screen real HTTPS, GET only, no-store, CSP, navigation'
       - name: Confirm anonymous access is rejected without contacting paid providers
         shell: bash
         run: |
