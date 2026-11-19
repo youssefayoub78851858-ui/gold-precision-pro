@@ -38,6 +38,7 @@ APPROVAL_ENV = "GPP_BIQUOTE_PRIVATE_FORWARD_ARCHIVE"
 APPROVAL = "APPROVED_READONLY_PRIVATE_NO_TRADING"
 ALLOW_DIR_PREFIX = "/var/data/"
 FRAMES_ORDER = ("M15", "H1", "H4")
+FIRST_SEEN_KEY = "firstObservedClosedUTC"
 SAFE = {
     "mode": "PRIVATE_FORWARD_BIQUOTE_CAPTURE_NOT_TRADING_ADMISSIBLE",
     "signal": "WAIT", "executable": False, "tradeEligible": False,
@@ -109,6 +110,7 @@ def _blank():
         "sessionVerified": False, "brokerRightsVerified": False,
         "closed": {tf: [] for tf in FRAMES_ORDER}, "quoteObservations": [],
         "lastImportedUTC": None,
+        FIRST_SEEN_KEY: {tf: {} for tf in FRAMES_ORDER},
     }
 
 def load_vault(dirname):
@@ -192,6 +194,34 @@ def load_vault(dirname):
             if (not all(_positive(p) and p < 100_000_000 for p in (o, h, l, c))
                     or not l <= min(o, c) <= max(o, c) <= h):
                 _fail("VAULT_CANDLE_GEOMETRY_INVALID")
+    # v1 archives written before the code upgrade lack these fields.
+    # Never invent their first-availability time from a lastImportedUTC,
+    # candle close, or file modification time. Only NEW append-only bars
+    # receive a timestamp, inside the SAME checksummed atomic vault write.
+    first_seen = v.get(FIRST_SEEN_KEY)
+    if first_seen is not None:
+        if (not isinstance(first_seen,dict) or
+                set(first_seen)!=set(FRAMES_ORDER)):
+            _fail("VAULT_FIRST_SEEN_FRAME_SHAPE_INVALID")
+        for tf in FRAMES_ORDER:
+            entries=first_seen[tf]
+            bars={x["openTime"] for x in v["closed"][tf]}
+            if (not isinstance(entries,dict) or len(entries)>len(bars)
+                    or not set(entries).issubset(bars)):
+                _fail("VAULT_FIRST_SEEN_UNKNOWN_BAR")
+            latest_seen=None
+            for bar in v["closed"][tf]:
+                opening=bar["openTime"]
+                if opening not in entries:
+                    continue  # legacy candle with UNKNOWN receipt
+                seen=_stamp(entries[opening])
+                closed_at=_stamp(opening)+dt.timedelta(seconds=FRAMES[tf][1])
+                if (imported is None or seen < closed_at or
+                        seen > imported or seen < START):
+                    _fail("VAULT_FIRST_SEEN_TIME_INVALID")
+                if latest_seen is not None and seen < latest_seen:
+                    _fail("VAULT_FIRST_SEEN_OUT_OF_ORDER")
+                latest_seen=seen
     previous_observed = None
     for quote in q:
         if set(quote) != {"tickUTC", "observedUTC", "bid", "ask", "spread"}:
@@ -294,6 +324,10 @@ def ingest(dirname, sample, *, received_utc):
                       for t in sorted(closed) if dt.datetime.fromtimestamp(t,UTC)>=START]
     current=load_vault(dirname)
     amended=json.loads(_canonical(current))
+    # Backward-compatible upgrade: old closed bars remain without receipt
+    # evidence forever. Do NOT backfill firstSeen for any existing candle.
+    if FIRST_SEEN_KEY not in amended:
+        amended[FIRST_SEEN_KEY]={tf:{} for tf in FRAMES_ORDER}
     newly={}
     for tf in FRAMES_ORDER:
         existing=amended["closed"][tf]
@@ -312,6 +346,8 @@ def ingest(dirname, sample, *, received_utc):
         if len(existing)+len(additions)>MAX_CANDLES_PER_FRAME:
             _fail("MAX_CANDLE_CAP_"+tf)
         amended["closed"][tf].extend(additions)
+        for newly_observed in additions:
+            amended[FIRST_SEEN_KEY][tf][newly_observed["openTime"]]=received_utc
         newly[tf]=len(additions)
     if len(amended["quoteObservations"]) >= MAX_QUOTE_SAMPLES:
         _fail("QUOTE_OBSERVATION_CAP")
@@ -338,6 +374,8 @@ def ingest(dirname, sample, *, received_utc):
         **SAFE, "status":"PRIVATE_FORWARD_CAPTURE_SAVED" if changed else "NO_NEW_BARS",
         "sampleSourceIndependentlyAuthenticated": False,
         "newClosedBars":newly,
+        "firstObservedReceiptRecordedForNewBars":True,
+        "legacyCandlesWithoutReceiptNotBackfilled":True,
         "totals":{tf:len(amended["closed"][tf]) for tf in FRAMES_ORDER},
         "spreadQuoteSamples":len(oldquotes),
         "crossFrameIncompleteM15": {
@@ -498,9 +536,22 @@ def inspect_vault_metadata(v, *, now_utc=None):
             or gap_reference["frames"][tf]["gapPairs"]
                 !=coverage[tf]["unclassifiedGapPairs"]):
             _fail("SEALED_GAP_REFERENCE_COUNTER_MISMATCH")
+    first_seen = v.get(FIRST_SEEN_KEY) or {tf:{} for tf in FRAMES_ORDER}
+    # Price-free metadata only. Having a LOCAL receipt is not independent
+    # proof of provider entitlement or a broker-executable quote.
+    first_seen_coverage={
+        "status":"LOCAL_RECEIPTS_UNVERIFIED_NOT_TRADE_PROOF",
+        "signal":"WAIT","executable":False,"paperOrdersAllowed":False,
+        "sourceRightsVerified":False,"brokerCalendarVerified":False,
+        "independentFirstAvailabilityVerified":False,
+        "recordedClosed":{tf:len(first_seen[tf]) for tf in FRAMES_ORDER},
+        "unknownLegacyClosed":{
+            tf:len(v["closed"][tf])-len(first_seen[tf]) for tf in FRAMES_ORDER},
+    }
     return {**SAFE,
             "status":"PRIVATE_FORWARD_VAULT_METADATA_ONLY",
             "counts":{tf:len(v["closed"][tf]) for tf in FRAMES_ORDER},
+            "firstSeenCoverage":first_seen_coverage,
             "quoteSamples":len(v["quoteObservations"]),
             "lastImportedUTC":v["lastImportedUTC"],
             # Only a retained BID/ASK receipt can establish observed freshness.

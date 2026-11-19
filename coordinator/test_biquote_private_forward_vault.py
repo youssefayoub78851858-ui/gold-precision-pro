@@ -144,6 +144,87 @@ class ForwardVault(unittest.TestCase):
         self.assertGreater(advanced["newClosedBars"]["M15"],0)
         self.assertEqual(len(load_vault(self.folder)["quoteObservations"]),2)
 
+    def test_first_seen_receipts_are_atomic_and_old_legacy_bars_remain_unknown(self):
+        import hashlib
+        with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+            first=ingest(self.folder,self.s,received_utc=iso(NOW))
+        doc=load_vault(self.folder)
+        recorded=doc["firstObservedClosedUTC"]
+        for tf in ("M15","H1","H4"):
+            self.assertEqual(set(recorded[tf]),{
+                bar["openTime"] for bar in doc["closed"][tf]})
+            self.assertTrue(all(x==iso(NOW) for x in recorded[tf].values()))
+        meta=inspect_metadata(self.folder,now_utc=NOW)
+        self.assertEqual(meta["firstSeenCoverage"]["status"],
+            "LOCAL_RECEIPTS_UNVERIFIED_NOT_TRADE_PROOF")
+        self.assertFalse(meta["firstSeenCoverage"]["independentFirstAvailabilityVerified"])
+        self.assertFalse(meta["firstSeenCoverage"]["paperOrdersAllowed"])
+        self.assertEqual(meta["firstSeenCoverage"]["recordedClosed"],first["totals"])
+        self.assertNotIn('"open"',json.dumps(meta))
+        # Emulate the already-persisted legacy schema-1 file, with no
+        # receipt metadata. New software MUST NOT fabricate historic times.
+        payload=doc.copy()
+        del payload["firstObservedClosedUTC"]
+        target=self.folder/FILE
+        def write_signed(p):
+            canonical=json.dumps(p,sort_keys=True,separators=(",",":"),
+                                 ensure_ascii=True)
+            digest=hashlib.sha256(canonical.encode()).hexdigest()
+            target.write_text(json.dumps({"payload":p,"sha256":digest}))
+        write_signed(payload)
+        self.assertNotIn("firstObservedClosedUTC",load_vault(self.folder))
+        old={tf:{x["openTime"] for x in payload["closed"][tf]}
+             for tf in ("M15","H1","H4")}
+        later=NOW+dt.timedelta(minutes=17)
+        with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+            new=ingest(self.folder,sample(later),received_utc=iso(later))
+        upgrade=load_vault(self.folder)
+        got=upgrade["firstObservedClosedUTC"]
+        for tf in ("M15","H1","H4"):
+            self.assertTrue(set(got[tf]).isdisjoint(old[tf]))
+            self.assertEqual(len(got[tf]),new["newClosedBars"][tf])
+            self.assertTrue(all(ts==iso(later) for ts in got[tf].values()))
+        summary=inspect_metadata(self.folder)
+        self.assertEqual(summary["firstSeenCoverage"]["unknownLegacyClosed"],
+                         {tf:len(old[tf]) for tf in old})
+        self.assertEqual(summary["signal"],"WAIT")
+        self.assertFalse(summary["paperOrdersAllowed"])
+        clean=target.read_bytes()
+        with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+            repeated=ingest(self.folder,sample(later),received_utc=iso(later))
+        self.assertEqual(repeated["status"],"NO_NEW_BARS")
+        self.assertEqual(target.read_bytes(),clean)
+
+    def test_first_seen_tampering_invalid_even_with_recomputed_digest(self):
+        import hashlib
+        ingest(self.folder,self.s,received_utc=iso(NOW))
+        target=self.folder/FILE
+        pristine=target.read_bytes()
+        original=load_vault(self.folder)
+        tf="M15"
+        oldest=next(iter(original["firstObservedClosedUTC"][tf]))
+        newest=next(reversed(original["firstObservedClosedUTC"][tf]))
+        cases=[
+            lambda p:p["firstObservedClosedUTC"][tf].update({oldest:"2026-11-17T00:00:00Z"}),
+            lambda p:p["firstObservedClosedUTC"][tf].update({oldest:iso(NOW+dt.timedelta(seconds=1))}),
+            lambda p:p["firstObservedClosedUTC"][tf].update({"2026-11-21T00:00:00Z":iso(NOW)}),
+            lambda p:p["firstObservedClosedUTC"][tf].update({oldest:True}),
+            lambda p:p["firstObservedClosedUTC"][tf].update({newest:"2026-11-18T00:00:00Z"}),
+        ]
+        try:
+            for alter in cases:
+                p=copy.deepcopy(original)
+                alter(p)
+                canonical=json.dumps(p,sort_keys=True,separators=(",",":"),
+                                     ensure_ascii=True)
+                digest=hashlib.sha256(canonical.encode()).hexdigest()
+                target.write_text(json.dumps({"payload":p,"sha256":digest}))
+                with self.assertRaises(ValueError):
+                    load_vault(self.folder)
+        finally:
+            target.write_bytes(pristine)
+        self.assertEqual(load_vault(self.folder),original)
+
     def test_quote_freshness_is_read_only_and_never_broker_entitlement(self):
         # No external requests, no orders, only a known synthetic receipt.
         no_capture=inspect_metadata(self.folder,now_utc=NOW)
