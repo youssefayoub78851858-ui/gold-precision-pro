@@ -397,8 +397,11 @@ class ForwardVault(unittest.TestCase):
             ("future_quote_tick",lambda v:v["quoteObservations"][-1].update(
                 {"tickUTC":"2026-11-19T03:05:40Z"}),
              "VAULT_QUOTE_RECEIPT_TIME_INVALID"),
-            ("future_candle_close",lambda v:v.update(
-                {"lastImportedUTC":"2026-11-18T23:00:00Z"}),
+            ("future_candle_close",lambda v:(
+                v.update({"lastImportedUTC":"2026-11-18T23:00:00Z"}),
+                v["quoteObservations"][-1].update({
+                    "observedUTC":"2026-11-18T23:00:00Z",
+                    "tickUTC":"2026-11-18T22:59:57Z"})),
              "VAULT_CANDLE_TIME_INVALID"),
         )
         for name,mutate,reason in cases:
