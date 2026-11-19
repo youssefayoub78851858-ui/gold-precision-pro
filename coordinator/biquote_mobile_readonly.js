@@ -11,6 +11,7 @@ const {analyzeChart}=require("./biquote_private_structure");
 const {makeMtfReadiness}=require("./biquote_mtf_readiness");
 const {examine:observeReferenceEma}=require("./biquote_observed_ema_reference");
 const {evaluateFrames:evaluateProviderSchedule}=require("./biquote_vendor_declared_session");
+const {observe:observeVendorH4Tail}=require("./biquote_vendor_h4_session_tail");
 const {observe:researchWatch}=require("./biquote_private_v3_watch");
 const URLS=Object.freeze({
  quote:"https://biquote.io/api/XAUUSD?allowStale=false",
@@ -228,6 +229,13 @@ async function snapshot({fetchFn=globalThis.fetch,nowMs=Date.now,authorization="
         origin:"AUTHENTICATED_PERSONAL_BIQUOTE_PRIVATE_CHART",
         priceBasis:"MID_WITH_POSSIBLE_BID_SEED",
         asOfUTC:sample.observedUTC,chart:rawPrivateChart
+      }),
+      // Independent, count-only research diagnostic across provider-
+      // declared weekend pauses. This can NEVER change V3's strict
+      // continuity requirement or paper/live order admission.
+      privateVendorH4Tail:observeVendorH4Tail({
+        origin:"AUTHENTICATED_PERSONAL_BIQUOTE_PRIVATE_CHART",
+        asOfUTC:sample.observedUTC,h4:rawPrivateChart.H4
       }),
       privateChartReadOnly:true,privateChartDataBasis:"MID_WITH_POSSIBLE_BID_SEED"}:{})}};
 }
