@@ -123,11 +123,21 @@ a.equal(withHorizon.h4CaptureHorizon.paperH4HistoryReachableByWindowEnd,false);
 a.equal(withHorizon.h4CaptureHorizon.tradeEligible,false);
 a.equal(withHorizon.h4CaptureHorizon.firstSeenVerified,false);
 a.equal(withHorizon.h4CaptureHorizonUnavailability,null);
+a.equal(withHorizon.h4EvidenceQuality.status,"NOT_READY_COUNT_ONLY");
+a.equal(withHorizon.h4EvidenceQuality.h4FullyCoveredCompared,2);
+a.equal(withHorizon.h4EvidenceQuality.h4NotFullyCovered,6);
+a.equal(withHorizon.h4EvidenceQuality.h4UnverifiedOrNotCompared,6);
+a.equal(withHorizon.h4EvidenceQuality.h4LatestConstituentsProven,false);
+a.equal(withHorizon.h4EvidenceQuality.h4WarmupDeficit,13);
+a.equal(withHorizon.h4EvidenceQuality.tradeEligible,false);
+a(withHorizon.h4EvidenceQuality.blockers.includes(
+ "H4_M15_OVERLAP_NOT_FULLY_VERIFIED"));
 const missingHorizon=extract({...packet,
  captureStartUTC:"2026-11-18T00:00:00Z",
  captureEndUTC:"2026-11-25T00:00:00Z"});
 safe(missingHorizon);
 a.equal(missingHorizon.h4CaptureHorizon,null);
+a.equal(missingHorizon.h4EvidenceQuality,null);
 a.equal(missingHorizon.h4CaptureHorizonUnavailability,
  "STAGE3_CYCLE_INCOMPLETE_NO_H4_HORIZON");
 const loneBound=extract({...full,
@@ -139,6 +149,7 @@ const wrongCutoff=extract({...requestedHorizon,
 safe(wrongCutoff);
 a.equal(wrongCutoff.h4CaptureHorizon.status,"BLOCKED");
 a.equal(wrongCutoff.h4CaptureHorizon.tradeEligible,false);
+a.equal(wrongCutoff.h4EvidenceQuality.status,"BLOCKED");
 const contradictory=structuredClone(full);
 const overlapRecord=contradictory.logs.find(x=>x.message.includes(
  '"BIQUOTE_STAGE3_ARCHIVE_OHLC_OVERLAP"'));
