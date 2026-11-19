@@ -85,3 +85,22 @@ test("historical cross-frame audit counts a mismatched fully covered H1 bar",()=
  const result=localCoveredParityAudit(validateChart(source,now));
  assert.ok(result.H1.disagreed>=1);
 });
+
+test("latest parity refuses missing M15 constituents even with plausible higher frames",()=>{
+ const source=chart(now);
+ // Remove one required M15 candle; chart validator accepts bounded historical gaps,
+ // but the parity guard must never treat a gap as matching higher frames.
+ source.M15.splice(20,1);
+ const checked=validateChart(source,now);
+ assert.ok(checked);
+ assert.equal(localLatestParity(checked),false);
+ const {localCoveredParityAudit}=require("../../review-dashboard.js");
+ const audit=localCoveredParityAudit(checked);
+ assert.ok(audit.H1.fullyCovered<6);
+});
+test("snapshot rejects absent rights and research safety fields",()=>{
+ const packet={signal:"WAIT",executable:false,researchEligible:true,
+  tradePlanExecutable:false,paperOrdersAllowed:false,orderEndpointsCalled:false,
+  status:"OBSERVED_READONLY_UNVERIFIED"};
+ assert.equal(validateSnapshot(packet,now),null);
+});
