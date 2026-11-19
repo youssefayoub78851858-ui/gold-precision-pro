@@ -43,5 +43,5 @@ jobs:
           grep -q 'displayVendorH4Tail(data.privateVendorH4Tail,acceptedChart)' biquote-mobile-ui.js
           grep -q 'privateVendorH4Tail:observeVendorH4Tail' coordinator/biquote_mobile_readonly.js
           grep -q 'id="gdc-v3-watch"' ultimate.html
-          grep -q 'renderFrozenV3ResearchWatch(data.privateTechnicalWatch)' biquote-mobile-ui.js
+          grep -Fq 'renderFrozenV3ResearchWatch(data.privateTechnicalWatch,' biquote-mobile-ui.js
           grep -q 'privateTechnicalWatch:researchWatch' coordinator/biquote_mobile_readonly.js
