@@ -22,6 +22,7 @@ function base(status,reason,extra={}){
   originalBrokerIdentified:false,
   originalBrokerCalendarVerified:false,
   brokerMarketDataRightsVerified:false,
+  observedClosedH4Bars:0,
   strictUtcH4Tail:0,
   providerDeclaredSessionAdjacentH4Tail:0,
   providerDeclaredPauseGapPairs:0,
@@ -64,6 +65,14 @@ function observe(input){
      v<=0||v>=1e8)||row.high<Math.max(row.open,row.close)||
      row.low>Math.min(row.open,row.close))
    return base("BLOCKED","INVALID_CLOSED_H4_PRICE_GEOMETRY");
+  // A bar that exists wholly inside the supplier's own stated weekend
+  // closure is contradictory to that declaration. Reject the scenario
+  // rather than silently counting manufactured weekend candles.
+  if(slotClosed(t,H4)===true)
+   return base("WAIT_SOURCE_SCHEDULE_CONTRADICTION",
+     "OBSERVED_H4_INSIDE_PROVIDER_DECLARED_FULL_CLOSURE",{
+      observedClosedH4Bars:bars.length
+     });
   if(prev===null){strict=1;adjacent=1;}
   else{
    const missing=(t-prev)/H4-1;
