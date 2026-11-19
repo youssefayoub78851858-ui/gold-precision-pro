@@ -9,6 +9,7 @@ for(let i=0;i<9;i++){
  const rec={archiveRejectedSnapshotsSoFar:7,archiveSavedSnapshotsSoFar:324+i,
   asOfUTC:iso(t+3033),event:"BIQUOTE_REVIEW24H_SAMPLE",slot:330+i,
   httpAllOk:true,geometryChecksOk:false,
+  archiveRejectionClass:"NONE",
   geometryFailureClass:"UNCLASSIFIED_M15_COVERAGE_GAP",
   signal:"WAIT",executable:false,
   geometryDetail:{privateQuotePrice:"SENSITIVE_NEVER_RETURN"}};
@@ -48,6 +49,7 @@ const good=extract(packet);safe(good);
 a.equal(good.status,"OBSERVED_LOG_CADENCE_ONLY_NOT_MARKET_PROOF");
 a.equal(good.sampleCount,9);
 a.equal(good.recordedArchiveIncrease,8);
+a.equal(good.newlyRejectedArchiveClasses.CLOSED_HISTORY_FRESHNESS,0);
 a.equal(good.latestSavedSnapshots,332);
 a.equal(good.renderLogEventsParsed,11);
 a.equal(good.renderLogEventsIgnored,1);
@@ -113,6 +115,19 @@ overlapRecord.message="BIQUOTE_SEVEN_DAY_STATUS "+JSON.stringify(contradiction);
 const refused=extract(contradictory);safe(refused);
 a.equal(refused.status,"BLOCKED");
 a(refused.blockerCodes.includes("CONTRADICTORY_STAGE3_COUNT_EVIDENCE"));
+// One saved snapshot becomes a freshness rejection in the latest slot.
+const stale=structuredClone(packet);
+const finalSample=stale.logs.find(x=>x.message.includes('"slot":338'));
+const finalBody=JSON.parse(finalSample.message);
+finalBody.archiveSavedSnapshotsSoFar=331;
+finalBody.archiveRejectedSnapshotsSoFar=8;
+finalBody.archiveRejectionClass="CLOSED_HISTORY_FRESHNESS";
+finalSample.message=JSON.stringify(finalBody);
+const staleAudit=extract(stale);safe(staleAudit);
+a.equal(staleAudit.status,"OBSERVED_LOG_CADENCE_ONLY_NOT_MARKET_PROOF");
+a.equal(staleAudit.recordedArchiveRejectionsIncrease,1);
+a.equal(staleAudit.newlyRejectedArchiveClasses.CLOSED_HISTORY_FRESHNESS,1);
+a(staleAudit.blockerCodes.includes("ARCHIVE_CLOSED_HISTORY_FRESHNESS_REJECTED"));
 // If one collector sample is missing, absent evidence is not invented.
 const missing=structuredClone(packet);
 missing.logs=missing.logs.filter(x=>!x.message.includes('"slot":334'));
@@ -132,6 +147,9 @@ for(const mutate of [
      let v=JSON.parse(x.message);v.signal="BUY";x.message=JSON.stringify(v);},
  p=>{let x=p.logs.find(x=>x.message.includes('"slot":335'));
      let v=JSON.parse(x.message);v.geometryFailureClass="PRIVATE_SPREAD";
+     x.message=JSON.stringify(v);},
+ p=>{let x=p.logs.find(x=>x.message.includes('"slot":335'));
+     let v=JSON.parse(x.message);v.archiveRejectionClass="PRIVATE_FEED_PAYLOAD";
      x.message=JSON.stringify(v);},
  p=>{let x=p.logs.find(x=>x.message.includes('"slot":335'));
      let v=JSON.parse(x.message);v.archiveRejectedSnapshotsSoFar=8;x.message=JSON.stringify(v);},
