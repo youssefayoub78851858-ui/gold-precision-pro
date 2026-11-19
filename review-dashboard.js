@@ -210,6 +210,17 @@
    add("rect",{x:at-w/2,y:Math.min(y(x.open),y(x.close)),
      width:w,height:Math.max(1,Math.abs(y(x.close)-y(x.open))),fill:color});
   });
+  // Time labels come only from validated closed candles, never projected bars.
+  for(const i of [0,Math.floor((rows.length-1)/2),rows.length-1]){
+   const bar=rows[i],label=document.createElementNS("http://www.w3.org/2000/svg","text");
+   label.setAttribute("x",String(18+(i+.5)*600/rows.length));
+   label.setAttribute("y","290");label.setAttribute("text-anchor","middle");
+   label.setAttribute("fill","#aab5c4");label.setAttribute("font-size","11");
+   label.textContent=new Date(bar.t+WIDTH[frame]).toLocaleString("en-GB",{
+    timeZone:"Asia/Beirut",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"
+   });
+   svg.appendChild(label);
+  }
   $("chart-status").textContent=frame+" — "+rows.length+
     " شمعة BiQuote مغلقة، MID وربما بذرة BID · عرض شخصي غير قابل للتنفيذ";
  }
