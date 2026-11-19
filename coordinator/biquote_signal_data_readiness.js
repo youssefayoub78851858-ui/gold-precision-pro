@@ -39,6 +39,8 @@ function base(status,extra={}){
   latestExpectedUTCGridClosedObservedAtDecision:FALSE(),
   technicalWarmupMissing:{M15:WARMUP,H1:WARMUP,H4:WARMUP},
   paperHistoryMissing:{M15:PAPER,H1:PAPER,H4:PAPER},
+  warmupCrossFrameRequiredH4:WARMUP,warmupCrossFrameMatchedH4:0,
+  warmupCrossFrameFullyVerified:false,
   localTimingAndParityCheck:"NOT_PROVEN",localGeometryObserved:false,...extra};
 }
 function parseRows(rows,tf){
@@ -80,6 +82,40 @@ function latestParity(frames){
      !equalPrice(parts.at(-1).close,last.close))return false;
  }
  return true;
+}
+// The latest H4 alone is insufficient: EMA/RSI warmup can consume older
+// H4 bars whose H1/M15 constituents were missing or revised. For the
+// last 21 locally-received consecutive H4 candles, prove that all 16
+// M15 and four H1 members were RECEIVED before decision and OHLC agree.
+// This remains local equality, not independent vendor/execution evidence.
+function warmupCrossFrameParity(frames){
+ const h4=contiguous(frames.H4,"H4").slice(-WARMUP);
+ if(h4.length!==WARMUP)return {matched:0,proven:false};
+ const m15=new Map(frames.M15.map(b=>[b.t,b]));
+ const h1=new Map(frames.H1.map(b=>[b.t,b]));
+ const matches=(whole,members)=>{
+  if(members.some(x=>!x))return false;
+  return equalPrice(whole.open,members[0].open)&&
+   equalPrice(whole.high,Math.max(...members.map(x=>x.high)))&&
+   equalPrice(whole.low,Math.min(...members.map(x=>x.low)))&&
+   equalPrice(whole.close,members.at(-1).close);
+ };
+ let matched=0;
+ for(const bar of h4){
+  const quarters=Array.from({length:16},(_,i)=>
+   m15.get(bar.t+i*WIDTH.M15));
+  const hours=Array.from({length:4},(_,i)=>
+   h1.get(bar.t+i*WIDTH.H1));
+  if(!matches(bar,quarters)||!matches(bar,hours))continue;
+  let hoursMatch=true;
+  for(const hour of hours){
+   const hourMembers=Array.from({length:4},(_,i)=>
+    m15.get(hour.t+i*WIDTH.M15));
+   if(!matches(hour,hourMembers)){hoursMatch=false;break;}
+  }
+  if(hoursMatch)matched++;
+ }
+ return {matched,proven:matched===WARMUP};
 }
 function assess(input){
  const origin=input?.dataOrigin;
@@ -166,12 +202,15 @@ function assess(input){
    blockers.push(tf+"_EXPECTED_UTC_CLOSED_SLOT_NOT_OBSERVED");
  }
  const parity=latestParity(available);
+ const warmupParity=warmupCrossFrameParity(available);
  if(!parity)blockers.push("LATEST_CLOSED_M15_H1_H4_OHLC_PARITY_UNPROVEN");
+ if(!warmupParity.proven)
+  blockers.push("H4_21_CLOSED_BARS_M15_H1_CROSS_FRAME_PARITY_UNPROVEN");
  const localReady=Object.values(warm).every(n=>n===0)&&
   Object.values(latestEligibleObserved).every(Boolean)&&
   Object.values(latestGridObserved).every(Boolean)&&
   Object.values(lastAge).every((n,i)=>Number.isFinite(n)&&
-   n>=0&&n<=MAX_AGE[Object.keys(WIDTH)[i]])&&parity;
+   n>=0&&n<=MAX_AGE[Object.keys(WIDTH)[i]])&&parity&&warmupParity.proven;
  return base(localReady?"LOCAL_GEOMETRY_ONLY_NOT_TRADE_READY":"INSUFFICIENT_EVIDENCE",{
   asOfUTC:new Date(asOf).toISOString().replace(".000Z","Z"),
   storedClosedCounts:counts,observedAtDecision:observed,
@@ -180,6 +219,8 @@ function assess(input){
   latestEligibleClosedObservedAtDecision:latestEligibleObserved,
   latestExpectedUTCGridClosedObservedAtDecision:latestGridObserved,
   technicalWarmupMissing:warm,paperHistoryMissing:paper,
+  warmupCrossFrameMatchedH4:warmupParity.matched,
+  warmupCrossFrameFullyVerified:warmupParity.proven,
   localTimingAndParityCheck:localReady?"LOCAL_ONLY_NOT_INDEPENDENT":"NOT_PROVEN",
   blockers,
   // This is never a signal-admission flag: independent upstream evidence is missing.
