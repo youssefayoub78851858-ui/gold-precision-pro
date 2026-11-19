@@ -169,11 +169,12 @@ function renderSignalRoadmap(vault,watchSide){
       Math.min(21,continuity.H1)+"/21، H4 "+Math.min(21,continuity.H4)+
       "/21 شمعة متصلة — استراحة السوق غير المؤكدة قد تعيد العداد"
    :"فحص V3 الفني: WAIT — التتابع غير مثبت، لا بيانات مفترضة";
- el("signal-roadmap-paper").textContent=counts
-   ?"حدّ تاريخ التداول الورقي (عدد فقط): M15 "+Math.min(50,counts.M15)+
-     "/50، H1 "+Math.min(50,counts.H1)+"/50، H4 "+
-     Math.min(50,counts.H4)+"/50 — لا يفتح التداول عند اكتماله"
-   :"حدّ تاريخ التداول الورقي: WAIT — العدد غير مؤكد";
+ el("signal-roadmap-paper").textContent=counts&&continuity
+   ?"حدّ تاريخ التداول الورقي المتتالي (عدد فقط): M15 "+Math.min(50,continuity.M15)+
+     "/50، H1 "+Math.min(50,continuity.H1)+"/50، H4 "+
+     Math.min(50,continuity.H4)+"/50 — إجمالي H4 محفوظ: "+counts.H4+
+     "؛ ما بيفتح التداول قبل إثبات الحقوق والتوقيت والتكاليف"
+   :"حدّ تاريخ التداول الورقي: WAIT — عدد الشموع المتتالية غير مؤكد";
  // The receipt map is LOCAL collection-time evidence, not the provider's
  // publication timestamp, a broker session calendar, or license proof.
  // An older deployed collector has NO firstSeenCoverage property: report
