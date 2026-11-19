@@ -51,6 +51,13 @@ a.equal(got.h4FullyCoveredDisagreed,0);
 a.equal(got.h4WarmupDeficit,12);
 a.equal(got.h4PaperHistoryDeficit,41);
 a.equal(got.maxPossibleContiguousH4ByCaptureEnd,42);
+a.equal(got.providerDeclaredBestH4ConsecutiveByCaptureEnd,18);
+a.equal(got.providerDeclaredEndH4Consecutive,13);
+a.equal(got.providerDeclaredFullWeekendPauseH4Slots,11);
+a.equal(got.providerDeclared21WarmupReachable,false);
+a.equal(got.providerDeclared50PaperReachable,false);
+a.equal(got.providerDeclaredBrokerCalendarVerified,false);
+a(got.blockers.includes("H4_21_WARMUP_UNREACHABLE_UNDER_BIQUOTE_DECLARED_WEEKEND_SCENARIO"));
 a(got.blockers.includes("H4_CONTIGUOUS_PAPER_HISTORY_SHORT"));
 a(got.blockers.includes("H4_M15_OVERLAP_NOT_FULLY_VERIFIED"));
 a(got.blockers.includes("LATEST_H4_M15_BAR_IDENTITY_NOT_PRESENT_IN_COUNT_LOGS"));
@@ -81,6 +88,9 @@ a.equal(optimistic.h4WarmupDeficit,0);
 a.equal(optimistic.h4PaperHistoryDeficit,0);
 a.equal(optimistic.h4UnverifiedOrNotCompared,0);
 a.equal(optimistic.h4LatestConstituentsProven,false);
+a.equal(optimistic.providerDeclaredBestH4ConsecutiveByCaptureEnd,64);
+a.equal(optimistic.providerDeclared21WarmupReachable,true);
+a.equal(optimistic.providerDeclared50PaperReachable,true);
 a(optimistic.blockers.includes("LATEST_H4_M15_BAR_IDENTITY_NOT_PRESENT_IN_COUNT_LOGS"));
 // Malformed or inconsistent *untrusted* count combinations fail closed.
 for(const mutate of [
@@ -98,6 +108,10 @@ for(const mutate of [
  x=>{x.h4CaptureHorizon.paperOrdersAllowed=true;},
  x=>{x.h4CaptureHorizon.firstSeenVerified=true;},
  x=>{x.h4CaptureHorizon.maxPossibleContiguousH4=99;},
+ x=>{x.h4CaptureHorizon.providerDeclaredH4Projection.originalBrokerScheduleVerified=true;},
+ x=>{x.h4CaptureHorizon.providerDeclaredH4Projection.providerDeclaredFullPauseH4Slots=0;},
+ x=>{x.h4CaptureHorizon.providerDeclaredH4Projection.technicalWarmup21ReachableUnderDeclaration=true;},
+ x=>{delete x.h4CaptureHorizon.providerDeclaredH4Projection;},
  x=>{delete x.h4CaptureHorizon;},
  ]){
  const item=structuredClone(input);mutate(item);
