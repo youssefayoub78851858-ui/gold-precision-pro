@@ -4,6 +4,8 @@ on:
     branches: [review/v2-portable-tests-20261109]
     paths:
       - 'coordinator/biquote_private_forward_vault.py'
+      - 'coordinator/biquote_collector_log_cadence_gate.js'
+      - 'coordinator/test_biquote_collector_log_cadence_gate.js'
       - 'coordinator/test_biquote_private_forward_vault.py'
       - 'coordinator/test_biquote_first_seen_collector_cutover.py'
       - 'coordinator/biquote_collector_backup_preflight.py'
@@ -39,6 +41,11 @@ jobs:
     timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Sanitized Render collector log continuity only, WAIT, no provider or vault access
+        run: node coordinator/test_biquote_collector_log_cadence_gate.js
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
