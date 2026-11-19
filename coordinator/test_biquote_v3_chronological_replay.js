@@ -55,6 +55,22 @@ const gapped=structuredClone(frames);gapped.H4.splice(20,1);
 const noBridge=inspect({...origin,frames:gapped});
 a.equal(noBridge.status,"BLOCKED");
 a.equal(noBridge.technicalWatchCounts.BUY,0);
+// Earlier covered H4/H1 bars must NOT mask a missing last closed candle.
+const cutM15=frames.M15.slice(-128);
+const cutH1=frames.H1.slice(-26);
+const cutH4=frames.H4.slice(-7);
+const {parity}=require("./biquote_v3_chronological_replay");
+a.equal(parity({M15:cutM15,H1:cutH1,H4:cutH4}),true);
+const latestH4Open=Date.parse(cutH4.at(-1).datetime);
+const brokenH4={M15:cutM15.filter(x=>Date.parse(x.datetime)!==latestH4Open+15*900000),
+ H1:cutH1,H4:cutH4};
+a.equal(parity(brokenH4),false,
+ "Missing one M15 in the LAST closed H4 must veto overlap proof");
+const latestH1Open=Date.parse(cutH1.at(-1).datetime);
+const brokenH1={M15:cutM15.filter(x=>Date.parse(x.datetime)!==latestH1Open+3*900000),
+ H1:cutH1,H4:cutH4};
+a.equal(parity(brokenH1),false,
+ "Missing one M15 in the LAST closed H1 must veto overlap proof");
 // A contradicting H4 close cannot be accepted as matched M15 geometry.
 const conflict=structuredClone(frames);
 for(const candle of conflict.H4)candle.high+=50;

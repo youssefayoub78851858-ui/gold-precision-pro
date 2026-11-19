@@ -52,10 +52,18 @@ function parity(frames){
  const map=new Map(frames.M15.map(x=>[stamp(x.datetime),x]));
  let checked={H1:0,H4:0};
  for(const [tf,n] of [["H1",4],["H4",16]]){
-  for(const bar of frames[tf]){
+  const higher=frames[tf];
+  // Earlier overlap is not proof for the latest CLOSED decision candle.
+  // The most recent higher-timeframe OHLC must be entirely covered by
+  // already closed, timestamp-aligned M15 bars; never bridge a gap.
+  if(!Array.isArray(higher)||higher.length===0)return false;
+  for(const [index,bar] of higher.entries()){
    const t=stamp(bar.datetime);
    const group=Array.from({length:n},(_,i)=>map.get(t+i*WIDTH.M15));
-   if(group.some(x=>!x))continue;
+   if(group.some(x=>!x)){
+    if(index===higher.length-1)return false;
+    continue;
+   }
    const expected={open:group[0].open,high:Math.max(...group.map(b=>b.high)),
     low:Math.min(...group.map(b=>b.low)),close:group.at(-1).close};
    // Strictly same price basis ONLY; a mismatch is never "fixed".
