@@ -75,6 +75,85 @@ function parity(frames){
  }
  return checked.H1>0&&checked.H4>0;
 }
+function observedReceiptAudit(parsed,firstSeen,cutoff){
+ // Separate local collector observation from RETROSPECTIVE outcomes.
+ // Legacy bars without immutable firstSeen receipt are never promoted to a
+ // point-in-time watch. This is NOT independently authenticated provider time.
+ const ZERO={BUY:0,SELL:0,NONE:0};
+ const base={mode:"BIQUOTE_V3_LOCAL_FIRST_SEEN_RECEIPT_AUDIT_ONLY",
+   signal:"WAIT",executable:false,paperOrdersAllowed:false,
+   brokerOrdersSent:0,sourceRightsVerified:false,
+   independentReceiptVerified:false,brokerFillsModeled:false,
+   winRate:null,netExpectancy:null,observedDecisionCount:0,
+   technicalWatchCounts:ZERO,firstObservedBarCounts:{M15:0,H1:0,H4:0},
+   legacyMissingReceiptCounts:{M15:0,H1:0,H4:0}};
+ const fail=reason=>({...base,status:"BLOCKED",reason});
+ if(firstSeen===undefined)return fail("NO_LOCAL_RECEIPT_METADATA_LEGACY");
+ if(!firstSeen||typeof firstSeen!=="object"||
+    Array.isArray(firstSeen)||
+    Object.keys(firstSeen).sort().join(",")!=="H1,H4,M15")
+   return fail("MALFORMED_FIRST_SEEN_FRAMES");
+ const source={},received={},counts={},unknown={};
+ for(const [tf,width] of Object.entries(WIDTH)){
+  const records=firstSeen[tf],bars=parsed[tf];
+  if(!records||typeof records!=="object"||Array.isArray(records))
+   return fail("MALFORMED_FIRST_SEEN_FRAME");
+  const lookups=new Set(bars.map(b=>b.datetime));
+  if(Object.keys(records).some(k=>!lookups.has(k)))
+   return fail("FIRST_SEEN_CANDLE_NOT_IN_ARCHIVE");
+  let last=-Infinity;
+  const converted=new Map();
+  for(const bar of bars){
+   const value=records[bar.datetime];
+   if(value===undefined)continue;
+   if(typeof value!=="string"||
+      !/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(value))
+    return fail("INVALID_FIRST_SEEN_RECEIPT_UTC");
+   const seen=Date.parse(value);
+   if(!Number.isFinite(seen)||seen<bar._t+width||seen<last)
+    return fail("FIRST_SEEN_BEFORE_CLOSE_OR_NONMONOTONIC");
+   last=seen;converted.set(bar.datetime,seen);
+  }
+  source[tf]=converted;counts[tf]=converted.size;
+  unknown[tf]=bars.length-converted.size;
+ }
+ const times=[...new Set(source.M15.values())].filter(x=>x<=cutoff)
+   .sort((a,b)=>a-b).slice(-MAX_REPLAY);
+ let observed=0,skipped=0;
+ const watches={BUY:0,SELL:0,NONE:0};
+ for(const asOf of times){
+  // Drop all legacy candles and each candle FIRST OBSERVED after this
+  // decision time, EVEN IF its close/open time was much earlier.
+  const frames=Object.fromEntries(Object.entries(WIDTH).map(([tf,width])=>{
+   const available=parsed[tf].filter(bar=>bar._t+width<=asOf&&
+     source[tf].has(bar.datetime)&&source[tf].get(bar.datetime)<=asOf);
+   return [tf,suffix(available,width,asOf)];
+  }));
+  if(Object.values(frames).some(rows=>rows.length<MIN)||!parity(frames)){
+   skipped++;continue;
+  }
+  const report=reviewFourStages({
+   dataOrigin:"BIQUOTE_ARCHIVED_UNVERIFIED_NO_PAPER",
+   snapshot:{asOfUTC:new Date(asOf).toISOString().replace(".000Z","Z"),
+    frames,feeds:{},spread:null,risk:{killSwitch:true,activeTrades:0}}
+  });
+  if(report.signal!=="WAIT"||report.executable!==false||
+     report.paperOrdersAllowed!==false||report.hypotheticalSyntheticPlan!==null||
+     report.stages?.data?.status!=="GEOMETRY_ONLY"||
+     report.stages?.analysis?.status!=="FROZEN_ENGINE_EVALUATED"){
+   skipped++;continue;
+  }
+  const side=report.stages.analysis.technicalCandidate;
+  if(!Object.hasOwn(watches,side)){skipped++;continue;}
+  watches[side]++;observed++;
+ }
+ return {...base,status:observed?"LOCAL_RECEIPT_WATCHES_NOT_TRADE_PROOF":
+                   "NO_TIME_ELIGIBLE_WATCHES",
+  reason:"LOCAL_COLLECTOR_TIMESTAMPS_ONLY_NO_BROKER_PROOF",
+  observedDecisionCount:observed,skippedDecisionCount:skipped,
+  technicalWatchCounts:watches,firstObservedBarCounts:counts,
+  legacyMissingReceiptCounts:unknown};
+}
 function blocked(code,totals={M15:0,H1:0,H4:0}){
  return {...safe,status:"BLOCKED",blocker:code,
   storedClosedCounts:totals,retrospectiveDecisionCount:0,
@@ -92,6 +171,7 @@ function inspect(input){
   [tf,parseRows(input.frames?.[tf],width)]));}
  catch{return blocked("UNSAFE_OR_MALFORMED_CLOSED_ARCHIVE");}
  const counts=Object.fromEntries(Object.keys(WIDTH).map(tf=>[tf,parsed[tf].length]));
+ const receiptAudit=observedReceiptAudit(parsed,input.firstObservedClosedUTC,cutoff);
  const m15=parsed.M15.filter(x=>x._t+WIDTH.M15<=cutoff);
  let checked=0, skipped=0;
  const observations={BUY:0,SELL:0,NONE:0};
@@ -127,10 +207,11 @@ function inspect(input){
   storedClosedCounts:counts,
   retrospectiveDecisionCount:checked,skippedDecisionCount:skipped,
   technicalWatchCounts:observations,
+  firstSeenReceiptAudit:receiptAudit,
   noFutureCandlesUsed:true,replayOnlyNotPointInTime:true,
   explanation:"Final OHLC archive is retrospectively filtered by close time. Per-bar FIRST-SEEN times, broker quotes, rights and costs are missing; do not call this an untouched prospective test."};
 }
-module.exports={inspect,stamp,parseRows,suffix,parity};
+module.exports={inspect,stamp,parseRows,suffix,parity,observedReceiptAudit};
 if(require.main===module){
  try{
   let raw="";

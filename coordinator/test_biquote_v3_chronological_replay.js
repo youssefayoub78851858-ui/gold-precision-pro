@@ -35,6 +35,44 @@ a.equal(good.brokerOrdersSent,0);
 const printed=JSON.stringify(good);
 for(const s of ['"open"','"high"','"low"','"close"','"bid"','"ask"','"spread"'])
  a.equal(printed.includes(s),false,"No prices or quotes in report");
+// Receipt-time replay excludes candles until their REAL LOCAL FIRST-SEEN
+// timestamp, even if the historical OHLC was already closed. These are
+// synthetic receipts, NEVER proof of independent live market delivery.
+const known=Object.fromEntries(Object.entries(frames).map(([tf,rows])=>
+ [tf,Object.fromEntries(rows.map(bar=>[
+  bar.datetime,iso(Date.parse(bar.datetime)+
+   ({M15:900000,H1:3600000,H4:14400000}[tf])+1000)
+ ]))]));
+const withReceipts=inspect({...origin,firstObservedClosedUTC:known});
+const observed=withReceipts.firstSeenReceiptAudit;
+a.equal(observed.signal,"WAIT");
+a.equal(observed.executable,false);
+a.equal(observed.paperOrdersAllowed,false);
+a.equal(observed.independentReceiptVerified,false);
+a.equal(observed.sourceRightsVerified,false);
+a(observed.observedDecisionCount>0);
+a.equal(observed.status,"LOCAL_RECEIPT_WATCHES_NOT_TRADE_PROOF");
+a.equal(observed.netExpectancy,null);
+const laterFirstSeen=Object.fromEntries(Object.entries(frames).map(([tf,rows])=>
+ [tf,Object.fromEntries(rows.map(bar=>[
+  bar.datetime,iso(START+500*900000)
+ ]))]));
+const delayed=inspect({...origin,firstObservedClosedUTC:laterFirstSeen});
+a.equal(delayed.firstSeenReceiptAudit.observedDecisionCount,0);
+a.equal(delayed.firstSeenReceiptAudit.status,"NO_TIME_ELIGIBLE_WATCHES");
+const missingLegacy=structuredClone(known);
+for(const key of Object.keys(missingLegacy.H4))delete missingLegacy.H4[key];
+const legacy=inspect({...origin,firstObservedClosedUTC:missingLegacy});
+a.equal(legacy.firstSeenReceiptAudit.observedDecisionCount,0);
+a.equal(legacy.firstSeenReceiptAudit.legacyMissingReceiptCounts.H4,frames.H4.length);
+for(const forged of [
+ {...known,H4:{...known.H4,UNKNOWN:"2026-11-20T00:00:00Z"}},
+ {...known,H1:{...known.H1,[frames.H1.at(-1).datetime]:"2026-11-18T00:00:00Z"}},
+]){
+ const bad=inspect({...origin,firstObservedClosedUTC:forged});
+ a.equal(bad.firstSeenReceiptAudit.status,"BLOCKED");
+ a.equal(bad.firstSeenReceiptAudit.observedDecisionCount,0);
+}
 // Fixed cutoff makes previous observations immutable to future price edits.
 const cutoff=iso(START+400*900000);
 const before=inspect({...origin,decisionCutoffUTC:cutoff});
