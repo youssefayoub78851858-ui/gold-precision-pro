@@ -114,6 +114,35 @@
     Array.from({length:4},(_,i)=>
       maps.M15.get(hour.t+i*WIDTH.M15))));
  }
+ // Check EVERY higher-timeframe candle for which all its M15
+ // constituents are present in this bounded private snapshot, not merely
+ // the latest H1/H4. Counts remain observational, NEVER trade authority.
+ function localCoveredParityAudit(chart){
+  if(!chart||!Array.isArray(chart.M15)||!Array.isArray(chart.H1)||
+     !Array.isArray(chart.H4))return null;
+  const m15=new Map(chart.M15.map(x=>[x.t,x]));
+  const near=(x,y)=>Number.isFinite(x)&&Number.isFinite(y)&&
+    Math.abs(x-y)<=Math.max(.00001,Math.abs(y)*1e-8);
+  const equal=(whole,parts)=>Boolean(whole)&&parts.length>0&&
+    parts.every(Boolean)&&
+    near(whole.open,parts[0].open)&&
+    near(whole.high,Math.max(...parts.map(x=>x.high)))&&
+    near(whole.low,Math.min(...parts.map(x=>x.low)))&&
+    near(whole.close,parts.at(-1).close);
+  const result={H1:{fullyCovered:0,disagreed:0},
+                H4:{fullyCovered:0,disagreed:0}};
+  for(const tf of ["H1","H4"]){
+   const n=tf==="H1"?4:16;
+   for(const whole of chart[tf]){
+    const parts=Array.from({length:n},(_,i)=>
+      m15.get(whole.t+i*WIDTH.M15));
+    if(parts.some(x=>!x))continue;
+    result[tf].fullyCovered++;
+    if(!equal(whole,parts))result[tf].disagreed++;
+   }
+  }
+  return result;
+ }
  function researchWatch(result){
   const d=result.d,v=d.privateTechnicalWatch,c=result.comparisons;
   if(!v||v.mode!=="PRIVATE_FROZEN_V3_TECHNICAL_WATCH_ONLY"||
@@ -129,10 +158,16 @@
      v.privateChartMaxBarsPerFrame!==48||
      v.full21H4CrossFrameAuditPossibleFromPrivateSnapshot!==false)
    return "WAIT — فحص V3 غير مؤكد";
+  const localAudit=localCoveredParityAudit(result.chart);
   const clean=d.status==="OBSERVED_READONLY_UNVERIFIED"&&
     localLatestParity(result.chart)===true&&
-    ["H1","H4"].every(tf=>c[tf].completeMatches>=1&&
-      c[tf].completeMismatches===0&&c[tf].incompleteM15Groups===0);
+    localAudit!==null&&
+    ["H1","H4"].every(tf=>
+      localAudit[tf].fullyCovered>=1&&
+      localAudit[tf].disagreed===0&&
+      c[tf].completeMatches>=localAudit[tf].fullyCovered&&
+      c[tf].completeMismatches===0&&
+      c[tf].incompleteM15Groups===0);
   if(clean&&v.status==="TECHNICAL_WATCH_ONLY_NOT_TRADE_READY"&&
      v.lastCrossFrameParityObserved===true&&
      (v.technicalCandidate==="BUY"&&v.watchLabel==="WATCH_BUY"||
@@ -142,7 +177,8 @@
  }
  // Pure validators are exposed only to local Node offline tests.
  if(typeof module!=="undefined"&&module.exports)
-  module.exports={validateChart,validateSnapshot,localLatestParity,researchWatch};
+  module.exports={validateChart,validateSnapshot,localLatestParity,
+    localCoveredParityAudit,researchWatch};
  if(typeof document==="undefined")return;
  const $=id=>document.getElementById(id);
  let frame="M15",state=null,pending=false,expiry=0;
