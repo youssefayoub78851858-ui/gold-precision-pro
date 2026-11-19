@@ -28,6 +28,7 @@ from biquote_private_forward_vault import (
 from biquote_forward_shadow_review import shadow_review as forward_shadow_review
 from biquote_seven_day_review import (
     run_seven_days, SEVEN_DAY_ENV, SEVEN_DAY_VALUE,
+    RENEWAL_START_ENV,
 )
 from ultimate_batch_acceptance import review_batch as four_stage_batch_review
 from xauusd_feed_gate import parse_utc
@@ -115,7 +116,11 @@ def run_biquote_readonly_review():
   # Capture and review are ONE worker using the SAME four GETs per slot;
   # never run a second archive polling thread alongside the review thread.
   if biquote_seven_day_enabled:
-   result=run_seven_days(forward_vault_dir,anchor=start)
+   # Original fixed start remains unchanged by default. A new, exact
+   # seven-day anchor requires a SECOND reviewed opt-in in the worker.
+   renewal=os.environ.get(RENEWAL_START_ENV,'').strip()
+   anchor=parse_utc(renewal) if renewal else start
+   result=run_seven_days(forward_vault_dir,anchor=anchor)
    print('BIQUOTE_SEVEN_DAY_REVIEW_FINISHED '+json.dumps({
        'status':result['status'],'windowsCompleted':result['windowsCompleted'],
        'signal':'WAIT','executable':False}),flush=True)

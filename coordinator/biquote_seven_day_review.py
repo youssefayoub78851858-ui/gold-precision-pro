@@ -32,6 +32,10 @@ UTC = dt.timezone.utc
 DAYS = 7
 SEVEN_DAY_ENV = "GPP_BIQUOTE_7DAY_FORWARD_REVIEW"
 SEVEN_DAY_VALUE = "APPROVED_SEVEN_DAYS_READONLY_NO_TRADING"
+# A second seven-day review must not inherit the first window's consent.
+RENEWAL_ENV = "GPP_BIQUOTE_NEXT_7DAY_APPROVAL"
+RENEWAL_VALUE = "APPROVED_SEPARATE_7DAY_RESEARCH_NO_TRADING"
+RENEWAL_START_ENV = "GPP_BIQUOTE_NEXT_7DAY_START_UTC"
 SAFE = {"signal": "WAIT", "executable": False, "paperOrdersAllowed": False,
         "liveOrdersAllowed": False, "tradeEligible": False, "researchEligible": False,
         "brokerOrdersSent": 0, "paperOrdersCreated": 0}
@@ -68,8 +72,18 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
     if (not folder.is_absolute() or not str(folder).startswith("/var/data/")
             or ".." in folder.parts):
         raise ValueError("OWNER_ONLY_PERSISTENT_DISK_REQUIRED")
-    if anchor != START or type(days) is not int or not 1 <= days <= DAYS:
+    if type(days) is not int or not 1 <= days <= DAYS:
         raise ValueError("HOLDOUT_ANCHOR_OR_WINDOW_INVALID")
+    anchor = _utc(anchor)
+    if anchor != START:
+        extra = os.environ if environment is None else environment
+        # Only the next exact week may ever use this distinct approval.
+        # No automatic renewal or roll-forward to a third interval.
+        if (anchor != START + dt.timedelta(days=DAYS) or
+            extra.get(RENEWAL_ENV) != RENEWAL_VALUE or
+            extra.get(RENEWAL_START_ENV) !=
+                anchor.strftime("%Y-%m-%dT%H:%M:%SZ")):
+            raise ValueError("EXPLICIT_NEXT_SEVEN_DAY_APPROVAL_REQUIRED")
     get_time = clock or (lambda: dt.datetime.now(UTC))
     do_sleep = sleep or time.sleep
     # Default logs contain fixed metadata only. Private quote prices, source
@@ -311,7 +325,7 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
     state = "BOUNDED_REVIEW_FINISHED"
     startup_checked = False
     for index in range(days):
-        start = START + dt.timedelta(days=index)
+        start = anchor + dt.timedelta(days=index)
         end = start + dt.timedelta(seconds=WINDOW_SECONDS)
         now = _utc(get_time())
         if now >= end:

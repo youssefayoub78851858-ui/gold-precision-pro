@@ -34,6 +34,41 @@ class SevenDayReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"HOLDOUT"):
             run.run_seven_days(VAULT,environment=ENV,days=8)
 
+    def test_next_seven_day_cycle_never_renews_without_distinct_approval(self):
+        new=DAY+dt.timedelta(days=7)
+        date=new.strftime("%Y-%m-%dT%H:%M:%SZ")
+        approved={**ENV,run.RENEWAL_ENV:run.RENEWAL_VALUE,
+                  run.RENEWAL_START_ENV:date}
+        called=[]
+        def observer(start,*,probe):
+            called.append(start)
+            return {"signal":"WAIT","executable":False,
+                    "completed24hWindow":True}
+        def forbidden(*_args,**_kwargs):
+            self.fail("UNEXPECTED_PROVIDER_OR_ARCHIVE_CALL")
+        with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+            for env in (ENV,{**approved,run.RENEWAL_ENV:""},
+                        {**approved,run.RENEWAL_START_ENV:"2026-12-02T00:00:00Z"}):
+                with self.assertRaisesRegex(ValueError,"EXPLICIT_NEXT_SEVEN_DAY"):
+                    run.run_seven_days(VAULT,anchor=new,
+                      clock=lambda:new+dt.timedelta(minutes=2),
+                      metadata=forbidden,observer=forbidden,source_probe=forbidden,
+                      archive=forbidden,days=1,environment=env)
+            with self.assertRaisesRegex(ValueError,"EXPLICIT_NEXT_SEVEN_DAY"):
+                run.run_seven_days(VAULT,anchor=DAY+dt.timedelta(days=14),
+                                   environment=approved,days=1)
+            out=run.run_seven_days(VAULT,anchor=new,
+                clock=lambda:new+dt.timedelta(minutes=2),
+                metadata=lambda _:meta(),observer=observer,
+                source_probe=forbidden,archive=forbidden,
+                emit=lambda _:None,days=1,environment=approved)
+        self.assertEqual(called,[new])
+        self.assertEqual(out["windowsCompleted"],1)
+        self.assertEqual(out["signal"],"WAIT")
+        self.assertFalse(out["paperOrdersAllowed"])
+        self.assertFalse(out["liveOrdersAllowed"])
+        self.assertFalse(out["sourceQualifiedForTrading"])
+
     def test_single_probe_and_signed_archive_sink_no_market_leak(self):
         reads=[]; writes=[]; status=[]
         def source_probe(*,private_snapshot_sink):

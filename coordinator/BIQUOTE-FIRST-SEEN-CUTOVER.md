@@ -89,3 +89,22 @@ output, never authenticates listing provenance, and always vetoes restore,
 deploy and orders. A fresh listed snapshot does **not** prove that the
 signed vault is recoverable. Keep the live collector untouched while the
 seven-day recording is active.
+
+## Dormant second seven-day capture option (not authorized or activated)
+
+The first approved collector window ends on **2026-11-25T00:00:00Z**.
+At that time the existing code stops; pushing code or restarting later
+will NOT collect more bars under the old window by itself.
+
+A *dormant* second fixed 7-day interval is now supported (25 November to
+2 December 2026). It requires an explicit NEW, owner-reviewed permission
+and the exact new anchor. The opt-in variables are
+`GPP_BIQUOTE_NEXT_7DAY_APPROVAL` and
+`GPP_BIQUOTE_NEXT_7DAY_START_UTC`.
+Neither has been set or approved in Render. It is strictly read-only,
+no trade signals, no live orders, no paid data. It can never auto-roll
+into a third interval. An actual controlled deploy must also be separately
+authorized after the current recording is finished and backed up.
+
+The old default start and authorization remain unchanged. No extra
+collector or API polling process is launched by this GitHub change.
