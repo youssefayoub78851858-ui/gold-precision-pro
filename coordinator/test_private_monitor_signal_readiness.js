@@ -46,6 +46,25 @@ vm.runInNewContext("renderSignalRoadmap(sample,'BUY')",sandbox,{timeout:1500});
 assert.match(text("signal-roadmap-status"),/WAIT.*BUY.*ممنوع/);
 assert.match(text("signal-roadmap-history"),/H4 8\/21/);
 assert.match(text("signal-roadmap-paper"),/H4 8\/50/);
+assert.match(text("signal-roadmap-h4-horizon"),/لا يمكن حساب/);
+// A conditional provider-only scenario must expose the weekend reset,
+// not promise the 21-H4 technical warmup before the fixed Nov25 deadline.
+sandbox.sample={...data,lastImportedUTC:"2026-11-19T18:16:03Z",
+ counts:{M15:165,H1:41,H4:10},
+ forwardCoverage:{M15:{latestContiguousBars:48},
+                  H1:{latestContiguousBars:19},
+                  H4:{latestContiguousBars:10}}};
+vm.runInNewContext("renderSignalRoadmap(sample,'NONE')",sandbox,{timeout:1500});
+assert.match(text("signal-roadmap-h4-horizon"),/أقصى H4 متصل نظرياً 18 شمعة/);
+assert.match(text("signal-roadmap-h4-horizon"),/و13 عند نهايتها/);
+assert.match(text("signal-roadmap-h4-horizon"),/11 فواصل H4/);
+assert.match(text("signal-roadmap-h4-horizon"),/مش توثيق مستقل للوسيط/);
+assert.match(text("signal-roadmap-status"),/^WAIT/);
+// An expired/forged clock must not produce a fresh planning estimate.
+sandbox.sample={...sandbox.sample,lastImportedUTC:"2026-11-26T18:16:03Z"};
+vm.runInNewContext("renderSignalRoadmap(sample,'BUY')",sandbox,{timeout:1500});
+assert.match(text("signal-roadmap-h4-horizon"),/لا يمكن حساب/);
+sandbox.sample=data;
 // Regression: 60 stored H4 bars with 9 contiguous cannot show 50/50.
 sandbox.sample={...data,
  counts:{M15:120,H1:77,H4:60},
