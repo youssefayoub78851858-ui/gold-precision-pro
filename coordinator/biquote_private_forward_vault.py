@@ -198,8 +198,10 @@ def load_vault(dirname):
     # Never invent their first-availability time from a lastImportedUTC,
     # candle close, or file modification time. Only NEW append-only bars
     # receive a timestamp, inside the SAME checksummed atomic vault write.
-    first_seen = v.get(FIRST_SEEN_KEY)
-    if first_seen is not None:
+    # A missing key means legacy v1. A present null/false/malformed key is
+    # NOT a legacy archive and MUST fail validation, even with a new hash.
+    if FIRST_SEEN_KEY in v:
+        first_seen = v[FIRST_SEEN_KEY]
         if (not isinstance(first_seen,dict) or
                 set(first_seen)!=set(FRAMES_ORDER)):
             _fail("VAULT_FIRST_SEEN_FRAME_SHAPE_INVALID")

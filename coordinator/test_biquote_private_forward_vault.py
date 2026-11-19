@@ -209,6 +209,7 @@ class ForwardVault(unittest.TestCase):
             lambda p:p["firstObservedClosedUTC"][tf].update({oldest:iso(NOW+dt.timedelta(seconds=1))}),
             lambda p:p["firstObservedClosedUTC"][tf].update({"2026-11-21T00:00:00Z":iso(NOW)}),
             lambda p:p["firstObservedClosedUTC"][tf].update({oldest:True}),
+            lambda p:p.update({"firstObservedClosedUTC":None}),
             lambda p:p["firstObservedClosedUTC"][tf].update({newest:"2026-11-18T00:00:00Z"}),
         ]
         try:
