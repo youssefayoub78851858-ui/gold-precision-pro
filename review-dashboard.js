@@ -44,13 +44,17 @@
      d.rawQuoteShown!==true||d.privateChartReadOnly!==true||
      d.privateChartDataBasis!=="MID_WITH_POSSIBLE_BID_SEED"||
      !finite(d.bid)||!finite(d.ask)||d.ask<d.bid||
+     typeof d.spread!=="number"||!Number.isFinite(d.spread)||
+     d.spread<0||Math.abs(d.spread-(d.ask-d.bid))>.0001||
      !Number.isFinite(d.quoteAgeSeconds)||d.quoteAgeSeconds<0||
      d.quoteAgeSeconds>30)return null;
   const at=time(d.observedUTC),qt=time(d.quoteUTC);
   if(!Number.isFinite(at)||!Number.isFinite(qt)||qt>at||
      at>now+5000||now-at>30000||now-qt>30000||qt>now+5000)return null;
   const chart=validateChart(d.privateChart,at);
-  if(!chart||!d.frameSummary||!d.crossFrameComparisons)return null;
+  if(!chart||!d.frameSummary||!d.crossFrameComparisons||
+     typeof d.frameSummary!=="object"||Array.isArray(d.frameSummary)||
+     Object.keys(d.frameSummary).sort().join(",")!=="H1,H4,M15")return null;
   for(const tf of TF){
    const s=d.frameSummary[tf],last=chart[tf].at(-1),closedAt=last.t+WIDTH[tf];
    if(!s||!Number.isSafeInteger(s.closedCount)||s.closedCount<50||
@@ -60,13 +64,23 @@
   }
   const comparisons=d.crossFrameComparisons;
   if(Object.keys(comparisons).sort().join(",")!=="H1,H4")return null;
+  let sourceGaps=false;
   for(const tf of ["H1","H4"]){
    const c=comparisons[tf];
-   if(!c||Object.keys(c).sort().join(",")!==
+   if(!c||typeof c!=="object"||Array.isArray(c)||
+      Object.keys(c).sort().join(",")!==
        "completeMatches,completeMismatches,incompleteM15Groups,outsideRetentionWindow"||
       !Object.values(c).every(x=>Number.isSafeInteger(x)&&x>=0&&x<=1000))
     return null;
+   // The source comparison partitions ALL closed higher-timeframe bars
+   // into exactly four mutually exclusive groups. If their counts do not
+   // sum to that timeframe's closed count, the packet is self-inconsistent.
+   const total=c.completeMatches+c.completeMismatches+
+      c.incompleteM15Groups+c.outsideRetentionWindow;
+   if(total!==d.frameSummary[tf].closedCount)return null;
+   if(c.completeMismatches>0||c.incompleteM15Groups>0)sourceGaps=true;
   }
+  if((d.status==="WAIT_CROSS_FRAME_GAPS")!==sourceGaps)return null;
   return {at,chart,d,comparisons};
  }
  // Frontend defense-in-depth on ALREADY private, already-fetched closed bars.
