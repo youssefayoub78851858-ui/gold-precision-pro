@@ -34,13 +34,15 @@ function extract(input){
   if(!row||typeof row!=="object"||Array.isArray(row)||
      typeof row.message!=="string"||typeof row.timestamp!=="string")
    return waiting("MALFORMED_RENDER_LOG_LINE");
+  const logClock=msTime(row.timestamp);
+  // Validate EVERY Render envelope, even an otherwise ignored log record:
+  // malformed timestamps are evidence of a corrupt export, not safe noise.
+  if(!logClock)return waiting("INVALID_RENDER_LOG_CLOCK");
   const message=row.message;
   const isSample=message.startsWith('{"')&&
     message.includes('"event":"BIQUOTE_REVIEW24H_SAMPLE"');
   const isStage=message.startsWith("BIQUOTE_SEVEN_DAY_STATUS ");
   if(!isSample&&!isStage){ignored++;continue;}
-  const logClock=msTime(row.timestamp);
-  if(!logClock)return waiting("INVALID_RENDER_LOG_CLOCK");
   let x;
   try{x=JSON.parse(isSample?message:message.slice("BIQUOTE_SEVEN_DAY_STATUS ".length));}
   catch{return waiting("MALFORMED_KNOWN_RENDER_LOG_EVENT");}
