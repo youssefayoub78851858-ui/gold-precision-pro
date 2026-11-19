@@ -3,14 +3,14 @@
 const a=require("node:assert/strict");
 const fs=require("node:fs"),path=require("node:path"),vm=require("node:vm");
 const src=fs.readFileSync(path.resolve(__dirname,"../biquote-mobile-ui.js"),"utf8");
-const begin=src.indexOf("function renderFrozenV3ResearchWatch(v,comparisons){");
+const begin=src.indexOf("function renderFrozenV3ResearchWatch(v,comparisons,sourceStatus){");
 const end=src.indexOf(" // This is a PRIVATE, already validated observation.",begin);
 a(begin>0&&end>begin,"Exact V3 watch panel must exist");
 const output={textContent:""};
 const env={$:id=>id==="gdc-v3-watch"?output:null};
 vm.runInNewContext(src.slice(begin,end),env,{timeout:2000});
-const render=(v,c)=>{
- env.renderFrozenV3ResearchWatch(v,c);
+const render=(v,c,sourceStatus="OBSERVED_READONLY_UNVERIFIED")=>{
+ env.renderFrozenV3ResearchWatch(v,c,sourceStatus);
  return output.textContent;
 };
 const safe={
@@ -57,11 +57,38 @@ const gap=render({...safe,status:"WAIT_DATA_INCOMPLETE",
  reason:"H4_NOT_21_STRICTLY_CONTIGUOUS_CLOSED"},c);
 a.match(gap,/أقل من 21 شمعة H4 متتالية/);
 a(!gap.includes("H1: مطابق"));
-const watch=render({...safe,status:"TECHNICAL_WATCH_ONLY_NOT_TRADE_READY",
+const clear={
+ H1:{completeMatches:12,completeMismatches:0,
+     incompleteM15Groups:0,outsideRetentionWindow:12},
+ H4:{completeMatches:2,completeMismatches:0,
+     incompleteM15Groups:0,outsideRetentionWindow:25}
+};
+const watchPayload={...safe,status:"TECHNICAL_WATCH_ONLY_NOT_TRADE_READY",
  technicalCandidate:"BUY",watchLabel:"WATCH_BUY",lastCrossFrameParityObserved:true,
- reason:"FROZEN_V3_ALIGNED_CLOSED_BAR_BOS_NO_INDEPENDENT_CONFIRMATION"},c);
+ reason:"FROZEN_V3_ALIGNED_CLOSED_BAR_BOS_NO_INDEPENDENT_CONFIRMATION"};
+const watch=render(watchPayload,clear);
 a.match(watch,/^WAIT · WATCH_BUY/);
 a.match(watch,/ليست توصية دخول/);
+// A valid-looking WATCH payload must not override contradictory live
+// source status, an old H1 mismatch, missing H4 constituents, or a
+// malformed overlap report. These conditions must show plain WAIT.
+for(const item of [
+ {c,status:"WAIT_CROSS_FRAME_GAPS"},
+ {c,status:"OBSERVED_READONLY_UNVERIFIED"},
+ {c:null,status:"OBSERVED_READONLY_UNVERIFIED"},
+ {c:{...clear,H4:{...clear.H4,incompleteM15Groups:1}},
+  status:"OBSERVED_READONLY_UNVERIFIED"},
+ {c:{...clear,H1:{...clear.H1,completeMatches:0}},
+  status:"OBSERVED_READONLY_UNVERIFIED"},
+ {c:{...clear,H1:{...clear.H1,completeMismatches:1}},
+  status:"OBSERVED_READONLY_UNVERIFIED"},
+ {c:clear,status:"UNVERIFIED_UNKNOWN_STATUS"}
+]){
+ const veto=render(watchPayload,item.c,item.status);
+ a.match(veto,/^WAIT — نتيجة WATCH تعارض/);
+ a(!veto.includes("WATCH_BUY"));
+}
+
 for(const patch of [
  {executable:true},{paperOrdersAllowed:true},{sourceRightsVerified:true},
  {firstSeenAtDecisionVerified:true},{brokerBidAskCostsVerified:true},
@@ -69,9 +96,9 @@ for(const patch of [
 ]){
  got=render({...safe,status:"TECHNICAL_WATCH_ONLY_NOT_TRADE_READY",
  technicalCandidate:"BUY",watchLabel:"WATCH_BUY",lastCrossFrameParityObserved:true,
- ...patch},c);
+ ...patch},clear);
  a.match(got,/^WAIT — نتيجة محرك V3 غير متاحة/);
  a(!got.includes("WATCH_BUY"));
 }
-a(src.includes("renderFrozenV3ResearchWatch(data.privateTechnicalWatch,\n     data.crossFrameComparisons)"));
+a(src.includes("renderFrozenV3ResearchWatch(data.privateTechnicalWatch,\n     data.crossFrameComparisons,data.status)"));
 console.log("PASS owner-only V3 WAIT: exact sanitized H1/H4 vs M15 counts, no raw private data, forged trade fields vetoed");
