@@ -5,6 +5,7 @@
  * Incoming Render logs remain UNATTESTED and cannot prove candle first-seen.
  */
 const {audit}=require("./biquote_collector_log_cadence_gate");
+const {reconcile}=require("./biquote_stage3_log_reconciliation");
 const MAX=11000;
 const ISO=/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,9})?Z$/;
 const waiting=reason=>({
@@ -28,7 +29,7 @@ function extract(input){
  if(input?.source!=="RENDER_LOG_EXPORT_UNTRUSTED"||
     !Array.isArray(input.logs)||!input.logs.length||input.logs.length>MAX)
   return waiting("INVALID_RENDER_LOG_INPUT");
- const samples=[],progress=[];
+ const samples=[],progress=[],stageRecords=[];
  let relevant=0,ignored=0;
  for(const row of input.logs){
   if(!row||typeof row!=="object"||Array.isArray(row)||
@@ -80,16 +81,53 @@ function extract(input){
    progress.push({atUTC:logClock.iso,frames,signal:x.signal,
     executable:x.executable,paperOrdersAllowed:x.paperOrdersAllowed,
     brokerOrdersSent:x.brokerOrdersSent});
+   stageRecords.push({event:x.event,atUTC:logClock.iso,
+    dayIndex:x.dayIndex,frames,signal:x.signal,executable:x.executable,
+    paperOrdersAllowed:x.paperOrdersAllowed,brokerOrdersSent:x.brokerOrdersSent});
+   relevant++;
+  }else if(["BIQUOTE_STAGE3_VENDOR_REFERENCE_GAPS",
+             "BIQUOTE_STAGE3_ARCHIVE_OHLC_OVERLAP",
+             "BIQUOTE_STAGE3_QUOTE_RECEIPT_CADENCE"].includes(x.event)){
+   // Only fixed count metadata. Never retain raw quote, candle or provider text.
+   const frames={};
+   const names=x.event==="BIQUOTE_STAGE3_ARCHIVE_OHLC_OVERLAP"?
+    ["H1","H4"]:["M15","H1","H4"];
+   if(x.event!=="BIQUOTE_STAGE3_QUOTE_RECEIPT_CADENCE"){
+    for(const tf of names){
+     const v=x.frames?.[tf];
+     if(!v||typeof v!=="object")return waiting("MALFORMED_STAGE3_COUNT_FRAME");
+     frames[tf]=x.event==="BIQUOTE_STAGE3_VENDOR_REFERENCE_GAPS"?
+      {unclassifiedMissingSlots:v.unclassifiedMissingSlots}:
+      {fullyCoveredCompared:v.fullyCoveredCompared,
+       fullyCoveredDisagreed:v.fullyCoveredDisagreed,
+       higherClosedExamined:v.higherClosedExamined,
+       notFullyCovered:v.notFullyCovered};
+    }
+   }
+   const intervals={};
+   if(x.event==="BIQUOTE_STAGE3_QUOTE_RECEIPT_CADENCE"){
+    for(const key of ["GT_150_LE_300_SECONDS","GT_300_LE_600_SECONDS",
+      "GT_3600_SECONDS","GT_600_LE_3600_SECONDS","LE_150_SECONDS"])
+     intervals[key]=x.intervalBins?.[key];
+   }
+   stageRecords.push({event:x.event,atUTC:logClock.iso,
+    dayIndex:x.dayIndex,frames,
+    sourceQuoteSamples:x.sourceQuoteSamples,observedIntervals:x.observedIntervals,
+    intervalBins:intervals,signal:x.signal,executable:x.executable,
+    paperOrdersAllowed:x.paperOrdersAllowed,brokerOrdersSent:x.brokerOrdersSent});
    relevant++;
   }else{ignored++;}
  }
  samples.sort((a,b)=>Date.parse(a.asOfUTC)-Date.parse(b.asOfUTC));
  progress.sort((a,b)=>Date.parse(a.atUTC)-Date.parse(b.atUTC));
+ const stage=reconcile({records:stageRecords});
+ if(stage.status==="BLOCKED")return waiting("CONTRADICTORY_STAGE3_COUNT_EVIDENCE");
  const report=audit({
   origin:"RENDER_SANITIZED_COLLECTOR_LOGS_UNATTESTED",
   startUTC:input.startUTC,endUTC:input.endUTC,samples,progress
  });
- return {...report,renderLogEventsParsed:relevant,renderLogEventsIgnored:ignored,
+ return {...report,stage3Consistency:stage,
+  renderLogEventsParsed:relevant,renderLogEventsIgnored:ignored,
   renderLogExportAuthenticated:false,privateVaultRead:false,
   brokerFirstSeenFromDeployedLegacyCollector:false};
 }
