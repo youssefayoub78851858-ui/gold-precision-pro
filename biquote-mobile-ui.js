@@ -547,7 +547,11 @@
      v.independentMacroNewsGcOrderFlowVerified===false&&
      v.brokerBidAskCostsVerified===false&&v.retrospectiveOnly===true&&
      v.entry===null&&v.stopLoss===null&&v.takeProfit===null&&
-     v.providerRequestsMade===0&&v.brokerOrdersSent===0;
+     v.providerRequestsMade===0&&v.brokerOrdersSent===0&&
+     v.requiredM15ToReconcile21H4===336&&
+     v.requiredH1ToReconcile21H4===84&&
+     v.privateChartMaxBarsPerFrame===48&&
+     v.full21H4CrossFrameAuditPossibleFromPrivateSnapshot===false;
    if(!valid){
      el.textContent="WAIT — نتيجة محرك V3 غير متاحة أو غير موثّقة";
      return;
@@ -566,7 +570,7 @@
    }
    if(attemptedWatch){
      el.textContent="WAIT · "+v.watchLabel+
-       " — مراقبة V3 فنية على شموع مغلقة فقط؛ ليست توصية دخول أو وقف أو هدف";
+       " — مراقبة V3 فنية على شموع مغلقة فقط؛ ليست توصية دخول أو وقف أو هدف. تدقيق 21 H4 بالكامل يحتاج 336 M15 و84 H1؛ الشاشة تحتفظ بحد أقصى 48 لكل فاصل.";
      return;
    }
    const reasons={
