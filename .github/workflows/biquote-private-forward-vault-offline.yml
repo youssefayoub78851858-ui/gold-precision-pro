@@ -56,7 +56,7 @@ jobs:
         run: node coordinator/test_biquote_stage3_log_reconciliation.js
       - name: Render log-export adapter never exposes private candle values or market authority
         run: node coordinator/test_biquote_render_log_export_readonly.js
-      - name: H4 capture horizon feasibility: no invented bars, 50-H4 paper cap cannot be asserted
+      - name: 'H4 capture horizon feasibility: offline 50-bar ceiling, no orders'
         run: node coordinator/test_biquote_capture_h4_horizon_gate.js
       - uses: actions/setup-python@v5
         with:
