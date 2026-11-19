@@ -67,3 +67,25 @@ secrets, paths or a signal. It does not access the Render private disk.
 Passing locally is NOT evidence that Render has an independent offsite backup
 or that a real disaster recovery operation succeeded. The coordinator should
 stay deployed on its prior build while the seven-day capture is active.
+
+## Render persistent-disk snapshots (19 November 2026 documentation check)
+
+Render documents **one automatic disk snapshot per 24 hours**, encrypted
+at rest, available for **seven days**. They are *platform disaster recovery*
+points. Restoring one **overwrites the entire current disk** and removes any
+newer accumulated market records; there is no per-file snapshot restore.
+
+Documentation: https://render.com/docs/disks
+
+The GitHub/Render integration in this workflow has **not verified any
+specific snapshot** for the collector disk, and exposes no list-snapshots
+or independent file-export action. Do not claim this is an audited, offsite
+backup of the signed BiQuote vault. The owner can inspect snapshots in
+Render Dashboard -> coordinator service -> Disk, without restoring them.
+
+The offline `biquote_render_snapshot_preflight.py` accepts only
+operator-supplied snapshot listing metadata. It strips snapshot keys from
+output, never authenticates listing provenance, and always vetoes restore,
+deploy and orders. A fresh listed snapshot does **not** prove that the
+signed vault is recoverable. Keep the live collector untouched while the
+seven-day recording is active.
