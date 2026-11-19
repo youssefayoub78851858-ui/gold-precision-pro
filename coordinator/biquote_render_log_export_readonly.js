@@ -6,6 +6,7 @@
  */
 const {audit}=require("./biquote_collector_log_cadence_gate");
 const {reconcile}=require("./biquote_stage3_log_reconciliation");
+const {assessWindow}=require("./biquote_capture_h4_horizon_gate");
 const MAX=11000;
 const ISO=/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,9})?Z$/;
 const waiting=reason=>({
@@ -128,11 +129,31 @@ function extract(input){
  progress.sort((a,b)=>Date.parse(a.atUTC)-Date.parse(b.atUTC));
  const stage=reconcile({records:stageRecords});
  if(stage.status==="BLOCKED")return waiting("CONTRADICTORY_STAGE3_COUNT_EVIDENCE");
+ // A capture deadline is not the log-query end. Only explicitly supplied,
+ // bounded collector dates may be combined with sanitized Stage3 counts.
+ const wantsHorizon=input.captureStartUTC!==undefined||
+                    input.captureEndUTC!==undefined;
+ if(wantsHorizon&&
+    (typeof input.captureStartUTC!=="string"||
+     typeof input.captureEndUTC!=="string"))
+  return waiting("CAPTURE_CUTOFF_PAIR_REQUIRED");
+ const h4CaptureHorizon=wantsHorizon&&
+  stage.status==="CONSISTENT_COUNTS_ONLY_NOT_MARKET_PROOF"?
+   assessWindow({
+    origin:"UNATTESTED_RENDER_COUNTS_NO_PRIVATE_ARCHIVE",
+    startUTC:input.captureStartUTC,asOfUTC:stage.latestProgressAtUTC,
+    endUTC:input.captureEndUTC,
+    persistedClosedCounts:stage.persistedClosed,
+    contiguousClosedCounts:stage.contiguousClosed
+   }):null;
  const report=audit({
   origin:"RENDER_SANITIZED_COLLECTOR_LOGS_UNATTESTED",
   startUTC:input.startUTC,endUTC:input.endUTC,samples,progress
  });
  return {...report,stage3Consistency:stage,
+  h4CaptureHorizon,
+  h4CaptureHorizonUnavailability:wantsHorizon&&!h4CaptureHorizon?
+   "STAGE3_CYCLE_INCOMPLETE_NO_H4_HORIZON":null,
   renderLogEventsParsed:relevant,renderLogEventsIgnored:ignored,
   renderLogExportAuthenticated:false,privateVaultRead:false,
   brokerFirstSeenFromDeployedLegacyCollector:false};
