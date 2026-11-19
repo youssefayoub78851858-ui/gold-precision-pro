@@ -53,6 +53,22 @@ a.equal(observed.sourceRightsVerified,false);
 a(observed.observedDecisionCount>0);
 a.equal(observed.status,"LOCAL_RECEIPT_WATCHES_NOT_TRADE_PROOF");
 a.equal(observed.netExpectancy,null);
+// A collector decision may occur at millisecond precision, but only
+// receipts <= the EXACT decision instant may enter point-in-time analysis.
+const edge=START+400*900000;
+const half=inspect({...origin,firstObservedClosedUTC:known,
+ decisionCutoffUTC:iso(edge+500)});
+const afterReceipt=inspect({...origin,firstObservedClosedUTC:known,
+ decisionCutoffUTC:iso(edge+1500)});
+a.equal(half.signalDataReadiness.asOfUTC,iso(edge+500));
+a.equal(afterReceipt.signalDataReadiness.asOfUTC,iso(edge+1500));
+a.equal(half.signalDataReadiness.signal,"WAIT");
+a.equal(half.signalDataReadiness.brokerOrdersSent,0);
+a.equal(half.signalDataReadiness.independentAvailabilityVerified,false);
+a.equal(afterReceipt.signalDataReadiness.observedAtDecision.H4,
+ half.signalDataReadiness.observedAtDecision.H4+1);
+a.equal(afterReceipt.signalDataReadiness.observedAtDecision.M15,
+ half.signalDataReadiness.observedAtDecision.M15+1);
 const laterFirstSeen=Object.fromEntries(Object.entries(frames).map(([tf,rows])=>
  [tf,Object.fromEntries(rows.map(bar=>[
   bar.datetime,iso(START+500*900000)
