@@ -62,7 +62,7 @@ for(const mutate of [
  x=>{x.privateChart.H4[47].high=2004;},
  x=>{x.privateChart.H1[44].close=2000.4;},
  x=>{x.privateChart.M15[42].high=2004;},
- x=>{x.privateChart.M15[42].close=2000.4;}
+ x=>{x.privateChart.M15[44].close=2000.4;}
 ]){
  const x=packet();mutate(x);
  const checked=mod.validateSnapshot(x,NOW);
@@ -73,6 +73,16 @@ for(const mutate of [
  a(!veto.includes("WATCH_BUY"),"Contradictory closed OHLC must veto technical WATCH");
 }
 
+// Modifying only an internal M15 *close*, without changing the first
+// open, final close, maximum high or minimum low, cannot be detected by
+// OHLC parity alone. No independent tick-level validity is claimed.
+const hiddenInterior=packet();
+hiddenInterior.privateChart.M15[42].close=2000.4;
+const interior=mod.validateSnapshot(hiddenInterior,NOW);
+a(interior);
+a.equal(mod.localLatestParity(interior.chart),true);
+// This is still never a real trade: the WATCH label remains retrospective.
+a.equal(interior.d.signal,"WAIT");a.equal(interior.d.executable,false);
 for(const mutate of [
  x=>{x.signal="BUY";},x=>{x.executable=true;},
  x=>{x.tradePlanExecutable=true;},x=>{x.rawQuoteShown=false;},
