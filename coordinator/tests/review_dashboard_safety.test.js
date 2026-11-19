@@ -45,3 +45,18 @@ test("never accept invalid chart geometry",()=>{
  const c=chart(now);c.H4[0].high=2990;
  assert.equal(validateChart(c,now),null);
 });
+
+test("21 H4 candles cannot be independently proven by the current single snapshot",()=>{
+ const {assess}=require("../biquote_snapshot_capacity_gate");
+ const x=assess();
+ assert.equal(x.signal,"WAIT");
+ assert.equal(x.executable,false);
+ assert.equal(x.sufficientForTradeRecommendations,false);
+ assert.equal(x.requiredM15Constituents,336);
+ assert.equal(x.requiredH1Constituents,84);
+ assert.equal(x.configuredProviderMaxM15Bars,200);
+ assert.equal(x.providerM15CapacityShortfall,136);
+ assert.equal(x.singleSnapshotCanProve21H4M15Parity,false);
+ assert.equal(x.archiveRequiredForFullWindow,true);
+ assert.equal(x.archiveCurrentlyVerified,false);
+});
