@@ -76,6 +76,9 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
         raise ValueError("HOLDOUT_ANCHOR_OR_WINDOW_INVALID")
     anchor = _utc(anchor)
     if anchor != START:
+        # Past-epoch/interior anchors remain invalid, not a renewable cycle.
+        if anchor < START + dt.timedelta(days=DAYS):
+            raise ValueError("HOLDOUT_ANCHOR_OR_WINDOW_INVALID")
         extra = os.environ if environment is None else environment
         # Only the next exact week may ever use this distinct approval.
         # No automatic renewal or roll-forward to a third interval.
