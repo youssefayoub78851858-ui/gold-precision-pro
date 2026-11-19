@@ -76,6 +76,15 @@ async function main(){
  assert.ok(result.body.crossFrameComparisons.H1.completeMatches>=10);
  assert.ok(result.body.crossFrameComparisons.H4.completeMatches>=2);
  assert.equal(result.body.crossFrameComparisons.H4.completeMismatches,0);
+ // Backend source partitions every higher closed bar into exactly one
+ // overlap group. The private mobile validator requires this equality.
+ for(const tf of ["H1","H4"]){
+  const c=result.body.crossFrameComparisons[tf];
+  assert.equal(c.completeMatches+c.completeMismatches+
+    c.incompleteM15Groups+c.outsideRetentionWindow,
+    result.body.frameSummary[tf].closedCount);
+ }
+ assert.equal(result.body.snapshotParityCapacity.signal,"WAIT");
  assert.equal(first.calls.length,4);
  assert.equal(first.calls.some(x=>x.opt.headers.Authorization),false);
  assert.equal(result.body.blockerCodes.includes("GC_DXY_US_YIELDS_ORDERFLOW_AND_NEWS_NOT_COMPLETE"),true);
@@ -87,6 +96,10 @@ async function main(){
  assert.equal(privateData.httpStatus,200);secure(privateData.body);
  assert.equal(privateData.body.bid,3840);
  assert.equal(privateData.body.ask,3840.22);
+ assert.equal(privateData.body.spread,
+   privateData.body.ask-privateData.body.bid);
+ assert.equal(privateData.body.snapshotParityCapacity.requiredM15Constituents,336);
+ assert.equal(privateData.body.snapshotParityCapacity.archiveCurrentlyVerified,false);
  assert.equal(privateData.body.rawQuoteShown,true);
  assert.equal(privateData.body.privateChartReadOnly,true);
  assert.equal(privateData.body.privateStructure.mode,"PRIVATE_READONLY_TECHNICAL_OBSERVATIONS");
