@@ -24,6 +24,8 @@ on:
       - 'coordinator/test_biquote_h4_evidence_quality_gate.js'
       - 'coordinator/biquote_render_log_export_readonly.js'
       - 'coordinator/test_biquote_render_log_export_readonly.js'
+      - 'private-monitor.html'
+      - 'coordinator/test_private_monitor_signal_readiness.js'
       - '.github/workflows/gold-four-stage-batch-offline.yml'
   workflow_dispatch:
 permissions:
@@ -51,6 +53,8 @@ jobs:
           node coordinator/test_biquote_capture_h4_horizon_gate.js
           node coordinator/test_biquote_h4_evidence_quality_gate.js
           node coordinator/test_biquote_render_log_export_readonly.js
+      - name: Private mobile dashboard shows contiguous, not raw H4 trade history
+        run: node coordinator/test_private_monitor_signal_readiness.js
       - name: Paper account cannot act on synthetic BUY or forged approval
         run: python -m unittest -v coordinator/test_ultimate_four_stage_paper.py
       - name: Underlying vault and final source quality safety tests
