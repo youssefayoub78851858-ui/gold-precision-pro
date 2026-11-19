@@ -58,6 +58,14 @@ class FourStageBatchAcceptance(unittest.TestCase):
         self.assertEqual(paper_history["missingUntil50"],
             {tf:max(0,50-report["stages"]["archive"]["closedCounts"][tf])
              for tf in ("M15","H1","H4")})
+        self.assertEqual(paper_history["contiguousClosedCounts"],
+                         report["stages"]["archive"]["consecutiveClosedCounts"])
+        self.assertEqual(paper_history["missingContiguousUntil50"],
+            {tf:max(0,50-report["stages"]["archive"]["consecutiveClosedCounts"][tf])
+             for tf in ("M15","H1","H4")})
+        self.assertFalse(paper_history["50BarHistoryFullyQualified"])
+        self.assertIn("BIQUOTE_CONTIGUOUS_PAPER_HISTORY_UNVERIFIED",
+                      report["stages"]["paper"]["blockers"]) if not paper_history["contiguousCountsVerifiedWithinArchive"] else None
         self.assertEqual(report["stages"]["context"]["status"],
                          "INDEPENDENT_SOURCE_CONFIRMATIONS_REQUIRED")
         checklist=report["completionAudit"]
@@ -109,6 +117,11 @@ class FourStageBatchAcceptance(unittest.TestCase):
                       checklist["remainingBlockerCodes"])
         self.assertIn("OUT_OF_SAMPLE_NET_EXPECTANCY_NOT_PROVEN",
                       checklist["remainingBlockerCodes"])
+        self.assertEqual(checklist["missingStrictContiguousBarsUntilPaper50"],
+                         paper_history["missingContiguousUntil50"])
+        self.assertEqual(checklist["paperHistoryCountFloorMet"],
+                         paper_history["contiguousCountMinimumMet"])
+        self.assertFalse(checklist["paperHistoryIndependentlyQualified"])
         self.assertFalse(report["stages"]["archive"]["automaticQuoteDeletionAllowed"])
         archive=report["stages"]["archive"]
         self.assertFalse(archive["stage2SourceVerified"])
@@ -245,6 +258,36 @@ class FourStageBatchAcceptance(unittest.TestCase):
                      '"spread"','"quoteObservations"','"hypotheticalSyntheticPlan"'):
             self.assertNotIn(leak,encoded)
         self.assertNotIn("3900",encoded)
+
+    def test_50_plus_true_tail_is_not_capped_by_v3_48_preview(self):
+        ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
+        meta=inspect_metadata(self.folder)
+        shadow=shadow_review(self.folder,now_utc=AFTER)
+        # Synthetic count-only regression of a sealed 55-H4-bar archive.
+        # The 48-bar V3 preview remains bounded; a 50-bar paper HISTORY
+        # requirement must use the whole sealed-archive contiguous count.
+        meta=json.loads(json.dumps(meta))
+        shadow=json.loads(json.dumps(shadow))
+        meta["counts"]["H4"]=55
+        meta["forwardCoverage"]["H4"]["closedBars"]=55
+        meta["forwardCoverage"]["H4"]["latestContiguousBars"]=55
+        shadow["frames"]["H4"]["persistedClosed"]=55
+        shadow["frames"]["H4"]["contiguousClosed"]=48
+        out=review_batch(self.folder,now_utc=AFTER,
+                         vault_metadata=meta,shadow_status=shadow)
+        self.assert_blocked(out)
+        self.assertEqual(out["stages"]["archive"]["consecutiveClosedCounts"]["H4"],55)
+        self.assertEqual(out["stages"]["paper"]["historyReadiness"]["contiguousClosedCounts"]["H4"],55)
+        self.assertEqual(out["completionAudit"]["missingStrictContiguousBarsUntilPaper50"]["H4"],0)
+        self.assertFalse(out["completionAudit"]["paperHistoryIndependentlyQualified"])
+        # An untrusted preview that contradicts the count-only sealed
+        # metadata must be rejected, not silently upgraded.
+        shadow["frames"]["H4"]["contiguousClosed"]=47
+        tamper=review_batch(self.folder,now_utc=AFTER,
+                            vault_metadata=meta,shadow_status=shadow)
+        self.assert_blocked(tamper)
+        self.assertEqual(tamper["stages"]["archive"]["status"],
+                         "PRIVATE_VAULT_NOT_READABLE")
 
     def test_protected_monitor_reuses_once_computed_status_safely(self):
         ingest(self.folder,sample(AFTER),received_utc=iso(AFTER))
