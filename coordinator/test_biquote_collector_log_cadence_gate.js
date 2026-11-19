@@ -45,6 +45,10 @@ assert.equal(good.recordedArchiveIncrease,6);
 assert.equal(good.recordedArchiveRejectionsIncrease,0);
 assert.equal(good.newlyRejectedArchiveClasses.CLOSED_HISTORY_FRESHNESS,0);
 assert.equal(good.newRejectionsWithUnknownClass,0);
+assert.equal(good.longestObservedConsecutiveArchiveRejections,0);
+assert.equal(good.trailingObservedConsecutiveArchiveRejections,0);
+assert.equal(good.archiveSavesAfterLatestObservedRejection,null);
+assert.equal(good.latestObservedRejectionClass,null);
 assert.equal(good.collectorSlotsWithoutRecordedArchiveOutcome,0);
 assert.equal(good.httpNonOkSamples,0);
 assert.equal(good.geometryNotOkSamples,7);
@@ -109,7 +113,53 @@ assert.equal(freshnessResult.recordedArchiveIncrease,0);
 assert.equal(freshnessResult.recordedArchiveRejectionsIncrease,1);
 assert.equal(freshnessResult.newlyRejectedArchiveClasses.CLOSED_HISTORY_FRESHNESS,1);
 assert.equal(freshnessResult.newRejectionsWithUnknownClass,0);
+assert.equal(freshnessResult.longestObservedConsecutiveArchiveRejections,1);
+assert.equal(freshnessResult.trailingObservedConsecutiveArchiveRejections,1);
+assert.equal(freshnessResult.archiveSavesAfterLatestObservedRejection,0);
+assert.equal(freshnessResult.latestObservedRejectionClass,"CLOSED_HISTORY_FRESHNESS");
 assert(freshnessResult.blockerCodes.includes("ARCHIVE_CLOSED_HISTORY_FRESHNESS_REJECTED"));
+// One stale historical bar rejection followed by 19 new saved
+// collector slots: only the *capture outcomes* recover, not that
+// rejected history or underlying market data is now trade-qualified.
+const resumed=structuredClone(freshness);
+resumed.endUTC="2026-11-19T12:06:13Z";
+for(let i=1;i<=3;i++){
+ resumed.samples.push({asOfUTC:iso(Date.parse("2026-11-19T12:00:03Z")+i*120000),
+  slot:360+i,archiveSavedSnapshotsSoFar:353+i,
+  archiveRejectedSnapshotsSoFar:8,archiveRejectionClass:"NONE",
+  signal:"WAIT",executable:false,httpAllOk:true,
+  geometryChecksOk:false,geometryFailureClass:"UNCLASSIFIED_M15_COVERAGE_GAP"});
+}
+const capturedAgain=audit(resumed);checked(capturedAgain);
+assert.equal(capturedAgain.archiveSavesAfterLatestObservedRejection,3);
+assert.equal(capturedAgain.longestObservedConsecutiveArchiveRejections,1);
+assert.equal(capturedAgain.trailingObservedConsecutiveArchiveRejections,0);
+assert.equal(capturedAgain.latestObservedRejectionClass,"CLOSED_HISTORY_FRESHNESS");
+assert(capturedAgain.blockerCodes.includes("COLLECTOR_OHLC_GEOMETRY_NOT_PROVEN"));
+// Two adjacent rejected slots have a meaningful run; any future
+// snapshot still cannot make up the two lost historical receipts.
+const repeated=structuredClone(input);
+repeated.samples.forEach((r,i)=>{
+ const rejected=Math.min(Math.max(0,i-1),2);
+ r.archiveSavedSnapshotsSoFar=324+i-rejected;
+ r.archiveRejectedSnapshotsSoFar=7+rejected;
+ r.archiveRejectionClass=i===2||i===3?
+  "CLOSED_HISTORY_FRESHNESS":"NONE";
+});
+const repeatedResult=audit(repeated);checked(repeatedResult);
+assert.equal(repeatedResult.newlyRejectedArchiveClasses.CLOSED_HISTORY_FRESHNESS,2);
+assert.equal(repeatedResult.longestObservedConsecutiveArchiveRejections,2);
+assert.equal(repeatedResult.trailingObservedConsecutiveArchiveRejections,0);
+assert.equal(repeatedResult.archiveSavesAfterLatestObservedRejection,3);
+assert.equal(repeatedResult.latestObservedRejectionClass,"CLOSED_HISTORY_FRESHNESS");
+// If one subsequent Render log is missing, cannot claim the unobserved
+// slot was saved; capture recovery is UNKNOWN, not 2+ known successes.
+const omitted=structuredClone(repeated);
+omitted.samples.splice(4,1);
+const uncertainRecovery=audit(omitted);checked(uncertainRecovery);
+assert.equal(uncertainRecovery.missingLogSlots,1);
+assert.equal(uncertainRecovery.archiveSavesAfterLatestObservedRejection,null);
+assert.equal(uncertainRecovery.status,"PARTIAL_LOG_COVERAGE_NOT_PROOF");
 const forgedReason=structuredClone(freshness);
 forgedReason.samples[1].archiveRejectionClass="NONE";
 const reasonBlocked=audit(forgedReason);checked(reasonBlocked);
