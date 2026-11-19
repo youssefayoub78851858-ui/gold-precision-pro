@@ -19,6 +19,13 @@ const safe=(status,reason,extra={})=>({
  watchLabel:"WAIT",entry:null,stopLoss:null,takeProfit:null,
  providerRequestsMade:0,brokerOrdersSent:0,paperOrdersSent:0,
  noHistoricalBackfillAssumed:true,retrospectiveOnly:true,
+ // 21 fully independently reconciled H4 candles require 21*16
+ // constituent M15 and 21*4 H1, whereas the personal chart snapshot
+ // retains at most 48 bars per frame. No synthetic backfill permitted.
+ requiredM15ToReconcile21H4:336,
+ requiredH1ToReconcile21H4:84,
+ privateChartMaxBarsPerFrame:48,
+ full21H4CrossFrameAuditPossibleFromPrivateSnapshot:false,
  ...extra
 });
 function parseTail(rows,width,asOf){
