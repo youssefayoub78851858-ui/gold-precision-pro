@@ -12,6 +12,7 @@ on:
       - 'coordinator/biquote_24h_final_verdict.py'
       - 'coordinator/biquote_private_forward_vault.py'
       - 'coordinator/biquote_forward_shadow_review.py'
+      - 'coordinator/test_biquote_forward_shadow_review.py'
       - 'coordinator/ultimate_four_stage_review.js'
       - 'coordinator/paper_admission_gate.py'
       - '.github/workflows/gold-four-stage-batch-offline.yml'
