@@ -5,6 +5,8 @@ on:
     paths:
       - 'coordinator/biquote_v3_chronological_replay.js'
       - 'coordinator/test_biquote_v3_chronological_replay.js'
+      - 'coordinator/biquote_v3_chronological_private.py'
+      - 'coordinator/test_biquote_v3_chronological_private.py'
       - 'coordinator/ultimate_four_stage_review.js'
       - 'coordinator/v3_ultimate.js'
       - '.github/workflows/biquote-v3-chronological-offline.yml'
@@ -22,5 +24,11 @@ jobs:
           node-version: '24'
       - name: Verify no future OHLC, no broker orders, no fictional net PnL
         run: node coordinator/test_biquote_v3_chronological_replay.js
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: One sealed private archive to count-only V3 audit, never orders
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_v3_chronological_private
       - name: Verify frozen V3 four-stage safety still WAIT
         run: node coordinator/test_ultimate_four_stage_review.js
