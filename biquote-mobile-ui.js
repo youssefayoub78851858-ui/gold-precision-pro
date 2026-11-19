@@ -304,6 +304,45 @@
      "هذا تدقيق احتمالي، لا يملأ شموعاً ولا يفعّل صفقات. القرار WAIT.");
    el.textContent=lines.join("\n");
  }
+ function displayVendorH4Tail(v,chart){
+    const el=$("biquote-h4-vendor-session-tail");
+    if(!el)return;
+    const count=chart?.H4?.length;
+    const valid=v&&v.mode==="BIQUOTE_VENDOR_DECLARED_H4_ADJACENCY_RESEARCH_ONLY"&&
+      v.status==="PROVIDER_DECLARED_PAUSE_SCENARIO_NOT_TRADING_PROOF"&&
+      v.sourceRecord==="BIQUOTE_SUPPORT_REPLY_2026_11_16"&&
+      v.signal==="WAIT"&&v.technicalCandidate==="NONE"&&
+      v.executable===false&&v.paperOrdersAllowed===false&&
+      v.liveOrdersAllowed===false&&v.originalBrokerIdentified===false&&
+      v.originalBrokerCalendarVerified===false&&
+      v.brokerMarketDataRightsVerified===false&&
+      v.all21H4M15ParityVerified===false&&
+      v.perBarFirstSeenVerified===false&&v.researchWarmupApproved===false&&
+      v.missingCandlesSynthesized===0&&v.brokerOrdersSent===0&&
+      v.paperOrdersSent===0&&v.providerRequestsMade===0&&
+      Number.isSafeInteger(count)&&count>=2&&
+      v.observedClosedH4Bars===count&&
+      ["strictUtcH4Tail","providerDeclaredSessionAdjacentH4Tail",
+       "providerDeclaredPauseGapPairs","providerDeclaredPauseMissingH4Slots",
+       "unexplainedGapPairs","unknownCalendarGapPairs"].every(k=>
+        Number.isSafeInteger(v[k])&&v[k]>=0)&&
+      v.strictUtcH4Tail<=count&&
+      v.providerDeclaredSessionAdjacentH4Tail<=count&&
+      v.providerDeclaredSessionAdjacentH4Tail>=v.strictUtcH4Tail&&
+      v.providerScenarioReached21H4===(v.providerDeclaredSessionAdjacentH4Tail>=21);
+    if(!valid){
+      el.textContent="WAIT — فحص H4 عبر الاستراحة المعلنة غير مؤكد أو جلسة المشاهدة غير مفعّلة";
+      return;
+    }
+    el.textContent="H4 متتابعة على شبكة UTC: "+v.strictUtcH4Tail+
+      " | H4 مرصودة متجاورة بافتراض استراحة BiQuote: "+
+      v.providerDeclaredSessionAdjacentH4Tail+"/21 بحثياً فقط.\n"+
+      "فواصل H4 مفقودة كلها ضمن الاستراحة المعلنة: "+
+      v.providerDeclaredPauseMissingH4Slots+
+      " | فجوات خارجها: "+v.unexplainedGapPairs+
+      " | فجوات بجدول غير معروف: "+v.unknownCalendarGapPairs+
+      ".\nالقرار WAIT: لا بيانات جديدة مُختلقة، ولا إثبات مستقل لجلسات وسيط MT5 أو مطابقة 21 شمعة H4 مع M15 أو جودة التنفيذ.";
+  }
  const eventNames={BOS_UP:"كسر قمة مؤكدة",BOS_DOWN:"كسر قاع مؤكد",
    SWEEP_HIGH:"سحب سيولة فوق قمة",SWEEP_LOW:"سحب سيولة تحت قاع",
    FVG_BULL:"FVG صاعد",FVG_BEAR:"FVG هابط"};
@@ -466,6 +505,7 @@
    }
    const watch=$("gdc-v3-watch");
    if(watch)watch.textContent="WAIT — ما في WATCH مؤكد؛ السعر أو جلسة المشاهدة غير مؤهّلة";
+   displayVendorH4Tail(null,null);
  }
  function renderFrozenV3ResearchWatch(v){
    const el=$("gdc-v3-watch");
@@ -521,6 +561,7 @@
        " · "+f.closedCount+" شمعة مغلقة · وصفي فقط";
    }
    renderFrozenV3ResearchWatch(data.privateTechnicalWatch);
+   displayVendorH4Tail(data.privateVendorH4Tail,acceptedChart);
    $("gdc-blocker").textContent=data.status==="WAIT_CROSS_FRAME_GAPS"?
      "سبب WAIT: فجوات أو اختلافات تغطية بين M15/H1/H4 غير محسومة؛ بالإضافة إلى غياب إثبات جلسات الوسيط والمصادر المساندة وتكاليف التنفيذ. لا صفقات.":
      "سبب WAIT: شارت BiQuote وحده لا يثبت الصفقات؛ ينقص GC وDXY والسندات والأخبار وOrder Flow وحقوق الوسيط وتكاليف التنفيذ واختبارات مستقلة.";
