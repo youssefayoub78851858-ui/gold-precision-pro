@@ -66,7 +66,7 @@ a.match(mod.researchWatch(good),/^WAIT · WATCH_BUY/);
 // Even an older fully covered H1 or H4 disagreement, outside the last
 // H1/H4 but inside the private M15 snapshot, MUST suppress WATCH.
 for(const mutate of [
- x=>{x.privateChart.H1[45].high=2004;},
+ x=>{x.privateChart.H1[41].high=2004;},
  x=>{x.privateChart.H4[46].high=2004;},
  x=>{x.privateChart.M15[25].high=2004;}
 ]){
