@@ -106,7 +106,13 @@ main{padding:4px 7px calc(58px + env(safe-area-inset-bottom,0px))}
 #signal p{margin:4px 0}.footer{padding:7px 3px calc(7px + env(safe-area-inset-bottom,0px))}
 @media(min-width:680px){.chart{height:170px;max-height:170px}.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:360px){.grid .label{font-size:9px}.grid .value{font-size:10px}.chart{height:118px;max-height:118px}}
-</style></head>
+.fold-section{margin:3px 0;border:1px solid #344459;border-radius:9px;background:#101927;overflow:hidden}
+.fold-section>summary{cursor:pointer;list-style:none;padding:8px 9px;margin:0;min-height:34px;display:flex;align-items:center;justify-content:space-between}
+.fold-section>summary::-webkit-details-marker{display:none}.fold-section>summary::after{content:"＋";color:#efc46e;font-weight:800;margin-inline-start:7px}
+.fold-section[open]>summary::after{content:"−"}.fold-section>section{padding:0 6px 6px}
+.fold-section .card{margin:0}.fold-section .terminal-details{padding:0 6px 6px}
+#chart .chart{height:118px;max-height:118px}#chart .chart-note{display:none}
+@media(max-width:420px){#chart .chart{height:110px;max-height:110px}}</style></head>
 <body><main>
 <div class="terminal-top"><header class="head"><div><h1>♛ Gold Precision Pro Ultimate</h1><div class="muted">XAUUSD · GOLD TERMINAL · لوحة المراجعة الخاصة</div></div></header><div class="status-strip"><span class="status-pill">● WAIT</span><span class="mini-label">READ ONLY</span></div></div>
 <nav class="nav" aria-label="أقسام الشاشة"><a href="#chart">▥ تحليل الذهب</a><a href="#quality">⚗ الاختبارات</a><a href="#signal">▤ السجل</a><a href="#settings">⚙ الإعدادات</a></nav>
@@ -115,14 +121,18 @@ main{padding:4px 7px calc(58px + env(safe-area-inset-bottom,0px))}
 <div class="chart-note">الشارت بيعرض فقط شموع BiQuote المغلقة بعد التحقق من الجلسة وصلاحية البيانات.</div><svg id="candles" class="chart" viewBox="0 0 680 300" role="img" aria-label="شارت الشموع المغلقة"><text x="340" y="145" text-anchor="middle" fill="#aab5c4">لا توجد شموع موثقة للعرض</text></svg>
 <p id="chart-status" role="status" aria-live="polite" class="fine muted">لن تُرسم شموع افتراضية أو مفتوحة.</p><button id="refresh" class="primary">↻ تحديث بيانات BiQuote الخاصة عند الطلب</button></section>
 <div class="terminal-section-title"><span>المؤشرات المساعدة</span><span class="sub">لا تُعرض قيم بدون اتصال موثّق</span></div><div class="market-mini" aria-label="مؤشرات السوق"><div class="card"><div class="label">التحليل الفني</div><div class="value">غير متاح</div></div><div class="card"><div class="label">DXY</div><div class="value">غير مربوط</div></div><div class="card"><div class="label">US10Y</div><div class="value">غير مربوط</div></div><div class="card"><div class="label">US02Y</div><div class="value">غير مربوط</div></div><div class="card"><div class="label">GC</div><div class="value">غير مرخّص</div></div></div>
-<div id="context" class="terminal-section-title"><span>▤ التحليل الفني والسيولة</span><span class="sub">معلومات موثقة فقط</span></div>
+<details class="fold-section" id="context"><summary class="terminal-section-title"><span>▤ التحليل الفني والسيولة</span><span class="sub">معلومات موثقة فقط</span></summary>
 <section class="grid" aria-label="التحليل"><div class="card"><div class="label">الاتجاه H4 / H1</div><div id="trend-status" class="value">غير متاح</div></div><div class="card"><div class="label">فرص M15</div><div id="watch-status" class="value">WAIT</div></div><div class="card"><div class="label">EMA / RSI / ATR</div><div class="value">غير متحقق</div></div><div class="card"><div class="label">BOS / CHoCH</div><div class="value">غير متحقق</div></div></section>
-<div id="flow" class="terminal-section-title"><span>◈ Order Flow · السيولة</span><span class="sub">GC / DOM / Delta</span></div>
+</details>
+<details class="fold-section" id="flow"><summary class="terminal-section-title"><span>◈ Order Flow · السيولة</span><span class="sub">GC / DOM / Delta</span></summary>
 <section class="terminal-details"><div class="card"><h2>Footprint / Delta</h2><p class="muted">لا يوجد تدفق GC مرخّص</p></div><div class="card"><h2>DOM / Absorption</h2><p class="muted">غير متاح حالياً</p></div></section>
-<div id="news" class="terminal-section-title"><span>▣ الأخبار والسياق</span><span class="sub">Fed · BLS · العوائد</span></div>
+</details>
+<details class="fold-section" id="news"><summary class="terminal-section-title"><span>▣ الأخبار والسياق</span><span class="sub">Fed · BLS · العوائد</span></summary>
 <section class="terminal-details"><div class="card"><h2>الأخبار الاقتصادية</h2><p class="muted">لا توجد قراءة حديثة متحققة</p></div><div class="card"><h2>جلسات السوق</h2><p class="muted">تقويم الوسيط غير مثبت</p></div></section>
-<div id="quality" class="terminal-section-title"><span>✓ جودة البيانات والمصادر</span><span class="sub">Read-only audit</span></div>
+</details>
+<details class="fold-section" id="quality"><summary class="terminal-section-title"><span>✓ جودة البيانات والمصادر</span><span class="sub">Read-only audit</span></summary>
 <section class="terminal-details"><div class="card"><h2>فحص الشموع M15 / H1 / H4</h2><p id="quality-status" class="muted">بانتظار الفحص</p><p id="parity-status" class="fine muted">تطابق الفريمات: غير متحقق</p></div><div class="card"><h2>حقوق المصدر وتكاليف التنفيذ</h2><p class="warn">غير مثبتة للتداول</p></div></section>
+</details>
 <section id="signal" class="card wait"><div class="signal-compact"><h2>⌛ مركز التوصيات</h2><strong id="decision">WAIT</strong></div><div class="fine warn">executable = false · BUY / SELL محجوبة حتى اكتمال التحقق</div><p class="fine muted">الشارت للعرض الخاص فقط؛ لا ينتج عنه دخول أو وقف خسارة أو أهداف تداول.</p><p id="reason" role="status" aria-live="polite" class="fine">لا توجد إشارة قابلة للتنفيذ؛ البيانات والحقوق والاختبارات غير مكتملة.</p></section>
 <section class="terminal-details"><div class="card"><h2>▤ الاختبارات والسجل</h2><p class="muted">لا نتائج مفترضة أو نسب نجاح وهمية</p></div><div class="card"><h2>🔒 التداول الورقي / الحقيقي</h2><p class="muted">لا أوامر تلقائية؛ التداول الحقيقي مقفل</p></div></section>
 <section id="settings" class="card session-card" aria-label="جلسة المشاهدة الخاصة"><details class="session-details"><summary>🔐 جلسة BiQuote الخاصة · تعليمات الوصول</summary><p class="fine">إذا أدخلت رمز المشاهدة على نفس المتصفح سابقاً، بتُستخدم جلسة المشاهدة الآمنة الموجودة. وإلا افتح <a href="/ultimate">Ultimate</a> وأدخل الرمز مرة واحدة. ما حدا بيشوف الأسعار الخاصة من دون جلسة صالحة.</p><p class="fine warn">الشارت يتحدّث عند الطلب فقط. لا توصيات تنفيذ أو تداول آلي.</p></details></section>
