@@ -243,6 +243,7 @@
     signal:AbortSignal.timeout(15000)
    });
    if(response.status===401||response.status===403)throw Error("SESSION_REQUIRED");
+   if(response.status===429)throw Error("RATE_LIMITED");
    if(response.status!==200)throw Error("DATA_UNAVAILABLE");
    if(!/^application\/json(?:\s*;|\s*$)/i.test(response.headers.get("content-type")||""))
     throw Error("INVALID_RESPONSE_TYPE");
