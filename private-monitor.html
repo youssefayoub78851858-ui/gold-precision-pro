@@ -84,6 +84,7 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <ul>
 <li id="signal-roadmap-history">البيانات: تتابع الشموع غير مفحوص</li>
 <li id="signal-roadmap-paper">التداول الورقي: تاريخ 50 شمعة لكل فاصل غير مفحوص</li>
+<li id="signal-roadmap-h4-horizon">فترة 18–25 نوفمبر: أثر عطلة السوق على اكتمال H4 غير محسوم</li>
 <li id="signal-roadmap-firstseen">اختبار زمن القرار: وقت أول وصول الشموع لكل فاصل غير مفحوص</li>
 <li id="signal-roadmap-rights">المصدر: الترخيص والبيانات المستقلة غير مثبتين</li>
 <li id="signal-roadmap-costs">التنفيذ: السبريد والعمولة والانزلاق غير مثبتين</li>
@@ -139,10 +140,39 @@ function clearSignalRoadmap(){
  el("signal-roadmap-status").textContent="WAIT — لا توجد صفقة قابلة للتنفيذ";
  el("signal-roadmap-history").textContent="البيانات: تعذّر فحص الشموع المتصلة";
  el("signal-roadmap-paper").textContent="التداول الورقي: لا يوجد دليل على تاريخ 50 شمعة لكل فاصل";
+ el("signal-roadmap-h4-horizon").textContent="فترة 18–25 نوفمبر: لا يوجد دليل كافٍ لحساب أثر عطلة السوق على H4";
  el("signal-roadmap-firstseen").textContent="اختبار زمن القرار: أول وصول كل شمعة غير مثبت";
  el("signal-roadmap-rights").textContent="المصدر: حقوق XAUUSD وGC والبيانات المساعدة غير مثبتة";
  el("signal-roadmap-costs").textContent="التنفيذ: السبريد والعمولة والانزلاق غير مثبتين";
  el("signal-roadmap-performance").textContent="الاختبار: الربحية المستقلة بعد التكاليف غير مثبتة";
+}
+function privateDeclaredH4WeekendCeiling(asOfUTC,tailCount){
+ // A *conditional* browser-only planning estimate from BiQuote's
+ // November 16 support-declared schedule. Not the original broker's
+ // independently verified session/calendar; it never opens an order.
+ const start=Date.parse("2026-11-18T00:00:00Z");
+ const stop=Date.parse("2026-11-25T00:00:00Z");
+ const at=Date.parse(asOfUTC);
+ const width=4*3600000,step=15*60000;
+ if(typeof asOfUTC!=="string"||!/Z$/.test(asOfUTC)||
+    !Number.isFinite(at)||at<start||at>=stop||
+    !Number.isSafeInteger(tailCount)||tailCount<0||tailCount>45000)
+  return null;
+ let current=tailCount,best=current,fullWeekendH4=0;
+ for(let boundary=Math.floor(at/width)+1;
+         boundary<=Math.floor(stop/width);boundary++){
+  const open=(boundary-1)*width;
+  let fullyClosed=true;
+  for(let i=0;i<16;i++){
+   const d=new Date(open+i*step),day=d.getUTCDay(),h=d.getUTCHours();
+   const weekend=(day===5&&h>=22)||day===6||(day===0&&h<23);
+   const daily=(day>=1&&day<=4&&h===22);
+   if(!(weekend||daily)){fullyClosed=false;break;}
+  }
+  if(fullyClosed){current=0;fullWeekendH4++;}
+  else{current++;best=Math.max(current,best);}
+ }
+ return {best,atEnd:current,fullWeekendH4};
 }
 function renderSignalRoadmap(vault,watchSide){
  // Only trusted, owner-authenticated metadata can populate progress.
@@ -169,6 +199,14 @@ function renderSignalRoadmap(vault,watchSide){
       Math.min(21,continuity.H1)+"/21، H4 "+Math.min(21,continuity.H4)+
       "/21 شمعة متصلة — استراحة السوق غير المؤكدة قد تعيد العداد"
    :"فحص V3 الفني: WAIT — التتابع غير مثبت، لا بيانات مفترضة";
+ const declared=continuity&&privateDeclaredH4WeekendCeiling(
+   vault?.lastImportedUTC,continuity.H4);
+ el("signal-roadmap-h4-horizon").textContent=declared
+   ?"فترة التسجيل 18–25 نوفمبر، حسب استراحة BiQuote المعلنة فقط: أقصى H4 متصل نظرياً "+
+      declared.best+" شمعة أثناء الفترة، و"+declared.atEnd+
+      " عند نهايتها؛ "+declared.fullWeekendH4+
+      " فواصل H4 كاملة ضمن عطلة معلنة. مش توثيق مستقل للوسيط أو إذن تمديد."
+   :"فترة 18–25 نوفمبر: لا يمكن حساب سقف H4 دون وقت حفظ موثّق؛ لا افتراض لجدول الوسيط";
  el("signal-roadmap-paper").textContent=counts&&continuity
    ?"حدّ تاريخ التداول الورقي المتتالي (عدد فقط): M15 "+Math.min(50,continuity.M15)+
      "/50، H1 "+Math.min(50,continuity.H1)+"/50، H4 "+
