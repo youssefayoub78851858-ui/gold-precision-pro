@@ -429,6 +429,18 @@ const server = http.createServer(async (req, res) => {
 
   const url = new URL(req.url, "http://localhost");
 
+  // Review-only static mobile dashboard. This page contains no raw broker
+  // credentials, private XAUUSD candles or trading endpoints and uses the
+  // existing public research WAIT route on explicit user request only.
+  if(DEMO_MODE && (url.pathname==="/review-dashboard"||
+                   url.pathname==="/review-dashboard.html")){
+    res.writeHead(200,{"Content-Type":"text/html; charset=utf-8",
+      "Cache-Control":"no-store","X-Content-Type-Options":"nosniff",
+      "Referrer-Policy":"no-referrer",
+      "Content-Security-Policy":"frame-ancestors 'none'"});
+    return res.end(fs.readFileSync(path.join(__dirname,"review-dashboard.html")));
+  }
+
   if (url.pathname === "/review" || url.pathname === "/review-ui.js" ||
       (DEMO_MODE && url.pathname === "/")) {
     const isScript = url.pathname === "/review-ui.js";
