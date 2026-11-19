@@ -464,6 +464,37 @@
    for(const [id,message] of Object.entries(status)){
      const e=$(id);if(e)e.textContent=message;
    }
+   const watch=$("gdc-v3-watch");
+   if(watch)watch.textContent="WAIT — ما في WATCH مؤكد؛ السعر أو جلسة المشاهدة غير مؤهّلة";
+ }
+ function renderFrozenV3ResearchWatch(v){
+   const el=$("gdc-v3-watch");
+   if(!el)return;
+   const valid=v?.mode==="PRIVATE_FROZEN_V3_TECHNICAL_WATCH_ONLY"&&
+     v.signal==="WAIT"&&v.executable===false&&v.tradeEligible===false&&
+     v.paperOrdersAllowed===false&&v.liveOrdersAllowed===false&&
+     v.sourceRightsVerified===false&&
+     v.firstSeenAtDecisionVerified===false&&
+     v.independentMacroNewsGcOrderFlowVerified===false&&
+     v.brokerBidAskCostsVerified===false&&v.retrospectiveOnly===true&&
+     v.entry===null&&v.stopLoss===null&&v.takeProfit===null&&
+     v.providerRequestsMade===0&&v.brokerOrdersSent===0;
+   if(!valid){
+     el.textContent="WAIT — نتيجة محرك V3 غير متاحة أو غير موثّقة";
+     return;
+   }
+   if(v.status==="TECHNICAL_WATCH_ONLY_NOT_TRADE_READY"&&
+      v.lastCrossFrameParityObserved===true&&
+      (v.technicalCandidate==="BUY"&&v.watchLabel==="WATCH_BUY"||
+       v.technicalCandidate==="SELL"&&v.watchLabel==="WATCH_SELL")){
+     el.textContent="WAIT · "+v.watchLabel+
+       " — مراقبة V3 فنية على شموع مغلقة فقط؛ ليست توصية دخول أو وقف أو هدف";
+     return;
+   }
+   el.textContent="WAIT — لا توجد مراقبة BUY/SELL مؤهّلة: "+
+     (v.status==="WAIT_CROSS_FRAME_EVIDENCE"?"آخر شموع M15/H1/H4 غير متطابقة أو ناقصة":
+      v.status==="WAIT_DATA_INCOMPLETE"?"عدد الشموع المتتالية أو حداثتها غير كافيين":
+      "لا يوجد اختراق متوافق بين الفواصل الثلاثة");
  }
  // This is a PRIVATE, already validated observation. It can describe trend
  // but never authorize an order, trade plan, paper position or entry/SL/TP.
@@ -489,6 +520,7 @@
        (label[f.descriptiveTrend]||"اتجاه غير محسوم")+
        " · "+f.closedCount+" شمعة مغلقة · وصفي فقط";
    }
+   renderFrozenV3ResearchWatch(data.privateTechnicalWatch);
    $("gdc-blocker").textContent=data.status==="WAIT_CROSS_FRAME_GAPS"?
      "سبب WAIT: فجوات أو اختلافات تغطية بين M15/H1/H4 غير محسومة؛ بالإضافة إلى غياب إثبات جلسات الوسيط والمصادر المساندة وتكاليف التنفيذ. لا صفقات.":
      "سبب WAIT: شارت BiQuote وحده لا يثبت الصفقات؛ ينقص GC وDXY والسندات والأخبار وOrder Flow وحقوق الوسيط وتكاليف التنفيذ واختبارات مستقلة.";
