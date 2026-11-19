@@ -249,6 +249,7 @@
     throw Error("INVALID_RESPONSE_TYPE");
    const packet=await response.json();
    const verified=validateSnapshot(packet,Date.now());
+   if(document.visibilityState==="hidden")throw Error("PAGE_HIDDEN");
    if(!verified)throw Error("PRIVATE_SESSION_OR_DATA_INVALID");
    state=verified;expiry=Date.now()+Math.min(15000,
     Math.max(1000,30000-(Date.now()-verified.at)));
