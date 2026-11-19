@@ -36,6 +36,7 @@ function base(status,extra={}){
   legacyWithoutFirstSeen:ZERO(),firstSeenAfterDecision:ZERO(),
   contiguousObservedClosed:ZERO(),
   latestEligibleClosedObservedAtDecision:FALSE(),
+  latestExpectedUTCGridClosedObservedAtDecision:FALSE(),
   technicalWarmupMissing:{M15:WARMUP,H1:WARMUP,H4:WARMUP},
   paperHistoryMissing:{M15:PAPER,H1:PAPER,H4:PAPER},
   localTimingAndParityCheck:"NOT_PROVEN",localGeometryObserved:false,...extra};
@@ -105,7 +106,7 @@ function assess(input){
   return base("BLOCKED",{storedClosedCounts:counts,
    blockers:[...FIXED,"INVALID_RECEIPT_MAP"]});
  const available={},observed={},unknown={},afterDecision={},tail={},warm={},paper={},lastAge={};
- const latestEligibleObserved={};
+ const latestEligibleObserved={},latestGridObserved={};
  for(const tf of Object.keys(WIDTH)){
   const map=receipts[tf],bars=frames[tf],width=WIDTH[tf];
   if(!map||typeof map!=="object"||Array.isArray(map))
@@ -142,6 +143,13 @@ function assess(input){
   const latestClosed=bars.filter(b=>b.t+width<=asOf).at(-1);
   latestEligibleObserved[tf]=!!latestClosed&&!!last&&
    latestClosed.t===last.t;
+  // UTC aligned EXPECTED time slot is a conservative safeguard only.
+  // When a closed slot is absent at the decision time, older H4 can still
+  // look fresh (<5h) and pass 21-bar warmup. We must not grant local
+  // geometry readiness from that stale slot. During legitimate broker
+  // breaks/DST uncertainty, fail closed to WAIT, never invent a flat bar.
+  const expectedUTCSlot=Math.floor(asOf/width)*width-width;
+  latestGridObserved[tf]=!!last&&last.t===expectedUTCSlot;
   lastAge[tf]=last?asOf-(last.t+width):null;
  }
  const blockers=[...FIXED];
@@ -154,11 +162,14 @@ function assess(input){
   if(afterDecision[tf]>0)blockers.push(tf+"_FUTURE_RECEIPTS_EXCLUDED_FROM_DECISION");
   if(!latestEligibleObserved[tf])
    blockers.push(tf+"_LATEST_ELIGIBLE_CLOSED_BAR_NOT_OBSERVED_AT_DECISION");
+  if(!latestGridObserved[tf])
+   blockers.push(tf+"_EXPECTED_UTC_CLOSED_SLOT_NOT_OBSERVED");
  }
  const parity=latestParity(available);
  if(!parity)blockers.push("LATEST_CLOSED_M15_H1_H4_OHLC_PARITY_UNPROVEN");
  const localReady=Object.values(warm).every(n=>n===0)&&
   Object.values(latestEligibleObserved).every(Boolean)&&
+  Object.values(latestGridObserved).every(Boolean)&&
   Object.values(lastAge).every((n,i)=>Number.isFinite(n)&&
    n>=0&&n<=MAX_AGE[Object.keys(WIDTH)[i]])&&parity;
  return base(localReady?"LOCAL_GEOMETRY_ONLY_NOT_TRADE_READY":"INSUFFICIENT_EVIDENCE",{
@@ -167,6 +178,7 @@ function assess(input){
   legacyWithoutFirstSeen:unknown,firstSeenAfterDecision:afterDecision,
   contiguousObservedClosed:tail,
   latestEligibleClosedObservedAtDecision:latestEligibleObserved,
+  latestExpectedUTCGridClosedObservedAtDecision:latestGridObserved,
   technicalWarmupMissing:warm,paperHistoryMissing:paper,
   localTimingAndParityCheck:localReady?"LOCAL_ONLY_NOT_INDEPENDENT":"NOT_PROVEN",
   blockers,
