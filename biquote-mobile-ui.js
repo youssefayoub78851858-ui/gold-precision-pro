@@ -507,9 +507,31 @@
    if(watch)watch.textContent="WAIT — ما في WATCH مؤكد؛ السعر أو جلسة المشاهدة غير مؤهّلة";
    displayVendorH4Tail(null,null);
  }
- function renderFrozenV3ResearchWatch(v){
+ function renderFrozenV3ResearchWatch(v,comparisons){
    const el=$("gdc-v3-watch");
    if(!el)return;
+   // Only sanitized overlap counts; never render raw provider text,
+   // private OHLC rows, credentials, quote prices, or execution levels.
+   function overlapFacts(){
+     if(!comparisons||typeof comparisons!=="object"||
+        Array.isArray(comparisons)||Object.keys(comparisons).sort().join(",")!=="H1,H4")
+       return null;
+     const facts=[];
+     for(const tf of ["H1","H4"]){
+       const x=comparisons[tf];
+       if(!x||typeof x!=="object"||Array.isArray(x)||
+          Object.keys(x).sort().join(",")!==
+            "completeMatches,completeMismatches,incompleteM15Groups,outsideRetentionWindow"||
+          !["completeMatches","completeMismatches",
+            "incompleteM15Groups","outsideRetentionWindow"].every(k=>
+             Number.isSafeInteger(x[k])&&x[k]>=0&&x[k]<=1000))return null;
+       facts.push(tf+": مطابق "+x.completeMatches+
+         "، مختلف "+x.completeMismatches+
+         "، M15 ناقص "+x.incompleteM15Groups+
+         "، خارج نطاق M15 "+x.outsideRetentionWindow);
+     }
+     return facts.join(" | ");
+   }
    const valid=v?.mode==="PRIVATE_FROZEN_V3_TECHNICAL_WATCH_ONLY"&&
      v.signal==="WAIT"&&v.executable===false&&v.tradeEligible===false&&
      v.paperOrdersAllowed===false&&v.liveOrdersAllowed===false&&
@@ -531,11 +553,37 @@
        " — مراقبة V3 فنية على شموع مغلقة فقط؛ ليست توصية دخول أو وقف أو هدف";
      return;
    }
-   el.textContent="WAIT — لا توجد مراقبة BUY/SELL مؤهّلة: "+
-     (v.status==="WAIT_CROSS_FRAME_EVIDENCE"?
-       "تقرير شموع H1/H4 مع M15 فيه اختلاف أو تغطية غير مكتملة، ولو آخر شمعة سليمة":
-      v.status==="WAIT_DATA_INCOMPLETE"?"عدد الشموع المتتالية أو حداثتها غير كافيين":
-      "لا يوجد اختراق متوافق بين الفواصل الثلاثة");
+   const reasons={
+     SOURCE_HAS_UNRESOLVED_CROSS_FRAME_GAPS:
+       "تقرير المصدر كشف اختلاف أسعار أو تغطية ناقصة في شموع أقدم",
+     HISTORICAL_CROSS_FRAME_GAPS_OR_PRICE_MISMATCH:
+       "اختلاف أو نقص في شموع H1/H4 المتقاطعة مع M15",
+     CROSS_FRAME_SUMMARY_MISSING:"مقارنة الفواصل مفقودة",
+     CROSS_FRAME_SUMMARY_INVALID:"مقارنة الفواصل غير صالحة",
+     LAST_CLOSED_H1_H4_M15_PARITY_NOT_PROVEN:
+       "تطابق آخر شموع H1/H4 مع M15 غير مثبت",
+     NO_ALIGNED_CLOSED_BAR_BOS:
+       "ما ظهر كسر سعري متوافق على الفواصل الثلاثة",
+     M15_INSUFFICIENT_CLOSED_HISTORY:"شموع M15 المغلقة غير كافية",
+     H1_INSUFFICIENT_CLOSED_HISTORY:"شموع H1 المغلقة غير كافية",
+     H4_INSUFFICIENT_CLOSED_HISTORY:"شموع H4 المغلقة غير كافية",
+     M15_NOT_21_STRICTLY_CONTIGUOUS_CLOSED:"أقل من 21 شمعة M15 متتالية",
+     H1_NOT_21_STRICTLY_CONTIGUOUS_CLOSED:"أقل من 21 شمعة H1 متتالية",
+     H4_NOT_21_STRICTLY_CONTIGUOUS_CLOSED:"أقل من 21 شمعة H4 متتالية",
+     M15_LATEST_CLOSED_CANDLE_STALE:"آخر شمعة M15 قديمة",
+     H1_LATEST_CLOSED_CANDLE_STALE:"آخر شمعة H1 قديمة",
+     H4_LATEST_CLOSED_CANDLE_STALE:"آخر شمعة H4 قديمة"
+   };
+   const reason=Object.prototype.hasOwnProperty.call(reasons,v.reason)?
+       reasons[v.reason]:
+       v.status==="WAIT_DATA_INCOMPLETE"?
+         "عدد الشموع المغلقة المتتالية أو حداثتها غير كافيين":
+       v.status==="WAIT_CROSS_FRAME_EVIDENCE"?
+         "مقارنة H1/H4 مع M15 لم تجتز تدقيق البيانات":
+         "ما في فرصة فنية مؤهّلة";
+   const facts=v.status==="WAIT_CROSS_FRAME_EVIDENCE"?overlapFacts():null;
+   el.textContent="WAIT — "+reason+(facts?" | "+facts:"")+
+     " | لا دخول أو وقف أو أهداف قبل إثبات البيانات والتكاليف";
  }
  // This is a PRIVATE, already validated observation. It can describe trend
  // but never authorize an order, trade plan, paper position or entry/SL/TP.
@@ -561,7 +609,8 @@
        (label[f.descriptiveTrend]||"اتجاه غير محسوم")+
        " · "+f.closedCount+" شمعة مغلقة · وصفي فقط";
    }
-   renderFrozenV3ResearchWatch(data.privateTechnicalWatch);
+   renderFrozenV3ResearchWatch(data.privateTechnicalWatch,
+     data.crossFrameComparisons);
    displayVendorH4Tail(data.privateVendorH4Tail,acceptedChart);
    $("gdc-blocker").textContent=data.status==="WAIT_CROSS_FRAME_GAPS"?
      "سبب WAIT: فجوات أو اختلافات تغطية بين M15/H1/H4 غير محسومة؛ بالإضافة إلى غياب إثبات جلسات الوسيط والمصادر المساندة وتكاليف التنفيذ. لا صفقات.":
