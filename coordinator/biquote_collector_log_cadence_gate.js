@@ -9,6 +9,11 @@ const MAX=11000;
 const PERIOD=120000;
 const TIME=/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,6})?Z$/;
 const TFS=["M15","H1","H4"];
+const GEOMETRY_CLASSES=Object.freeze([
+ "UNCLASSIFIED_M15_COVERAGE_GAP","OHLC_PRICE_DISAGREEMENT",
+ "OTHER_SOURCE_SHAPE_FAILURE","NO_STRUCTURAL_FAILURE","UNAVAILABLE"
+]);
+const geometryZeros=()=>Object.fromEntries(GEOMETRY_CLASSES.map(k=>[k,0]));
 const FIXED=Object.freeze([
  "RUNNING_LEGACY_COLLECTOR_HAS_NO_PER_CANDLE_FIRST_SEEN",
  "UPSTREAM_MARKET_RIGHTS_UNVERIFIED",
@@ -29,6 +34,7 @@ const safe=(state,reason,extra={})=>({
  recordedArchiveIncrease:0,recordedArchiveRejectionsIncrease:0,
  collectorSlotsWithoutRecordedArchiveOutcome:0,
  httpNonOkSamples:0,geometryNotOkSamples:0,
+ geometryFailureClassCounts:geometryZeros(),
  unclassifiedFrameGaps:{M15:null,H1:null,H4:null},
  blockerCodes:[...FIXED,...(reason?[reason]:[])],...extra
 });
@@ -51,6 +57,7 @@ function audit(input){
   return safe("BLOCKED","INVALID_LOG_ARRAYS");
  let previous=null,missing=0,archiveIncrease=0,rejectionsIncrease=0;
  let unaccounted=0,httpNonOk=0,geometryNotOk=0;
+ const geometryFailures=geometryZeros();
  for(const rec of samples){
   if(!rec||typeof rec!=="object"||Array.isArray(rec))
    return safe("BLOCKED","MALFORMED_SAMPLE");
@@ -59,6 +66,8 @@ function audit(input){
      rec.signal!=="WAIT"||rec.executable!==false||
      typeof rec.httpAllOk!=="boolean"||
      typeof rec.geometryChecksOk!=="boolean"||
+     (rec.geometryFailureClass!==undefined&&
+      !GEOMETRY_CLASSES.includes(rec.geometryFailureClass))||
      !int(rec.slot)||!int(rec.archiveSavedSnapshotsSoFar)||
      !int(rec.archiveRejectedSnapshotsSoFar))
    return safe("BLOCKED","UNSAFE_OR_INVALID_SAMPLE");
@@ -82,6 +91,7 @@ function audit(input){
   }
   if(!rec.httpAllOk)httpNonOk++;
   if(!rec.geometryChecksOk)geometryNotOk++;
+  geometryFailures[rec.geometryFailureClass??"UNAVAILABLE"]++;
   previous={t,slot:rec.slot,saved:rec.archiveSavedSnapshotsSoFar,
             rejected:rec.archiveRejectedSnapshotsSoFar};
  }
@@ -119,6 +129,10 @@ function audit(input){
  if(unaccounted)blockers.push("COLLECTOR_SLOTS_WITHOUT_ARCHIVE_OUTCOME");
  if(httpNonOk)blockers.push("HTTP_NON_OK_COLLECTOR_LOG_SAMPLES");
  if(geometryNotOk)blockers.push("COLLECTOR_OHLC_GEOMETRY_NOT_PROVEN");
+ if(geometryFailures.UNCLASSIFIED_M15_COVERAGE_GAP)
+  blockers.push("REPORTED_M15_CONSTITUENT_COVERAGE_GAP");
+ if(geometryFailures.OHLC_PRICE_DISAGREEMENT)
+  blockers.push("REPORTED_CLOSED_OHLC_PRICE_DISAGREEMENT");
  if(!recentProgress)blockers.push("CLOSED_BAR_PROGRESS_NOT_RECENT_IN_LOG_WINDOW");
  if(latest&&TFS.some(tf=>latest.gaps[tf]>0))
   blockers.push("UNCLASSIFIED_CLOSED_BAR_TIME_GAPS_PRESENT");
@@ -133,6 +147,7 @@ function audit(input){
     recordedArchiveRejectionsIncrease:rejectionsIncrease,
     collectorSlotsWithoutRecordedArchiveOutcome:unaccounted,
     httpNonOkSamples:httpNonOk,geometryNotOkSamples:geometryNotOk,
+    geometryFailureClassCounts:geometryFailures,
     latestSavedSnapshots:previous.saved,latestRejectedSnapshots:previous.rejected,
     unclassifiedFrameGaps:latest?latest.gaps:{M15:null,H1:null,H4:null},
     logWindowEdgesObserved:covered,recentClosedProgressObserved:recentProgress,
