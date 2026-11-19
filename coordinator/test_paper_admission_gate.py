@@ -85,6 +85,35 @@ class PaperAdmissionTests(unittest.TestCase):
         self.assertFalse(passed["paperOrdersAllowed"])
         self.assertIn("BIQUOTE_SOURCE_AND_UNDERLYING_RIGHTS_UNVERIFIED",
                       passed["reasonCodes"])
+        # Raw 80 stored bars are not 80 consecutive bars. The isolated
+        # source gate may NEVER authorize a paper order even if counts reach 80.
+        eighty={"M15":80,"H1":80,"H4":80}
+        tail={"M15":80,"H1":80,"H4":9}
+        gaps=assess_biquote_paper_gate(
+            {"ohlcStructuralChecksPassed":True},
+            {"status":"ADMISSIBLE_FOR_RESEARCH_ONLY"},eighty,tail)
+        self.assertTrue(gaps["historyReadiness"]["countMinimumMet"])
+        self.assertFalse(gaps["historyReadiness"]["contiguousCountMinimumMet"])
+        self.assertEqual(gaps["historyReadiness"]["missingContiguousUntil50"]["H4"],41)
+        self.assertIn("BIQUOTE_CONTIGUOUS_PAPER_50_BAR_MINIMUM_INCOMPLETE",
+                      gaps["reasonCodes"])
+        self.assertFalse(gaps["paperOrdersAllowed"])
+        no_tail=assess_biquote_paper_gate(
+            {"ohlcStructuralChecksPassed":True},
+            {"status":"ADMISSIBLE_FOR_RESEARCH_ONLY"},eighty)
+        self.assertIn("BIQUOTE_CONTIGUOUS_PAPER_HISTORY_UNVERIFIED",
+                      no_tail["reasonCodes"])
+        self.assertFalse(no_tail["historyReadiness"]["contiguousCountsVerifiedWithinArchive"])
+        complete=assess_biquote_paper_gate(
+            {"ohlcStructuralChecksPassed":True},
+            {"status":"ADMISSIBLE_FOR_RESEARCH_ONLY"},eighty,eighty)
+        self.assertTrue(complete["historyReadiness"]["contiguousCountMinimumMet"])
+        self.assertFalse(complete["historyReadiness"]["50BarHistoryFullyQualified"])
+        self.assertFalse(complete["paperOrdersAllowed"])
+        forged=assess_biquote_paper_gate({}, {}, eighty,
+                                         {"M15":80,"H1":80,"H4":81})
+        self.assertIn("BIQUOTE_CONTIGUOUS_PAPER_HISTORY_UNVERIFIED",forged["reasonCodes"])
+        self.assertFalse(forged["paperOrdersAllowed"])
         for invalid in (None,{"M15":50,"H1":50},
                         {"M15":True,"H1":50,"H4":50},
                         {"M15":-1,"H1":50,"H4":50},
