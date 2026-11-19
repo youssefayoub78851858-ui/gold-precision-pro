@@ -64,7 +64,7 @@ def assess_paper_gate(monitor: object, audit: object) -> dict:
     }
 
 
-def biquote_history_readiness(closed_counts: object) -> dict:
+def biquote_history_readiness(closed_counts: object, contiguous_counts: object = None) -> dict:
     """Safe count-only preflight, never permission to trade or gap-bridging.
 
     A 50-bar floor matches the existing paper-history baseline. Passing
@@ -79,6 +79,22 @@ def biquote_history_readiness(closed_counts: object) -> dict:
     counts = {tf: closed_counts[tf] if valid else None for tf in frames}
     missing = {tf: max(0, 50 - counts[tf]) if valid else None for tf in frames}
     enough = valid and all(n == 0 for n in missing.values())
+    # A saved historical bar does not imply that the latest H4 sequence
+    # covers 50 consecutive closed market bars. No independent broker
+    # session/calendar, timestamp or execution attestation is inferred.
+    contiguous_valid = (valid and isinstance(contiguous_counts, dict)
+                        and set(contiguous_counts) == set(frames)
+                        and all(type(contiguous_counts.get(tf)) is int
+                                and 0 <= contiguous_counts[tf] <= counts[tf]
+                                for tf in frames))
+    contiguous = {tf: contiguous_counts[tf] if contiguous_valid else None
+                  for tf in frames}
+    missing_contiguous = {
+        tf: max(0, 50 - contiguous[tf]) if contiguous_valid else None
+        for tf in frames
+    }
+    contiguous_enough = contiguous_valid and all(
+        n == 0 for n in missing_contiguous.values())
     return {
         "mode": "BIQUOTE_PAPER_HISTORY_COUNT_PREFLIGHT_ONLY",
         "status": ("UNVERIFIED_CLOSED_HISTORY" if not valid else
@@ -88,6 +104,11 @@ def biquote_history_readiness(closed_counts: object) -> dict:
         "minimumClosedBarsEachFrame": 50,
         "closedCounts": counts, "missingUntil50": missing,
         "countMinimumMet": bool(enough),
+        "contiguousClosedCounts": contiguous,
+        "missingContiguousUntil50": missing_contiguous,
+        "contiguousCountsVerifiedWithinArchive": bool(contiguous_valid),
+        "contiguousCountMinimumMet": bool(contiguous_enough),
+        "50BarHistoryFullyQualified": False,
         "brokerSessionCalendarVerified": False,
         "independentSourceRightsVerified": False,
         "executionCostsVerified": False,
@@ -96,7 +117,8 @@ def biquote_history_readiness(closed_counts: object) -> dict:
 
 
 def assess_biquote_paper_gate(source_audit: object, research_intake: object,
-                              closed_counts: object = None) -> dict:
+                              closed_counts: object = None,
+                              contiguous_counts: object = None) -> dict:
     """Fail-closed BiQuote paper-trading admission. Never constructs a ledger."""
     audit = source_audit if isinstance(source_audit, dict) else {}
     intake = research_intake if isinstance(research_intake, dict) else {}
@@ -111,7 +133,11 @@ def assess_biquote_paper_gate(source_audit: object, research_intake: object,
         reasons.append("BIQUOTE_STRUCTURAL_AUDIT_FAILED")
     if intake.get("status") != "ADMISSIBLE_FOR_RESEARCH_ONLY":
         reasons.append("RESEARCH_INTAKE_BLOCKED")
-    history = biquote_history_readiness(closed_counts)
+    history = biquote_history_readiness(closed_counts, contiguous_counts)
+    if not history["contiguousCountsVerifiedWithinArchive"]:
+        reasons.append("BIQUOTE_CONTIGUOUS_PAPER_HISTORY_UNVERIFIED")
+    elif not history["contiguousCountMinimumMet"]:
+        reasons.append("BIQUOTE_CONTIGUOUS_PAPER_50_BAR_MINIMUM_INCOMPLETE")
     if history["status"] == "UNVERIFIED_CLOSED_HISTORY":
         reasons.append("BIQUOTE_FORWARD_HISTORY_UNAVAILABLE")
     elif not history["countMinimumMet"]:
