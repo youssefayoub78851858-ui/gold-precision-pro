@@ -507,12 +507,12 @@
    if(watch)watch.textContent="WAIT — ما في WATCH مؤكد؛ السعر أو جلسة المشاهدة غير مؤهّلة";
    displayVendorH4Tail(null,null);
  }
- function renderFrozenV3ResearchWatch(v,comparisons){
+ function renderFrozenV3ResearchWatch(v,comparisons,sourceStatus){
    const el=$("gdc-v3-watch");
    if(!el)return;
    // Only sanitized overlap counts; never render raw provider text,
    // private OHLC rows, credentials, quote prices, or execution levels.
-   function overlapFacts(){
+   function overlapEvidence(){
      if(!comparisons||typeof comparisons!=="object"||
         Array.isArray(comparisons)||Object.keys(comparisons).sort().join(",")!=="H1,H4")
        return null;
@@ -530,8 +530,15 @@
          "، M15 ناقص "+x.incompleteM15Groups+
          "، خارج نطاق M15 "+x.outsideRetentionWindow);
      }
-     return facts.join(" | ");
+     return {
+       facts:facts.join(" | "),
+       clean:["H1","H4"].every(tf=>
+         comparisons[tf].completeMatches>=1&&
+         comparisons[tf].completeMismatches===0&&
+         comparisons[tf].incompleteM15Groups===0)
+     };
    }
+   const overlap=overlapEvidence();
    const valid=v?.mode==="PRIVATE_FROZEN_V3_TECHNICAL_WATCH_ONLY"&&
      v.signal==="WAIT"&&v.executable===false&&v.tradeEligible===false&&
      v.paperOrdersAllowed===false&&v.liveOrdersAllowed===false&&
@@ -545,10 +552,19 @@
      el.textContent="WAIT — نتيجة محرك V3 غير متاحة أو غير موثّقة";
      return;
    }
-   if(v.status==="TECHNICAL_WATCH_ONLY_NOT_TRADE_READY"&&
+   const attemptedWatch=v.status==="TECHNICAL_WATCH_ONLY_NOT_TRADE_READY"&&
       v.lastCrossFrameParityObserved===true&&
       (v.technicalCandidate==="BUY"&&v.watchLabel==="WATCH_BUY"||
-       v.technicalCandidate==="SELL"&&v.watchLabel==="WATCH_SELL")){
+       v.technicalCandidate==="SELL"&&v.watchLabel==="WATCH_SELL");
+   // Defense in depth: even an otherwise contract-valid WATCH payload
+   // cannot outvote contradictory source status or historical M15/H1/H4
+   // counts. The server enforces this too, but the browser must fail closed.
+   if(attemptedWatch&&
+      (sourceStatus!=="OBSERVED_READONLY_UNVERIFIED"||overlap?.clean!==true)){
+     el.textContent="WAIT — نتيجة WATCH تعارض حالة المصدر أو تغطية شموع M15/H1/H4؛ لا توصية دخول";
+     return;
+   }
+   if(attemptedWatch){
      el.textContent="WAIT · "+v.watchLabel+
        " — مراقبة V3 فنية على شموع مغلقة فقط؛ ليست توصية دخول أو وقف أو هدف";
      return;
@@ -581,7 +597,7 @@
        v.status==="WAIT_CROSS_FRAME_EVIDENCE"?
          "مقارنة H1/H4 مع M15 لم تجتز تدقيق البيانات":
          "ما في فرصة فنية مؤهّلة";
-   const facts=v.status==="WAIT_CROSS_FRAME_EVIDENCE"?overlapFacts():null;
+   const facts=v.status==="WAIT_CROSS_FRAME_EVIDENCE"?overlap?.facts:null;
    el.textContent="WAIT — "+reason+(facts?" | "+facts:"")+
      " | لا دخول أو وقف أو أهداف قبل إثبات البيانات والتكاليف";
  }
@@ -610,7 +626,7 @@
        " · "+f.closedCount+" شمعة مغلقة · وصفي فقط";
    }
    renderFrozenV3ResearchWatch(data.privateTechnicalWatch,
-     data.crossFrameComparisons);
+     data.crossFrameComparisons,data.status);
    displayVendorH4Tail(data.privateVendorH4Tail,acceptedChart);
    $("gdc-blocker").textContent=data.status==="WAIT_CROSS_FRAME_GAPS"?
      "سبب WAIT: فجوات أو اختلافات تغطية بين M15/H1/H4 غير محسومة؛ بالإضافة إلى غياب إثبات جلسات الوسيط والمصادر المساندة وتكاليف التنفيذ. لا صفقات.":
