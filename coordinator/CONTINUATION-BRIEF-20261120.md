@@ -29,3 +29,45 @@ Continue work in an integrated batch, in sequence, without pausing for approval 
 6. Report exact changed commits, successful/pending tests, external blockers and whether a real BUY/SELL recommendation is independently justified. No promise of profit.
 
 This file is a portable GitHub handoff, not a ChatGPT saved-memory entry.
+
+## 2026-11-20 next batch — evidence and paper validation
+
+- **Review-only changes**: strengthened `biquote_pre_signal_milestones.js`
+  to reject impossible UTC dates, frame-count and receipt contradictions,
+  stale/missing M15/H1/H4 expected slots, unverified 21-H4 warmup parity,
+  and ledger counters from a different decision cycle. The related
+  fail-closed test suite passed in four-stage CI on `e7197104`.
+- Added `prospective_paper_holdout_audit.js` and its test. This is an
+  **offline, untrusted, sanitized arithmetic auditor** for closed paper
+  outcomes, net of supplied spread/slippage/commission assumptions.
+  It checks chronological decision/entry/exit/first-seen timestamps and
+  computes net PnL, R expectancy and realized drawdown. Even a sample
+  with more than 30 profitable outcomes **never** grants a real or
+  paper execution permission, source-licensing attestation, independent
+  statistical proof, or a BUY/SELL recommendation.
+- The paper-auditor regression was corrected after a test-case mistake
+  (a purported invalid decision timestamp actually preceded the entry).
+  Four-stage offline GitHub Actions PASSED on commit `7e627ce3`,
+  run `44631804890`. Later changes should verify their own CI separately.
+- Read-only Render coordinator metadata from **2026-11-19 21:46 UTC**:
+  stored closed M15=179, H1=44, H4=11; strict contiguous tails
+  M15=48, H1=22, H4=11; 4 unclassified M15 missing slots, 1 H1 slot,
+  0 H4 missing slots. These are last observed **metadata**, not a
+  real-time quote, a per-bar source attestation, or full historical
+  cross-frame validation. H4 still lacks 10 strict contiguous closes
+  for a 21-bar technical warmup, and 39 for a 50-bar paper-history floor.
+- Review Render demo last independently verified live on `a8b5fe02`;
+  private coordinator on `b01574f2`. **No redeploy in this batch.**
+  Production untouched. Keep these distinct from GitHub HEAD.
+- Gmail check after November 17: no new support reply found from
+  BiQuote, CFI, or Twelve Data in that period. BiQuote follow-up already
+  sent on November 18 requesting exact MT5 broker identity,
+  broker-specific session/DST proof and confirmation that XAUUSD is
+  spot/CFD rather than CME order book. Do not send duplicates without
+  a new reason.
+- Current recommendation status stays `WAIT`, `executable=false`.
+  Source rights + session/calendar, independent historical BID/ASK
+  execution assumptions, synchronized macro/GC news and true
+  **untouched, externally corroborated after-cost prospective** paper
+  outcomes remain mandatory. Code and offline CI cannot invent them.
+
