@@ -172,7 +172,7 @@ function renderSignalRoadmap(vault,watchSide){
      "/50، H1 "+Math.min(50,counts.H1)+"/50، H4 "+
      Math.min(50,counts.H4)+"/50 — لا يفتح التداول عند اكتماله"
    :"حدّ تاريخ التداول الورقي: WAIT — العدد غير مؤكد";
- el("signal-roadmap-status").textContent=["BUY","SELL"].includes(watchSide)
+ el("signal-roadmap-status").textContent=counts&&continuity&&["BUY","SELL"].includes(watchSide)
    ?"WAIT — V3 أظهر مراقبة فنية "+watchSide+" فقط؛ ممنوع تنفيذ صفقة"
    :"WAIT — ما في إشارة تداول معتمدة";
  // No raw OHLC, provider prices, keys, URLs, or broker order endpoints.
