@@ -50,6 +50,9 @@ a.equal(good.status,"OBSERVED_LOG_CADENCE_ONLY_NOT_MARKET_PROOF");
 a.equal(good.sampleCount,9);
 a.equal(good.recordedArchiveIncrease,8);
 a.equal(good.newlyRejectedArchiveClasses.CLOSED_HISTORY_FRESHNESS,0);
+a.equal(good.longestObservedConsecutiveArchiveRejections,0);
+a.equal(good.trailingObservedConsecutiveArchiveRejections,0);
+a.equal(good.archiveSavesAfterLatestObservedRejection,null);
 a.equal(good.latestSavedSnapshots,332);
 a.equal(good.renderLogEventsParsed,11);
 a.equal(good.renderLogEventsIgnored,1);
@@ -171,6 +174,28 @@ const staleAudit=extract(stale);safe(staleAudit);
 a.equal(staleAudit.status,"OBSERVED_LOG_CADENCE_ONLY_NOT_MARKET_PROOF");
 a.equal(staleAudit.recordedArchiveRejectionsIncrease,1);
 a.equal(staleAudit.newlyRejectedArchiveClasses.CLOSED_HISTORY_FRESHNESS,1);
+a.equal(staleAudit.longestObservedConsecutiveArchiveRejections,1);
+a.equal(staleAudit.trailingObservedConsecutiveArchiveRejections,1);
+a.equal(staleAudit.archiveSavesAfterLatestObservedRejection,0);
+a.equal(staleAudit.latestObservedRejectionClass,"CLOSED_HISTORY_FRESHNESS");
+// Verify exact forwarding through the Render export boundary, without
+// exposing rejected private candle prices, time series or broker rights.
+const laterSaved=structuredClone(stale);
+laterSaved.endUTC=iso(start+19*60000);
+const nextSample={
+ ...finalBody,slot:339,asOfUTC:iso(start+18*60000+3033),
+ archiveSavedSnapshotsSoFar:332,archiveRejectedSnapshotsSoFar:8,
+ archiveRejectionClass:"NONE"
+};
+laterSaved.logs.push({timestamp:iso(start+18*60000+3033),
+ message:JSON.stringify(nextSample)});
+const laterAudit=extract(laterSaved);safe(laterAudit);
+a.equal(laterAudit.status,"OBSERVED_LOG_CADENCE_ONLY_NOT_MARKET_PROOF");
+a.equal(laterAudit.longestObservedConsecutiveArchiveRejections,1);
+a.equal(laterAudit.trailingObservedConsecutiveArchiveRejections,0);
+a.equal(laterAudit.archiveSavesAfterLatestObservedRejection,1);
+a.equal(laterAudit.latestObservedRejectionClass,"CLOSED_HISTORY_FRESHNESS");
+a(laterAudit.blockerCodes.includes("COLLECTOR_OHLC_GEOMETRY_NOT_PROVEN"));
 a(staleAudit.blockerCodes.includes("ARCHIVE_CLOSED_HISTORY_FRESHNESS_REJECTED"));
 // If one collector sample is missing, absent evidence is not invented.
 const missing=structuredClone(packet);
