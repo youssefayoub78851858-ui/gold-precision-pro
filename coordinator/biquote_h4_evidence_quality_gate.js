@@ -23,6 +23,12 @@ function blocked(reason){
   h4UnverifiedOrNotCompared:null,h4ContiguousVsCoveredNotJoinable:true,
   h4WarmupDeficit:null,h4PaperHistoryDeficit:null,
   maxPossibleContiguousH4ByCaptureEnd:null,
+  providerDeclaredBestH4ConsecutiveByCaptureEnd:null,
+  providerDeclaredEndH4Consecutive:null,
+  providerDeclaredFullWeekendPauseH4Slots:null,
+  providerDeclared21WarmupReachable:null,
+  providerDeclared50PaperReachable:null,
+  providerDeclaredBrokerCalendarVerified:false,
   blockers:["LEGACY_PER_BAR_FIRST_SEEN_UNAVAILABLE",
             "UPSTREAM_RIGHTS_AND_BROKER_SESSION_UNVERIFIED",
             "BID_ASK_FILL_COSTS_NOT_VERIFIED",
@@ -46,7 +52,8 @@ function assessEvidence(input){
  const stored=s.persistedClosed,tail=s.contiguousClosed,gaps=s.unclassifiedMissingSlots,
        compared=s.comparedClosed,notCovered=s.notFullyCoveredClosed,
        disagree=s.fullyCoveredDisagreements,
-       ceiling=h.maximumPossibleContiguousClosed;
+       ceiling=h.maximumPossibleContiguousClosed,
+       scenario=h.providerDeclaredH4Projection;
  if(!stored||!tail||!gaps||!compared||!notCovered||!disagree||!ceiling||
     FRAMES.some(tf=>!int(stored[tf])||!int(tail[tf])||
        tail[tf]>stored[tf]||!int(gaps[tf])||!int(ceiling[tf])||
@@ -62,6 +69,30 @@ function assessEvidence(input){
     h.paperH4HistoryReachableByWindowEnd!==(ceiling.H4>=PAPER)||
     h.theoreticalWarmupH4ReachableByWindowEnd!==(ceiling.H4>=WARMUP))
   return blocked("STAGE3_AND_CAPTURE_COUNTERS_CONTRADICT");
+ // Reconcile the *conditional* vendor support schedule with the
+ // generic optimistic UTC-grid ceiling. Never use an untrusted scenario
+ // to claim independent broker-calendar verification or trade eligibility.
+ const scenarioValid=scenario&&
+   scenario.mode==="BIQUOTE_SUPPORT_DECLARED_NOVEMBER_2026_SCENARIO_ONLY"&&
+   scenario.status==="HYPOTHETICAL_VENDOR_SCHEDULE_NOT_BROKER_VERIFIED"&&
+   scenario.originalBrokerScheduleVerified===false&&
+   scenario.consentExtended===false&&
+   int(scenario.providerDeclaredFullPauseH4Slots)&&
+   int(scenario.maxPossibleClosedH4FutureSlotsUnderDeclaration)&&
+   int(scenario.maxPossibleContiguousH4AtAnyTimeUnderDeclaration)&&
+   int(scenario.maxPossibleContiguousH4AtCaptureEndUnderDeclaration)&&
+   scenario.providerDeclaredFullPauseH4Slots+
+     scenario.maxPossibleClosedH4FutureSlotsUnderDeclaration===
+     h.upperBoundFutureClosedSlots?.H4&&
+   scenario.maxPossibleContiguousH4AtAnyTimeUnderDeclaration<=ceiling.H4&&
+   scenario.maxPossibleContiguousH4AtCaptureEndUnderDeclaration<=
+     scenario.maxPossibleContiguousH4AtAnyTimeUnderDeclaration&&
+   scenario.technicalWarmup21ReachableUnderDeclaration===
+     (scenario.maxPossibleContiguousH4AtAnyTimeUnderDeclaration>=WARMUP)&&
+   scenario.paperHistory50ReachableUnderDeclaration===
+     (scenario.maxPossibleContiguousH4AtAnyTimeUnderDeclaration>=PAPER);
+ if(!scenarioValid)
+  return blocked("PROVIDER_DECLARED_H4_PROJECTION_INCOMPLETE_OR_FORGED");
  const h4Unknown=stored.H4-compared.H4;
  const reasons=[];
  if(tail.H4<WARMUP)reasons.push("H4_CONTIGUOUS_TECHNICAL_WARMUP_SHORT");
@@ -72,6 +103,10 @@ function assessEvidence(input){
  if(gaps.M15>0||gaps.H1>0||gaps.H4>0)
   reasons.push("UNCLASSIFIED_CLOSED_FRAME_GAPS");
  if(ceiling.H4<PAPER)reasons.push("H4_50_BAR_HISTORY_UNREACHABLE_BY_CAPTURE_END");
+ if(!scenario.technicalWarmup21ReachableUnderDeclaration)
+  reasons.push("H4_21_WARMUP_UNREACHABLE_UNDER_BIQUOTE_DECLARED_WEEKEND_SCENARIO");
+ if(!scenario.paperHistory50ReachableUnderDeclaration)
+  reasons.push("H4_50_PAPER_UNREACHABLE_UNDER_BIQUOTE_DECLARED_WEEKEND_SCENARIO");
  // This cannot establish the newest CLOSED H4 coverage, even if ALL
  // archived H4 bars are counted as fully covered by an untrusted log.
  reasons.push("LATEST_H4_M15_BAR_IDENTITY_NOT_PRESENT_IN_COUNT_LOGS");
@@ -87,6 +122,16 @@ function assessEvidence(input){
   h4WarmupDeficit:Math.max(0,WARMUP-tail.H4),
   h4PaperHistoryDeficit:Math.max(0,PAPER-tail.H4),
   maxPossibleContiguousH4ByCaptureEnd:ceiling.H4,
+  providerDeclaredBestH4ConsecutiveByCaptureEnd:
+   scenario.maxPossibleContiguousH4AtAnyTimeUnderDeclaration,
+  providerDeclaredEndH4Consecutive:
+   scenario.maxPossibleContiguousH4AtCaptureEndUnderDeclaration,
+  providerDeclaredFullWeekendPauseH4Slots:
+   scenario.providerDeclaredFullPauseH4Slots,
+  providerDeclared21WarmupReachable:
+   scenario.technicalWarmup21ReachableUnderDeclaration,
+  providerDeclared50PaperReachable:
+   scenario.paperHistory50ReachableUnderDeclaration,
   stage3ReportAtUTC:s.latestProgressAtUTC,
   captureEndUTC:h.captureEndUTC,
   blockers:[...blocked("COUNT_LOGS_ARE_NOT_TRADE_EVIDENCE").blockers,...reasons]
