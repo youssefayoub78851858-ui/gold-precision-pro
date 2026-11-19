@@ -68,6 +68,8 @@ function validateCrossFrameEvidence(input){
  for(const tf of ["H1","H4"]){
   const v=c[tf];
   if(!v||typeof v!=="object"||Array.isArray(v)||
+     Object.keys(v).sort().join(",")!==
+       "completeMatches,completeMismatches,incompleteM15Groups,outsideRetentionWindow"||
      !["completeMatches","completeMismatches",
        "incompleteM15Groups","outsideRetentionWindow"].every(k=>
        Number.isSafeInteger(v[k])&&v[k]>=0&&v[k]<=1000))
