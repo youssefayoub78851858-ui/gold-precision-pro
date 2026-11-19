@@ -64,3 +64,24 @@ test("21 H4 candles cannot be independently proven by the current single snapsho
  assert.equal(x.archiveRequiredForFullWindow,true);
  assert.equal(x.archiveCurrentlyVerified,false);
 });
+
+test("latest timeframe parity rejects a corrupted M15 constituent",()=>{
+ const source=chart(now);
+ // Change one constituent's high while preserving valid OHLC geometry.
+ source.M15[20].high=3003;
+ const checked=validateChart(source,now);
+ assert.ok(checked);
+ assert.equal(localLatestParity(checked),false);
+ assert.equal(researchWatch({d:{privateTechnicalWatch:{signal:"BUY"}},comparisons:{},chart:checked}),
+  "WAIT — فحص V3 غير مؤكد");
+});
+test("historical cross-frame audit counts a mismatched fully covered H1 bar",()=>{
+ const {localCoveredParityAudit}=require("../../review-dashboard.js");
+ const source=chart(now);
+ const baseline=localCoveredParityAudit(validateChart(source,now));
+ assert.ok(baseline.H1.fullyCovered>=1);
+ assert.equal(baseline.H1.disagreed,0);
+ source.M15[20].high=3003;
+ const result=localCoveredParityAudit(validateChart(source,now));
+ assert.ok(result.H1.disagreed>=1);
+});
