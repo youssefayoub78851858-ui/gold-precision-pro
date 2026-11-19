@@ -45,6 +45,7 @@ a.equal(early.storedClosedCounts.M15,131);
 a.equal(early.storedClosedCounts.H1,32);
 a.equal(early.storedClosedCounts.H4,8);
 a.equal(early.contiguousObservedClosed.H4,8);
+a.equal(early.firstSeenAfterDecision.H4,0);
 a.equal(early.technicalWarmupMissing.H4,13);
 a.equal(early.paperHistoryMissing.H4,42);
 a.equal(early.localGeometryObserved,false);
@@ -57,6 +58,10 @@ a.equal(good.paperHistoryMissing.H4,29);
 a.equal(good.status,"LOCAL_GEOMETRY_ONLY_NOT_TRADE_READY");
 a.equal(good.localTimingAndParityCheck,"LOCAL_ONLY_NOT_INDEPENDENT");
 a.equal(good.localGeometryObserved,true);
+for(const tf of Object.keys(WIDTH))
+ a.equal(good.storedClosedCounts[tf],
+  good.observedAtDecision[tf]+good.firstSeenAfterDecision[tf]+
+  good.legacyWithoutFirstSeen[tf]);
 a(good.blockers.includes("UPSTREAM_BROKER_DATA_RIGHTS_UNVERIFIED"));
 // Legacy bars are unknown, NOT automatically assigned a receipt.
 const legacy=structuredClone(mature);
@@ -65,6 +70,7 @@ const unknown=assess(legacy);
 safe(unknown);
 a.equal(unknown.status,"RECEIPTS_UNAVAILABLE");
 a.equal(unknown.legacyWithoutFirstSeen.H4,21);
+a.equal(unknown.firstSeenAfterDecision.H4,0);
 a.equal(unknown.contiguousObservedClosed.H4,0);
 // Missing or delayed last H4 first-seen makes coverage insufficient.
 const missing=structuredClone(mature);
@@ -79,6 +85,9 @@ late.firstObservedClosedUTC.H4[late.frames.H4.at(-1).datetime]=
 const lateReport=assess(late);
 safe(lateReport);
 a.equal(lateReport.observedAtDecision.H4,20);
+a.equal(lateReport.firstSeenAfterDecision.H4,1);
+a.equal(lateReport.legacyWithoutFirstSeen.H4,0);
+a(lateReport.blockers.includes("H4_FUTURE_RECEIPTS_EXCLUDED_FROM_DECISION"));
 a.equal(lateReport.localGeometryObserved,false);
 // Partial M15 group and a differing H4 bar cannot pass price parity.
 const absent=structuredClone(mature);
@@ -98,6 +107,9 @@ future.firstObservedClosedUTC.M15[future.frames.M15.at(-1).datetime]=
  iso(Date.parse(future.frames.M15.at(-1).datetime)+WIDTH.M15+1000);
 a.equal(assess(future).localGeometryObserved,good.localGeometryObserved);
 a.equal(assess(future).observedAtDecision.M15,good.observedAtDecision.M15);
+a.equal(assess(future).firstSeenAfterDecision.M15,1);
+a.equal(assess(future).legacyWithoutFirstSeen.M15,0);
+a.equal(assess(future).storedClosedCounts.M15,337);
 // Untrusted packet assertions cannot override hard-coded no-trading.
 const forged=assess({...mature,sourceRightsVerified:true,
  brokerCostsVerified:true,canTrade:true,signal:"BUY",paperOrdersAllowed:true});
