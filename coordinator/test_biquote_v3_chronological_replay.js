@@ -49,7 +49,9 @@ const insufficient=inspect({...origin,frames:sample(200)});
 a.equal(insufficient.status,"BLOCKED");
 a.equal(insufficient.retrospectiveDecisionCount,0);
 // Gaps are never stitched across an invented broker session.
-const gapped=structuredClone(frames);gapped.H4.splice(23,1);
+// A gap before the 21st H4 leaves fewer than 21 on BOTH sides:
+ // no old watch can be carried across an unclassified missing session.
+const gapped=structuredClone(frames);gapped.H4.splice(20,1);
 const noBridge=inspect({...origin,frames:gapped});
 a.equal(noBridge.status,"BLOCKED");
 a.equal(noBridge.technicalWatchCounts.BUY,0);
