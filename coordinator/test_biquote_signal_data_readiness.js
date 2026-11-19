@@ -48,6 +48,8 @@ a.equal(early.contiguousObservedClosed.H4,8);
 a.equal(early.firstSeenAfterDecision.H4,0);
 a.equal(early.technicalWarmupMissing.H4,13);
 a.equal(early.paperHistoryMissing.H4,42);
+a.equal(early.warmupCrossFrameMatchedH4,0);
+a.equal(early.warmupCrossFrameFullyVerified,false);
 a.equal(early.localGeometryObserved,false);
 a(early.blockers.includes("H4_INSUFFICIENT_POINT_IN_TIME_WARMUP"));
 // Reaching a research-only technical warm-up never enables a trade.
@@ -58,6 +60,8 @@ a.equal(good.paperHistoryMissing.H4,29);
 a.equal(good.status,"LOCAL_GEOMETRY_ONLY_NOT_TRADE_READY");
 a.equal(good.localTimingAndParityCheck,"LOCAL_ONLY_NOT_INDEPENDENT");
 a.equal(good.localGeometryObserved,true);
+a.equal(good.warmupCrossFrameMatchedH4,21);
+a.equal(good.warmupCrossFrameFullyVerified,true);
 for(const tf of Object.keys(WIDTH))
  a.equal(good.storedClosedCounts[tf],
   good.observedAtDecision[tf]+good.firstSeenAfterDecision[tf]+
@@ -137,6 +141,52 @@ const pausedReport=assess(paused);
 safe(pausedReport);
 a.equal(pausedReport.latestExpectedUTCGridClosedObservedAtDecision.H4,false);
 a(pausedReport.blockers.includes("H4_EXPECTED_UTC_CLOSED_SLOT_NOT_OBSERVED"));
+// IMPORTANT: a matching *latest* H4 is not enough for 21-H4 warmup.
+// An old constituent may have an unknown local receipt while the last
+// 21 M15 and H1 bars are still contiguous and fresh.
+const backfillFixture=fixture(384);
+const backfillGood=assess(backfillFixture);
+safe(backfillGood);
+a.equal(backfillGood.warmupCrossFrameMatchedH4,21);
+a.equal(backfillGood.localGeometryObserved,true);
+const olderM15ReceiptMissing=structuredClone(backfillFixture);
+const historicalM15=olderM15ReceiptMissing.frames.M15[16*10].datetime;
+delete olderM15ReceiptMissing.firstObservedClosedUTC.M15[historicalM15];
+const oldMissingResult=assess(olderM15ReceiptMissing);safe(oldMissingResult);
+a.equal(oldMissingResult.technicalWarmupMissing.M15,0);
+a.equal(oldMissingResult.technicalWarmupMissing.H4,0);
+a.equal(oldMissingResult.warmupCrossFrameMatchedH4,20);
+a.equal(oldMissingResult.warmupCrossFrameFullyVerified,false);
+a.equal(oldMissingResult.localGeometryObserved,false);
+a(oldMissingResult.blockers.includes(
+ "H4_21_CLOSED_BARS_M15_H1_CROSS_FRAME_PARITY_UNPROVEN"));
+// All local receipt times can exist while an older H4/H1 candle is
+// inconsistent with its M15 constituents. Neither old mismatch can
+// be hidden by the newest H4 still matching perfectly.
+const historicalH4Mismatch=structuredClone(backfillFixture);
+historicalH4Mismatch.frames.H4[14].high+=10;
+const oldH4Result=assess(historicalH4Mismatch);safe(oldH4Result);
+a.equal(oldH4Result.technicalWarmupMissing.H4,0);
+a.equal(oldH4Result.warmupCrossFrameMatchedH4,20);
+a.equal(oldH4Result.localGeometryObserved,false);
+a(oldH4Result.blockers.includes(
+ "H4_21_CLOSED_BARS_M15_H1_CROSS_FRAME_PARITY_UNPROVEN"));
+const historicalH1Mismatch=structuredClone(backfillFixture);
+historicalH1Mismatch.frames.H1[4*14].high+=10;
+const oldH1Result=assess(historicalH1Mismatch);safe(oldH1Result);
+a.equal(oldH1Result.warmupCrossFrameMatchedH4,20);
+a.equal(oldH1Result.localGeometryObserved,false);
+a(oldH1Result.blockers.includes(
+ "H4_21_CLOSED_BARS_M15_H1_CROSS_FRAME_PARITY_UNPROVEN"));
+// Future receipt of ONE older M15 candle must not be used to prove
+// prior-decision 21-H4 integrity.
+const olderFutureReceipt=structuredClone(backfillFixture);
+olderFutureReceipt.firstObservedClosedUTC.M15[historicalM15]=
+ iso(Date.parse(olderFutureReceipt.asOfUTC)+600000);
+const oldFutureResult=assess(olderFutureReceipt);safe(oldFutureResult);
+a.equal(oldFutureResult.firstSeenAfterDecision.M15,1);
+a.equal(oldFutureResult.warmupCrossFrameFullyVerified,false);
+a.equal(oldFutureResult.localGeometryObserved,false);
 // Legacy bars are unknown, NOT automatically assigned a receipt.
 const legacy=structuredClone(mature);
 delete legacy.firstObservedClosedUTC;
