@@ -52,7 +52,27 @@ function packet(){
 const good=mod.validateSnapshot(packet(),NOW);
 a(good,"full private valid snapshot");
 a.equal(good.chart.M15.length,48);
+a.equal(mod.localLatestParity(good.chart),true);
 a.match(mod.researchWatch(good),/^WAIT · WATCH_BUY/);
+// Even perfectly clean (but forged) source-wide overlap counters must
+// not override a price conflict in the latest closed H1, last H4, or
+// one of the H1 constituents of the last H4 in the private local chart.
+for(const mutate of [
+ x=>{x.privateChart.H1[47].high=2004;},
+ x=>{x.privateChart.H4[47].high=2004;},
+ x=>{x.privateChart.H1[44].close=2000.4;},
+ x=>{x.privateChart.M15[42].high=2004;},
+ x=>{x.privateChart.M15[42].close=2000.4;}
+]){
+ const x=packet();mutate(x);
+ const checked=mod.validateSnapshot(x,NOW);
+ a(checked,"Row geometry is valid; discrepancy only emerges from cross-frame parity");
+ a.equal(mod.localLatestParity(checked.chart),false);
+ const veto=mod.researchWatch(checked);
+ a.match(veto,/^WAIT/);
+ a(!veto.includes("WATCH_BUY"),"Contradictory closed OHLC must veto technical WATCH");
+}
+
 for(const mutate of [
  x=>{x.signal="BUY";},x=>{x.executable=true;},
  x=>{x.tradePlanExecutable=true;},x=>{x.rawQuoteShown=false;},
