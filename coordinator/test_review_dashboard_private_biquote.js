@@ -135,21 +135,29 @@ class Node {
  replaceChildren(){this.nodes=[];}
 }
 const nodes=Object.fromEntries(["candles","price","timestamp","source",
- "reason","decision","quality-status","chart-status","refresh"].map(k=>[k,new Node()]));
+ "reason","decision","quality-status","chart-status","refresh",
+ "data-state","trend-status","watch-status","parity-status"].map(k=>[k,new Node()]));
 const tabs=["15min","1h","4h"].map(tf=>{
  const n=new Node();n.dataset.frame=tf;return n;
 });
+const documentEvents={};
+const windowEvents={};
 const document={
+ visibilityState:"visible",
  getElementById:id=>nodes[id]||null,
  querySelectorAll:x=>x==="[data-frame]"?tabs:[],
- createElementNS:()=>new Node()
+ createElementNS:()=>new Node(),
+ addEventListener:(n,fn)=>{documentEvents[n]=fn;}
 };
+const window={addEventListener:(n,fn)=>{windowEvents[n]=fn;}};
 const script=fs.readFileSync("review-dashboard.js","utf8");
 const NativeDate=Date;
-class Clock extends NativeDate {static now(){return NOW;}}
+let timeNow=NOW;
+class Clock extends NativeDate {static now(){return timeNow;}}
 let calls=[];
-const context={document,Date:Clock,Intl,console,
- setInterval:()=>null,
+let intervalCallback=null;
+const context={document,window,Date:Clock,Intl,console,
+ setInterval:(fn)=>{intervalCallback=fn;return 1;},
  AbortSignal:{timeout:()=>({})},
  fetch:async(url,options)=>{
   calls.push({url,options});
@@ -173,6 +181,40 @@ a.equal(nodes.price.textContent,"غير متاح");
  a(!JSON.stringify(nodes).includes("NOT_FOR_UI"));
  tabs[1].handlers.click();
  a(nodes["chart-status"].textContent.startsWith("H1"));
+ // Stage 3: Android throttles timers in the background. A user
+ // selecting a timeframe after expiry must synchronously wipe ALL
+ // private prices and WATCH, without any new upstream request.
+ timeNow=NOW+20000;
+ tabs[0].handlers.click();
+ a.equal(nodes.price.textContent,"غير متاح");
+ a.equal(nodes["watch-status"].textContent,"WAIT");
+ a(!nodes.reason.textContent.includes("WATCH_BUY"));
+ a.equal(calls.length,1,"No background refresh on tab switch");
+ timeNow=NOW;
+ await nodes.refresh.handlers.click();
+ a(nodes.price.textContent.includes("2,000"));
+ document.visibilityState="hidden";
+ documentEvents.visibilitychange();
+ a.equal(nodes.price.textContent,"غير متاح");
+ a(!nodes.reason.textContent.includes("WATCH_BUY"));
+ a.equal(calls.length,2);
+ document.visibilityState="visible";
+ await nodes.refresh.handlers.click();
+ a(nodes.price.textContent.includes("2,000"));
+ windowEvents.pagehide();
+ a.equal(nodes.price.textContent,"غير متاح");
+ a.equal(calls.length,3);
+ await nodes.refresh.handlers.click();
+ a(nodes.price.textContent.includes("2,000"));
+ timeNow=NOW+20000;
+ windowEvents.focus();
+ a.equal(nodes.price.textContent,"غير متاح");
+ a(!nodes.reason.textContent.includes("WATCH_BUY"));
+ a.equal(calls.length,4);
+ a.equal(typeof intervalCallback,"function");
+ intervalCallback();
+ a.equal(calls.length,4);
+ timeNow=NOW;
  // New browser session lacking a valid viewer cookie cannot reveal prices.
  context.fetch=async()=>({status:200,json:async()=>({
   signal:"WAIT",executable:false,rawQuoteShown:false})});
