@@ -95,7 +95,10 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
                 sh.get("approvedDirection")!="NONE"):
                 raise ValueError("FORGED_PRECOMPUTED_STATUS")
         counts={tf:m["counts"][tf] for tf in FRAMES_ORDER}
-        tails={tf:sh["frames"][tf]["contiguousClosed"] for tf in FRAMES_ORDER}
+        # V3 preview is capped at 48 OHLC bars for bounded analysis.
+        # 50-bar paper-horizon COUNTS use private sealed full-tail metadata.
+        tails={tf:m["forwardCoverage"][tf]["latestContiguousBars"]
+               for tf in FRAMES_ORDER}
         capacity=capacity_readiness(m)
         # Stage 2 never promotes source or technical readiness. Require
         # cross-file counter consistency before showing continuity progress.
@@ -103,7 +106,8 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
             details=sh["frames"][tf]
             coverage=m["forwardCoverage"][tf]
             if (type(tails[tf]) is not int or
-                not 0<=tails[tf]<=min(counts[tf],48) or
+                not 0<=tails[tf]<=counts[tf] or
+                details.get("contiguousClosed")!=min(tails[tf],48) or
                 details.get("persistedClosed")!=counts[tf] or
                 details.get("neededContiguous")!=21 or
                 coverage.get("closedBars")!=counts[tf] or
@@ -213,7 +217,7 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
     # fills or fabricated equity curve, regardless of synthetic V3 output.
     paper=assess_biquote_paper_gate(
         {"ohlcStructuralChecksPassed":source_ok},
-        {"status":"BLOCKED"},counts)
+        {"status":"BLOCKED"},counts,tails)
     result["stages"]["paper"]={
         "status":"BLOCKED", "paperOrdersAllowed":False,
         "paperLedgerOpened":False,"sampleTradesCreated":0,
@@ -232,6 +236,7 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
     # Derive blockers exclusively from observed sealed-bar counters and
     # unverified source/risk flags; no simulated profit or broker authority.
     missing={tf:max(0,21-tails[tf]) for tf in FRAMES_ORDER}
+    paper_missing={tf:max(0,50-tails[tf]) for tf in FRAMES_ORDER}
     blockers=[]
     if archive_status=="PRIVATE_VAULT_NOT_READABLE":
         blockers.append("PRIVATE_VAULT_UNREADABLE")
@@ -240,6 +245,8 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
     for tf in FRAMES_ORDER:
         if missing[tf]:
             blockers.append("STRICT_"+tf+"_CLOSED_WARMUP_INCOMPLETE")
+    if any(paper_missing.values()):
+        blockers.append("STRICT_CONTIGUOUS_PAPER_HISTORY_50_BARS_INCOMPLETE")
     blockers.extend([
         "UNDERLYING_BROKER_MARKET_DATA_RIGHTS_UNCONFIRMED",
         "BROKER_XAUUSD_SESSION_DST_UNCONFIRMED",
@@ -262,6 +269,9 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
         "outOfSampleNetExpectancyVerified":False,
         "archiveIntegrityObserved":archive_status=="FORWARD_CAPTURE_PRESENT_UNVERIFIED",
         "missingStrictClosedBarsUntil21":missing,
+        "missingStrictContiguousBarsUntilPaper50":paper_missing,
+        "paperHistoryCountFloorMet":all(v==0 for v in paper_missing.values()),
+        "paperHistoryIndependentlyQualified":False,
         # Strict wall-clock contiguity is *not* the same as consecutive
         # broker-tradable candles. An undocumented daily pause or weekend
         # can reset raw-grid continuity; do not silently exempt any slot.
