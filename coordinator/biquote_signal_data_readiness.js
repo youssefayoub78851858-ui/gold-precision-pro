@@ -6,6 +6,7 @@
  * First-seen timestamps are LOCAL receipts, never authenticated vendor times.
  */
 const WIDTH=Object.freeze({M15:900000,H1:3600000,H4:14400000});
+const {slotClosed:providerDeclaredClosedSlot}=require("./biquote_vendor_declared_session");
 const WARMUP=21,PAPER=50,MAX_BARS=45000;
 const MAX_AGE=Object.freeze({M15:1200000,H1:4500000,H4:18000000});
 const START=Date.parse("2026-11-18T00:00:00Z");
@@ -41,6 +42,10 @@ function base(status,extra={}){
   paperHistoryMissing:{M15:PAPER,H1:PAPER,H4:PAPER},
   warmupCrossFrameRequiredH4:WARMUP,warmupCrossFrameMatchedH4:0,
   warmupCrossFrameFullyVerified:false,
+  warmupCrossFrameProviderPauseAffectedH4:0,
+  warmupCrossFrameUnexplainedCoverageH4:0,
+  warmupCrossFramePriceMismatchH4:0,
+  warmupCrossFrameProviderPauseNotBrokerVerified:true,
   localTimingAndParityCheck:"NOT_PROVEN",localGeometryObserved:false,...extra};
 }
 function parseRows(rows,tf){
@@ -90,7 +95,8 @@ function latestParity(frames){
 // This remains local equality, not independent vendor/execution evidence.
 function warmupCrossFrameParity(frames){
  const h4=contiguous(frames.H4,"H4").slice(-WARMUP);
- if(h4.length!==WARMUP)return {matched:0,proven:false};
+ if(h4.length!==WARMUP)return {matched:0,proven:false,
+   declaredPauseAffected:0,unexplainedCoverage:0,priceMismatch:0};
  const m15=new Map(frames.M15.map(b=>[b.t,b]));
  const h1=new Map(frames.H1.map(b=>[b.t,b]));
  const matches=(whole,members)=>{
@@ -100,13 +106,33 @@ function warmupCrossFrameParity(frames){
    equalPrice(whole.low,Math.min(...members.map(x=>x.low)))&&
    equalPrice(whole.close,members.at(-1).close);
  };
- let matched=0;
+ let matched=0,declaredPauseAffected=0,unexplainedCoverage=0,
+     priceMismatch=0;
  for(const bar of h4){
   const quarters=Array.from({length:16},(_,i)=>
    m15.get(bar.t+i*WIDTH.M15));
   const hours=Array.from({length:4},(_,i)=>
    h1.get(bar.t+i*WIDTH.H1));
-  if(!matches(bar,quarters)||!matches(bar,hours))continue;
+  const missingSlots=[];
+  quarters.forEach((q,i)=>{
+   if(!q)missingSlots.push({t:bar.t+i*WIDTH.M15,width:WIDTH.M15});
+  });
+  hours.forEach((h,i)=>{
+   if(!h)missingSlots.push({t:bar.t+i*WIDTH.H1,width:WIDTH.H1});
+  });
+  if(missingSlots.length){
+   // A support-declared November trading break can explain missing
+   // constituents. It NEVER justifies bridging or claiming OHLC parity.
+   // A missing slot outside that exact bounded declaration remains unknown.
+   if(missingSlots.every(x=>providerDeclaredClosedSlot(x.t,x.width)===true))
+    declaredPauseAffected++;
+   else unexplainedCoverage++;
+   continue;
+  }
+  if(!matches(bar,quarters)||!matches(bar,hours)){
+   priceMismatch++;
+   continue;
+  }
   let hoursMatch=true;
   for(const hour of hours){
    const hourMembers=Array.from({length:4},(_,i)=>
@@ -114,8 +140,10 @@ function warmupCrossFrameParity(frames){
    if(!matches(hour,hourMembers)){hoursMatch=false;break;}
   }
   if(hoursMatch)matched++;
+  else priceMismatch++;
  }
- return {matched,proven:matched===WARMUP};
+ return {matched,declaredPauseAffected,unexplainedCoverage,
+         priceMismatch,proven:matched===WARMUP};
 }
 function assess(input){
  const origin=input?.dataOrigin;
@@ -206,6 +234,12 @@ function assess(input){
  if(!parity)blockers.push("LATEST_CLOSED_M15_H1_H4_OHLC_PARITY_UNPROVEN");
  if(!warmupParity.proven)
   blockers.push("H4_21_CLOSED_BARS_M15_H1_CROSS_FRAME_PARITY_UNPROVEN");
+ if(warmupParity.declaredPauseAffected>0)
+  blockers.push("H4_M15_COVERAGE_ABSENT_WITHIN_BIQUOTE_DECLARED_PAUSE_NOT_PROVEN");
+ if(warmupParity.unexplainedCoverage>0)
+  blockers.push("H4_M15_COVERAGE_MISSING_OUTSIDE_DECLARED_PAUSE");
+ if(warmupParity.priceMismatch>0)
+  blockers.push("H4_M15_H1_WARMUP_OHLC_PRICE_CONFLICT");
  const localReady=Object.values(warm).every(n=>n===0)&&
   Object.values(latestEligibleObserved).every(Boolean)&&
   Object.values(latestGridObserved).every(Boolean)&&
@@ -221,6 +255,9 @@ function assess(input){
   technicalWarmupMissing:warm,paperHistoryMissing:paper,
   warmupCrossFrameMatchedH4:warmupParity.matched,
   warmupCrossFrameFullyVerified:warmupParity.proven,
+  warmupCrossFrameProviderPauseAffectedH4:warmupParity.declaredPauseAffected,
+  warmupCrossFrameUnexplainedCoverageH4:warmupParity.unexplainedCoverage,
+  warmupCrossFramePriceMismatchH4:warmupParity.priceMismatch,
   localTimingAndParityCheck:localReady?"LOCAL_ONLY_NOT_INDEPENDENT":"NOT_PROVEN",
   blockers,
   // This is never a signal-admission flag: independent upstream evidence is missing.
