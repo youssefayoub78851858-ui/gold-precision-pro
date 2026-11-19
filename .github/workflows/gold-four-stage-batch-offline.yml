@@ -39,6 +39,8 @@ on:
       - 'coordinator/biquote_v3_chronological_private.py'
       - 'coordinator/test_biquote_v3_chronological_private.py'
       - 'coordinator/test_biquote_signal_data_readiness.js'
+      - 'coordinator/prospective_paper_holdout_audit.js'
+      - 'coordinator/test_prospective_paper_holdout_audit.js'
       - 'coordinator/biquote_pre_signal_milestones.js'
       - 'coordinator/test_biquote_pre_signal_milestones.js'
       - 'coordinator/biquote_capture_h4_horizon_gate.js'
@@ -77,6 +79,8 @@ jobs:
           node coordinator/test_biquote_h4_evidence_quality_gate.js
           node coordinator/test_biquote_pre_signal_milestones.js
           node coordinator/test_biquote_render_log_export_readonly.js
+      - name: Prospective paper outcome arithmetic, modeled costs, no-trade approval (offline only)
+        run: node coordinator/test_prospective_paper_holdout_audit.js
       - name: Single-snapshot capacity, authenticated VIEWER WATCH and weekend-only H4 diagnostics (all fail-closed)
         run: |
           node coordinator/test_biquote_snapshot_capacity_gate.js
