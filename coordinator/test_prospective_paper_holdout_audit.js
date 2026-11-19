@@ -55,7 +55,7 @@ for(const data of [
  {...packet([trade(1)]),trades:[trade(1),trade(1)]},
  {...packet([trade(2),trade(1)])},
  {...packet([trade(1)]),trades:[{...trade(1),firstObservedClosedUTC:iso(start+3600000)}]},
- {...packet([trade(1)]),trades:[{...trade(1),decisionUTC:iso(start+2400000)}]},
+ {...packet([trade(1)]),trades:[{...trade(1),decisionUTC:iso(start+3600000+120000)}]},
  {...packet([trade(1)]),trades:[{...trade(1),spreadUsd:-1}]},
  {...packet([trade(1)]),trades:[{...trade(1),commissionUsd:NaN}]},
  {...packet([trade(1)]),trades:[{...trade(1),initialRiskUsd:0}]},
