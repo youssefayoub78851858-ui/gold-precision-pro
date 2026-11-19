@@ -25,9 +25,11 @@ const result=(status,reason,more={})=>({
  backupVerified:false,independentHoldoutValidated:false,
  captureExtended:false,collectorRestarted:false,
  hypotheticalFutureH4Closures:null,maxPossibleStoredH4:null,
+ maxPossibleContiguousH4:null,rawStoredH4CountReachableByWindowEnd:null,
  paperH4HistoryReachableByWindowEnd:null,
  theoreticalWarmupH4ReachableByWindowEnd:null,
  upperBoundFutureClosedSlots:empty(),maximumPossiblePersistedClosed:empty(),
+ maximumPossibleContiguousClosed:empty(),
  blockers:["HYPOTHETICAL_COUNTS_NOT_TRADING_PROOF",
            "H4_FIRST_SEEN_FOR_DEPLOYED_LEGACY_ARCHIVE_UNKNOWN",
            "BROKER_SESSIONS_AND_DATA_RIGHTS_UNVERIFIED",
@@ -37,36 +39,50 @@ function assessWindow(input){
  if(input?.origin!=="UNATTESTED_RENDER_COUNTS_NO_PRIVATE_ARCHIVE")
   return result("BLOCKED","INVALID_UNATTESTED_METADATA_ORIGIN");
  const start=stamp(input.startUTC),now=stamp(input.asOfUTC),
-       end=stamp(input.endUTC),c=input.persistedClosedCounts;
+       end=stamp(input.endUTC),c=input.persistedClosedCounts,
+       tail=input.contiguousClosedCounts;
  if(!Number.isFinite(start)||!Number.isFinite(now)||!Number.isFinite(end)||
     !(start<=now&&now<end&&end-start<=7*86400000)||
     !c||typeof c!=="object"||Array.isArray(c)||
     Object.keys(c).sort().join(",")!=="H1,H4,M15"||
-    Object.values(c).some(n=>!integer(n)))
+    Object.values(c).some(n=>!integer(n))||
+    !tail||typeof tail!=="object"||Array.isArray(tail)||
+    Object.keys(tail).sort().join(",")!=="H1,H4,M15"||
+    Object.keys(WIDTH).some(tf=>!integer(tail[tf])||tail[tf]>c[tf]))
   return result("BLOCKED","INVALID_BOUNDED_WINDOW_OR_COUNTS");
- const remaining={},ceiling={};
+ const remaining={},ceiling={},contiguousCeiling={};
  for(const tf of Object.keys(WIDTH)){
   // End inclusively is intentionally generous. A last-close exactly
   // at stop time may not get recorded, making this only an upper bound.
   remaining[tf]=Math.max(0,Math.floor(end/WIDTH[tf])-
                            Math.floor(now/WIDTH[tf]));
   ceiling[tf]=c[tf]+remaining[tf];
+  contiguousCeiling[tf]=tail[tf]+remaining[tf];
  }
- const paperPossible=ceiling.H4>=PAPER,warmupPossible=ceiling.H4>=WARMUP;
+ // Paper/technical history needs a contiguous recent H4 sequence; 50
+ // stored bars with older gaps is NOT 50 eligible history bars. Even the
+ // optimistic future horizon remains count-only and not an availability seal.
+ const paperPossible=contiguousCeiling.H4>=PAPER,
+       warmupPossible=contiguousCeiling.H4>=WARMUP;
  const blockers=[
   "HYPOTHETICAL_COUNTS_NOT_TRADING_PROOF",
   "H4_FIRST_SEEN_FOR_DEPLOYED_LEGACY_ARCHIVE_UNKNOWN",
   "BROKER_SESSIONS_AND_DATA_RIGHTS_UNVERIFIED"
  ];
  if(!paperPossible)blockers.push("H4_50_BAR_PAPER_HISTORY_MATHEMATICALLY_UNREACHABLE");
+ if(ceiling.H4>=PAPER&&!paperPossible)
+  blockers.push("RAW_H4_COUNT_CANNOT_REPLACE_CONTIGUOUS_HISTORY");
  if(!warmupPossible)blockers.push("H4_21_BAR_WARMUP_MATHEMATICALLY_UNREACHABLE");
  return result("THEORETICAL_COUNT_CEILING_NOT_READINESS",null,{
   asOfUTC:input.asOfUTC,captureEndUTC:input.endUTC,
-  persistedClosedCounts:{...c},
+  persistedClosedCounts:{...c},contiguousClosedCounts:{...tail},
   upperBoundFutureClosedSlots:remaining,
   maximumPossiblePersistedClosed:ceiling,
+  maximumPossibleContiguousClosed:contiguousCeiling,
   hypotheticalFutureH4Closures:remaining.H4,
   maxPossibleStoredH4:ceiling.H4,
+  maxPossibleContiguousH4:contiguousCeiling.H4,
+  rawStoredH4CountReachableByWindowEnd:ceiling.H4>=PAPER,
   theoreticalWarmupH4ReachableByWindowEnd:warmupPossible,
   paperH4HistoryReachableByWindowEnd:paperPossible,
   minWarmupH4:WARMUP,minPaperHistoryH4:PAPER,
