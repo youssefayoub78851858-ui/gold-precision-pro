@@ -1,140 +1,57 @@
-<!doctype html>
-<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Gold Precision Pro Ultimate — لوحة المراجعة</title>
-<style>
-:root{color-scheme:dark;--gold:#e9bb62;--border:#59472a;--bg:#080c13}*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:#f1eee8;font:15px system-ui,Tahoma,sans-serif}
-main{max-width:900px;margin:auto;padding:14px 14px calc(110px + env(safe-area-inset-bottom, 0px))}.head{text-align:center;padding:18px 4px;border-bottom:1px solid var(--border)}
-h1{color:var(--gold);font-size:clamp(21px,5vw,30px);margin:4px}h2{font-size:17px;margin:0 0 12px;color:#f5d79b}
-small,.muted{color:#aeb5c0}.nav,.frames{display:flex;gap:8px;overflow:auto;padding:12px 0}
-a,button{font:inherit;cursor:pointer}a{color:#f4d18e}.nav a,.frames button{white-space:nowrap;padding:11px 14px;border-radius:12px;border:1px solid #455268;background:#162132;color:#f2f3f7;text-decoration:none}
-.frames button[aria-pressed=true]{background:linear-gradient(#f5d993,#c7953d);color:#15100b;font-weight:800;border-color:#e8b961}
-.card{background:linear-gradient(145deg,#172333,#0d1725);border:1px solid #39495c;border-radius:17px;padding:15px;margin:11px 0;box-shadow:0 7px 25px #0005}
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid .card{margin:0}
-.price{font-size:30px;font-weight:800;direction:ltr;display:inline-block}.gold{color:var(--gold)}.green{color:#55d7a1}.warn{color:#ffcc79}
-.label{font-size:13px;color:#a9b5c7}.value{font-weight:700;font-size:18px;overflow-wrap:anywhere}
-.chart{width:100%;height:auto;display:block;background:#09121e;border-radius:12px;border:1px solid #26394c}
-button.primary{border:1px solid #f1d18c;background:linear-gradient(#f7d88e,#b78336);color:#15100a;border-radius:12px;padding:12px 18px;font-weight:800;width:100%}
-button:disabled{opacity:.6;cursor:wait}.wait{border-color:#8a573d;background:#281b20}.wait strong{color:#ffd06e;font-size:25px}
-.footer{display:flex;gap:8px;justify-content:space-between;position:fixed;bottom:0;right:0;left:0;z-index:30;background:#0d1723f5;border-top:1px solid var(--border);padding:12px max(12px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
-.footer a{font-size:12px;text-decoration:none;text-align:center}.fine{font-size:12px;line-height:1.7}
-@media(min-width:680px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-
-/* Ultimate mobile visual system */
-body{background:radial-gradient(ellipse at 50% -12%,#233349 0%,#090e17 48%,#050911 100%);font-size:14px}main{max-width:1100px;padding:10px 12px 110px}.head{padding:15px 4px 19px;border-bottom:1px solid #97744366}.head h1{font-weight:850;letter-spacing:.15px}.head .muted{font-size:12px}.head .gold{font-size:26px}.nav{gap:7px;padding:12px 0;scrollbar-width:none}.nav a{font-size:12px;padding:10px 12px;border:1px solid #66543c;background:#172335;color:#f6d48e}.card{background:linear-gradient(150deg,#1a293d 0%,#101c2d 65%,#0e1727 100%);border:1px solid #45546a;border-radius:18px;padding:14px;margin:10px 0;box-shadow:0 10px 22px #0003}.card h2{font-size:16px}.price{font-size:clamp(32px,7vw,46px);color:#f3d28b}.grid{gap:9px}.grid .card{min-height:105px}.grid .label{font-size:12px}.grid .value{font-size:17px;margin-top:10px}.chart{border-radius:15px;min-height:210px;max-height:340px}.frames{justify-content:flex-start;gap:7px}.frames button{padding:10px 16px}.wait{background:linear-gradient(125deg,#342719,#181d2a);border-color:#b48b4d}.wait strong{font-size:29px}.footer{max-width:1100px;margin:auto;box-shadow:0 -9px 24px #0008;gap:3px}.footer a{flex:1;color:#f5d18c;font-size:11px}.fine{line-height:1.65}.mini-label{font-size:11px;letter-spacing:.5px;color:#c8a568;font-weight:750}.status-strip{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:10px 12px;background:#0e1b2c;border:1px solid #645236;border-radius:12px;margin-top:10px}.status-pill{border:1px solid #b18847;color:#f6d48e;background:#3b2b1c;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:800}.hero-price{display:flex;align-items:center;justify-content:space-between;gap:12px}.hero-price .asset{font-size:22px;font-weight:850;color:#eac47b}.card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.session-details{margin:0}.session-details summary{cursor:pointer;color:#f4ce83;font-weight:700}.session-details[open] summary{margin-bottom:10px}.session-card{border-style:dashed}.card .primary{box-shadow:inset 0 1px #ffe3a4,0 3px 15px #b7833630}.chart-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.chart-head h2{margin:0}.chart-head .frames{padding:0}@media(min-width:680px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.chart{height:340px}}
-
-/* Reference-inspired compact trading terminal v4 */
-body{background:#070b12;color:#e7e9ed;font-size:13px}
-main{max-width:760px;padding:8px 10px 112px}
-.head{display:flex;align-items:center;justify-content:space-between;text-align:right;padding:11px 3px 13px;border-bottom:1px solid #6c542d}
-.head h1{font-size:19px;line-height:1.3;margin:0;color:#f1c976}
-.head .gold{font-size:28px}.head .muted{font-size:11px;margin-top:3px}
-.status-strip{padding:6px 9px;margin:0;border-radius:10px;gap:6px}
-.nav{padding:8px 0;gap:5px}.nav a{padding:8px 9px;font-size:11px;flex:1;text-align:center}
-.card{border-radius:13px;margin:8px 0;padding:12px;background:linear-gradient(145deg,#142237,#0d1929);border-color:#364962}
-.card h2{font-size:14px;margin:0 0 7px}.grid{gap:7px}.grid .card{min-height:85px;padding:11px}
-.grid .value{font-size:15px;margin-top:5px}.grid .label{font-size:11px}
-.price{font-size:33px}.hero-price .asset{font-size:17px}
-.chart{min-height:200px;height:auto;max-height:300px}
-.chart-head h2{font-size:14px}.frames button{padding:7px 10px;font-size:12px;min-width:47px}
-.primary{padding:10px!important;font-size:13px!important}
-.session-card{margin:6px 0;padding:8px 11px}.session-details summary{font-size:12px}
-.footer{padding:9px 4px calc(9px + env(safe-area-inset-bottom,0px));border-top:1px solid #886738}
-.footer a{font-size:10px}.fine{font-size:11px}
-.terminal-top{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
-.terminal-top .head{border:0}.terminal-top .status-strip{flex-direction:column;align-items:flex-end;background:transparent;border:0}
-.terminal-hero{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
-.terminal-hero .mini-label{font-size:11px}
-.market-mini{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin:7px 0}
-.market-mini .card{margin:0;min-height:70px;padding:9px 6px;text-align:center}
-.market-mini .label{font-size:10px}.market-mini .value{font-size:12px;margin-top:5px}
-.terminal-section-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:16px 3px 6px;color:#f0ca7c;font-weight:750;font-size:13px}
-.terminal-section-title .sub{font-size:10px;color:#8e9bb1;font-weight:400}
-.signal-compact{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.signal-compact strong{font-size:23px!important}
-.terminal-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-.terminal-details .card{margin:0;min-height:86px}
-.terminal-details .card h2{font-size:12px}
-.terminal-details .card p{margin:6px 0}
-.market-mini .value{overflow-wrap:anywhere}
-@media(min-width:680px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.chart{height:300px}}
-
-@media(max-width:420px){.market-mini{gap:4px}.market-mini .card{padding:8px 3px;min-width:0}.market-mini .label{font-size:10px}.market-mini .value{font-size:10px;line-height:1.3}.nav a{font-size:10px;padding:9px 4px}.head h1{font-size:17px}}
-
-#data-state{margin:4px 0;color:#d4b06b}#watch-status{color:#f3c579}#parity-status{border-top:1px solid #39475b;padding-top:7px}#chart,#context,#flow,#news,#quality,#signal,#settings{scroll-margin-top:15px}
-
-/* Mobile screenshot corrective pass: compact viewport, no giant empty market area */
-body{font-size:12px;background:#080b11}
-main{padding:6px 9px calc(68px + env(safe-area-inset-bottom,0px))}
-.terminal-top{gap:5px}.head{padding:6px 0 8px}.head h1{font-size:clamp(14px,4.1vw,18px)}.head .muted{font-size:9px}
-.terminal-top .status-strip{gap:2px;padding:3px 0}.status-pill{padding:3px 7px;font-size:10px}.terminal-top .mini-label{font-size:9px}
-.nav{padding:5px 0;gap:4px}.nav a{padding:7px 2px;font-size:10px;border-radius:8px}
-.card{padding:9px;border-radius:10px;margin:6px 0}
-.terminal-hero .mini-label{font-size:10px}.price{font-size:clamp(21px,6vw,29px);line-height:1.3}
-.terminal-hero .gold{font-size:19px!important}.terminal-hero{gap:5px}
-#data-state{margin:1px 0}.fine{font-size:10px;line-height:1.45}
-.chart-head{gap:4px}.chart-head h2{font-size:12px}.frames button{padding:5px 8px;min-width:38px;font-size:11px;border-radius:8px}
-.chart{height:clamp(150px,37vw,210px);min-height:0;max-height:none;border-radius:8px}
-#chart-status{margin:6px 0}.primary{padding:8px!important;font-size:11px!important}
-.market-mini{margin:5px 0;gap:4px}.market-mini .card{min-height:54px;padding:7px 2px}.market-mini .label{font-size:9px}.market-mini .value{font-size:9px}
-.terminal-section-title{margin:10px 2px 5px;font-size:12px}.terminal-details{gap:5px}.terminal-details .card{min-height:64px;padding:9px}
-.grid{gap:5px}.grid .card{min-height:67px;padding:9px}.grid .value{font-size:13px}
-.session-cta{display:inline-flex;align-items:center;text-decoration:none;border:1px solid #856733;border-radius:8px;background:#352a19;color:#f5d58d;padding:6px 9px;font-size:11px;font-weight:700;margin-top:7px}
-.footer{padding:8px 2px calc(8px + env(safe-area-inset-bottom,0px))}.footer a{font-size:9px}
-@media(min-width:680px){.chart{height:210px}.grid .card{min-height:67px}}
-
-.chart-note{color:#c5ad7c;font-size:10px;line-height:1.4;margin:4px 0 7px}.session-cta{max-width:100%;line-height:1.4}a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid #f3cf80;outline-offset:2px}@media(max-width:390px){.head h1{font-size:13px}.nav a{font-size:9px}.chart{height:145px}.footer a{font-size:9px}}
-
-/* Android density correction: single compact trading viewport, not stacked tall cards. */
-main{padding:4px 7px calc(58px + env(safe-area-inset-bottom,0px))}
-.terminal-top{margin:0}.head{padding:4px 0}.head h1{font-size:15px}.head .muted{font-size:9px}
-.nav{padding:4px 0;gap:3px}.nav a{padding:6px 2px;font-size:10px}
-.card{margin:4px 0;padding:7px 9px;border-radius:9px;box-shadow:none}
-.terminal-hero{grid-template-columns:minmax(0,1fr) auto}.price{font-size:24px}
-#source{font-size:9px}.session-cta{margin-top:4px;padding:5px 7px;font-size:10px}
-.chart-head{margin-bottom:3px}.chart{height:130px;min-height:0;max-height:130px}
-.chart-note{margin:2px 0 3px;font-size:9px}
-#chart-status{margin:3px 0;font-size:9px}.primary{padding:7px!important}
-.terminal-section-title{margin:7px 1px 3px;font-size:11px}
-.market-mini{gap:3px;margin:3px 0}.market-mini .card{min-height:43px;padding:5px 2px}.market-mini .label{font-size:9px}.market-mini .value{font-size:9px;margin-top:2px}
-.grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
-.grid .card{min-height:58px;padding:6px 4px}.grid .label{font-size:10px}.grid .value{font-size:11px;margin-top:4px}
-.terminal-details{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
-.terminal-details .card{min-height:54px;padding:7px}.terminal-details .card h2{font-size:11px;margin:0 0 3px}
-.terminal-details .card p{margin:2px 0;font-size:10px}
-#signal{padding:7px 9px}#signal .signal-compact strong{font-size:17px!important}
-#signal p{margin:4px 0}.footer{padding:7px 3px calc(7px + env(safe-area-inset-bottom,0px))}
-@media(min-width:680px){.chart{height:170px;max-height:170px}.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media(max-width:360px){.grid .label{font-size:9px}.grid .value{font-size:10px}.chart{height:118px;max-height:118px}}
-.fold-section{margin:3px 0;border:1px solid #344459;border-radius:9px;background:#101927;overflow:hidden}
-.fold-section>summary{cursor:pointer;list-style:none;padding:8px 9px;margin:0;min-height:34px;display:flex;align-items:center;justify-content:space-between}
-.fold-section>summary::-webkit-details-marker{display:none}.fold-section>summary::after{content:"＋";color:#efc46e;font-weight:800;margin-inline-start:7px}
-.fold-section[open]>summary::after{content:"−"}.fold-section>section{padding:0 6px 6px}
-.fold-section .card{margin:0}.fold-section .terminal-details{padding:0 6px 6px}
-#chart .chart{height:118px;max-height:118px}#chart .chart-note{display:none}
-@media(max-width:420px){#chart .chart{height:110px;max-height:110px}}</style></head>
-<body><main>
-<div class="terminal-top"><header class="head"><div><h1>♛ Gold Precision Pro Ultimate</h1><div class="muted">XAUUSD · GOLD TERMINAL · لوحة المراجعة الخاصة</div></div></header><div class="status-strip"><span class="status-pill">● WAIT</span><span class="mini-label">READ ONLY</span></div></div>
-<nav class="nav" aria-label="أقسام الشاشة"><a href="#chart">▥ تحليل الذهب</a><a href="#quality">⚗ الاختبارات</a><a href="#signal">▤ السجل</a><a href="#settings">⚙ الإعدادات</a></nav>
-<section class="card"><div class="terminal-hero"><div><div class="mini-label">XAUUSD · آخر إغلاق شمعة متحققة</div><div id="data-state" role="status" aria-live="polite" class="fine muted">● بانتظار التحقق</div><div id="price" class="price">غير متاح</div><div id="timestamp" class="fine muted">لم يُطلب تحديث البيانات بعد</div></div><div style="text-align:left"><div class="gold" style="font-size:26px">Au</div><div class="mini-label">BiQuote</div></div></div><div id="source" class="fine warn">المصدر غير متحقق — لا يُعرض سعر مباشر</div><a class="session-cta" href="/ultimate">🔐 افتح Ultimate لتفعيل جلسة المشاهدة، ثم ارجع واضغط تحديث</a></section>
-<section id="chart" class="card"><div class="chart-head"><h2>📈 XAUUSD · الشارت</h2><div class="frames" role="group" aria-label="الفريم"><button data-frame="15min" aria-pressed="true">M15</button><button data-frame="1h" aria-pressed="false">H1</button><button data-frame="4h" aria-pressed="false">H4</button></div></div>
-<div class="chart-note">الشارت بيعرض فقط شموع BiQuote المغلقة بعد التحقق من الجلسة وصلاحية البيانات.</div><svg id="candles" class="chart" viewBox="0 0 680 300" role="img" aria-label="شارت الشموع المغلقة"><text x="340" y="145" text-anchor="middle" fill="#aab5c4">لا توجد شموع موثقة للعرض</text></svg>
-<p id="chart-status" role="status" aria-live="polite" class="fine muted">لن تُرسم شموع افتراضية أو مفتوحة.</p><button id="refresh" class="primary">↻ تحديث بيانات BiQuote الخاصة عند الطلب</button></section>
-<div class="terminal-section-title"><span>المؤشرات المساعدة</span><span class="sub">لا تُعرض قيم بدون اتصال موثّق</span></div><div class="market-mini" aria-label="مؤشرات السوق"><div class="card"><div class="label">التحليل الفني</div><div class="value">غير متاح</div></div><div class="card"><div class="label">DXY</div><div class="value">غير مربوط</div></div><div class="card"><div class="label">US10Y</div><div class="value">غير مربوط</div></div><div class="card"><div class="label">US02Y</div><div class="value">غير مربوط</div></div><div class="card"><div class="label">GC</div><div class="value">غير مرخّص</div></div></div>
-<details class="fold-section" id="context"><summary class="terminal-section-title"><span>▤ التحليل الفني والسيولة</span><span class="sub">معلومات موثقة فقط</span></summary>
-<section class="grid" aria-label="التحليل"><div class="card"><div class="label">الاتجاه H4 / H1</div><div id="trend-status" class="value">غير متاح</div></div><div class="card"><div class="label">فرص M15</div><div id="watch-status" class="value">WAIT</div></div><div class="card"><div class="label">EMA / RSI / ATR</div><div class="value">غير متحقق</div></div><div class="card"><div class="label">BOS / CHoCH</div><div class="value">غير متحقق</div></div></section>
-</details>
-<details class="fold-section" id="flow"><summary class="terminal-section-title"><span>◈ Order Flow · السيولة</span><span class="sub">GC / DOM / Delta</span></summary>
-<section class="terminal-details"><div class="card"><h2>Footprint / Delta</h2><p class="muted">لا يوجد تدفق GC مرخّص</p></div><div class="card"><h2>DOM / Absorption</h2><p class="muted">غير متاح حالياً</p></div></section>
-</details>
-<details class="fold-section" id="news"><summary class="terminal-section-title"><span>▣ الأخبار والسياق</span><span class="sub">Fed · BLS · العوائد</span></summary>
-<section class="terminal-details"><div class="card"><h2>الأخبار الاقتصادية</h2><p class="muted">لا توجد قراءة حديثة متحققة</p></div><div class="card"><h2>جلسات السوق</h2><p class="muted">تقويم الوسيط غير مثبت</p></div></section>
-</details>
-<details class="fold-section" id="quality"><summary class="terminal-section-title"><span>✓ جودة البيانات والمصادر</span><span class="sub">Read-only audit</span></summary>
-<section class="terminal-details"><div class="card"><h2>فحص الشموع M15 / H1 / H4</h2><p id="quality-status" class="muted">بانتظار الفحص</p><p id="parity-status" class="fine muted">تطابق الفريمات: غير متحقق</p></div><div class="card"><h2>حقوق المصدر وتكاليف التنفيذ</h2><p class="warn">غير مثبتة للتداول</p></div></section>
-</details>
-<section id="signal" class="card wait"><div class="signal-compact"><h2>⌛ مركز التوصيات</h2><strong id="decision">WAIT</strong></div><div class="fine warn">executable = false · BUY / SELL محجوبة حتى اكتمال التحقق</div><p class="fine muted">الشارت للعرض الخاص فقط؛ لا ينتج عنه دخول أو وقف خسارة أو أهداف تداول.</p><p id="reason" role="status" aria-live="polite" class="fine">لا توجد إشارة قابلة للتنفيذ؛ البيانات والحقوق والاختبارات غير مكتملة.</p></section>
-<section class="terminal-details"><div class="card"><h2>▤ الاختبارات والسجل</h2><p class="muted">لا نتائج مفترضة أو نسب نجاح وهمية</p></div><div class="card"><h2>🔒 التداول الورقي / الحقيقي</h2><p class="muted">لا أوامر تلقائية؛ التداول الحقيقي مقفل</p></div></section>
-<section id="settings" class="card session-card" aria-label="جلسة المشاهدة الخاصة"><details class="session-details"><summary>🔐 جلسة BiQuote الخاصة · تعليمات الوصول</summary><p class="fine">إذا أدخلت رمز المشاهدة على نفس المتصفح سابقاً، بتُستخدم جلسة المشاهدة الآمنة الموجودة. وإلا افتح <a href="/ultimate">Ultimate</a> وأدخل الرمز مرة واحدة. ما حدا بيشوف الأسعار الخاصة من دون جلسة صالحة.</p><p class="fine warn">الشارت يتحدّث عند الطلب فقط. لا توصيات تنفيذ أو تداول آلي.</p></details></section>
-<nav class="footer"><a href="#chart">⌂ الرئيسية</a><a href="#context">▤ التحليل</a><a href="#quality">⚗ الاختبارات</a><a href="#signal">▤ السجل</a><a href="#settings">⚙ الإعدادات</a></nav>
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gold Precision Pro Ultimate — Mobile Terminal</title><style>
+:root{color-scheme:dark;--gold:#edc56c;--edge:#30445a;--panel:#111f30}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#050910;color:#e9edf3;font:12px system-ui,Tahoma,sans-serif}
+main{max-width:650px;margin:auto;padding:8px 9px 64px}
+a{color:var(--gold);text-decoration:none}button{font:inherit;cursor:pointer}
+.top{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 8px}
+.brand{font-size:17px;font-weight:850;color:var(--gold)}.sub{font-size:10px;color:#a7b2c2}
+.crown{font-size:23px;color:var(--gold)}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:7px}
+.tabs a{border:1px solid var(--edge);border-radius:9px;background:#152236;text-align:center;padding:9px 2px;font-size:11px;color:#e2e8ef}
+.tabs a.active{background:linear-gradient(#f7d88b,#bd893b);color:#1a1309;font-weight:800;border-color:#e4b75b}
+.panel{background:linear-gradient(150deg,#142336,#0d1725);border:1px solid var(--edge);border-radius:10px;padding:9px;margin:6px 0}
+.quote{display:grid;grid-template-columns:1fr auto;align-items:center;gap:7px}
+.symbol{font-size:16px;font-weight:850}.price{font-size:23px;color:var(--gold);font-weight:850;direction:ltr;text-align:left}
+.pill{display:inline-block;border:1px solid #725c37;border-radius:20px;padding:3px 7px;color:#f1d18a;background:#35291b;font-size:10px}
+.fine{font-size:10px;line-height:1.4;color:#b6c0cc}.muted{color:#aab6c5}.warn{color:#efc67b}
+#data-state{font-size:10px;color:#e5c17a}.quote-bottom{display:flex;justify-content:space-between;gap:8px;margin-top:4px;align-items:center}
+.chart-tools{display:flex;justify-content:center;gap:6px;margin:6px 0}
+.chart-tools button{background:#1a2a3e;color:#e8ebef;border:1px solid #405269;border-radius:7px;padding:5px 13px}
+.chart-tools button[aria-pressed=true]{background:linear-gradient(#f6d68b,#c18b38);color:#17120b;border-color:#e4b65d;font-weight:800}
+.chart{width:100%;height:175px;display:block;background:#07111d;border:1px solid #2a3c50;border-radius:8px}
+.chart-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px}
+#refresh{border:1px solid #a07b3f;background:#30271a;color:#f5d38b;border-radius:7px;padding:5px 9px;font-weight:750}
+.market{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin:7px 0}
+.market .panel{margin:0;min-height:65px;padding:7px 3px;text-align:center}
+.market .key{font-size:10px;font-weight:800;color:#e5e9f0}.market .val{font-size:10px;margin-top:6px;color:#c3ccd8;overflow-wrap:anywhere}
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:7px 0}
+.quick details{background:linear-gradient(145deg,#17273b,#0c1725);border:1px solid var(--edge);border-radius:9px;min-width:0}
+.quick summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:5px;padding:10px 8px;min-height:53px;font-size:11px;font-weight:750}
+.quick summary::-webkit-details-marker{display:none}.quick summary::before{content:"＋";color:var(--gold);font-weight:900}.quick details[open] summary::before{content:"−"}
+.quick details>div{padding:0 9px 9px;color:#c3cbd5;font-size:10px;line-height:1.5}
+.meter{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:7px 0}
+.meter details{background:#111e2e;border:1px solid var(--edge);border-radius:9px;padding:8px;min-height:64px}
+.meter summary{cursor:pointer;color:#e9c47a;font-weight:800;font-size:11px}.meter p{margin:5px 0}
+.signal{background:linear-gradient(110deg,#281c23,#171924);border:1px solid #764452;border-radius:10px;padding:9px;margin:7px 0}
+.signal-top{display:flex;align-items:center;justify-content:space-between;gap:5px;font-weight:800;color:#eac579;font-size:14px}
+#decision{color:#f2ca74;font-size:18px}.signal p{margin:4px 0}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:7px 0}
+.actions .panel{text-align:center;margin:0;font-size:12px;font-weight:800;padding:11px 5px}
+.actions .paper{border-color:#bb8e41;color:#e8c477;background:#352818}
+.actions .locked{color:#aeb8c7}
+#settings{margin:6px 0}.footer{position:fixed;bottom:0;right:0;left:0;background:#0d1828f7;border-top:1px solid #67532f;display:flex;justify-content:space-around;gap:3px;padding:10px 4px calc(10px + env(safe-area-inset-bottom,0px));z-index:10}
+.footer a{font-size:10px;color:#e9c477;text-align:center;flex:1}
+@media(max-width:390px){main{padding:5px 6px 64px}.brand{font-size:15px}.chart{height:158px}.market{gap:3px}.market .panel{padding:6px 2px}.tabs a{font-size:10px;padding:8px 1px}}
+</style></head><body><main>
+<header class="top"><div><div class="brand">♛ Gold Precision Pro Ultimate</div><div class="sub">تحليل احترافي للذهب · لوحة مراجعة خاصة</div></div><div class="crown">♛</div></header>
+<nav class="tabs"><a class="active" href="#chart">▥ تحليل الذهب</a><a href="#quality">♧ الاختبارات</a><a href="#signal">▤ السجل</a><a href="#settings">⚙ الإعدادات</a></nav>
+<section class="panel"><div class="quote"><div><div class="symbol">XAUUSD</div><div class="fine">الذهب / الدولار · آخر إغلاق M15</div></div><div><div id="price" class="price">غير متاح</div><div id="data-state">● غير متحقق</div></div></div><div class="quote-bottom"><span class="pill">BiQuote · خاص</span><span id="timestamp" class="fine">لا توجد عيّنة حديثة مؤهلة</span></div><div id="source" class="fine">المشاهدة خاصة وليست سعراً لحظياً للتنفيذ</div></section>
+<section id="chart"><div class="chart-tools" role="group" aria-label="الفريم"><button data-frame="4h" aria-pressed="false">H4</button><button data-frame="1h" aria-pressed="false">H1</button><button data-frame="15min" aria-pressed="true">M15</button></div><svg id="candles" class="chart" viewBox="0 0 680 300" role="img" aria-label="شموع BiQuote المغلقة"><text x="340" y="150" text-anchor="middle" fill="#aab5c4">WAIT — لا توجد شموع خاصة موثقة</text></svg><div class="chart-footer"><span id="chart-status" class="fine">لا تُعرض شموع غير متحققة</span><button id="refresh">↻ تحديث</button></div></section>
+<div class="market" aria-label="المؤشرات المساعدة"><div class="panel"><div class="key">التحليل الفني</div><div class="val">غير متحقق</div></div><div class="panel"><div class="key">DXY</div><div class="val">غير مربوط</div></div><div class="panel"><div class="key">US02Y</div><div class="val">غير مربوط</div></div><div class="panel"><div class="key">US10Y</div><div class="val">غير مربوط</div></div><div class="panel"><div class="key">GC</div><div class="val">غير مرخّص</div></div></div>
+<div class="quick"><details id="flow"><summary>◈ Order Flow</summary><div>Footprint / Delta: لا يوجد تدفق GC مرخّص. DOM / Absorption: غير متاح.</div></details><details id="news"><summary>▣ الأخبار الاقتصادية</summary><div>لا توجد أخبار حديثة متحققة أو تقويم وسيط مثبت.</div></details></div>
+<div class="meter"><details id="quality"><summary>▥ جودة البيانات · WAIT</summary><p id="quality-status" class="fine">بانتظار الفحص</p><p id="parity-status" class="fine">تطابق الفريمات: غير متحقق</p></details><details id="context"><summary>♢ حقوق المصدر</summary><p class="fine">BiQuote للعرض الخاص فقط؛ حقوق التداول والتكاليف غير مثبتة.</p><p class="fine">الاتجاه H4/H1: <span id="trend-status">غير متاح</span></p><p class="fine">فرص M15: <span id="watch-status">WAIT</span></p></details></div>
+<section id="signal" class="signal"><div class="signal-top"><span>⌛ حالة النظام: <strong id="decision">WAIT</strong></span><span class="pill">executable = false</span></div><p id="reason" role="status" aria-live="polite" class="fine">لا توجد توصية قابلة للتنفيذ قبل اكتمال التحقق.</p></section>
+<div class="actions"><div class="panel paper">◇ التداول الورقي فقط<br><span class="fine">ليس أمراً تلقائياً</span></div><div class="panel locked">♙ التداول الحقيقي مقفل<br><span class="fine">غير متاح في المراجعة</span></div></div>
+<details id="settings" class="panel"><summary>🔐 تفعيل جلسة BiQuote الخاصة</summary><p class="fine">افتح <a href="/ultimate">Ultimate</a> وأدخل رمز المشاهدة على نفس المتصفح، ثم ارجع واضغط تحديث. لا أسعار عامة أو بيانات افتراضية.</p></details>
+<nav class="footer"><a href="#chart">⌂ الرئيسية</a><a href="#context">▤ التحليل</a><a href="#quality">♧ الاختبارات</a><a href="#signal">▤ السجل</a><a href="#settings">⚙ الإعدادات</a></nav>
 </main><script src="/review-dashboard.js" defer></script></body></html>
