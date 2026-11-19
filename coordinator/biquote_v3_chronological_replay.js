@@ -6,6 +6,7 @@
  * No network, orders, broker fills, simulated equity or price-bearing output.
  */
 const {reviewFourStages}=require("./ultimate_four_stage_review");
+const {assess:assessSignalData}=require("./biquote_signal_data_readiness");
 const WIDTH=Object.freeze({M15:900000,H1:3600000,H4:14400000});
 const MIN=21,MAX_BARS=45000,MAX_REPLAY=256;
 const START=Date.parse("2026-11-18T00:00:00Z");
@@ -174,6 +175,13 @@ function inspect(input){
  catch{return blocked("UNSAFE_OR_MALFORMED_CLOSED_ARCHIVE");}
  const counts=Object.fromEntries(Object.keys(WIDTH).map(tf=>[tf,parsed[tf].length]));
  const receiptAudit=observedReceiptAudit(parsed,input.firstObservedClosedUTC,cutoff);
+ // Separate local first-seen signal-data geometry from retrospective watches.
+ // No inferred decision clock: without an explicit cutoff this gate is WAIT.
+ const signalDataReadiness=assessSignalData({
+  dataOrigin:origin,frames:input.frames,
+  firstObservedClosedUTC:input.firstObservedClosedUTC,
+  asOfUTC:input.decisionCutoffUTC
+ });
  const m15=parsed.M15.filter(x=>x._t+WIDTH.M15<=cutoff);
  let checked=0, skipped=0;
  const observations={BUY:0,SELL:0,NONE:0};
@@ -210,6 +218,7 @@ function inspect(input){
   retrospectiveDecisionCount:checked,skippedDecisionCount:skipped,
   technicalWatchCounts:observations,
   firstSeenReceiptAudit:receiptAudit,
+  signalDataReadiness,
   noFutureCandlesUsed:true,replayOnlyNotPointInTime:true,
   explanation:"Final OHLC archive is retrospectively filtered by close time. Per-bar FIRST-SEEN times, broker quotes, rights and costs are missing; do not call this an untouched prospective test."};
 }
