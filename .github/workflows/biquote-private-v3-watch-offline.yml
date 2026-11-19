@@ -5,6 +5,8 @@ on:
     paths:
       - 'coordinator/biquote_private_v3_watch.js'
       - 'coordinator/test_biquote_private_v3_watch.js'
+      - 'coordinator/biquote_vendor_h4_session_tail.js'
+      - 'coordinator/test_biquote_vendor_h4_session_tail.js'
       - 'coordinator/biquote_mobile_readonly.js'
       - 'coordinator/test_biquote_mobile_readonly.js'
       - 'biquote-mobile-ui.js'
@@ -24,6 +26,8 @@ jobs:
           node-version: '24'
       - name: Frozen closed-bar V3 WATCH must never become an order
         run: node coordinator/test_biquote_private_v3_watch.js
+      - name: Weekend session-adjacent H4 stays separate from strict UTC warmup and orders
+        run: node coordinator/test_biquote_vendor_h4_session_tail.js
       - name: Authenticated BiQuote read-only snapshot, anonymous isolation, no extra provider calls
         run: node coordinator/test_biquote_mobile_readonly.js
       - name: Mobile script syntax and private research panel wiring
@@ -31,6 +35,10 @@ jobs:
           node --check biquote-mobile-ui.js
           node --check coordinator/biquote_mobile_readonly.js
           node --check coordinator/biquote_private_v3_watch.js
+          node --check coordinator/biquote_vendor_h4_session_tail.js
+          grep -q 'id="biquote-h4-vendor-session-tail"' ultimate.html
+          grep -q 'displayVendorH4Tail(data.privateVendorH4Tail,acceptedChart)' biquote-mobile-ui.js
+          grep -q 'privateVendorH4Tail:observeVendorH4Tail' coordinator/biquote_mobile_readonly.js
           grep -q 'id="gdc-v3-watch"' ultimate.html
           grep -q 'renderFrozenV3ResearchWatch(data.privateTechnicalWatch)' biquote-mobile-ui.js
           grep -q 'privateTechnicalWatch:researchWatch' coordinator/biquote_mobile_readonly.js
