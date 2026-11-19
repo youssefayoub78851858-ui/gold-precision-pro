@@ -244,6 +244,8 @@
    });
    if(response.status===401||response.status===403)throw Error("SESSION_REQUIRED");
    if(response.status!==200)throw Error("DATA_UNAVAILABLE");
+   if(!/^application\/json(?:\s*;|\s*$)/i.test(response.headers.get("content-type")||""))
+    throw Error("INVALID_RESPONSE_TYPE");
    const packet=await response.json();
    const verified=validateSnapshot(packet,Date.now());
    if(!verified)throw Error("PRIVATE_SESSION_OR_DATA_INVALID");
