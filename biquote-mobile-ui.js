@@ -532,7 +532,8 @@
      return;
    }
    el.textContent="WAIT — لا توجد مراقبة BUY/SELL مؤهّلة: "+
-     (v.status==="WAIT_CROSS_FRAME_EVIDENCE"?"آخر شموع M15/H1/H4 غير متطابقة أو ناقصة":
+     (v.status==="WAIT_CROSS_FRAME_EVIDENCE"?
+       "تقرير شموع H1/H4 مع M15 فيه اختلاف أو تغطية غير مكتملة، ولو آخر شمعة سليمة":
       v.status==="WAIT_DATA_INCOMPLETE"?"عدد الشموع المتتالية أو حداثتها غير كافيين":
       "لا يوجد اختراق متوافق بين الفواصل الثلاثة");
  }
