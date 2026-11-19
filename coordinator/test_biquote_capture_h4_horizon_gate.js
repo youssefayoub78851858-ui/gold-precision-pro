@@ -33,6 +33,19 @@ assert.equal(out.maxPossibleContiguousH4,42);
 assert.equal(out.rawStoredH4CountReachableByWindowEnd,false);
 assert.equal(out.theoreticalWarmupH4ReachableByWindowEnd,true);
 assert.equal(out.paperH4HistoryReachableByWindowEnd,false);
+const declared=out.providerDeclaredH4Projection;
+assert.equal(declared.mode,"BIQUOTE_SUPPORT_DECLARED_NOVEMBER_2026_SCENARIO_ONLY");
+assert.equal(declared.status,"HYPOTHETICAL_VENDOR_SCHEDULE_NOT_BROKER_VERIFIED");
+assert.equal(declared.originalBrokerScheduleVerified,false);
+assert.equal(declared.consentExtended,false);
+assert.equal(declared.providerDeclaredFullPauseH4Slots,11);
+assert.equal(declared.maxPossibleClosedH4FutureSlotsUnderDeclaration,22);
+assert.equal(declared.maxPossibleContiguousH4AtAnyTimeUnderDeclaration,18);
+assert.equal(declared.maxPossibleContiguousH4AtCaptureEndUnderDeclaration,13);
+assert.equal(declared.technicalWarmup21ReachableUnderDeclaration,false);
+assert.equal(declared.paperHistory50ReachableUnderDeclaration,false);
+assert(out.blockers.includes("H4_21_WARMUP_UNREACHABLE_WITHIN_PROVIDER_DECLARED_WEEKEND_SCENARIO"));
+assert(out.blockers.includes("H4_50_PAPER_UNREACHABLE_WITHIN_PROVIDER_DECLARED_WEEKEND_SCENARIO"));
 assert.equal(out.minPaperHistoryH4,50);
 assert(out.blockers.includes(
  "H4_50_BAR_PAPER_HISTORY_MATHEMATICALLY_UNREACHABLE"));
@@ -45,6 +58,11 @@ safe(optimistic);
 assert.equal(optimistic.maxPossibleStoredH4,55);
 assert.equal(optimistic.paperH4HistoryReachableByWindowEnd,true);
 assert.equal(optimistic.maxPossibleContiguousH4,55);
+// Generic arithmetic allows 55; support-declared weekend arithmetic
+// cannot silently bridge a full 4h closure. Neither is broker proof.
+assert.equal(optimistic.providerDeclaredH4Projection.maxPossibleContiguousH4AtAnyTimeUnderDeclaration,31);
+assert.equal(optimistic.providerDeclaredH4Projection.maxPossibleContiguousH4AtCaptureEndUnderDeclaration,13);
+assert.equal(optimistic.providerDeclaredH4Projection.paperHistory50ReachableUnderDeclaration,false);
 assert.equal(optimistic.tradeEligible,false);
 // 50 stored H4 bars with a broken latest contiguous sequence do NOT
 // qualify for a 50-H4 walk-forward paper history. Historical orphaned
@@ -66,6 +84,24 @@ assert.equal(nearEnd.hypotheticalFutureH4Closures,1);
 assert.equal(nearEnd.maxPossibleStoredH4,10);
 assert.equal(nearEnd.maxPossibleContiguousH4,10);
 assert.equal(nearEnd.paperH4HistoryReachableByWindowEnd,false);
+assert.equal(nearEnd.providerDeclaredH4Projection.providerDeclaredFullPauseH4Slots,0);
+assert.equal(nearEnd.providerDeclaredH4Projection.maxPossibleContiguousH4AtAnyTimeUnderDeclaration,10);
+// A newly observed 10-H4 tail near Thursday Nov 19 18:16 UTC still
+// cannot become 21 consecutively before this capture stops at Nov25.
+const latest={...input,asOfUTC:"2026-11-19T18:16:03Z",
+ persistedClosedCounts:{M15:165,H1:41,H4:10},
+ contiguousClosedCounts:{M15:48,H1:19,H4:10}};
+const projection=assessWindow(latest);
+safe(projection);
+assert.equal(projection.providerDeclaredH4Projection.providerDeclaredFullPauseH4Slots,11);
+assert.equal(projection.providerDeclaredH4Projection.maxPossibleClosedH4FutureSlotsUnderDeclaration,21);
+assert.equal(projection.providerDeclaredH4Projection.maxPossibleContiguousH4AtAnyTimeUnderDeclaration,18);
+assert.equal(projection.providerDeclaredH4Projection.maxPossibleContiguousH4AtCaptureEndUnderDeclaration,13);
+assert.equal(projection.providerDeclaredH4Projection.technicalWarmup21ReachableUnderDeclaration,false);
+// The exact broker may differ; no claim that the provider schedule has
+// been validated independently, no implied permission to extend 7 days.
+assert.equal(projection.brokerSessionCalendarVerified,false);
+assert.equal(projection.captureExtended,false);
 // Invented data, consent extensions and unbounded windows fail closed.
 for(const mutate of [
  x=>{x.origin="REAL_BROKER_APPROVED";},
