@@ -166,6 +166,7 @@
     redirect:"error",headers:{Accept:"application/json"},
     signal:AbortSignal.timeout(15000)
    });
+   if(response.status===401||response.status===403)throw Error("SESSION_REQUIRED");
    if(response.status!==200)throw Error("DATA_UNAVAILABLE");
    const packet=await response.json();
    const verified=validateSnapshot(packet,Date.now());
@@ -184,8 +185,10 @@
    $("reason").textContent=researchWatch(verified)+
      " | التوصيات المعتمدة محجوبة بسبب حقوق الوسيط وGC والأخبار والتكاليف واختبار الأداء";
    $("decision").textContent="WAIT";draw();
-  }catch{
-   reset("WAIT — لا توجد جلسة عرض خاصة صالحة، أو السعر قديم/غير متاح. افتح Ultimate وسجّل رمز المشاهدة أول مرة فقط.");
+  }catch(error){
+   reset(error.message==="SESSION_REQUIRED"
+    ?"WAIT — جلسة المشاهدة الخاصة غير مفعّلة في هذا المتصفح. افتح Ultimate وأدخل الرمز هناك، ثم ارجع واضغط تحديث."
+    :"WAIT — تعذّر التحقق من بيانات BiQuote الحديثة أو الجلسة. افتح Ultimate للتأكد من الجلسة، ثم أعد المحاولة.");
   }finally{pending=false;refresh.disabled=false;}
  });
  // Presentation-only expiry: NO background quote calls, no stored prices.
