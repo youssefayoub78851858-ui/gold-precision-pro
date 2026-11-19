@@ -193,6 +193,49 @@ class SevenDayReviewTests(unittest.TestCase):
                        "2026-11-16T21"):
             self.assertNotIn(marker,str(events)+str(out))
 
+    def test_first_seen_migration_logs_counts_only_even_after_restart(self):
+        events=[]
+        safe_receipt={"status":"LOCAL_RECEIPTS_UNVERIFIED_NOT_TRADE_PROOF",
+            "signal":"WAIT","executable":False,"paperOrdersAllowed":False,
+            "sourceRightsVerified":False,"brokerCalendarVerified":False,
+            "independentFirstAvailabilityVerified":False,
+            "recordedClosed":{"M15":2,"H1":0,"H4":0},
+            "unknownLegacyClosed":{"M15":3,"H1":2,"H4":1},
+            "secretPrivatePrice":"DO_NOT_PRINT_987654"}
+        first={**meta(12),"counts":{"M15":5,"H1":2,"H4":1},
+               "firstSeenCoverage":safe_receipt}
+        def observer(_start,*,probe):
+            return {"signal":"WAIT","executable":False,"completed24hWindow":True}
+        with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+            out=run.run_seven_days(VAULT,clock=lambda:DAY+dt.timedelta(minutes=2),
+                observer=observer,metadata=lambda _:first,
+                emit=events.append,days=1,environment=ENV)
+        self.assertEqual(out["signal"],"WAIT")
+        lines=[x for x in events if x["event"]=="BIQUOTE_STAGE3_FIRST_SEEN_COVERAGE"]
+        self.assertEqual(len(lines),1)
+        self.assertEqual(lines[0]["phase"],"RESTART")
+        self.assertEqual(lines[0]["frames"]["M15"],
+                         {"locallyTimestamped":2,"legacyUnknown":3})
+        self.assertFalse(lines[0]["firstAvailabilityVerified"])
+        self.assertFalse(lines[0]["paperReady"])
+        self.assertNotIn("DO_NOT_PRINT",str(events))
+        self.assertNotIn("987654",str(events))
+        self.assertNotIn("firstObservedClosedUTC",str(events))
+        # Tampered counts and forged broker rights fail without printing input.
+        suspicious={**first,"firstSeenCoverage":{
+            **safe_receipt,"recordedClosed":{"M15":6,"H1":0,"H4":0},
+            "sourceRightsVerified":True}}
+        rejected=[]
+        run.run_seven_days(VAULT,clock=lambda:DAY+dt.timedelta(minutes=2),
+            observer=observer,metadata=lambda _:suspicious,
+            emit=rejected.append,days=1,environment=ENV)
+        self.assertFalse(any(x["event"]=="BIQUOTE_STAGE3_FIRST_SEEN_COVERAGE"
+                             for x in rejected))
+        self.assertTrue(any(x["event"]=="BIQUOTE_STAGE3_FIRST_SEEN_UNVERIFIED"
+                            for x in rejected))
+        self.assertNotIn("DO_NOT_PRINT",str(rejected))
+        self.assertNotIn("987654",str(rejected))
+
     def test_closed_h1_h4_parity_in_render_events_is_counts_only(self):
         start=dt.datetime(2026,11,18,tzinfo=UTC)
         def closed(minutes):

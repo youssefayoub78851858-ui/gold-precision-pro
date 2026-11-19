@@ -79,6 +79,48 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
               json.dumps(record, separators=(",", ":"), sort_keys=True), flush=True)
     log = safe_log if emit is None else emit
 
+    def log_first_seen(phase, snapshot, expected_counts, index):
+        """Log ONLY local first-receipt COUNTS; never raw timestamps or OHLC.
+
+        A deployment/restart may leave old candles without receipt history.
+        The presence of local timestamps does NOT prove independent market
+        availability, licensing, or an admissible forward trading signal.
+        """
+        info=snapshot.get("firstSeenCoverage") if isinstance(snapshot,dict) else None
+        if info is None:
+            log({"event":"BIQUOTE_STAGE3_FIRST_SEEN_LEGACY_UNAVAILABLE",
+                 "phase":phase,"dayIndex":index,
+                 "firstAvailabilityVerified":False,**SAFE})
+            return
+        try:
+            if (not isinstance(info,dict) or
+                info.get("status")!="LOCAL_RECEIPTS_UNVERIFIED_NOT_TRADE_PROOF"
+                or info.get("signal")!="WAIT" or info.get("executable") is not False
+                or info.get("paperOrdersAllowed") is not False
+                or info.get("sourceRightsVerified") is not False
+                or info.get("brokerCalendarVerified") is not False
+                or info.get("independentFirstAvailabilityVerified") is not False):
+                raise ValueError("UNSAFE_FIRST_SEEN_COVERAGE")
+            present,missing=info["recordedClosed"],info["unknownLegacyClosed"]
+            if (not isinstance(present,dict) or not isinstance(missing,dict) or
+                set(present)!={"M15","H1","H4"} or set(missing)!={"M15","H1","H4"}):
+                raise ValueError("INVALID_FIRST_SEEN_COUNTERS")
+            pairs={}
+            for tf in ("M15","H1","H4"):
+                ok=present[tf];unknown=missing[tf];n=expected_counts[tf]
+                if (type(ok) is not int or type(unknown) is not int or
+                    not 0<=ok<=n or unknown!=n-ok):
+                    raise ValueError("CONTRADICTORY_FIRST_SEEN_COUNTERS")
+                pairs[tf]={"locallyTimestamped":ok,"legacyUnknown":unknown}
+            log({"event":"BIQUOTE_STAGE3_FIRST_SEEN_COVERAGE",
+                 "phase":phase,"dayIndex":index,"frames":pairs,
+                 "noFirstSeenBackfill":True,"firstAvailabilityVerified":False,
+                 "brokerRightsVerified":False,"paperReady":False,**SAFE})
+        except (ValueError,TypeError,KeyError):
+            log({"event":"BIQUOTE_STAGE3_FIRST_SEEN_UNVERIFIED",
+                 "phase":phase,"dayIndex":index,
+                 "firstAvailabilityVerified":False,**SAFE})
+
     def log_gap_reference(phase, expected_counts, index):
         # Reopen only the sealed private archive, never any provider endpoint.
         # This is a GENERIC vendor-pause timing hypothesis, never broker
@@ -287,7 +329,8 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
         try:
             # inspect_metadata loads the on-disk sealed content and checks the
             # SHA-256 envelope and owner-only permissions on every restart.
-            cap = capacity_readiness(metadata(str(folder)))
+            vault_status = metadata(str(folder))
+            cap = capacity_readiness(vault_status)
         except (OSError, ValueError, TypeError, KeyError):
             state = "VAULT_METADATA_READ_BLOCKED"
             log({"event": "BIQUOTE_SEVEN_DAY_VAULT_AUDIT_BLOCKED",
@@ -304,6 +347,7 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
                  "previouslyStoredQuoteSamples": cap["quoteSamplesUsed"],
                  "previouslyStoredData": bool(cap["quoteSamplesUsed"] or any(counts.values())),
                  "capacityStatus": cap["status"], **SAFE})
+            log_first_seen("RESTART", vault_status, counts, index)
             log_gap_reference("RESTART", counts, index)
         if (cap["status"] == "CAPACITY_LIMIT_REACHED"
                 or cap["quoteSamplesRemaining"] < MAX_SAMPLES
@@ -359,9 +403,12 @@ def run_seven_days(vault_dir, *, anchor=START, clock=None, sleep=None,
                                  "sourceRightsVerified": False,
                                  "independentBrokerSessionVerified": False,
                                  "v3TradeQualified": False, **SAFE})
-                            log_gap_reference("NEW_CLOSED_BAR", {
+                            stable_counts={
                                 tf: details[tf]["persistedClosed"]
-                                for tf in ("M15", "H1", "H4")}, index)
+                                for tf in ("M15", "H1", "H4")}
+                            log_first_seen("NEW_CLOSED_BAR", fresh,
+                                           stable_counts,index)
+                            log_gap_reference("NEW_CLOSED_BAR",stable_counts,index)
                         except (OSError, ValueError, TypeError, KeyError):
                             log({"event": "BIQUOTE_STAGE3_METADATA_UNAVAILABLE",
                                  "dayIndex": index, **SAFE})
