@@ -321,6 +321,20 @@ def shadow_review(dirname: str | pathlib.Path, *, runner=None,
             for tf in FRAMES_ORDER)):
         safe["reasonCodes"].append("FROZEN_V3_CLOSED_BAR_STALE_OR_UNVERIFIED")
         return safe
+    # Secondary strict UTC-as-of gate: a new BID/ASK tick does not prove
+    # that the latest CLOSED candles caught up. The archive's 2-frame
+    # freshness diagnostic is for collection monitoring ONLY; the actual
+    # frozen V3 checkFrame uses at most ONE frame of age at the decision.
+    # Recheck here independently even if a test runner lies about Node's
+    # dataGeometry status. Never bridge session gaps or synthesize candles.
+    if any(not checked[tf] or
+           not 0 <= (receipt - (
+               _stamp(checked[tf][-1]["datetime"]) +
+               dt.timedelta(seconds=WIDTH[tf])
+           )).total_seconds() <= WIDTH[tf]
+           for tf in FRAMES_ORDER):
+        safe["reasonCodes"].append("FROZEN_V3_AS_OF_CLOSED_BAR_NOT_RECENT")
+        return safe
     packet = {"dataOrigin": "BIQUOTE_ARCHIVED_UNVERIFIED_NO_PAPER",
               "snapshot": {
                   "asOfUTC": received,

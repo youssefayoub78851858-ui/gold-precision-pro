@@ -228,6 +228,33 @@ class ForwardShadowTests(unittest.TestCase):
         for key in ('"bid"','"ask"','"spread"','"open"','"high"','"low"','"close"'):
             self.assertNotIn(key,json.dumps(report))
 
+    def test_fresh_quote_but_17_minute_old_m15_cannot_reach_shadow_engine(self):
+        # 2-frame ingestion age permits collection diagnostics at 17m,
+        # while frozen V3 needs the last CLOSED M15 to be at most 15m old.
+        # A provider quote becoming fresh must NOT hide a stalled M15 feed.
+        now=AFTER + dt.timedelta(minutes=12)
+        fixture=sample(now)
+        fixture["frames"]["M15"]["bars"].pop(0)  # newest closed bar missing
+        with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+            saved=ingest(self.folder,fixture,received_utc=iso(now))
+            self.assertEqual(saved["status"],"PRIVATE_FORWARD_CAPTURE_SAVED")
+            metadata=inspect_metadata(self.folder,now_utc=now)
+            self.assertEqual(metadata["closedFrameFreshness"]["frames"]["M15"]["status"],
+                             "RECENT_UNVERIFIED")
+            result=shadow_review(self.folder,now_utc=now,
+                runner=lambda _:self.fail("A fresh quote must not mask stale M15"))
+        self.assertEqual(result["signal"],"WAIT")
+        self.assertEqual(result["technicalWatch"],"NONE")
+        self.assertFalse(result["executable"])
+        self.assertFalse(result["paperOrdersAllowed"])
+        self.assertGreaterEqual(result["frames"]["H4"]["contiguousClosed"],21)
+        self.assertIn("FROZEN_V3_AS_OF_CLOSED_BAR_NOT_RECENT",
+                      result["reasonCodes"])
+        self.assertNotIn("FROZEN_V3_COMPLETED_WITH_REAL_OBSERVED_CLOSED_BARS",
+                         str(result.get("engineReview")))
+        for secret in ('"bid"','"ask"','"spread"','"open"','"high"','"low"','"close"'):
+            self.assertNotIn(secret,json.dumps(result))
+
     def test_gaps_reset_shadow_warmup_and_never_bridge_unknown_sessions(self):
         history=sample(AFTER)
         # Drop one H4 candle close to the end; do not invent session hours.
