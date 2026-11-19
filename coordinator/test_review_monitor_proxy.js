@@ -579,6 +579,33 @@ const mock=body=>({status:200,ok:true,headers:{get:()=>null},text:async()=>JSON.
   a.equal(rejected.body.biquoteForwardShadow,undefined);
   a.equal(rejected.body.ultimateFourStageBatch,undefined);
  }
+
+ const paperHistory={mode:"BIQUOTE_PAPER_HISTORY_COUNT_PREFLIGHT_ONLY",
+  status:"BELOW_50_CLOSED_BARS_PER_FRAME",signal:"WAIT",executable:false,
+  paperOrdersAllowed:false,minimumClosedBarsEachFrame:50,
+  closedCounts:{M15:0,H1:0,H4:0},missingUntil50:{M15:50,H1:50,H4:50},
+  countMinimumMet:false,brokerSessionCalendarVerified:false,
+  independentSourceRightsVerified:false,executionCostsVerified:false,
+  sourceQuotesNotBrokerFills:true,privateBid:999991};
+ const payload=ph=>({...batch,stages:{...batch.stages,
+  paper:{...batch.stages.paper,historyReadiness:ph}}});
+ const withHistory=await relay(auth,{approved:true,fetchFn:async()=>mock({
+  ...expected,ultimateFourStageBatch:payload(paperHistory)})});
+ a.equal(withHistory.httpStatus,200);
+ a.deepEqual(withHistory.body.ultimateFourStageBatch.paperHistory.missingUntil50,
+  {M15:50,H1:50,H4:50});
+ a.equal(withHistory.body.ultimateFourStageBatch.paperHistory.paperOrdersAllowed,false);
+ a.ok(!JSON.stringify(withHistory).includes("999991"));
+ for(const bad of [
+  {status:"COUNT_FLOOR_REACHED_NOT_PAPER_READY"},{countMinimumMet:true},
+  {paperOrdersAllowed:true},{minimumClosedBarsEachFrame:21},
+  {missingUntil50:{M15:0,H1:50,H4:50}},{executionCostsVerified:true},
+  {closedCounts:{M15:50,H1:0,H4:0}}
+ ]){
+  const rejected=await relay(auth,{approved:true,fetchFn:async()=>mock({
+   ...expected,ultimateFourStageBatch:payload({...paperHistory,...bad})})});
+  a.equal(rejected.httpStatus,503,"Forged paper-history proof must fail closed");
+ }
  const outBatch=await relay(auth,{approved:true,fetchFn:async()=>mock({
   ...expected,ultimateFourStageBatch:batch
  })});

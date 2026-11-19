@@ -628,6 +628,35 @@ function sanitize(input){
      independentMacroOrderFlowVerified:false,
      paperOrdersAllowed:false,liveOrdersAllowed:false};
   }
+
+  // Count-only historical paper readiness: never an order admission.
+  let paperHistorySafe=null;
+  if(st.paper.historyReadiness!==undefined){
+   const h=st.paper.historyReadiness,got={},need={};
+   for(const tf of ["M15","H1","H4"]){
+    got[tf]=countSafe[tf].closed;need[tf]=Math.max(0,50-got[tf]);
+   }
+   const enough=Object.values(need).every(n=>n===0);
+   const expected=enough?"COUNT_FLOOR_REACHED_NOT_PAPER_READY":"BELOW_50_CLOSED_BARS_PER_FRAME";
+   if(!h||h.mode!=="BIQUOTE_PAPER_HISTORY_COUNT_PREFLIGHT_ONLY"||
+      h.status!==expected||h.signal!=="WAIT"||h.executable!==false||
+      h.paperOrdersAllowed!==false||h.minimumClosedBarsEachFrame!==50||
+      h.countMinimumMet!==enough||
+      h.brokerSessionCalendarVerified!==false||
+      h.independentSourceRightsVerified!==false||
+      h.executionCostsVerified!==false||
+      h.sourceQuotesNotBrokerFills!==true||
+      Object.keys(h.closedCounts||{}).sort().join(",")!=="H1,H4,M15"||
+      Object.keys(h.missingUntil50||{}).sort().join(",")!=="H1,H4,M15"||
+      ["M15","H1","H4"].some(tf=>
+        h.closedCounts[tf]!==got[tf]||h.missingUntil50[tf]!==need[tf]))
+    throw Error("Forged BiQuote paper-history proof");
+   paperHistorySafe={mode:"BIQUOTE_PAPER_HISTORY_COUNT_PREFLIGHT_ONLY",
+    status:expected,signal:"WAIT",paperOrdersAllowed:false,
+    minimumClosedBarsEachFrame:50,closedCounts:got,missingUntil50:need,
+    countMinimumMet:enough,brokerSessionCalendarVerified:false,
+    independentSourceRightsVerified:false,executionCostsVerified:false};
+  }
   safeBatch={mode:"GOLD_PRECISION_FOUR_STAGE_BATCH_READONLY_V1",
    signal:"WAIT",executable:false,paperOrdersAllowed:false,
    dataStatus:st.data.status,archiveStatus:st.archive.status,
@@ -640,7 +669,8 @@ function sanitize(input){
    quoteSamplesHardCap:capLimit,
    capacityExhausted:st.archive.archiveCapacityExhausted,
    ...(stage2Safe?{stage2:stage2Safe}:{}),
-   ...(stage3Safe?{stage3:stage3Safe}:{})};
+   ...(stage3Safe?{stage3:stage3Safe}:{}),
+   ...(paperHistorySafe?{paperHistory:paperHistorySafe}:{})};
    // The four-stage WAIT-only checklist cannot claim source authorisation.
    // Derive the expected blockers from independently validated counters.
    if(x.completionAudit!==undefined){

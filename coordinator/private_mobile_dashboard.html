@@ -72,6 +72,7 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <section id="paper-gate-panel" aria-labelledby="paper-gate-title">
 <h2 id="paper-gate-title">جاهزية التداول الورقي وإدارة المخاطر</h2>
 <p id="paper-gate-state" role="status">التداول الورقي محجوب حتى التحقق من المصادر وإدارة المخاطر.</p>
+<p id="biquote-paper-history" role="status">BiQuote — تاريخ الصفقات الورقية غير مفحوص.</p>
 <ul id="paper-gate-reasons" aria-live="polite"></ul>
 <p><small>هذا فحص جاهزية فقط؛ لا يوجد حساب ورقي نشط أو أوامر صفقات.</small></p>
 </section>
@@ -248,6 +249,18 @@ el("refresh").addEventListener("click",async()=>{
   el("recovery-observations").textContent=
     Number.isInteger(recovery?.consecutiveObservations)?"الملاحظات المتتالية: "+
       recovery.consecutiveObservations+" / 3 — التداول الورقي محجوب":"لا توجد ملاحظات قابلة للتدقيق";
+
+  const hist=data.ultimateFourStageBatch?.paperHistory;
+  const safeHist=hist?.mode==="BIQUOTE_PAPER_HISTORY_COUNT_PREFLIGHT_ONLY"
+   &&hist?.signal==="WAIT"&&hist?.paperOrdersAllowed===false
+   &&hist?.independentSourceRightsVerified===false
+   &&hist?.brokerSessionCalendarVerified===false
+   &&hist?.executionCostsVerified===false;
+  el("biquote-paper-history").textContent=safeHist
+   ?"BiQuote — ناقص من 50 شمعة: M15 "+hist.missingUntil50.M15+
+    "، H1 "+hist.missingUntil50.H1+"، H4 "+hist.missingUntil50.H4+
+    ". WAIT — التداول الورقي يبقى ممنوعاً حتى بعد اكتمال العدد."
+   :"BiQuote — تاريخ التداول الورقي غير متحقق، والصفقات ممنوعة.";
   const gate=data.paperGate;
   el("paper-gate-state").textContent=gate?.status==="BLOCKED"&&gate?.paperOrdersAllowed===false
     ?"BLOCKED — لا تداول ورقي، ولا تشغيل صفقات حتى تكتمل الشروط"
