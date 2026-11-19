@@ -5,7 +5,7 @@ import socket
 import unittest
 from unittest.mock import patch
 
-from paper_admission_gate import assess_paper_gate
+from paper_admission_gate import assess_paper_gate, assess_biquote_paper_gate, biquote_history_readiness
 
 GOOD = {
     "status": "WAIT_EODHD_INTAKE",
@@ -62,6 +62,41 @@ class PaperAdmissionTests(unittest.TestCase):
                        {"M15": 100, "H1": 100}, {"M15": True, "H1": 100, "H4": 100}):
             x = self.check({**GOOD, "closedBarCounts": counts}, AUDIT)
             self.assertIn("CLOSED_MULTITIMEFRAME_HISTORY_INCOMPLETE", x["reasonCodes"])
+
+    def test_biquote_history_floor_is_never_source_or_trade_approval(self):
+        low={"M15":120,"H1":30,"H4":7}
+        h=biquote_history_readiness(low)
+        self.assertEqual(h["status"],"BELOW_50_CLOSED_BARS_PER_FRAME")
+        self.assertEqual(h["missingUntil50"],{"M15":0,"H1":20,"H4":43})
+        self.assertFalse(h["countMinimumMet"])
+        self.assertFalse(h["paperOrdersAllowed"])
+        result=assess_biquote_paper_gate(
+            {"ohlcStructuralChecksPassed":True},
+            {"status":"ADMISSIBLE_FOR_RESEARCH_ONLY"},low)
+        self.assertIn("BIQUOTE_PAPER_HISTORY_50_BAR_MINIMUM_INCOMPLETE",
+                      result["reasonCodes"])
+        self.assertEqual(result["historyReadiness"],h)
+        full={"M15":50,"H1":50,"H4":50}
+        passed=assess_biquote_paper_gate(
+            {"ohlcStructuralChecksPassed":True},
+            {"status":"ADMISSIBLE_FOR_RESEARCH_ONLY"},full)
+        self.assertTrue(passed["historyReadiness"]["countMinimumMet"])
+        self.assertEqual(passed["status"],"BLOCKED")
+        self.assertFalse(passed["paperOrdersAllowed"])
+        self.assertIn("BIQUOTE_SOURCE_AND_UNDERLYING_RIGHTS_UNVERIFIED",
+                      passed["reasonCodes"])
+        for invalid in (None,{"M15":50,"H1":50},
+                        {"M15":True,"H1":50,"H4":50},
+                        {"M15":-1,"H1":50,"H4":50},
+                        {"M15":50000,"H1":50,"H4":50}):
+            x=assess_biquote_paper_gate({}, {}, invalid)
+            self.assertEqual(x["historyReadiness"]["status"],
+                             "UNVERIFIED_CLOSED_HISTORY")
+            self.assertIn("BIQUOTE_FORWARD_HISTORY_UNAVAILABLE",x["reasonCodes"])
+            self.assertFalse(x["paperOrdersAllowed"])
+        for data in (result,passed):
+            self.assertNotIn('"bid"',json.dumps(data))
+            self.assertNotIn('"ask"',json.dumps(data))
 
     def test_no_account_files_network_or_broker(self):
         with patch.object(socket, "socket", side_effect=AssertionError("No network")):

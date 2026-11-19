@@ -213,12 +213,13 @@ def review_batch(vault_dir, *, final_report=None, now_utc=None, shadow_runner=No
     # fills or fabricated equity curve, regardless of synthetic V3 output.
     paper=assess_biquote_paper_gate(
         {"ohlcStructuralChecksPassed":source_ok},
-        {"status":"BLOCKED"})
+        {"status":"BLOCKED"},counts)
     result["stages"]["paper"]={
         "status":"BLOCKED", "paperOrdersAllowed":False,
         "paperLedgerOpened":False,"sampleTradesCreated":0,
         "brokerCostsVerified":False,"riskApproved":False,
         "forwardNetPerformanceEstablished":False,
+        "historyReadiness":paper["historyReadiness"],
         "blockers":list(paper["reasonCodes"])[:18],
         "costBlockers":list(paper["costReadiness"]["reasonCodes"])[:12]
     }

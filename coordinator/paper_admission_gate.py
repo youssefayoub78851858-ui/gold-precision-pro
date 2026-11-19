@@ -64,7 +64,39 @@ def assess_paper_gate(monitor: object, audit: object) -> dict:
     }
 
 
-def assess_biquote_paper_gate(source_audit: object, research_intake: object) -> dict:
+def biquote_history_readiness(closed_counts: object) -> dict:
+    """Safe count-only preflight, never permission to trade or gap-bridging.
+
+    A 50-bar floor matches the existing paper-history baseline. Passing
+    counts cannot establish the source license, broker calendar, independent
+    costs or uninterrupted broker sessions; none are promoted here.
+    """
+    frames = ("M15", "H1", "H4")
+    valid = (isinstance(closed_counts, dict)
+             and set(closed_counts) == set(frames)
+             and all(type(closed_counts.get(tf)) is int
+                     and 0 <= closed_counts[tf] <= 45000 for tf in frames))
+    counts = {tf: closed_counts[tf] if valid else None for tf in frames}
+    missing = {tf: max(0, 50 - counts[tf]) if valid else None for tf in frames}
+    enough = valid and all(n == 0 for n in missing.values())
+    return {
+        "mode": "BIQUOTE_PAPER_HISTORY_COUNT_PREFLIGHT_ONLY",
+        "status": ("UNVERIFIED_CLOSED_HISTORY" if not valid else
+                   "COUNT_FLOOR_REACHED_NOT_PAPER_READY" if enough else
+                   "BELOW_50_CLOSED_BARS_PER_FRAME"),
+        "signal": "WAIT", "executable": False, "paperOrdersAllowed": False,
+        "minimumClosedBarsEachFrame": 50,
+        "closedCounts": counts, "missingUntil50": missing,
+        "countMinimumMet": bool(enough),
+        "brokerSessionCalendarVerified": False,
+        "independentSourceRightsVerified": False,
+        "executionCostsVerified": False,
+        "sourceQuotesNotBrokerFills": True,
+    }
+
+
+def assess_biquote_paper_gate(source_audit: object, research_intake: object,
+                              closed_counts: object = None) -> dict:
     """Fail-closed BiQuote paper-trading admission. Never constructs a ledger."""
     audit = source_audit if isinstance(source_audit, dict) else {}
     intake = research_intake if isinstance(research_intake, dict) else {}
@@ -79,11 +111,17 @@ def assess_biquote_paper_gate(source_audit: object, research_intake: object) -> 
         reasons.append("BIQUOTE_STRUCTURAL_AUDIT_FAILED")
     if intake.get("status") != "ADMISSIBLE_FOR_RESEARCH_ONLY":
         reasons.append("RESEARCH_INTAKE_BLOCKED")
+    history = biquote_history_readiness(closed_counts)
+    if history["status"] == "UNVERIFIED_CLOSED_HISTORY":
+        reasons.append("BIQUOTE_FORWARD_HISTORY_UNAVAILABLE")
+    elif not history["countMinimumMet"]:
+        reasons.append("BIQUOTE_PAPER_HISTORY_50_BAR_MINIMUM_INCOMPLETE")
     return {
         "mode": "PAPER_ADMISSION_REVIEW_ONLY", "provider": "BiQuote",
         "status": "BLOCKED", "signal": "WAIT", "executable": False,
         "researchEligible": False, "paperOrdersAllowed": False,
         "paperRunning": False, "ledgerCreatedByGate": False,
         "sourceRequestsMade": 0, "reasonCodes": reasons,
+        "historyReadiness": history,
         "costReadiness": cost_readiness(),
     }

@@ -43,6 +43,21 @@ class FourStageBatchAcceptance(unittest.TestCase):
         self.assertFalse(report["stages"]["paper"]["paperLedgerOpened"])
         self.assertEqual(report["stages"]["paper"]["sampleTradesCreated"],0)
         self.assertFalse(report["stages"]["paper"]["forwardNetPerformanceEstablished"])
+        paper_history=report["stages"]["paper"]["historyReadiness"]
+        self.assertEqual(paper_history["mode"],
+                         "BIQUOTE_PAPER_HISTORY_COUNT_PREFLIGHT_ONLY")
+        self.assertEqual(paper_history["signal"],"WAIT")
+        self.assertFalse(paper_history["executable"])
+        self.assertFalse(paper_history["paperOrdersAllowed"])
+        self.assertFalse(paper_history["brokerSessionCalendarVerified"])
+        self.assertFalse(paper_history["independentSourceRightsVerified"])
+        self.assertFalse(paper_history["executionCostsVerified"])
+        self.assertEqual(paper_history["minimumClosedBarsEachFrame"],50)
+        self.assertEqual(paper_history["closedCounts"],
+                         report["stages"]["archive"]["closedCounts"])
+        self.assertEqual(paper_history["missingUntil50"],
+            {tf:max(0,50-report["stages"]["archive"]["closedCounts"][tf])
+             for tf in ("M15","H1","H4")})
         self.assertEqual(report["stages"]["context"]["status"],
                          "INDEPENDENT_SOURCE_CONFIRMATIONS_REQUIRED")
         checklist=report["completionAudit"]
@@ -139,6 +154,10 @@ class FourStageBatchAcceptance(unittest.TestCase):
         self.assertEqual(out["stages"]["archive"]["stage2Status"],"WAIT_NO_FORWARD_CLOSED_BARS")
         self.assertEqual(out["stages"]["archive"]["stage2Frames"]["H4"]["remainingUntil21"],21)
         self.assertEqual(out["stages"]["archive"]["closedCounts"]["H4"],0)
+        self.assertEqual(out["stages"]["paper"]["historyReadiness"]["status"],
+                         "BELOW_50_CLOSED_BARS_PER_FRAME")
+        self.assertIn("BIQUOTE_PAPER_HISTORY_50_BAR_MINIMUM_INCOMPLETE",
+                      out["stages"]["paper"]["blockers"])
         self.assertEqual(out["stages"]["analysis"]["stage3"]["status"],
                          "WAIT_CLOSED_BAR_WARMUP")
         self.assertEqual(out["stages"]["archive"]["capacityStatus"],"CAPACITY_HEADROOM")
@@ -204,6 +223,9 @@ class FourStageBatchAcceptance(unittest.TestCase):
                          "FORWARD_CAPTURE_PRESENT_UNVERIFIED")
         self.assertGreaterEqual(
             out["stages"]["archive"]["consecutiveClosedCounts"]["H4"],21)
+        self.assertFalse(out["stages"]["paper"]["historyReadiness"]["countMinimumMet"])
+        self.assertEqual(out["stages"]["paper"]["historyReadiness"]["missingUntil50"]["H4"],
+                         max(0,50-out["stages"]["archive"]["closedCounts"]["H4"]))
         self.assertEqual(out["stages"]["archive"]["stage2Status"],
                          "WAIT_INDEPENDENT_SOURCE_RIGHTS_AND_CALENDAR")
         self.assertEqual(out["stages"]["archive"]["stage2Frames"]["H4"]["remainingUntil21"],0)
