@@ -250,6 +250,23 @@ async function main(){
  const mismatch=await api.snapshot({fetchFn:fake(incorrect).fetch,nowMs:()=>NOW});
  assert.equal(mismatch.httpStatus,200);secure(mismatch.body);
  assert.ok(["WAIT_CROSS_FRAME_GAPS","OBSERVED_READONLY_UNVERIFIED"].includes(mismatch.body.status));
+ // Authenticated private WATCH must not contradict the source-wide
+ // H1/M15 overlap failure. The latest H1 is intact; an earlier H1
+ // has incorrect price geometry relative to its constituent M15s.
+ api.resetForTests();
+ const oldConflict=packet();
+ oldConflict.H1.bars[5].high+=17;
+ const sourceOld=await api.snapshot({fetchFn:fake(oldConflict).fetch,
+   nowMs:()=>NOW,authorization:auth,verifyViewer:async()=>true});
+ assert.equal(sourceOld.httpStatus,200);secure(sourceOld.body);
+ assert.equal(sourceOld.body.status,"WAIT_CROSS_FRAME_GAPS");
+ assert.equal(sourceOld.body.privateTechnicalWatch.watchLabel,"WAIT");
+ assert.equal(sourceOld.body.privateTechnicalWatch.technicalCandidate,"NONE");
+ assert.equal(sourceOld.body.privateTechnicalWatch.reason,
+   "SOURCE_HAS_UNRESOLVED_CROSS_FRAME_GAPS");
+ assert.equal(sourceOld.body.privateTechnicalWatch.tradeEligible,false);
+ assert.equal(sourceOld.body.privateTechnicalWatch.brokerOrdersSent,0);
+
 
  // BiQuote H1/H4 history can straddle a daily/weekend gap, but our
  // read-only viewer must still show strictly within-segment observations
