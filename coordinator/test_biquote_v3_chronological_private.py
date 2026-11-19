@@ -36,6 +36,18 @@ class ChronologicalPrivate(unittest.TestCase):
                 {k:len(v) for k,v in stored["closed"].items()})
             self.assertEqual(report["retrospectiveDecisionCount"],
                              sum(report["technicalWatchCounts"].values()))
+            receipts=report["localFirstSeenAudit"]
+            self.assertEqual(receipts["signal"],"WAIT")
+            self.assertFalse(receipts["paperOrdersAllowed"])
+            self.assertFalse(receipts["independentReceiptVerified"])
+            self.assertEqual(receipts["recordedClosedCounts"],
+                {tf:len(stored["firstObservedClosedUTC"][tf])
+                 for tf in ("M15","H1","H4")})
+            self.assertEqual(receipts["unknownLegacyClosedCounts"],
+                             {"M15":0,"H1":0,"H4":0})
+            self.assertEqual(receipts["observedDecisionCount"],
+                             sum(receipts["technicalWatchCounts"].values()))
+            self.assertLessEqual(receipts["observedDecisionCount"],256)
             safe=json.dumps(report)
             for private in ('"open"','"high"','"low"','"close"',
                             '"bid"','"ask"','3900.0','/private'):
@@ -51,6 +63,29 @@ class ChronologicalPrivate(unittest.TestCase):
             self.assertEqual(blocked["status"],"BLOCKED")
             self.assertEqual(blocked["retrospectiveDecisionCount"],0)
             self.assertNotIn('"bid"',json.dumps(blocked))
+    def test_legacy_archive_does_not_fake_receipts_or_future_observations(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as tmp:
+            directory=pathlib.Path(tmp)/"private"
+            ingest(directory,sample(AFTER),received_utc=iso(AFTER))
+            old=load_vault(directory)
+            old.pop("firstObservedClosedUTC")
+            digest=hashlib.sha256(json.dumps(old,sort_keys=True,separators=(",",
+                          ":"),ensure_ascii=True).encode()).hexdigest()
+            archive=directory/"biquote-forward-private-v1.json"
+            archive.write_text(json.dumps({"payload":old,"sha256":digest}))
+            with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+                report=inspect_private_vault(directory)
+            audit=report["localFirstSeenAudit"]
+            self.assertEqual(audit["status"],"BLOCKED")
+            self.assertEqual(audit["observedDecisionCount"],0)
+            self.assertEqual(audit["recordedClosedCounts"],{
+                "M15":0,"H1":0,"H4":0})
+            self.assertEqual(audit["unknownLegacyClosedCounts"],{
+                tf:len(old["closed"][tf]) for tf in ("M15","H1","H4")})
+            self.assertEqual(report["signal"],"WAIT")
+            self.assertFalse(report["paperOrdersAllowed"])
+
     def test_missing_vault_does_not_generate_market_candles(self):
         with tempfile.TemporaryDirectory() as tmp:
             d=pathlib.Path(tmp)/"missing"

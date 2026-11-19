@@ -88,7 +88,9 @@ function observedReceiptAudit(parsed,firstSeen,cutoff){
    technicalWatchCounts:ZERO,firstObservedBarCounts:{M15:0,H1:0,H4:0},
    legacyMissingReceiptCounts:{M15:0,H1:0,H4:0}};
  const fail=reason=>({...base,status:"BLOCKED",reason});
- if(firstSeen===undefined)return fail("NO_LOCAL_RECEIPT_METADATA_LEGACY");
+ if(firstSeen===undefined)return {...fail("NO_LOCAL_RECEIPT_METADATA_LEGACY"),
+   legacyMissingReceiptCounts:Object.fromEntries(Object.keys(WIDTH).map(tf=>
+     [tf,parsed[tf].length]))};
  if(!firstSeen||typeof firstSeen!=="object"||
     Array.isArray(firstSeen)||
     Object.keys(firstSeen).sort().join(",")!=="H1,H4,M15")

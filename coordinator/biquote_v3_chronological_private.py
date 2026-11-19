@@ -48,6 +48,8 @@ def inspect_private_vault(dirname, *, runner=None):
                 {"datetime":b["openTime"],"open":b["open"],"high":b["high"],
                  "low":b["low"],"close":b["close"]}
                 for b in sealed["closed"][tf]]
+        if "firstObservedClosedUTC" in sealed:
+            packet["firstObservedClosedUTC"]=sealed["firstObservedClosedUTC"]
         if runner is None:
             raw=subprocess.run(
                 ["node",str(NODE)],input=json.dumps(packet,allow_nan=False),
@@ -60,6 +62,36 @@ def inspect_private_vault(dirname, *, runner=None):
         watches=out.get("technicalWatchCounts")
         count=out.get("retrospectiveDecisionCount")
         stored=out.get("storedClosedCounts")
+        audit=out.get("firstSeenReceiptAudit")
+        receipt_counts={tf:len(sealed.get("firstObservedClosedUTC",{}).get(tf,{}))
+                        for tf in FRAMES_ORDER}
+        legacy_counts={tf:counts[tf]-receipt_counts[tf] for tf in FRAMES_ORDER}
+        receipt_count=audit.get("observedDecisionCount") if isinstance(audit,dict) else None
+        receipt_watches=audit.get("technicalWatchCounts") if isinstance(audit,dict) else None
+        receipt_status=("NO_TIME_ELIGIBLE_WATCHES" if receipt_count==0 else
+                        "LOCAL_RECEIPT_WATCHES_NOT_TRADE_PROOF")
+        if (not isinstance(audit,dict) or
+            audit.get("mode")!="BIQUOTE_V3_LOCAL_FIRST_SEEN_RECEIPT_AUDIT_ONLY" or
+            audit.get("signal")!="WAIT" or
+            audit.get("executable") is not False or
+            audit.get("paperOrdersAllowed") is not False or
+            audit.get("brokerOrdersSent")!=0 or
+            audit.get("sourceRightsVerified") is not False or
+            audit.get("independentReceiptVerified") is not False or
+            audit.get("brokerFillsModeled") is not False or
+            audit.get("winRate") is not None or
+            audit.get("netExpectancy") is not None or
+            audit.get("firstObservedBarCounts")!=receipt_counts or
+            audit.get("legacyMissingReceiptCounts")!=legacy_counts or
+            type(receipt_count) is not int or not 0<=receipt_count<=256 or
+            not isinstance(receipt_watches,dict) or
+            set(receipt_watches)!={"BUY","SELL","NONE"} or
+            any(type(receipt_watches[k]) is not int or
+                not 0<=receipt_watches[k]<=256 for k in receipt_watches) or
+            sum(receipt_watches.values())!=receipt_count or
+            audit.get("status")!=(
+                receipt_status if "firstObservedClosedUTC" in sealed else "BLOCKED")):
+            return result
         if (out.get("mode")!="BIQUOTE_V3_CHRONOLOGICAL_RECONSTRUCTION_ONLY"
             or out.get("signal")!="WAIT" or out.get("executable") is not False
             or out.get("paperOrdersAllowed") is not False
@@ -96,7 +128,16 @@ def inspect_private_vault(dirname, *, runner=None):
                 "reason":"MISSING_PER_BAR_FIRST_SEEN_BROKER_QUOTES_AND_COSTS",
                 "closedCounts":{tf:counts[tf] for tf in FRAMES_ORDER},
                 "retrospectiveDecisionCount":count,
-                "technicalWatchCounts":{key:watches[key] for key in ("BUY","SELL","NONE")}}
+                "technicalWatchCounts":{key:watches[key] for key in ("BUY","SELL","NONE")},
+                "localFirstSeenAudit":{
+                    "status":audit["status"],"signal":"WAIT",
+                    "paperOrdersAllowed":False,
+                    "independentReceiptVerified":False,
+                    "recordedClosedCounts":receipt_counts,
+                    "unknownLegacyClosedCounts":legacy_counts,
+                    "observedDecisionCount":receipt_count,
+                    "technicalWatchCounts":{
+                        key:receipt_watches[key] for key in ("BUY","SELL","NONE")}}}
     except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):
         return result
 
