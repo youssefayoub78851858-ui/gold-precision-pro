@@ -23,6 +23,11 @@ const safe={
  brokerBidAskCostsVerified:false,retrospectiveOnly:true,
  entry:null,stopLoss:null,takeProfit:null,
  providerRequestsMade:0,brokerOrdersSent:0,
+ // Frozen private viewer capacity contract, not trading evidence.
+ requiredM15ToReconcile21H4:336,
+ requiredH1ToReconcile21H4:84,
+ privateChartMaxBarsPerFrame:48,
+ full21H4CrossFrameAuditPossibleFromPrivateSnapshot:false,
  technicalCandidate:"NONE",watchLabel:"WAIT",
  reason:"SOURCE_HAS_UNRESOLVED_CROSS_FRAME_GAPS",
  privateToken:"DO_NOT_PRINT_TOKEN",priceSecret:948382
@@ -90,6 +95,10 @@ for(const item of [
 }
 
 for(const patch of [
+ {requiredM15ToReconcile21H4:200},
+ {requiredH1ToReconcile21H4:48},
+ {privateChartMaxBarsPerFrame:336},
+ {full21H4CrossFrameAuditPossibleFromPrivateSnapshot:true},
  {executable:true},{paperOrdersAllowed:true},{sourceRightsVerified:true},
  {firstSeenAtDecisionVerified:true},{brokerBidAskCostsVerified:true},
  {entry:4420},{providerRequestsMade:1},{brokerOrdersSent:1}
