@@ -234,14 +234,23 @@ class ForwardShadowTests(unittest.TestCase):
         # A provider quote becoming fresh must NOT hide a stalled M15 feed.
         now=AFTER + dt.timedelta(minutes=12)
         fixture=sample(now)
+        # Intake already rejects this stale M15 history; verify it.
         fixture["frames"]["M15"]["bars"].pop(0)  # newest closed bar missing
         with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
-            saved=ingest(self.folder,fixture,received_utc=iso(now))
-            self.assertEqual(saved["status"],"PRIVATE_FORWARD_CAPTURE_SAVED")
-            metadata=inspect_metadata(self.folder,now_utc=now)
+            with self.assertRaisesRegex(ValueError,"CLOSED_HISTORY_STALE_M15"):
+                ingest(self.folder,fixture,received_utc=iso(now))
+            # Secondary defense: simulate a digest-consistent but semantically
+            # corrupted sealed snapshot reaching the shadow via shared memory.
+            # No disk rewrite, external API, credentials, execution or order.
+            healthy=ingest(self.folder,sample(now),received_utc=iso(now))
+            self.assertEqual(healthy["status"],"PRIVATE_FORWARD_CAPTURE_SAVED")
+            sealed=load_vault(self.folder)
+            sealed["closed"]["M15"].pop()
+            metadata=inspect_vault_metadata(sealed,now_utc=now)
             self.assertEqual(metadata["closedFrameFreshness"]["frames"]["M15"]["status"],
                              "RECENT_UNVERIFIED")
             result=shadow_review(self.folder,now_utc=now,
+                vault_metadata=metadata,sealed_vault=sealed,
                 runner=lambda _:self.fail("A fresh quote must not mask stale M15"))
         self.assertEqual(result["signal"],"WAIT")
         self.assertEqual(result["technicalWatch"],"NONE")
