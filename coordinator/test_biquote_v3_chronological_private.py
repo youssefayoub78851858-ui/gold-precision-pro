@@ -126,6 +126,62 @@ class ChronologicalPrivate(unittest.TestCase):
             self.assertEqual(gated["contiguousObservedClosed"],{
                 "M15":0,"H1":0,"H4":0})
 
+    def test_deployed_legacy_to_future_receipts_keeps_old_bars_unknown(self):
+        """Rehearse the ACTUAL old collector capability, no Render I/O."""
+        import datetime as dt
+        import hashlib
+        with tempfile.TemporaryDirectory() as tmp:
+            d=pathlib.Path(tmp)/"private"
+            with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+                ingest(d,sample(AFTER),received_utc=iso(AFTER))
+                legacy=load_vault(d)
+                legacy.pop("firstObservedClosedUTC")  # older deployed build
+                old_counts={tf:len(legacy["closed"][tf])
+                            for tf in ("M15","H1","H4")}
+                blob=json.dumps(legacy,sort_keys=True,separators=(",",":"),
+                                ensure_ascii=True)
+                digest=hashlib.sha256(blob.encode("utf8")).hexdigest()
+                p=d/"biquote-forward-private-v1.json"
+                p.write_text(json.dumps({"payload":legacy,"sha256":digest}))
+                old_bytes=p.read_bytes()
+                old_report=inspect_private_vault(d)
+                self.assertEqual(old_bytes,p.read_bytes())
+                self.assertEqual(old_report["pointInTimeDataAudit"]["status"],
+                                 "RECEIPTS_UNAVAILABLE")
+                later=AFTER+dt.timedelta(hours=4)
+                ingest(d,sample(later),received_utc=iso(later))
+                updated=load_vault(d)
+                report=inspect_private_vault(d)
+            gate=report["pointInTimeDataAudit"]
+            local=report["localFirstSeenAudit"]
+            self.assertEqual(report["signal"],"WAIT")
+            self.assertFalse(report["executable"])
+            self.assertFalse(report["paperOrdersAllowed"])
+            self.assertFalse(report["liveOrdersAllowed"])
+            self.assertFalse(gate["independentAvailabilityVerified"])
+            self.assertEqual(gate["legacyWithoutFirstSeen"],old_counts)
+            self.assertEqual(gate["firstSeenAfterDecision"],{
+                "M15":0,"H1":0,"H4":0})
+            self.assertEqual(local["unknownLegacyClosedCounts"],old_counts)
+            for tf in old_counts:
+                new=len(updated["closed"][tf])-old_counts[tf]
+                self.assertGreater(new,0)
+                self.assertEqual(gate["observedAtDecision"][tf],new)
+                self.assertEqual(local["recordedClosedCounts"][tf],new)
+                old_times={x["openTime"] for x in legacy["closed"][tf]}
+                self.assertTrue(old_times.isdisjoint(
+                    updated["firstObservedClosedUTC"][tf].keys()))
+                self.assertLessEqual(gate["contiguousObservedClosed"][tf],new)
+            self.assertEqual(local["observedDecisionCount"],0)
+            self.assertEqual(gate["status"],"INSUFFICIENT_EVIDENCE")
+            self.assertGreater(gate["technicalWarmupMissing"]["H4"],0)
+            report_text=json.dumps(report)
+            for leaked in ('"bid"','"ask"','"open"','"high"','"low"',
+                           '"close"','3900.0','/private'):
+                self.assertNotIn(leaked,report_text)
+            self.assertFalse(any(x.suffix in (".sqlite",".db")
+                                 for x in d.rglob("*")))
+
     def test_missing_vault_does_not_generate_market_candles(self):
         with tempfile.TemporaryDirectory() as tmp:
             d=pathlib.Path(tmp)/"missing"
