@@ -59,6 +59,7 @@ function extract(input){
     archiveSavedSnapshotsSoFar:x.archiveSavedSnapshotsSoFar,
     archiveRejectedSnapshotsSoFar:x.archiveRejectedSnapshotsSoFar,
     httpAllOk:x.httpAllOk,geometryChecksOk:x.geometryChecksOk,
+    geometryFailureClass:x.geometryFailureClass,
     signal:x.signal,executable:x.executable
    });
    relevant++;
