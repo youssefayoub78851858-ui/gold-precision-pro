@@ -149,6 +149,52 @@ const backfillGood=assess(backfillFixture);
 safe(backfillGood);
 a.equal(backfillGood.warmupCrossFrameMatchedH4,21);
 a.equal(backfillGood.localGeometryObserved,true);
+// A 22:00-23:00 UTC break is stated in BiQuote's 2026-11-16
+// support reply, not independently verified with the original broker.
+// The 20:00 H4 bar spans that hour. It can be a legitimate partial
+// bar, so treating "16 of 16 M15" as a guaranteed eventual condition
+// would misdiagnose this market. Count it WITHOUT filling or approving.
+const declaredPause=fixture(336);
+for(const tf of ["M15","H1"]){
+ declaredPause.frames[tf]=declaredPause.frames[tf].filter(bar=>{
+  const t=Date.parse(bar.datetime),d=new Date(t);
+  return !(d.getUTCHours()===22&&
+    (d.getUTCDate()===18||d.getUTCDate()===19||
+     d.getUTCDate()===20));
+ });
+}
+declaredPause.firstObservedClosedUTC=receipts(declaredPause.frames);
+const breakReport=assess(declaredPause);safe(breakReport);
+a.equal(breakReport.technicalWarmupMissing.H4,0);
+a.equal(breakReport.warmupCrossFrameMatchedH4,18);
+a.equal(breakReport.warmupCrossFrameProviderPauseAffectedH4,3);
+a.equal(breakReport.warmupCrossFrameUnexplainedCoverageH4,0);
+a.equal(breakReport.warmupCrossFramePriceMismatchH4,0);
+a.equal(breakReport.warmupCrossFrameProviderPauseNotBrokerVerified,true);
+a.equal(breakReport.warmupCrossFrameFullyVerified,false);
+a.equal(breakReport.localGeometryObserved,false);
+a(breakReport.blockers.includes(
+ "H4_M15_COVERAGE_ABSENT_WITHIN_BIQUOTE_DECLARED_PAUSE_NOT_PROVEN"));
+// One unrelated missing H1 constituent in active market hours must NOT
+// be attributed to the provider-declared daily 22:00 break.
+const offSessionMissing=structuredClone(declaredPause);
+const openHour="2026-11-19T11:00:00Z";
+offSessionMissing.frames.H1=offSessionMissing.frames.H1.filter(
+ b=>b.datetime!==openHour);
+delete offSessionMissing.firstObservedClosedUTC.H1[openHour];
+const badCoverage=assess(offSessionMissing);safe(badCoverage);
+a.equal(badCoverage.warmupCrossFrameProviderPauseAffectedH4,3);
+a.equal(badCoverage.warmupCrossFrameUnexplainedCoverageH4,1);
+a.equal(badCoverage.warmupCrossFrameFullyVerified,false);
+a(badCoverage.blockers.includes("H4_M15_COVERAGE_MISSING_OUTSIDE_DECLARED_PAUSE"));
+a.equal(badCoverage.tradeEligible,false);
+// A price disagreement with every constituent present stays a mismatch,
+// never an allowed market break. The origin is still unsupported.
+const altered=structuredClone(backfillFixture);
+altered.frames.H4[10].high+=12;
+const priceReport=assess(altered);safe(priceReport);
+a.equal(priceReport.warmupCrossFramePriceMismatchH4,1);
+a(priceReport.blockers.includes("H4_M15_H1_WARMUP_OHLC_PRICE_CONFLICT"));
 const olderM15ReceiptMissing=structuredClone(backfillFixture);
 const historicalM15=olderM15ReceiptMissing.frames.M15[16*10].datetime;
 delete olderM15ReceiptMissing.firstObservedClosedUTC.M15[historicalM15];
