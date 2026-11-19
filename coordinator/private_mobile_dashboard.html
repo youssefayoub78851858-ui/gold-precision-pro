@@ -56,6 +56,7 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 </div>
 <p id="forward-last">آخر حفظ: غير مؤكد</p>
 <p id="forward-coverage">الفجوات والتغطية: غير مؤكدتين</p>
+<p id="forward-readiness" role="status">WAIT — جاهزية التاريخ: غير مؤكدة</p>
 <p><small>أعداد من القرص الخاص فقط. أي فجوة تعتبر غير مصنّفة لحين توثيق جلسات الوسيط، ولا تعني الأعداد أن البيانات مرخّصة أو أن صفقة ممكنة.</small></p>
 </section>
 <section id="fxcm-review-panel" aria-labelledby="fxcm-review-title">
@@ -168,6 +169,25 @@ el("refresh").addEventListener("click",async()=>{
   el("forward-coverage").textContent=safeVault
    ?"فجوات زمنية غير مصنّفة في الأرشيف: "+missing+" — لا يعني صفر فجوات إثبات صلاحية الجلسات"
    :"التغطية الزمنية لم تتحقق بعد";
+  // Separate the 21 H4 CONTIGUOUS technical watch warmup from the
+  // 50-CLOSED-BAR-EACH M15/H1/H4 paper-history minimum. Passing either
+  // count never verifies licensing, trading costs or profitable signals.
+  const totals={};
+  for(const tf of ["M15","H1","H4"]){
+   const n=safeVault?vault.counts?.[tf]:null;
+   totals[tf]=Number.isInteger(n)&&n>=0&&n<=45000?n:null;
+  }
+  const run=safeVault?vault.forwardCoverage?.H4?.latestContiguousBars:null;
+  const h4Run=Number.isInteger(run)&&run>=0&&run<=48
+   &&totals.H4!==null&&run<=totals.H4?run:null;
+  const paperCounts=Object.values(totals).every(n=>n!==null);
+  el("forward-readiness").textContent=h4Run!==null&&paperCounts
+   ?"WAIT — معاينة V3 الفنية: H4 المتصلة "+Math.min(21,h4Run)+"/21"
+     +"؛ الحدّ الأدنى لتاريخ التداول الورقي: M15 "+Math.min(50,totals.M15)+"/50"
+     +"، H1 "+Math.min(50,totals.H1)+"/50"
+     +"، H4 "+Math.min(50,totals.H4)+"/50"
+     +" — الأعداد وحدها لا تفعّل صفقات أو تثبت حقوق المصدر والتكاليف والربحية."
+   :"WAIT — لا يوجد دليل موثوق كافٍ على اكتمال تاريخ H4 أو تاريخ التداول الورقي.";
   const fxcm=data.fxcmReview;
   const safeFxcm=fxcm?.provider==="FXCM"&&fxcm?.mode==="OFFLINE_PREPARATION_ONLY"
     &&fxcm?.status==="WAIT_FXCM_NOT_CONNECTED"&&fxcm?.signal==="WAIT"
