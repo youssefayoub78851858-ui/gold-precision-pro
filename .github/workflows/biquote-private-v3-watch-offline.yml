@@ -1,0 +1,36 @@
+name: BiQuote private V3 WATCH integration (offline no orders)
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - 'coordinator/biquote_private_v3_watch.js'
+      - 'coordinator/test_biquote_private_v3_watch.js'
+      - 'coordinator/biquote_mobile_readonly.js'
+      - 'coordinator/test_biquote_mobile_readonly.js'
+      - 'biquote-mobile-ui.js'
+      - 'ultimate.html'
+      - '.github/workflows/biquote-private-v3-watch-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  research-watch-no-trades:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Frozen closed-bar V3 WATCH must never become an order
+        run: node coordinator/test_biquote_private_v3_watch.js
+      - name: Authenticated BiQuote read-only snapshot, anonymous isolation, no extra provider calls
+        run: node coordinator/test_biquote_mobile_readonly.js
+      - name: Mobile script syntax and private research panel wiring
+        run: |
+          node --check biquote-mobile-ui.js
+          node --check coordinator/biquote_mobile_readonly.js
+          node --check coordinator/biquote_private_v3_watch.js
+          grep -q 'id="gdc-v3-watch"' ultimate.html
+          grep -q 'renderFrozenV3ResearchWatch(data.privateTechnicalWatch)' biquote-mobile-ui.js
+          grep -q 'privateTechnicalWatch:researchWatch' coordinator/biquote_mobile_readonly.js
