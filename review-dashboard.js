@@ -168,6 +168,17 @@
    for(const [k,v] of Object.entries(attrs))node.setAttribute(k,String(v));
    svg.appendChild(node);
   };
+  // Chart grid and truthful price-axis labels; no synthetic candles.
+  for(let tick=0;tick<=4;tick++){
+   const y=40+tick*55;
+   add("line",{x1:12,y1:y,x2:660,y2:y,stroke:"#32435a","stroke-width":.8,"stroke-dasharray":"4 5"});
+   const label=document.createElementNS("http://www.w3.org/2000/svg","text");
+   label.setAttribute("x","658");label.setAttribute("y",String(y-5));
+   label.setAttribute("text-anchor","end");label.setAttribute("fill","#b6c3d3");
+   label.setAttribute("font-size","11");
+   label.textContent=format(hi-tick*range/4);
+   svg.appendChild(label);
+  }
   rows.forEach((x,i)=>{
    const at=18+i*644/rows.length,w=Math.max(3,644/rows.length*.55),
      y=p=>260-(p-lo)/range*220,
