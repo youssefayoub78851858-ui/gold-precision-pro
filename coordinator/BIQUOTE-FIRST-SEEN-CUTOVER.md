@@ -14,6 +14,37 @@ skip a receipt slot or interrupt H4 continuity.
 collector during the active capture.** No new service, second poller,
 paid request, public price path or production deployment is permitted.
 
+## Actual running-build verification — 19 November 2026 (read-only)
+
+- Render private coordinator `gold-precision-coordinator` is still LIVE at
+  `b01574f221cb550b9ead70b6c8de17e0b1a61c8f`, with auto-deploy disabled.
+  Its deployed `biquote_private_forward_vault.py` has **NO**
+  `firstObservedClosedUTC` implementation. Its deployed
+  `biquote_seven_day_review.py` has **NO** first-seen-coverage logging.
+- The later first-seen receipt implementation and point-in-time V3 audit are
+  review-branch **CODE ONLY**. Passing GitHub Actions does NOT imply those
+  changes ran on the owner-only disk or that existing market bars have local
+  first-seen records.
+- Read-only Render logs at 2026-11-19 11:00 UTC showed closed
+  M15=136 (latest contiguous 48), H1=34 (contiguous 12), H4=8
+  (contiguous 8), 736 sparse BID/ASK quote samples; unclassified missing
+  slots M15=4, H1=1. These are **persisted counts, not independently
+  authenticated archive receipts**. This evidence cannot establish a
+  point-in-time signal, broker data rights or fills.
+- The running archive is expected to be a legacy no-first-seen archive;
+  the exact vault bytes were **NOT** accessed or inspected through Render.
+  On a future controlled transition, ALL historical un-timestamped candles
+  remain UNKNOWN forever. Only candles newly appended AFTER authorized
+  deployment can carry local receipt evidence.
+- The offline mixed legacy/new migration regression
+  `test_deployed_legacy_to_future_receipts_keeps_old_bars_unknown`
+  checks that hypothetical forward upgrade does not fabricate historical
+  timestamps or open paper/live trading. This is **not** a real Render
+  migration, backup or restore test.
+
+**Decision:** preserve the collector process and its fixed consent window;
+no deploy, restart, new poller, new subscription or actual execution.
+
 ## Why the new receipt evidence matters
 
 - Newly appended closed candles get `firstObservedClosedUTC` recorded
