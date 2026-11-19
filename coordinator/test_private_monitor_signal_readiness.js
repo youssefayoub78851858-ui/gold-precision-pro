@@ -26,6 +26,7 @@ vm.runInNewContext("renderSignalRoadmap(null,'BUY')",sandbox,{timeout:1500});
 assert.match(text("signal-roadmap-status"),/WAIT/);
 assert.doesNotMatch(text("signal-roadmap-status"),/BUY/);
 assert.match(text("signal-roadmap-history"),/غير مثبت/);
+assert.match(text("signal-roadmap-firstseen"),/غير متاحة/);
 const data={
  mode:"PRIVATE_FORWARD_BIQUOTE_CAPTURE_NOT_TRADING_ADMISSIBLE",
  status:"PRIVATE_FORWARD_VAULT_METADATA_ONLY",signal:"WAIT",
@@ -45,12 +46,50 @@ vm.runInNewContext("renderSignalRoadmap(sample,'BUY')",sandbox,{timeout:1500});
 assert.match(text("signal-roadmap-status"),/WAIT.*BUY.*ممنوع/);
 assert.match(text("signal-roadmap-history"),/H4 8\/21/);
 assert.match(text("signal-roadmap-paper"),/H4 8\/50/);
+assert.match(text("signal-roadmap-firstseen"),/غير متاحة/);
 assert.match(text("signal-roadmap-rights"),/غير مثبتة/);
 assert.match(text("signal-roadmap-costs"),/غير مثبتين/);
 assert.match(text("signal-roadmap-performance"),/غير مثبت/);
 const render=Array.from(nodes.values()).map(x=>x.textContent).join(" ");
 assert(!render.includes("DO_NOT_PRINT_ME"));
 assert(!render.includes("4279.12"));
+// Offline receipt evidence is LOCAL, not proof of market availability.
+sandbox.sample={...data,firstSeenCoverage:{
+ status:"LOCAL_RECEIPTS_UNVERIFIED_NOT_TRADE_PROOF",signal:"WAIT",
+ executable:false,paperOrdersAllowed:false,sourceRightsVerified:false,
+ brokerCalendarVerified:false,independentFirstAvailabilityVerified:false,
+ recordedClosed:{M15:0,H1:0,H4:0},
+ unknownLegacyClosed:{M15:130,H1:32,H4:8}
+}};
+vm.runInNewContext("renderSignalRoadmap(sample,'NONE')",sandbox,{timeout:1500});
+assert.match(text("signal-roadmap-firstseen"),/M15 0\/130/);
+assert.match(text("signal-roadmap-firstseen"),/H4 0\/8/);
+assert.match(text("signal-roadmap-firstseen"),/170/);
+sandbox.sample={...data,firstSeenCoverage:{
+ ...sandbox.sample.firstSeenCoverage,
+ recordedClosed:{M15:5,H1:1,H4:1},
+ unknownLegacyClosed:{M15:125,H1:31,H4:7}
+}};
+vm.runInNewContext("renderSignalRoadmap(sample,'NONE')",sandbox,{timeout:1500});
+assert.match(text("signal-roadmap-firstseen"),/M15 5\/130/);
+assert.match(text("signal-roadmap-firstseen"),/163/);
+const valid=sandbox.sample.firstSeenCoverage;
+for(const bad of [
+ {...valid,unknownLegacyClosed:{...valid.unknownLegacyClosed,M15:130}},
+ {...valid,independentFirstAvailabilityVerified:true},
+ {...valid,recordedClosed:{...valid.recordedClosed,H4:99}},
+ {...valid,recordedClosed:{...valid.recordedClosed,M15:-1}},
+ {...valid,recordedClosed:{...valid.recordedClosed,H1:"1"}},
+]){
+ sandbox.sample={...data,firstSeenCoverage:bad};
+ vm.runInNewContext("renderSignalRoadmap(sample,'BUY')",sandbox,{timeout:1500});
+ assert.match(text("signal-roadmap-firstseen"),/مرفوض/);
+ assert.match(text("signal-roadmap-status"),/^WAIT/);
+ assert.doesNotMatch(text("signal-roadmap-status"),/BUY/);
+}
+const output=Array.from(nodes.values()).map(x=>x.textContent).join(" ");
+assert(!output.includes("DO_NOT_PRINT_ME"));
+assert(!output.includes("4279.12"));
 // A forged readiness flag and malformed data are never displayed as
 // qualified observations, BUY or live trade.
 sandbox.sample={...data,brokerRightsVerified:true};

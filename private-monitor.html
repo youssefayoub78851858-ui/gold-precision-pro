@@ -84,6 +84,7 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <ul>
 <li id="signal-roadmap-history">البيانات: تتابع الشموع غير مفحوص</li>
 <li id="signal-roadmap-paper">التداول الورقي: تاريخ 50 شمعة لكل فاصل غير مفحوص</li>
+<li id="signal-roadmap-firstseen">اختبار زمن القرار: وقت أول وصول الشموع لكل فاصل غير مفحوص</li>
 <li id="signal-roadmap-rights">المصدر: الترخيص والبيانات المستقلة غير مثبتين</li>
 <li id="signal-roadmap-costs">التنفيذ: السبريد والعمولة والانزلاق غير مثبتين</li>
 <li id="signal-roadmap-performance">الاختبار: الربحية خارج عيّنة التطوير لم تثبت بعد</li>
@@ -138,6 +139,7 @@ function clearSignalRoadmap(){
  el("signal-roadmap-status").textContent="WAIT — لا توجد صفقة قابلة للتنفيذ";
  el("signal-roadmap-history").textContent="البيانات: تعذّر فحص الشموع المتصلة";
  el("signal-roadmap-paper").textContent="التداول الورقي: لا يوجد دليل على تاريخ 50 شمعة لكل فاصل";
+ el("signal-roadmap-firstseen").textContent="اختبار زمن القرار: أول وصول كل شمعة غير مثبت";
  el("signal-roadmap-rights").textContent="المصدر: حقوق XAUUSD وGC والبيانات المساعدة غير مثبتة";
  el("signal-roadmap-costs").textContent="التنفيذ: السبريد والعمولة والانزلاق غير مثبتين";
  el("signal-roadmap-performance").textContent="الاختبار: الربحية المستقلة بعد التكاليف غير مثبتة";
@@ -172,7 +174,39 @@ function renderSignalRoadmap(vault,watchSide){
      "/50، H1 "+Math.min(50,counts.H1)+"/50، H4 "+
      Math.min(50,counts.H4)+"/50 — لا يفتح التداول عند اكتماله"
    :"حدّ تاريخ التداول الورقي: WAIT — العدد غير مؤكد";
- el("signal-roadmap-status").textContent=counts&&continuity&&["BUY","SELL"].includes(watchSide)
+ // The receipt map is LOCAL collection-time evidence, not the provider's
+ // publication timestamp, a broker session calendar, or license proof.
+ // An older deployed collector has NO firstSeenCoverage property: report
+ // UNKNOWN, do not invent first arrival times or treat unknown as zero.
+ let receiptIntegrity=true;
+ let receiptText="WAIT — أوقات أول وصول الشموع غير متاحة من نسخة الجامع الحالية؛ لا اختبار زمني مستقل";
+ if(counts){
+   const first=vault.firstSeenCoverage;
+   if(first?.status==="LOCAL_RECEIPTS_UNVERIFIED_NOT_TRADE_PROOF"&&
+      first?.signal==="WAIT"&&first?.executable===false&&
+      first?.paperOrdersAllowed===false&&
+      first?.sourceRightsVerified===false&&
+      first?.brokerCalendarVerified===false&&
+      first?.independentFirstAvailabilityVerified===false&&
+      ["M15","H1","H4"].every(tf=>{
+        const n=first.recordedClosed?.[tf],legacy=first.unknownLegacyClosed?.[tf];
+        return Number.isSafeInteger(n)&&n>=0&&
+          Number.isSafeInteger(legacy)&&legacy>=0&&
+          n+legacy===counts[tf];
+      })){
+     const known=first.recordedClosed,old=first.unknownLegacyClosed;
+     receiptText="WAIT — أول وصول محلي مسجّل، مش وقت نشر الوسيط: M15 "+
+       known.M15+"/"+counts.M15+"، H1 "+known.H1+"/"+counts.H1+
+       "، H4 "+known.H4+"/"+counts.H4+
+       " | شموع قديمة وقت وصولها مجهول: "+(old.M15+old.H1+old.H4)+
+       " — ما بيثبت الترخيص أو نجاح الاختبار المستقل";
+   } else if(first!==undefined) {
+     receiptIntegrity=false;
+     receiptText="WAIT — أعداد أول وصول الشموع لا تتطابق مع الأرشيف؛ الدليل مرفوض";
+   }
+ }
+ el("signal-roadmap-firstseen").textContent=receiptText;
+ el("signal-roadmap-status").textContent=counts&&continuity&&receiptIntegrity&&["BUY","SELL"].includes(watchSide)
    ?"WAIT — V3 أظهر مراقبة فنية "+watchSide+" فقط؛ ممنوع تنفيذ صفقة"
    :"WAIT — ما في إشارة تداول معتمدة";
  // No raw OHLC, provider prices, keys, URLs, or broker order endpoints.
