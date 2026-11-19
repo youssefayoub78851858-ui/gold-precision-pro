@@ -29,6 +29,9 @@ function extract(input){
  if(input?.source!=="RENDER_LOG_EXPORT_UNTRUSTED"||
     !Array.isArray(input.logs)||!input.logs.length||input.logs.length>MAX)
   return waiting("INVALID_RENDER_LOG_INPUT");
+ const start=msTime(input.startUTC),end=msTime(input.endUTC);
+ if(!start||!end||start.ms>=end.ms||end.ms-start.ms>7*86400000)
+  return waiting("INVALID_EXPLICIT_EXPORT_WINDOW");
  const samples=[],progress=[],stageRecords=[];
  let relevant=0,ignored=0;
  for(const row of input.logs){
@@ -39,6 +42,8 @@ function extract(input){
   // Validate EVERY Render envelope, even an otherwise ignored log record:
   // malformed timestamps are evidence of a corrupt export, not safe noise.
   if(!logClock)return waiting("INVALID_RENDER_LOG_CLOCK");
+  if(logClock.ms<start.ms||logClock.ms>end.ms)
+   return waiting("RENDER_LOG_RECORD_OUTSIDE_EXPLICIT_WINDOW");
   const message=row.message;
   const isSample=message.startsWith('{"')&&
     message.includes('"event":"BIQUOTE_REVIEW24H_SAMPLE"');
