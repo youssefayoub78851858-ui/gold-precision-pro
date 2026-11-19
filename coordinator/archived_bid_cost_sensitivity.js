@@ -26,7 +26,10 @@ function developmentBreakeven(grossR, reciprocalStopDistanceSum, count){
   return null;
  }
  if(!(reciprocalStopDistanceSum>0))throw Error("ZERO_STOP_DISTANCE_COST_DENOMINATOR");
- return round(Math.max(0,grossR/reciprocalStopDistanceSum));
+ // Null means there is NO nonnegative friction level at which gross-loss
+ // development trades could break even. Zero would falsely imply that
+ // removing fees makes a losing set of trades profitable.
+ return grossR>0?round(grossR/reciprocalStopDistanceSum):null;
 }
 function drawdownR(trades){
  let equity=0,peak=0,max=0;
@@ -116,6 +119,7 @@ function inspect(root=ROOT){
       rLostPerUsdPerOzRoundTripFriction:round(periodCostSlope),
       hypotheticalBreakEvenAllInFrictionUsdPerOz:
         developmentBreakeven(periodGross,periodCostSlope,periodTradeCount),
+      grossLossOrFlatBeforeCosts:periodTradeCount>0&&periodGross<=0,
       historicalPositiveNetBeyondCeilingNotSupported:true,
       commissionSlippageAndBrokerFillEvidenceAvailable:false,
       tradingApprovalGranted:false

@@ -26,8 +26,8 @@ assert.deepEqual(report.scenariosUSDperOz,[0.4,0.8,1.2]);
 assert.equal(report.periods.length,2);
 assert.equal(report.breakEvenFrictionOnlyDescriptiveNotTradingAuthority,true);
 assert.equal(developmentBreakeven(10,5,2),2);
-assert.equal(developmentBreakeven(-10,5,2),0);
-assert.equal(developmentBreakeven(0,5,2),0);
+assert.equal(developmentBreakeven(-10,5,2),null);
+assert.equal(developmentBreakeven(0,5,2),null);
 assert.equal(developmentBreakeven(0,0,0),null);
 for(const bad of [[0,0,1],[5,0,1],[1,-1,1],[NaN,1,1],[1,Infinity,1],[0,2,0]]){
  assert.throws(()=>developmentBreakeven(...bad));
@@ -44,9 +44,12 @@ for(const p of report.periods){
  assert.equal(breakEven.tradingApprovalGranted,false);
  assert.equal(breakEven.historicalPositiveNetBeyondCeilingNotSupported,true);
  assert.equal(breakEven.historicalGrossRAtZeroAssumedFriction,p.scenarios[0].grossR);
+ assert.equal(breakEven.grossLossOrFlatBeforeCosts,
+   p.scenarios[0].closedTrades>0 && p.scenarios[0].grossR<=0);
  assert.ok(breakEven.rLostPerUsdPerOzRoundTripFriction>=0);
  const threshold=breakEven.hypotheticalBreakEvenAllInFrictionUsdPerOz;
- assert.equal(threshold===null,p.scenarios[0].closedTrades===0);
+ assert.equal(threshold===null,
+   p.scenarios[0].closedTrades===0||p.scenarios[0].grossR<=0);
  if(threshold!==null){
    assert.ok(threshold>=0);
    const netAtThreshold=p.scenarios[0].grossR-
