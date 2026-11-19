@@ -10,6 +10,8 @@ on:
       - 'coordinator/test_biquote_render_log_export_readonly.js'
       - 'coordinator/biquote_capture_h4_horizon_gate.js'
       - 'coordinator/test_biquote_capture_h4_horizon_gate.js'
+      - 'coordinator/biquote_h4_evidence_quality_gate.js'
+      - 'coordinator/test_biquote_h4_evidence_quality_gate.js'
       - 'coordinator/biquote_stage3_log_reconciliation.js'
       - 'coordinator/test_biquote_stage3_log_reconciliation.js'
       - 'coordinator/test_biquote_private_forward_vault.py'
@@ -58,6 +60,8 @@ jobs:
         run: node coordinator/test_biquote_render_log_export_readonly.js
       - name: 'H4 capture horizon feasibility: offline 50-bar ceiling, no orders'
         run: node coordinator/test_biquote_capture_h4_horizon_gate.js
+      - name: 'H4 audit quality: distinguish stored, contiguous and M15-comparable bars'
+        run: node coordinator/test_biquote_h4_evidence_quality_gate.js
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
