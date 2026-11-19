@@ -17,6 +17,21 @@ on:
       - 'coordinator/paper_admission_gate.py'
       - 'coordinator/test_paper_admission_gate.py'
       - 'coordinator/biquote_signal_data_readiness.js'
+      - 'coordinator/biquote_snapshot_capacity_gate.js'
+      - 'coordinator/test_biquote_snapshot_capacity_gate.js'
+      - 'coordinator/biquote_private_v3_watch.js'
+      - 'coordinator/test_biquote_private_v3_watch.js'
+      - 'coordinator/test_biquote_watch_wait_explanation_ui.js'
+      - 'coordinator/biquote_vendor_h4_session_tail.js'
+      - 'coordinator/test_biquote_vendor_h4_session_tail.js'
+      - 'coordinator/biquote_mobile_readonly.js'
+      - 'coordinator/test_biquote_mobile_readonly.js'
+      - 'biquote-mobile-ui.js'
+      - 'ultimate.html'
+      - 'coordinator/biquote_v3_chronological_replay.js'
+      - 'coordinator/test_biquote_v3_chronological_replay.js'
+      - 'coordinator/biquote_v3_chronological_private.py'
+      - 'coordinator/test_biquote_v3_chronological_private.py'
       - 'coordinator/test_biquote_signal_data_readiness.js'
       - 'coordinator/biquote_capture_h4_horizon_gate.js'
       - 'coordinator/test_biquote_capture_h4_horizon_gate.js'
@@ -41,7 +56,7 @@ jobs:
           python-version: '3.11'
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
       - name: Four-stage batch integration on verified isolated synthetic test data
         working-directory: coordinator
         run: python -m unittest -v test_ultimate_batch_acceptance test_private_forward_capacity_preflight test_biquote_declared_pause_forensics test_paper_admission_gate
@@ -53,10 +68,20 @@ jobs:
           node coordinator/test_biquote_capture_h4_horizon_gate.js
           node coordinator/test_biquote_h4_evidence_quality_gate.js
           node coordinator/test_biquote_render_log_export_readonly.js
+      - name: Single-snapshot capacity, authenticated VIEWER WATCH and weekend-only H4 diagnostics (all fail-closed)
+        run: |
+          node coordinator/test_biquote_snapshot_capacity_gate.js
+          node coordinator/test_biquote_private_v3_watch.js
+          node coordinator/test_biquote_watch_wait_explanation_ui.js
+          node coordinator/test_biquote_vendor_h4_session_tail.js
+          node coordinator/test_biquote_mobile_readonly.js
+          node --check biquote-mobile-ui.js
+      - name: Frozen V3 chronological research replay cannot leak tomorrow or place paper orders
+        run: node coordinator/test_biquote_v3_chronological_replay.js
       - name: Private mobile dashboard shows contiguous, not raw H4 trade history
         run: node coordinator/test_private_monitor_signal_readiness.js
       - name: Paper account cannot act on synthetic BUY or forged approval
         run: python -m unittest -v coordinator/test_ultimate_four_stage_paper.py
       - name: Underlying vault and final source quality safety tests
         working-directory: coordinator
-        run: python -m unittest -v test_biquote_forward_shadow_review test_biquote_24h_final_verdict test_biquote_private_forward_vault
+        run: python -m unittest -v test_biquote_forward_shadow_review test_biquote_24h_final_verdict test_biquote_private_forward_vault test_biquote_v3_chronological_private
