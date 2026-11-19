@@ -14,6 +14,20 @@ const SCENARIOS=Object.freeze([0.40,0.80,1.20]); // XAUUSD price units, assumed 
 const EXPECTED=Object.freeze(["2026-09-bid.json","2026-10-bid.json"]);
 const sum=(xs,fn)=>xs.reduce((a,x)=>a+fn(x),0);
 const round=x=>Math.round(x*1e6)/1e6;
+// A descriptive break-even threshold of the fixed *development-period* trades.
+// Holding entries/exits invariant: netR(cost) = grossR - cost * sum(1/stopDistance).
+// No forward holdout, broker execution costs or source rights are certified.
+function developmentBreakeven(grossR, reciprocalStopDistanceSum, count){
+ if(!Number.isFinite(grossR)||!Number.isFinite(reciprocalStopDistanceSum)||
+    !Number.isSafeInteger(count)||count<0||reciprocalStopDistanceSum<0)
+   throw Error("INVALID_DEVELOPMENT_COST_BREAK_EVEN_INPUT");
+ if(count===0){
+  if(grossR!==0||reciprocalStopDistanceSum!==0)throw Error("UNSUPPORTED_EMPTY_TRADE_COSTS");
+  return null;
+ }
+ if(!(reciprocalStopDistanceSum>0))throw Error("ZERO_STOP_DISTANCE_COST_DENOMINATOR");
+ return round(Math.max(0,grossR/reciprocalStopDistanceSum));
+}
 function drawdownR(trades){
  let equity=0,peak=0,max=0;
  // Existing backtest excludes overlapping positions; exitIndex is
@@ -41,7 +55,7 @@ function inspect(root=ROOT){
   const doc=JSON.parse(fs.readFileSync(path.join(root,"research","recorded",name),"utf8"));
   if(doc.symbol!=="XAU/USD"||!doc.frames||doc.frames["15min"]?.length<100||
      doc.source?.includes("synthetic"))throw Error("ARCHIVE_SYMBOL_OR_HISTORY_INVALID");
-  const results=[];let stableIdentity=null;
+  const results=[];let stableIdentity=null,periodGross=null,periodCostSlope=null,periodTradeCount=null;
   for(const assumed of SCENARIOS){
    const sim=backtestFrames(doc.frames,{spread:assumed,risk:1});
    // Cost scenarios must not alter candidate generation, entry/exit
@@ -54,7 +68,15 @@ function inspect(root=ROOT){
    if(sim.trades!==sim.tradesDetail.length)throw Error("TRADES_COUNT_MISMATCH");
    const gross=sum(sim.tradesDetail,t=>t.grossR);
    const net=sum(sim.tradesDetail,t=>t.netR);
-   const costR=sum(sim.tradesDetail,t=>assumed/Math.abs(t.entry-t.stop));
+   const costSlope=sum(sim.tradesDetail,t=>1/Math.abs(t.entry-t.stop));
+   const costR=assumed*costSlope;
+   if(periodGross===null){
+     periodGross=gross;periodCostSlope=costSlope;periodTradeCount=sim.trades;
+   }else if(Math.abs(periodGross-gross)>1e-9||
+            Math.abs(periodCostSlope-costSlope)>1e-9||
+            periodTradeCount!==sim.trades){
+     throw Error("DEVELOPMENT_TRADES_CHANGED_WITH_ASSUMED_FRICTION");
+   }
    if(Math.abs(net-(gross-costR))>1e-6||
       Math.abs(net-sim.totalR)>0.011)throw Error("BACKTEST_COST_ACCOUNTING_MISMATCH");
    const item={
@@ -88,6 +110,16 @@ function inspect(root=ROOT){
     priceBasis:"BID_ONLY",m15Bars:meta.stored15MinuteBars,
     h1Bars:meta.storedHourBars,h4Bars:meta.stored4HourBars,
     firstOpenUTC:meta.firstM15UTC,lastOpenUTC:meta.lastM15UTC,
+    developmentFrictionCeiling:{
+      sample:"SAME_BID_ONLY_DEVELOPMENT_TRADES_NOT_FORWARD",
+      historicalGrossRAtZeroAssumedFriction:round(periodGross),
+      rLostPerUsdPerOzRoundTripFriction:round(periodCostSlope),
+      hypotheticalBreakEvenAllInFrictionUsdPerOz:
+        developmentBreakeven(periodGross,periodCostSlope,periodTradeCount),
+      historicalPositiveNetBeyondCeilingNotSupported:true,
+      commissionSlippageAndBrokerFillEvidenceAvailable:false,
+      tradingApprovalGranted:false
+    },
     scenarios:results});
  }
  const aggregate=SCENARIOS.map(cost=>{
@@ -120,6 +152,10 @@ function inspect(root=ROOT){
   pastArchiveUsedDuringDevelopment:true,
   scenariosUSDperOz:[...SCENARIOS],
   periods,aggregate,
+  // The development-period break-even computation is NOT independent
+  // prospective evidence. Show all periods separately; never combine a
+  // purported capital drawdown curve across months.
+  breakEvenFrictionOnlyDescriptiveNotTradingAuthority:true,
   label:"Descriptive development backtest. BID-only prices; hypothetical all-in price frictions. No real ASK fills, slippage, commissions, source-first-availability proof, or independent new holdout. NOT trading profitability.",
   signal:"WAIT",executable:false,tradeEligible:false,
   paperOrdersAllowed:false,providerRequestsMade:0,ordersSent:0,
@@ -127,7 +163,7 @@ function inspect(root=ROOT){
   independentPerformanceProven:false
  };
 }
-module.exports={inspect};
+module.exports={inspect,developmentBreakeven};
 if(require.main===module){
  try{process.stdout.write(JSON.stringify(inspect(),null,2)+"\n");}
  catch(e){console.error("DEV_COST_SENSITIVITY_BLOCKED: "+e.message);process.exitCode=1;}

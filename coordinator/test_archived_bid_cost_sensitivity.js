@@ -2,7 +2,7 @@
 // Tests only the EXISTING local BID development recordings; never market data.
 const assert=require("node:assert/strict");
 const fs=require("node:fs"),path=require("node:path");
-const {inspect}=require("./archived_bid_cost_sensitivity");
+const {inspect,developmentBreakeven}=require("./archived_bid_cost_sensitivity");
 const report=inspect();
 assert.equal(report.signal,"WAIT");
 assert.equal(report.executable,false);
@@ -24,12 +24,38 @@ assert.equal(report.archivedBidM15Bars,4884);
 assert.equal(report.archivedAskM15Bars,0);
 assert.deepEqual(report.scenariosUSDperOz,[0.4,0.8,1.2]);
 assert.equal(report.periods.length,2);
+assert.equal(report.breakEvenFrictionOnlyDescriptiveNotTradingAuthority,true);
+assert.equal(developmentBreakeven(10,5,2),2);
+assert.equal(developmentBreakeven(-10,5,2),0);
+assert.equal(developmentBreakeven(0,5,2),0);
+assert.equal(developmentBreakeven(0,0,0),null);
+for(const bad of [[0,0,1],[5,0,1],[1,-1,1],[NaN,1,1],[1,Infinity,1],[0,2,0]]){
+ assert.throws(()=>developmentBreakeven(...bad));
+}
 assert.equal(report.periods.reduce((a,p)=>a+p.m15Bars,0),4884);
 for(const p of report.periods){
  const expected=p.file.startsWith("2026-09")?2448:2436;
  assert.equal(p.m15Bars,expected);
  assert.equal(p.priceBasis,"BID_ONLY");
  assert.match(p.sha256,/^[a-f0-9]{64}$/);
+ const breakEven=p.developmentFrictionCeiling;
+ assert.equal(breakEven.sample,"SAME_BID_ONLY_DEVELOPMENT_TRADES_NOT_FORWARD");
+ assert.equal(breakEven.commissionSlippageAndBrokerFillEvidenceAvailable,false);
+ assert.equal(breakEven.tradingApprovalGranted,false);
+ assert.equal(breakEven.historicalPositiveNetBeyondCeilingNotSupported,true);
+ assert.equal(breakEven.historicalGrossRAtZeroAssumedFriction,p.scenarios[0].grossR);
+ assert.ok(breakEven.rLostPerUsdPerOzRoundTripFriction>=0);
+ const threshold=breakEven.hypotheticalBreakEvenAllInFrictionUsdPerOz;
+ assert.equal(threshold===null,p.scenarios[0].closedTrades===0);
+ if(threshold!==null){
+   assert.ok(threshold>=0);
+   const netAtThreshold=p.scenarios[0].grossR-
+      threshold*breakEven.rLostPerUsdPerOzRoundTripFriction;
+   // Rounding to 6 decimals is descriptive; if gross R is negative,
+   // friction zero cannot turn a losing development period into profit.
+   assert.ok(netAtThreshold<0.0001);
+   if(p.scenarios[0].grossR>0)assert.ok(Math.abs(netAtThreshold)<0.0001);
+ }
  for(const x of p.scenarios){
   assert.equal(typeof x.assumedRoundTripPriceFrictionUSDperOz,"number");
   assert.ok(x.closedTrades>=0&&x.rawHistoricalSignals>=x.closedTrades);
