@@ -55,3 +55,15 @@ Offline tests:
 `test_biquote_seven_day_review`. These are synthetic and prove
 program logic only; they do **not** attest actual Render backup,
 continuous uptime or trade readiness.
+
+## Isolated local restore rehearsal (offline only)
+
+The new `biquote_collector_restore_rehearsal.py` accepts an existing, owner-only
+backup, verifies its signed payload, restores it to a disposable private
+scratch directory, reloads all sealed candles and receipts, compares bytes,
+and destroys the scratch copy. It emits **counts only**, never prices, quote
+secrets, paths or a signal. It does not access the Render private disk.
+
+Passing locally is NOT evidence that Render has an independent offsite backup
+or that a real disaster recovery operation succeeded. The coordinator should
+stay deployed on its prior build while the seven-day capture is active.

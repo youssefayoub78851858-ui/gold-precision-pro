@@ -8,6 +8,8 @@ on:
       - 'coordinator/test_biquote_first_seen_collector_cutover.py'
       - 'coordinator/biquote_collector_backup_preflight.py'
       - 'coordinator/test_biquote_collector_backup_preflight.py'
+      - 'coordinator/biquote_collector_restore_rehearsal.py'
+      - 'coordinator/test_biquote_collector_restore_rehearsal.py'
       - 'coordinator/BIQUOTE-FIRST-SEEN-CUTOVER.md'
       - '.github/workflows/biquote-private-forward-vault-offline.yml'
       - 'coordinator/biquote_offline_source_audit.py'
@@ -40,7 +42,7 @@ jobs:
           python-version: '3.11'
       - name: Verify no network, private disk, closed-only time seal and archive integrity
         working-directory: coordinator
-        run: python -m unittest -v test_biquote_private_forward_vault test_biquote_first_seen_collector_cutover test_biquote_collector_backup_preflight test_biquote_forward_integration test_biquote_24h_observer test_biquote_public_one_shot test_biquote_render_standby test_biquote_seven_day_review test_biquote_session_gap_audit test_biquote_sampled_spread_buckets test_biquote_quote_cadence
+        run: python -m unittest -v test_biquote_private_forward_vault test_biquote_first_seen_collector_cutover test_biquote_collector_backup_preflight test_biquote_collector_restore_rehearsal test_biquote_forward_integration test_biquote_24h_observer test_biquote_public_one_shot test_biquote_render_standby test_biquote_seven_day_review test_biquote_session_gap_audit test_biquote_sampled_spread_buckets test_biquote_quote_cadence
       - name: Source audit and overlap compatibility unchanged (synthetic only)
         working-directory: coordinator
         run: python -m unittest -v test_biquote_offline_source_audit test_biquote_overlap_evidence
