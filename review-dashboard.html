@@ -66,6 +66,18 @@ main{padding:3px 7px calc(47px + env(safe-area-inset-bottom,0px))}
 .footer{padding:6px 2px calc(6px + env(safe-area-inset-bottom,0px))}.footer a{font-size:9px}
 }
 @media(max-width:380px){.chart{height:105px!important}.market .key,.market .val{font-size:8px}}
+/* Slightly enlarge the actual mobile dashboard, while keeping all panels visible. */
+@media(max-width:650px){
+ .chart{height:clamp(145px,24vh,185px)!important;max-height:185px!important}
+ .panel{padding:7px 9px;margin:4px 0}
+ .tabs a{padding:7px 2px;font-size:11px}
+ .market .panel{min-height:54px;padding:6px 3px}
+ .market .key{font-size:10px}.market .val{font-size:10px;margin-top:4px}
+ .quick summary{min-height:43px;padding:7px 8px;font-size:11px}
+ .meter details{min-height:43px;padding:7px 8px}
+ .signal{padding:8px 9px}.actions .panel{padding:9px 5px}
+}
+@media(max-width:380px){.chart{height:145px!important;max-height:145px!important}}
 </style></head><body><main>
 <header class="top"><div><div class="brand">♛ Gold Precision Pro Ultimate</div><div class="sub">تحليل احترافي للذهب · لوحة مراجعة خاصة</div></div><div class="crown">♛</div></header>
 <nav class="tabs"><a class="active" href="#chart">▥ تحليل الذهب</a><a href="#quality">♧ الاختبارات</a><a href="#signal">▤ السجل</a><a href="#settings">⚙ الإعدادات</a></nav>
