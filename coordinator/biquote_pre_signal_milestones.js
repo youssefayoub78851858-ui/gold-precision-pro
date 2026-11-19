@@ -6,6 +6,9 @@
  */
 const MODE="GOLD_PRECISION_PRE_SIGNAL_MILESTONES_V1";
 const NUM=x=>Number.isSafeInteger(x)&&x>=0&&x<=20000000;
+const ISO=/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/;
+const utc=x=>typeof x==="string"&&ISO.test(x)&&Number.isFinite(Date.parse(x))&&
+ new Date(x).toISOString().slice(0,19)===x.slice(0,19);
 const hardWait=()=>({mode:MODE,signal:"WAIT",executable:false,
  recommendationAllowed:false,tradeEligible:false,paperOrdersAllowed:false,
  liveOrdersAllowed:false,brokerOrdersSent:0,providerRequestsMade:0,
@@ -17,6 +20,8 @@ function summarize(input){
   p?.signal==="WAIT"&&p?.executable===false&&p?.tradeEligible===false&&
   p?.paperOrdersAllowed===false&&p?.brokerOrdersSent===0&&
   p?.sourceRightsVerified===false&&p?.independentAvailabilityVerified===false&&
+  ["LOCAL_GEOMETRY_ONLY_NOT_TRADE_READY","INSUFFICIENT_EVIDENCE"].includes(p?.status)&&
+  utc(p?.asOfUTC)&&
   NUM(p?.contiguousObservedClosed?.H4)&&
   NUM(p?.technicalWarmupMissing?.H4)&&
   NUM(p?.paperHistoryMissing?.H4)&&
@@ -49,7 +54,7 @@ function summarize(input){
   {id:"PROSPECTIVE_PAPER_HOLDOUT",state:"UNTOUCHED_AFTER_COST_RESULTS_REQUIRED",complete:false,
    reason:"NO_INDEPENDENT_NET_OF_SPREAD_BROKER_COST_VALIDATION"}
  ];
- return {...hardWait(),asOfUTC:validPoint&&typeof p.asOfUTC==="string"?
+ return {...hardWait(),asOfUTC:validPoint?
   p.asOfUTC:null,stages,completedStages:0,requiredStages:4,
   local21H4Observed:local21,local50H4Observed:local50,
   blockers:stages.map(x=>x.id)};
