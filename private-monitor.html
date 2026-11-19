@@ -78,6 +78,18 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <p id="forward-mid-quote-parity" role="status">WAIT — مقارنة BID/ASK مع نطاق الشموع المقفلة غير متاحة</p>
 <p><small>أعداد من القرص الخاص فقط. أي فجوة تعتبر غير مصنّفة لحين توثيق جلسات الوسيط، ولا تعني الأعداد أن البيانات مرخّصة أو أن صفقة ممكنة.</small></p>
 </section>
+<section id="signal-roadmap" aria-labelledby="signal-roadmap-title">
+<h2 id="signal-roadmap-title">شو ناقص حتى يصير النظام يعطي صفقات؟</h2>
+<p id="signal-roadmap-status" role="status" aria-live="polite">WAIT — الصفقات ممنوعة لحدّ ما تتوثّق الشروط</p>
+<ul>
+<li id="signal-roadmap-history">البيانات: تتابع الشموع غير مفحوص</li>
+<li id="signal-roadmap-paper">التداول الورقي: تاريخ 50 شمعة لكل فاصل غير مفحوص</li>
+<li id="signal-roadmap-rights">المصدر: الترخيص والبيانات المستقلة غير مثبتين</li>
+<li id="signal-roadmap-costs">التنفيذ: السبريد والعمولة والانزلاق غير مثبتين</li>
+<li id="signal-roadmap-performance">الاختبار: الربحية خارج عيّنة التطوير لم تثبت بعد</li>
+</ul>
+<p><small>التحليل الفني ممكن يعطي WATCH للبحث فقط؛ ما في دخول أو وقف أو أهداف للتنفيذ من هيدي البيانات. لا تضغط على BUY/SELL باعتبارها أمر تداول.</small></p>
+</section>
 <section id="biquote-shadow-review" aria-labelledby="biquote-shadow-title">
 <h2 id="biquote-shadow-title">تحليل V3 من أرشيف BiQuote الخاص — بحث فقط</h2>
 <p id="biquote-shadow-state" role="status">WAIT — بانتظار شموع جديدة كافية لتقييم الاتجاه</p>
@@ -122,7 +134,54 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 "use strict";
 const el=id=>document.getElementById(id);
 let memoryToken="";
+function clearSignalRoadmap(){
+ el("signal-roadmap-status").textContent="WAIT — لا توجد صفقة قابلة للتنفيذ";
+ el("signal-roadmap-history").textContent="البيانات: تعذّر فحص الشموع المتصلة";
+ el("signal-roadmap-paper").textContent="التداول الورقي: لا يوجد دليل على تاريخ 50 شمعة لكل فاصل";
+ el("signal-roadmap-rights").textContent="المصدر: حقوق XAUUSD وGC والبيانات المساعدة غير مثبتة";
+ el("signal-roadmap-costs").textContent="التنفيذ: السبريد والعمولة والانزلاق غير مثبتين";
+ el("signal-roadmap-performance").textContent="الاختبار: الربحية المستقلة بعد التكاليف غير مثبتة";
+}
+function renderSignalRoadmap(vault,watchSide){
+ // Only trusted, owner-authenticated metadata can populate progress.
+ // This code CANNOT promote technical WATCH into trade admission.
+ let counts=null,continuity=null;
+ if(vault?.mode==="PRIVATE_FORWARD_BIQUOTE_CAPTURE_NOT_TRADING_ADMISSIBLE"&&
+    vault?.status==="PRIVATE_FORWARD_VAULT_METADATA_ONLY"&&
+    vault?.signal==="WAIT"&&vault?.executable===false&&
+    vault?.paperOrdersAllowed===false&&vault?.tradeSignalReady===false&&
+    vault?.brokerRightsVerified===false){
+   const frames=["M15","H1","H4"];
+   const ok=frames.every(tf=>{
+     const n=vault.counts?.[tf],t=vault.forwardCoverage?.[tf]?.latestContiguousBars;
+     return Number.isSafeInteger(n)&&n>=0&&n<=45000&&
+       Number.isSafeInteger(t)&&t>=0&&t<=n&&t<=45000;
+   });
+   if(ok){
+    counts=Object.fromEntries(frames.map(tf=>[tf,vault.counts[tf]]));
+    continuity=Object.fromEntries(frames.map(tf=>[tf,vault.forwardCoverage[tf].latestContiguousBars]));
+   }
+ }
+ el("signal-roadmap-history").textContent=continuity
+   ?"فحص V3 الفني: M15 "+Math.min(21,continuity.M15)+"/21، H1 "+
+      Math.min(21,continuity.H1)+"/21، H4 "+Math.min(21,continuity.H4)+
+      "/21 شمعة متصلة — استراحة السوق غير المؤكدة قد تعيد العداد"
+   :"فحص V3 الفني: WAIT — التتابع غير مثبت، لا بيانات مفترضة";
+ el("signal-roadmap-paper").textContent=counts
+   ?"حدّ تاريخ التداول الورقي (عدد فقط): M15 "+Math.min(50,counts.M15)+
+     "/50، H1 "+Math.min(50,counts.H1)+"/50، H4 "+
+     Math.min(50,counts.H4)+"/50 — لا يفتح التداول عند اكتماله"
+   :"حدّ تاريخ التداول الورقي: WAIT — العدد غير مؤكد";
+ el("signal-roadmap-status").textContent=["BUY","SELL"].includes(watchSide)
+   ?"WAIT — V3 أظهر مراقبة فنية "+watchSide+" فقط؛ ممنوع تنفيذ صفقة"
+   :"WAIT — ما في إشارة تداول معتمدة";
+ // No raw OHLC, provider prices, keys, URLs, or broker order endpoints.
+ el("signal-roadmap-rights").textContent="المصدر: حقوق XAUUSD وتوقيت الوسيط، وربط GC وDXY والسندات والأخبار غير مثبتة";
+ el("signal-roadmap-costs").textContent="التنفيذ: BID/ASK تاريخي مستقل وسبريد وعمولة وانزلاق الوسيط غير مثبتين";
+ el("signal-roadmap-performance").textContent="الاختبار: صافي الربحية خارج عيّنة التطوير وبعد التكاليف غير مثبت";
+}
 function clearBatchDisplay(){
+ clearSignalRoadmap();
  el("batch-readiness-state").textContent="WAIT — لا توجد حالة موثّقة للمراحل";
  el("batch-data-state").textContent="غير مؤكدة";
  el("batch-archive-state").textContent="غير مؤكد";
@@ -443,6 +502,7 @@ el("refresh").addEventListener("click",async()=>{
   el("biquote-shadow-state").textContent=side!=="NONE"
     ?"WAIT — ملاحظة فنية V3: "+side+" (ليست صفقة، ممنوع التنفيذ)"
     :"WAIT — لا يوجد اتجاه بحثي مؤهّل أو لم تكتمل الأدلة والشموع";
+  renderSignalRoadmap(safeVault?vault:null,side);
   const batch=data.ultimateFourStageBatch;
   const acceptedBatch=batch?.mode==="GOLD_PRECISION_FOUR_STAGE_BATCH_READONLY_V1"
    &&batch?.signal==="WAIT"&&batch?.executable===false

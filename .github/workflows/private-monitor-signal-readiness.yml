@@ -1,0 +1,22 @@
+name: Private monitor: signal readiness, WAIT only (offline)
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - 'private-monitor.html'
+      - 'coordinator/test_private_monitor_signal_readiness.js'
+      - '.github/workflows/private-monitor-signal-readiness.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  roadmap-read-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Validate mobile display without external providers
+        run: node coordinator/test_private_monitor_signal_readiness.js
