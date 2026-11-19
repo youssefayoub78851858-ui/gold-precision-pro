@@ -108,6 +108,9 @@ const untrusted=extract({...packet,source:"LIVE_BROKER_VERIFIED"});
 safe(untrusted);a.equal(untrusted.status,"BLOCKED");
 for(const mutate of [
  p=>{p.logs[0].timestamp="now";},
+ p=>{p.logs.push({timestamp:iso(start+30*60000),
+  message:"IGNORED_BUT_OUTSIDE_EXPLICIT_WINDOW"});},
+ p=>{p.endUTC=iso(start+8*60000);},
  p=>{p.logs[0].message="BIQUOTE_SEVEN_DAY_STATUS {invalid";},
  p=>{p.logs.find(x=>x.message.includes('"slot":335')).timestamp="2026-11-19T13:00:00Z";},
  p=>{let x=p.logs.find(x=>x.message.includes('"slot":335'));
