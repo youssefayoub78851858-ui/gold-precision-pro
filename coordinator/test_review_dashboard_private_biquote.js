@@ -184,7 +184,8 @@ const context={document,window,Date:Clock,Intl,console,
  AbortSignal:{timeout:()=>({})},
  fetch:async(url,options)=>{
   calls.push({url,options});
-  return {status:200,json:async()=>packet()};
+  return {status:200,headers:{get:key=>key==="content-type"?
+     "application/json; charset=utf-8":null},json:async()=>packet()};
  }};
 vm.runInNewContext(script,context,{timeout:3000});
 a.equal(calls.length,0,"NO background market calls");
@@ -239,7 +240,8 @@ a.equal(nodes.price.textContent,"غير متاح");
  a.equal(calls.length,4);
  timeNow=NOW;
  // New browser session lacking a valid viewer cookie cannot reveal prices.
- context.fetch=async()=>({status:200,json:async()=>({
+ context.fetch=async()=>({status:200,
+  headers:{get:()=> "application/json; charset=utf-8"},json:async()=>({
   signal:"WAIT",executable:false,rawQuoteShown:false})});
  await nodes.refresh.handlers.click();
  a.equal(nodes.price.textContent,"غير متاح");
