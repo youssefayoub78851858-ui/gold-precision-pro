@@ -202,7 +202,7 @@
    svg.appendChild(label);
   }
   rows.forEach((x,i)=>{
-   const at=18+i*600/rows.length,w=Math.max(3,600/rows.length*.55),
+   const spacing=600/rows.length,at=18+(i+.5)*spacing,w=Math.max(3,spacing*.55),
      y=p=>260-(p-lo)/range*220,
      color=x.close>=x.open?"#24d2a0":"#f26879";
    add("line",{x1:at,y1:y(x.high),x2:at,y2:y(x.low),
