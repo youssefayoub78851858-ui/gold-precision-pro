@@ -33,7 +33,8 @@ function fail(status,why,extra={}){
   brokerSessionCalendarVerified:false,independentPriceParityVerified:false,
   executionBidAskVerified:false,independentTradeProfitabilityProven:false,
   matchedEventCount:0,checkedProgressEvents:0,sourceQuoteSamples:null,
-  persistedClosed:FRAMEZERO(),unclassifiedMissingSlots:FRAMEZERO(),
+  persistedClosed:FRAMEZERO(),contiguousClosed:FRAMEZERO(),
+  unclassifiedMissingSlots:FRAMEZERO(),latestProgressAtUTC:null,
   comparedClosed:{H1:0,H4:0},fullyCoveredDisagreements:{H1:null,H4:null},
   blockers:["LEGACY_COLLECTOR_FIRST_SEEN_UNKNOWN",
             "SOURCE_RIGHTS_AND_BROKER_CALENDAR_UNVERIFIED",
@@ -106,7 +107,7 @@ function reconcile({records}={}){
  // Every supplied Stage-3 progress cycle must have its OWN later companion
  // events, not reports from a prior or subsequent iteration sharing dayIndex.
  // Cross-day matches, pre-progress events, and reuse of one event are forbidden.
- let completeCycles=0,latest=null,counts=null,missing=null,
+ let completeCycles=0,latest=null,counts=null,contiguousCounts=null,missing=null,
      disagreements=null,compared=null,quoteCount=null,latestOverlap=null;
  for(let i=0;i<progresses.length;i++){
   const p=progresses[i],next=progresses[i+1]||null;
@@ -121,6 +122,8 @@ function reconcile({records}={}){
   }
   const currentCounts=Object.fromEntries(FRAMES.map(tf=>[
     tf,p.frames[tf].persistedClosed]));
+  const currentContiguous=Object.fromEntries(FRAMES.map(tf=>[
+    tf,p.frames[tf].contiguousClosed]));
   const currentMissing=Object.fromEntries(FRAMES.map(tf=>[
     tf,p.frames[tf].unclassifiedMissingSlots]));
   if(Object.keys(matches).length!==3)
@@ -128,7 +131,8 @@ function reconcile({records}={}){
     checkedProgressEvents:progresses.length,
     checkedCompleteCycles:completeCycles,
     matchedEventCount:Object.keys(matches).length+1,
-    persistedClosed:currentCounts,unclassifiedMissingSlots:currentMissing
+    persistedClosed:currentCounts,contiguousClosed:currentContiguous,
+    unclassifiedMissingSlots:currentMissing
    });
   const gap=matches[TYPES[1]],over=matches[TYPES[2]],quote=matches[TYPES[3]];
   if(!checkFrames(gap.frames,FRAMES)||!checkFrames(over.frames,["H1","H4"])||
@@ -164,7 +168,8 @@ function reconcile({records}={}){
        quote.observedIntervals)
    return fail("BLOCKED","STAGE3_QUOTE_INTERVAL_COUNTS_CONTRADICTORY");
   completeCycles++;
-  latest=p;counts=currentCounts;missing=currentMissing;
+  latest=p;counts=currentCounts;contiguousCounts=currentContiguous;
+  missing=currentMissing;
   disagreements=currentDisagreements;compared=currentCompared;
   quoteCount=quote.sourceQuoteSamples;latestOverlap=over;
  }
@@ -180,7 +185,9 @@ function reconcile({records}={}){
   checkedProgressEvents:progresses.length,checkedCompleteCycles:completeCycles,
   checkedQuoteCadenceEvents:checkedQuoteEvents,matchedEventCount:4,
   sourceQuoteSamples:quoteCount,
-  persistedClosed:counts,unclassifiedMissingSlots:missing,
+  persistedClosed:counts,contiguousClosed:contiguousCounts,
+  latestProgressAtUTC:latest.atUTC,
+  unclassifiedMissingSlots:missing,
   fullyCoveredDisagreements:disagreements,comparedClosed:compared,
   blockers
  });
