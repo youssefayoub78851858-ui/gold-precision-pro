@@ -138,6 +138,38 @@ const badHistory=reconcile({records:[...invalidHistory,...newerCycle]});
 safe(badHistory);assert.equal(badHistory.status,"BLOCKED");
 assert(badHistory.blockers.includes("HISTORICAL_STAGE3_QUOTE_CADENCE_CONTRADICTORY"));
 
+// A PRE-progress report must not be silently reused for the current cycle.
+const preprogress=structuredClone(fixture);
+preprogress.find(x=>x.event==="BIQUOTE_STAGE3_ARCHIVE_OHLC_OVERLAP")
+ .atUTC="2026-11-19T11:30:02.900000Z";
+const rejectedPre=reconcile({records:preprogress});safe(rejectedPre);
+assert.equal(rejectedPre.status,"INCOMPLETE");
+assert(rejectedPre.blockers.includes("HISTORICAL_OR_LATEST_STAGE3_BUNDLE_INCOMPLETE"));
+// Older false evidence must not be erased by a clean newest snapshot.
+const olderForged=structuredClone(olderCycle);
+olderForged.find(x=>x.event==="BIQUOTE_STAGE3_ARCHIVE_OHLC_OVERLAP")
+ .frames.H4.fullyCoveredCompared=7;
+const forgedHistory=reconcile({records:[...olderForged,...newerCycle]});
+safe(forgedHistory);
+assert.equal(forgedHistory.status,"BLOCKED");
+assert(forgedHistory.blockers.includes("STAGE3_OHLC_COVERAGE_COUNTERS_CONTRADICTORY"));
+// One missing report in any previously observed cycle remains incomplete,
+// even when the latest cycle's four count reports all agree.
+const historicMissing=reconcile({records:[
+ ...olderCycle.filter(x=>x.event!=="BIQUOTE_STAGE3_VENDOR_REFERENCE_GAPS"),
+ ...newerCycle]});
+safe(historicMissing);
+assert.equal(historicMissing.status,"INCOMPLETE");
+assert.equal(historicMissing.checkedCompleteCycles,0);
+// Two progress cycles 20 sec apart cannot SHARE newer ancillary reports.
+const fastProgress=structuredClone(progress);
+fastProgress.atUTC="2026-11-19T11:30:22.907797Z";
+fastProgress.frames.M15.persistedClosed=139;
+const stolen=reconcile({records:[...fixture,fastProgress]});
+safe(stolen);assert.equal(stolen.status,"INCOMPLETE");
+// A full pair of cycles is now evidence of count consistency only.
+assert.equal(twice.checkedCompleteCycles,2);
+
 // Unknown log payload cannot turn into broker permission or price evidence.
 const forged=reconcile({records:fixture.map(x=>({...x,canTrade:true,
  sourceRightsVerified:true,privateCandlePrice:"BROKER_SECRET"}))});
