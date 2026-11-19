@@ -73,6 +73,7 @@ small{color:#b9c6d1}.reason{font-family:monospace;direction:ltr;text-align:left;
 <p id="forward-freshness" role="status">WAIT — حداثة آخر عينة BID/ASK غير مؤكدة</p>
 <p id="forward-candle-age" role="status">WAIT — حداثة الشموع المغلقة M15/H1/H4 غير مثبتة</p>
 <p id="forward-coverage">الفجوات والتغطية: غير مؤكدتين</p>
+<p id="biquote-paper-history-counts" role="status">WAIT — عدد الشموع المطلوب للتداول الورقي غير متحقق بعد.</p>
 <p id="forward-gap-reference" role="status">WAIT — مقارنة الفجوات مع استراحة السوق المعلنة غير متاحة</p>
 <p id="forward-mid-quote-parity" role="status">WAIT — مقارنة BID/ASK مع نطاق الشموع المقفلة غير متاحة</p>
 <p><small>أعداد من القرص الخاص فقط. أي فجوة تعتبر غير مصنّفة لحين توثيق جلسات الوسيط، ولا تعني الأعداد أن البيانات مرخّصة أو أن صفقة ممكنة.</small></p>
@@ -134,6 +135,7 @@ function clearBatchDisplay(){
  el("batch-completion-state").textContent="WAIT — تقرير الإكمال غير متاح";
  el("batch-completion-blockers").replaceChildren();
  el("batch-session-warmup-state").textContent="WAIT — فحص انقطاع الشموع غير متاح";
+ el("biquote-paper-history-counts").textContent="WAIT — عدد الشموع المطلوب للتداول الورقي غير متحقق بعد.";
 }
 const labels={
  NOT_CONNECTED:"الوصلة الخاصة غير مفعّلة",
@@ -265,6 +267,24 @@ el("refresh").addEventListener("click",async()=>{
   el("forward-coverage").textContent=safeVault
    ?"فجوات زمنية غير مصنّفة في الأرشيف: "+missing+" — لا يعني صفر فجوات إثبات صلاحية الجلسات"
    :"التغطية الزمنية لم تتحقق بعد";
+  // Count-only paper-history floor from one already-sealed private vault.
+  // 50 bars is NOT broker licensing, continuous execution quotes, costs,
+  // paper admission or profitability evidence. Never fabricate market data.
+  const paperFrames={};
+  let paperCountsSafe=safeVault;
+  for(const tf of ["M15","H1","H4"]){
+    const n=safeVault?vault.counts?.[tf]:null;
+    if(!Number.isSafeInteger(n)||n<0||n>45000){paperCountsSafe=false;break;}
+    paperFrames[tf]=n;
+  }
+  const needed=paperCountsSafe?Object.fromEntries(["M15","H1","H4"].map(tf=>
+    [tf,Math.max(0,50-paperFrames[tf])])):null;
+  el("biquote-paper-history-counts").textContent=needed
+    ?"WAIT — تاريخ التداول الورقي، عدد فقط: M15 "+Math.min(50,paperFrames.M15)+
+      "/50 (ناقص "+needed.M15+")، H1 "+Math.min(50,paperFrames.H1)+
+      "/50 (ناقص "+needed.H1+")، H4 "+Math.min(50,paperFrames.H4)+
+      "/50 (ناقص "+needed.H4+") — بلوغ 50 لا يفتح صفقات ولا يثبت صلاحية المصدر أو الربحية."
+    :"WAIT — لم يتم التحقق من أعداد شموع BiQuote المحفوظة؛ التداول الورقي محجوب.";
   // Safe aggregate-only reference: the market pause is NOT the broker calendar.
   const ref=safeVault?vault.gapReference:null;
   const referenceSafe=ref?.status==="REFERENCE_ONLY_NOT_BROKER_VERIFIED"

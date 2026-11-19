@@ -78,6 +78,20 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertNotIn("sessionStorage", PUBLIC)
         self.assertNotIn("OrderSend", PUBLIC)
 
+    def test_public_android_biquote_paper_history_counts_are_price_free(self):
+        self.assertIn('id="biquote-paper-history-counts"', PUBLIC)
+        self.assertIn("const paperFrames={}", PUBLIC)
+        self.assertIn("let paperCountsSafe=safeVault", PUBLIC)
+        self.assertIn("vault.counts?.[tf]", PUBLIC)
+        self.assertIn("Number.isSafeInteger(n)", PUBLIC)
+        self.assertIn("Math.max(0,50-paperFrames[tf])", PUBLIC)
+        self.assertIn('el("biquote-paper-history-counts").textContent=needed', PUBLIC)
+        self.assertIn("بلوغ 50 لا يفتح صفقات", PUBLIC)
+        self.assertIn("لم يتم التحقق من أعداد شموع BiQuote", PUBLIC)
+        self.assertIn('el("biquote-paper-history-counts").textContent="WAIT', PUBLIC)
+        for forbidden in ("innerHTML", "localStorage", "sessionStorage", "OrderSend"):
+            self.assertNotIn(forbidden, PUBLIC)
+
     def test_private_quote_freshness_is_explicitly_wait_and_broker_unverified(self):
         for phrase in (
             'id="forward-freshness"',
