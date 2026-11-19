@@ -48,6 +48,12 @@ const safe=(state,reason,extra={})=>({
  geometryFailureClassCounts:geometryZeros(),
  newlyRejectedArchiveClasses:rejectionZeros(),
  newRejectionsWithUnknownClass:0,
+ // These are observed log outcomes only, NEVER proof that market candles
+ // recovered or that an older rejected snapshot became valid retroactively.
+ longestObservedConsecutiveArchiveRejections:0,
+ trailingObservedConsecutiveArchiveRejections:0,
+ archiveSavesAfterLatestObservedRejection:null,
+ latestObservedRejectionClass:null,
  unclassifiedFrameGaps:{M15:null,H1:null,H4:null},
  blockerCodes:[...FIXED,...(reason?[reason]:[])],...extra
 });
@@ -71,6 +77,8 @@ function audit(input){
  let previous=null,missing=0,archiveIncrease=0,rejectionsIncrease=0;
  let unaccounted=0,httpNonOk=0,geometryNotOk=0;
  let unclassifiedRejections=0;
+ let currentRejectRun=0,longestRejectRun=0,latestRejectClass=null;
+ let savesAfterLatestRejection=null;
  const rejectionClasses=rejectionZeros();
  const geometryFailures=geometryZeros();
  for(const rec of samples){
@@ -111,6 +119,25 @@ function audit(input){
        rec.archiveRejectionClass!=="NONE")
      rejectionClasses[rec.archiveRejectionClass]++;
     else unclassifiedRejections+=rejectedDelta;
+   }
+   // A multi-slot jump is NOT a known run, even if the endpoint
+   // counters imply archives were rejected/saved within that interval.
+   // One missing saved outcome also terminates run evidence.
+   if(slots!==1){
+    currentRejectRun=0;
+    if(savesAfterLatestRejection!==null)savesAfterLatestRejection=null;
+    if(rejectedDelta>0)latestRejectClass="UNKNOWN_OR_MISSING_LOG_SLOT";
+   }else if(rejectedDelta===1){
+    currentRejectRun++;
+    longestRejectRun=Math.max(longestRejectRun,currentRejectRun);
+    latestRejectClass=rec.archiveRejectionClass??"UNKNOWN_OR_MISSING_CLASS";
+    savesAfterLatestRejection=0;
+   }else if(savedDelta===1){
+    currentRejectRun=0;
+    if(savesAfterLatestRejection!==null)savesAfterLatestRejection++;
+   }else{
+    currentRejectRun=0;
+    if(savesAfterLatestRejection!==null)savesAfterLatestRejection=null;
    }
    missing+=slots-1;
    archiveIncrease+=savedDelta;
@@ -184,6 +211,10 @@ function audit(input){
     geometryFailureClassCounts:geometryFailures,
     newlyRejectedArchiveClasses:rejectionClasses,
     newRejectionsWithUnknownClass:unclassifiedRejections,
+    longestObservedConsecutiveArchiveRejections:longestRejectRun,
+    trailingObservedConsecutiveArchiveRejections:currentRejectRun,
+    archiveSavesAfterLatestObservedRejection:savesAfterLatestRejection,
+    latestObservedRejectionClass:latestRejectClass,
     latestSavedSnapshots:previous.saved,latestRejectedSnapshots:previous.rejected,
     unclassifiedFrameGaps:latest?latest.gaps:{M15:null,H1:null,H4:null},
     logWindowEdgesObserved:covered,recentClosedProgressObserved:recentProgress,
