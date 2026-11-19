@@ -182,6 +182,10 @@
  if(typeof document==="undefined")return;
  const $=id=>document.getElementById(id);
  let frame="M15",state=null,pending=false,expiry=0;
+ // Every user-initiated fetch has a generation. Android can hide or
+ // navigate away while a request or JSON body is in flight; response
+ // completion must not resurrect private prices after that transition.
+ let requestEpoch=0;
  const format=n=>Number.isFinite(n)?n.toLocaleString("en-US",{
   minimumFractionDigits:2,maximumFractionDigits:2}):"—";
  const clock=t=>new Date(t).toLocaleString("ar-LB",{
@@ -271,6 +275,7 @@
  refresh.addEventListener("click",async()=>{
   if(pending)return;
   pending=true;refresh.disabled=true;
+  const myEpoch=++requestEpoch;
   reset("WAIT — جارٍ تدقيق مصدر BiQuote الخاص عند الطلب");
   try{
    const response=await fetch("/api/v3/ultimate/biquote-observation",{
@@ -285,7 +290,8 @@
     throw Error("INVALID_RESPONSE_TYPE");
    const packet=await response.json();
    const verified=validateSnapshot(packet,Date.now());
-   if(document.visibilityState==="hidden")throw Error("PAGE_HIDDEN");
+   if(myEpoch!==requestEpoch||document.visibilityState==="hidden")
+    throw Error("PAGE_CHANGED_DURING_PRIVATE_FETCH");
    if(!verified)throw Error("PRIVATE_SESSION_OR_DATA_INVALID");
    state=verified;expiry=Date.now()+Math.min(15000,
     Math.max(1000,30000-(Date.now()-verified.at)));
@@ -318,14 +324,18 @@
  // BFCache/back navigation must not resurrect a private market snapshot.
  if(typeof document.addEventListener==="function")
   document.addEventListener("visibilitychange",()=>{
-   if(document.visibilityState==="hidden"&&state)
-    reset("WAIT — خرجت من شاشة المشاهدة؛ اضغط تحديث لتحقق جديد");
-   else if(expiry&&Date.now()>expiry)
+   if(document.visibilityState==="hidden"){
+    requestEpoch++;
+    if(state||pending)
+     reset("WAIT — خرجت من شاشة المشاهدة؛ اضغط تحديث لتحقق جديد");
+   }else if(expiry&&Date.now()>expiry)
     reset("WAIT — انتهت صلاحية السعر المرصود؛ اضغط تحديث");
   });
  if(typeof window!=="undefined"&&typeof window.addEventListener==="function"){
   window.addEventListener("pagehide",()=>{
-   if(state)reset("WAIT — انتهت جلسة عرض البيانات على الصفحة");
+   requestEpoch++;
+   if(state||pending)
+    reset("WAIT — غادرت الصفحة؛ الردود القديمة ملغاة");
   });
   window.addEventListener("focus",()=>{
    if(expiry&&Date.now()>expiry)
