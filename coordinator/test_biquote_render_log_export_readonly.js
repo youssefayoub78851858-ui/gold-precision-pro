@@ -108,6 +108,37 @@ a.equal(evidence.stage3Consistency.unclassifiedMissingSlots.M15,4);
 a.equal(evidence.stage3Consistency.fullyCoveredDisagreements.H4,0);
 a.equal(evidence.stage3Consistency.comparedClosed.H4,2);
 a.equal(evidence.stage3Consistency.sourceQuoteSamples,744);
+// Explicit seven-day capture bounds plus a complete Stage3 cycle allow an
+// upper bound on 50 consecutive H4 bars; they NEVER grant an order.
+const requestedHorizon={...full,
+ captureStartUTC:"2026-11-18T00:00:00Z",
+ captureEndUTC:"2026-11-25T00:00:00Z"};
+const withHorizon=extract(requestedHorizon);
+safe(withHorizon);
+a.equal(withHorizon.h4CaptureHorizon.status,
+ "THEORETICAL_COUNT_CEILING_NOT_READINESS");
+a.equal(withHorizon.h4CaptureHorizon.persistedClosedCounts.H4,8);
+a.equal(withHorizon.h4CaptureHorizon.contiguousClosedCounts.H4,8);
+a.equal(withHorizon.h4CaptureHorizon.paperH4HistoryReachableByWindowEnd,false);
+a.equal(withHorizon.h4CaptureHorizon.tradeEligible,false);
+a.equal(withHorizon.h4CaptureHorizon.firstSeenVerified,false);
+a.equal(withHorizon.h4CaptureHorizonUnavailability,null);
+const missingHorizon=extract({...packet,
+ captureStartUTC:"2026-11-18T00:00:00Z",
+ captureEndUTC:"2026-11-25T00:00:00Z"});
+safe(missingHorizon);
+a.equal(missingHorizon.h4CaptureHorizon,null);
+a.equal(missingHorizon.h4CaptureHorizonUnavailability,
+ "STAGE3_CYCLE_INCOMPLETE_NO_H4_HORIZON");
+const loneBound=extract({...full,
+ captureEndUTC:"2026-11-25T00:00:00Z"});
+safe(loneBound);
+a.equal(loneBound.status,"BLOCKED");
+const wrongCutoff=extract({...requestedHorizon,
+ captureEndUTC:"2026-11-26T00:00:00Z"});
+safe(wrongCutoff);
+a.equal(wrongCutoff.h4CaptureHorizon.status,"BLOCKED");
+a.equal(wrongCutoff.h4CaptureHorizon.tradeEligible,false);
 const contradictory=structuredClone(full);
 const overlapRecord=contradictory.logs.find(x=>x.message.includes(
  '"BIQUOTE_STAGE3_ARCHIVE_OHLC_OVERLAP"'));
