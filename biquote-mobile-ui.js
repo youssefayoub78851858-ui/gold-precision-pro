@@ -632,9 +632,24 @@
    renderFrozenV3ResearchWatch(data.privateTechnicalWatch,
      data.crossFrameComparisons,data.status);
    displayVendorH4Tail(data.privateVendorH4Tail,acceptedChart);
+   const cap=data.snapshotParityCapacity;
+   const capValid=cap&&cap.mode==="BIQUOTE_SINGLE_SNAPSHOT_21_H4_PARITY_CAPACITY_ONLY"&&
+     cap.status==="SINGLE_SNAPSHOT_CAPACITY_INSUFFICIENT"&&
+     cap.signal==="WAIT"&&cap.executable===false&&cap.tradeEligible===false&&
+     cap.paperOrdersAllowed===false&&cap.liveOrdersAllowed===false&&
+     cap.brokerOrdersSent===0&&cap.providerRequestsMade===0&&
+     cap.singleSnapshotCanProve21H4M15Parity===false&&
+     cap.requiredContiguousH4===21&&cap.requiredM15Constituents===336&&
+     cap.configuredProviderMaxM15Bars===200&&
+     cap.privateChartMaxM15Bars===48&&
+     cap.archiveRequiredForFullWindow===true&&
+     cap.archiveCurrentlyVerified===false;
+   const capacityText=capValid?
+     " | عائق مثبت: فحص 21 شمعة H4 يحتاج 336 شمعة M15، بينما لقطة المصدر محدودة بـ200 والشاشة بـ48. الأرشيف مطلوب، ولم يُثبت بعد.":"";
    $("gdc-blocker").textContent=data.status==="WAIT_CROSS_FRAME_GAPS"?
      "سبب WAIT: فجوات أو اختلافات تغطية بين M15/H1/H4 غير محسومة؛ بالإضافة إلى غياب إثبات جلسات الوسيط والمصادر المساندة وتكاليف التنفيذ. لا صفقات.":
      "سبب WAIT: شارت BiQuote وحده لا يثبت الصفقات؛ ينقص GC وDXY والسندات والأخبار وOrder Flow وحقوق الوسيط وتكاليف التنفيذ واختبارات مستقلة.";
+   $("gdc-blocker").textContent+=capacityText;
  }
  function reset(){
   quoteValidUntilMs=0;
