@@ -46,6 +46,18 @@ vm.runInNewContext("renderSignalRoadmap(sample,'BUY')",sandbox,{timeout:1500});
 assert.match(text("signal-roadmap-status"),/WAIT.*BUY.*ممنوع/);
 assert.match(text("signal-roadmap-history"),/H4 8\/21/);
 assert.match(text("signal-roadmap-paper"),/H4 8\/50/);
+// Regression: 60 stored H4 bars with 9 contiguous cannot show 50/50.
+sandbox.sample={...data,
+ counts:{M15:120,H1:77,H4:60},
+ forwardCoverage:{M15:{latestContiguousBars:50},
+                  H1:{latestContiguousBars:36},
+                  H4:{latestContiguousBars:9}}};
+vm.runInNewContext("renderSignalRoadmap(sample,'BUY')",sandbox,{timeout:1500});
+assert.match(text("signal-roadmap-paper"),/H4 9\/50/);
+assert.match(text("signal-roadmap-paper"),/إجمالي H4 محفوظ: 60/);
+assert.doesNotMatch(text("signal-roadmap-paper"),/H4 50\/50/);
+assert.match(text("signal-roadmap-status"),/^WAIT/);
+sandbox.sample=data;
 assert.match(text("signal-roadmap-firstseen"),/غير متاحة/);
 assert.match(text("signal-roadmap-rights"),/غير مثبتة/);
 assert.match(text("signal-roadmap-costs"),/غير مثبتين/);
