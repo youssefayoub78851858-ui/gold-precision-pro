@@ -19,13 +19,13 @@ function packet(){
    priceBasis:"MID_WITH_POSSIBLE_BID_SEED"};
  }
  const c={completeMatches:4,completeMismatches:0,
-   incompleteM15Groups:0,outsideRetentionWindow:50};
+   incompleteM15Groups:0,outsideRetentionWindow:61};
  return {signal:"WAIT",executable:false,researchEligible:false,
   tradePlanExecutable:false,paperOrdersAllowed:false,
   orderEndpointsCalled:false,status:"OBSERVED_READONLY_UNVERIFIED",
   rawQuoteShown:true,privateChartReadOnly:true,
   privateChartDataBasis:"MID_WITH_POSSIBLE_BID_SEED",
-  bid:1999.9,ask:2000.2,
+  bid:1999.9,ask:2000.2,spread:0.3,
   quoteAgeSeconds:1.5,observedUTC:new Date(NOW).toISOString(),
   quoteUTC:new Date(NOW-1500).toISOString(),privateChart:chart,
   frameSummary:summary,
@@ -94,6 +94,11 @@ for(const mutate of [
  x=>{x.privateChart.M15[47].close=NaN;},
  x=>{x.privateChart.M15[47].low=3000;},
  x=>{x.privateChart.H4[47].time=new Date(NOW).toISOString();},
+ x=>{x.spread=5;},
+ x=>{x.spread="0.3";},
+ x=>{x.crossFrameComparisons.H4.outsideRetentionWindow=60;},
+ x=>{x.frameSummary.H1.closedCount=66;},
+ x=>{x.status="WAIT_CROSS_FRAME_GAPS";},
  x=>{x.frameSummary.H4.lastClosedUTC="2026-11-10T00:00:00.000Z";},
  x=>{x.frameSummary.H4.closedCount=1;},
  x=>{x.privateChart.M15.push(x.privateChart.M15[47]);},
@@ -105,9 +110,12 @@ for(const mutate of [
  a.equal(mod.validateSnapshot(x,NOW),null);
 }
 for(const mutate of [
- x=>{x.status="WAIT_CROSS_FRAME_GAPS";},
- x=>{x.crossFrameComparisons.H1.incompleteM15Groups=1;},
- x=>{x.crossFrameComparisons.H4.completeMismatches=1;},
+ x=>{x.status="WAIT_CROSS_FRAME_GAPS";
+       x.crossFrameComparisons.H1.incompleteM15Groups=1;
+       x.crossFrameComparisons.H1.outsideRetentionWindow=60;},
+ x=>{x.status="WAIT_CROSS_FRAME_GAPS";
+       x.crossFrameComparisons.H4.completeMismatches=1;
+       x.crossFrameComparisons.H4.outsideRetentionWindow=60;},
  x=>{x.privateTechnicalWatch.entry=2000;},
  x=>{x.privateTechnicalWatch.paperOrdersAllowed=true;},
  x=>{x.privateTechnicalWatch.requiredM15ToReconcile21H4=48;}
