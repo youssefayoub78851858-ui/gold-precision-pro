@@ -9,6 +9,7 @@ on:
       - 'biquote-mobile-ui.js'
       - 'ultimate.html'
       - 'review-dashboard.html'
+      - 'review-dashboard.js'
       - 'index.html'
       - 'server.js'
   workflow_dispatch:
@@ -54,6 +55,14 @@ jobs:
           grep -q 'Gold Precision Pro Ultimate' "$page"
           grep -q 'id="decision"' "$page"
           grep -q 'executable = false' "$page"
+          grep -q 'src="/review-dashboard.js"' "$page"
+          js="$(mktemp)"
+          curl -fsSL --connect-timeout 12 --max-time 35 -o "$js" "$base/review-dashboard.js"
+          grep -Fq '"/api/v3/ultimate/biquote-observation"' "$js"
+          grep -Fq 'credentials:"same-origin"' "$js"
+          grep -Fq 'rawQuoteShown!==true' "$js"
+          ! grep -q 'MONITOR_READONLY_TOKEN' "$js"
+          [ "$(curl -sS --connect-timeout 12 --max-time 25 -o /dev/null -w '%{http_code}' -X POST "$base/review-dashboard.js")" = 405 ]
           ! grep -q 'MONITOR_READONLY_TOKEN' "$page"
           [ "$(curl -sS --connect-timeout 12 --max-time 25 -o /dev/null -w '%{http_code}' -X POST "$base/review-dashboard.html")" = 405 ]
           review="$(mktemp)"
