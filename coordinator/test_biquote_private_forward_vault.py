@@ -180,6 +180,43 @@ class ForwardVault(unittest.TestCase):
                 self.assertNotIn(secret,safe)
         self.assertEqual(len(load_vault(self.folder)["quoteObservations"]),1)
 
+    def test_archive_import_time_cannot_fake_last_quote_freshness(self):
+        # A newly sealed candle may move lastImportedUTC while the provider
+        # reuses the previous market tick. Liveness is the QUOTE receipt.
+        import hashlib
+        with patch.object(socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+            ingest(self.folder,self.s,received_utc=iso(NOW))
+            target=self.folder/FILE
+            good=target.read_text()
+            payload=json.loads(good)["payload"]
+            payload["lastImportedUTC"]=iso(NOW+dt.timedelta(seconds=20))
+            checksum=hashlib.sha256(json.dumps(
+                payload,sort_keys=True,separators=(",",":"),
+                ensure_ascii=True).encode("utf-8")).hexdigest()
+            target.write_text(json.dumps({"payload":payload,"sha256":checksum}))
+            restored=load_vault(self.folder)
+            self.assertEqual(restored["quoteObservations"][-1]["observedUTC"],iso(NOW))
+            # If this mistakenly used file import time, 290s would look RECENT.
+            observed=inspect_metadata(
+                self.folder,now_utc=NOW+dt.timedelta(seconds=310))
+            self.assertEqual(observed["captureFreshness"]["ageSeconds"],310)
+            self.assertEqual(observed["captureFreshness"]["status"],
+                             "STALE_OVER_5_MINUTES")
+            self.assertEqual(observed["signal"],"WAIT")
+            self.assertFalse(observed["tradeSignalReady"])
+            self.assertNotIn('"bid"',json.dumps(observed))
+            # A re-signed archive cannot claim a later refresh with no quote.
+            payload["lastImportedUTC"]=iso(NOW+dt.timedelta(seconds=40))
+            checksum=hashlib.sha256(json.dumps(
+                payload,sort_keys=True,separators=(",",":"),
+                ensure_ascii=True).encode("utf-8")).hexdigest()
+            target.write_text(json.dumps({"payload":payload,"sha256":checksum}))
+            with self.assertRaisesRegex(
+                    ValueError,"VAULT_LAST_QUOTE_RECEIPT_NOT_CURRENT_WITH_IMPORT"):
+                load_vault(self.folder)
+            target.write_text(good)
+            self.assertEqual(load_vault(self.folder)["schema"],1)
+
     def test_stale_closed_frames_detected_even_when_quote_sample_is_new(self):
         # One timestamp and NO provider calls. Diagnostic thresholds of
         # 30m/2h/8h are not broker-close/schedule assertions.

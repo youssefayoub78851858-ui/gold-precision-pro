@@ -171,6 +171,14 @@ def load_vault(dirname):
             _fail("VAULT_RECEIPT_MISSING")
     elif imported < START or not q:
         _fail("VAULT_RECEIPT_INCONSISTENT")
+    # The file import clock is NOT proof that a new BID/ASK tick arrived.
+    # A repeated tick may accompany a newly closed bar, so allow at most
+    # the 30-second ingest freshness window between receipt and import.
+    # All UI liveness must instead use the LAST retained quote receipt.
+    if q:
+        quote_receipt = _stamp(q[-1]["observedUTC"])
+        if imported is None or not 0 <= (imported - quote_receipt).total_seconds() <= 30:
+            _fail("VAULT_LAST_QUOTE_RECEIPT_NOT_CURRENT_WITH_IMPORT")
     for tf in FRAMES_ORDER:
         width = FRAMES[tf][1]
         for bar in v["closed"][tf]:
@@ -495,8 +503,12 @@ def inspect_vault_metadata(v, *, now_utc=None):
             "counts":{tf:len(v["closed"][tf]) for tf in FRAMES_ORDER},
             "quoteSamples":len(v["quoteObservations"]),
             "lastImportedUTC":v["lastImportedUTC"],
+            # Only a retained BID/ASK receipt can establish observed freshness.
+            # A write containing only newly closed bars cannot refresh quote age.
             "captureFreshness":capture_freshness(
-                v["lastImportedUTC"], len(v["quoteObservations"]), now_utc=now_utc),
+                v["quoteObservations"][-1]["observedUTC"]
+                if v["quoteObservations"] else None,
+                len(v["quoteObservations"]), now_utc=now_utc),
             "forwardCoverage":coverage,
             "closedFrameFreshness":closed_frame_freshness(
                 coverage,now_utc=now_utc),
