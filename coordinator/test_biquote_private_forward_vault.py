@@ -340,5 +340,46 @@ class ForwardVault(unittest.TestCase):
             load_vault(self.folder)
         self.folder.chmod(0o700)
 
+    def test_recomputed_digest_cannot_admit_invalid_closed_or_quote_geometry(self):
+        # Re-signing a forged local payload cannot qualify data as valid.
+        # SHA-256 is a local integrity check, not broker authentication.
+        import hashlib
+        ingest(self.folder,self.s,received_utc=iso(NOW))
+        target=self.folder/FILE
+        good=target.read_text()
+        cases=(
+            ("invalid_high",lambda v:v["closed"]["M15"][-1].update(
+                {"high":v["closed"]["M15"][-1]["low"]-1}),
+             "VAULT_CANDLE_GEOMETRY_INVALID"),
+            ("misaligned_h4",lambda v:v["closed"]["H4"][-1].update(
+                {"openTime":"2026-11-19T00:01:00Z"}),
+             "VAULT_CANDLE_TIME_INVALID"),
+            ("crossed_bid_ask",lambda v:v["quoteObservations"][-1].update(
+                {"ask":v["quoteObservations"][-1]["bid"]-1}),
+             "VAULT_QUOTE_GEOMETRY_INVALID"),
+            ("future_quote_tick",lambda v:v["quoteObservations"][-1].update(
+                {"tickUTC":"2026-11-19T03:05:40Z"}),
+             "VAULT_QUOTE_RECEIPT_TIME_INVALID"),
+            ("future_candle_close",lambda v:v.update(
+                {"lastImportedUTC":"2026-11-18T23:00:00Z"}),
+             "VAULT_CANDLE_TIME_INVALID"),
+        )
+        for name,mutate,reason in cases:
+            with self.subTest(case=name), patch.object(
+                    socket,"socket",side_effect=AssertionError("NO_NETWORK")):
+                payload=json.loads(good)["payload"]
+                mutate(payload)
+                digest=hashlib.sha256(json.dumps(
+                    payload,sort_keys=True,separators=(",",":"),
+                    ensure_ascii=True).encode("utf-8")).hexdigest()
+                target.write_text(json.dumps(
+                    {"payload":payload,"sha256":digest}))
+                with self.assertRaisesRegex(ValueError,reason) as caught:
+                    load_vault(self.folder)
+                self.assertNotIn("3901",str(caught.exception))
+        target.write_text(good)
+        self.assertEqual(load_vault(self.folder)["schema"],1)
+        self.assertEqual(inspect_metadata(self.folder)["signal"],"WAIT")
+
 if __name__=="__main__":
     unittest.main()

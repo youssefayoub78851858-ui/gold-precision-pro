@@ -159,6 +159,48 @@ def load_vault(dirname):
         _fail("VAULT_QUOTE_INVALID")
     if [_stamp(x["tickUTC"]) for x in q] != sorted(set(_stamp(x["tickUTC"]) for x in q)):
         _fail("VAULT_QUOTE_ORDER_INVALID")
+
+    # A matching local SHA-256 only detects accidental edits; it does NOT
+    # attest the broker or make semantically invalid stored prices safe.
+    # Revalidate every archived closed bar and quote after any restart,
+    # before metadata, shadow analysis, or an authenticated UI can use it.
+    imported_text = v.get("lastImportedUTC")
+    imported = _stamp(imported_text) if imported_text is not None else None
+    if imported is None:
+        if q or any(v["closed"][tf] for tf in FRAMES_ORDER):
+            _fail("VAULT_RECEIPT_MISSING")
+    elif imported < START or not q:
+        _fail("VAULT_RECEIPT_INCONSISTENT")
+    for tf in FRAMES_ORDER:
+        width = FRAMES[tf][1]
+        for bar in v["closed"][tf]:
+            if set(bar) != {"openTime", "open", "high", "low", "close"}:
+                _fail("VAULT_CANDLE_SHAPE_INVALID")
+            opening = _stamp(bar["openTime"])
+            if (int(opening.timestamp()) % width != 0 or imported is None
+                    or opening + dt.timedelta(seconds=width) > imported):
+                _fail("VAULT_CANDLE_TIME_INVALID")
+            o, h, l, c = (bar[k] for k in ("open", "high", "low", "close"))
+            if (not all(_positive(p) and p < 100_000_000 for p in (o, h, l, c))
+                    or not l <= min(o, c) <= max(o, c) <= h):
+                _fail("VAULT_CANDLE_GEOMETRY_INVALID")
+    previous_observed = None
+    for quote in q:
+        if set(quote) != {"tickUTC", "observedUTC", "bid", "ask", "spread"}:
+            _fail("VAULT_QUOTE_SHAPE_INVALID")
+        tick = _stamp(quote["tickUTC"])
+        observed = _stamp(quote["observedUTC"])
+        if (imported is None or observed < START or observed > imported
+                or previous_observed is not None and observed < previous_observed
+                or not 0 <= (observed - tick).total_seconds() <= 30):
+            _fail("VAULT_QUOTE_RECEIPT_TIME_INVALID")
+        bid, ask, spread = (quote[k] for k in ("bid", "ask", "spread"))
+        if (not all(_positive(p) and p < 100_000_000 for p in (bid, ask))
+                or type(spread) not in (float, int) or not math.isfinite(spread)
+                or spread < 0 or ask < bid
+                or abs(spread - round(ask - bid, 8)) > 0.0000001):
+            _fail("VAULT_QUOTE_GEOMETRY_INVALID")
+        previous_observed = observed
     return v
 
 def _atomic_save(dirname, payload):
