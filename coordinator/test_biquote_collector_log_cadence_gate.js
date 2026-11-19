@@ -14,7 +14,7 @@ const input={
  samples:Array.from({length:7},(_,i)=>({
   asOfUTC:iso(START+i*120000+3000),slot:330+i,
   archiveSavedSnapshotsSoFar:324+i,archiveRejectedSnapshotsSoFar:7,
-  signal:"WAIT",executable:false
+  signal:"WAIT",executable:false,httpAllOk:true,geometryChecksOk:false
  })),
  progress:[{atUTC:iso(START+3016),frames,signal:"WAIT",executable:false,
             paperOrdersAllowed:false,brokerOrdersSent:0}]
@@ -40,6 +40,11 @@ assert.equal(good.status,"OBSERVED_LOG_CADENCE_ONLY_NOT_MARKET_PROOF");
 assert.equal(good.sampleCount,7);
 assert.equal(good.missingLogSlots,0);
 assert.equal(good.recordedArchiveIncrease,6);
+assert.equal(good.recordedArchiveRejectionsIncrease,0);
+assert.equal(good.collectorSlotsWithoutRecordedArchiveOutcome,0);
+assert.equal(good.httpNonOkSamples,0);
+assert.equal(good.geometryNotOkSamples,7);
+assert(good.blockerCodes.includes("COLLECTOR_OHLC_GEOMETRY_NOT_PROVEN"));
 assert.equal(good.latestSavedSnapshots,330);
 assert.equal(good.latestRejectedSnapshots,7);
 assert.equal(good.unclassifiedFrameGaps.M15,4);
@@ -54,6 +59,26 @@ const hole=audit(absent);checked(hole);
 assert.equal(hole.status,"PARTIAL_LOG_COVERAGE_NOT_PROOF");
 assert.equal(hole.missingLogSlots,1);
 assert(hole.blockerCodes.includes("MISSING_COLLECTOR_LOG_SLOTS"));
+// One slot can be saved OR rejected, never counted twice.
+const double=structuredClone(input);
+double.samples[4].archiveRejectedSnapshotsSoFar++;
+for(let i=5;i<double.samples.length;i++)double.samples[i].archiveRejectedSnapshotsSoFar++;
+const over=audit(double);checked(over);
+assert.equal(over.status,"BLOCKED");
+assert(over.blockerCodes.includes("NONMONOTONIC_OR_CONTRADICTORY_SAMPLE_SERIES"));
+// Missing archive outcomes are insufficient capture evidence even with every log.
+const noSave=structuredClone(input);
+for(let i=3;i<noSave.samples.length;i++)noSave.samples[i].archiveSavedSnapshotsSoFar--;
+const lacking=audit(noSave);checked(lacking);
+assert.equal(lacking.status,"PARTIAL_LOG_COVERAGE_NOT_PROOF");
+assert.equal(lacking.collectorSlotsWithoutRecordedArchiveOutcome,1);
+assert(lacking.blockerCodes.includes("COLLECTOR_SLOTS_WITHOUT_ARCHIVE_OUTCOME"));
+const http=structuredClone(input);http.samples[4].httpAllOk=false;
+const httpReport=audit(http);checked(httpReport);
+assert.equal(httpReport.httpNonOkSamples,1);
+assert(httpReport.blockerCodes.includes("HTTP_NON_OK_COLLECTOR_LOG_SAMPLES"));
+// HTTP 200 does NOT imply price or closed-candle geometry validation.
+assert.equal(good.geometryNotOkSamples,good.sampleCount);
 // A caller cannot infer continuous collection from an unbounded or truncated query.
 const truncated=structuredClone(input);truncated.samples.shift();
 assert.equal(audit(truncated).logWindowEdgesObserved,false);
@@ -67,6 +92,8 @@ const corruption=[
  x=>{x.samples[5].slot=x.samples[4].slot;},
  x=>{x.samples[5].asOfUTC=x.samples[4].asOfUTC;},
  x=>{x.samples[4].signal="BUY";},
+ x=>{delete x.samples[4].httpAllOk;},
+ x=>{x.samples[4].geometryChecksOk="true";},
  x=>{x.samples[4].executable=true;},
  x=>{x.progress[0].brokerOrdersSent=1;},
  x=>{x.progress[0].frames.H4.contiguousClosed=21;},
