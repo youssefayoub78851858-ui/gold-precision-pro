@@ -21,7 +21,11 @@ const now=Date.UTC(2026,10,19,12,0,0);
 test("valid closed candles are observational, not automatically signals",()=>{
  const c=validateChart(chart(now),now);
  assert.ok(c);
- assert.equal(localLatestParity(c),false);
+ // These fabricated but internally consistent CLOSED bars match locally.
+ // Matching OHLC alone is observational and must never authorize a trade.
+ assert.equal(localLatestParity(c),true);
+ assert.equal(researchWatch({d:{privateTechnicalWatch:{signal:"BUY"}},comparisons:{},chart:c}),
+  "WAIT — فحص V3 غير مؤكد");
 });
 test("reject open or future candles in every timeframe",()=>{
  for(const tf of Object.keys(W)){
