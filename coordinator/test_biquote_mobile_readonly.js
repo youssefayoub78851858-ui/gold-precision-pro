@@ -63,6 +63,7 @@ async function main(){
  assert.equal(result.body.privateChart,undefined);
  assert.equal(result.body.rawPrivateChart,undefined);
  assert.equal(result.body.privateStructure,undefined);
+ assert.equal(result.body.privateTechnicalWatch,undefined);
  assert.equal(result.body.rawPrivateStructure,undefined);
  assert.equal(result.body.vendorDeclaredSession,undefined);
  assert.equal(result.body.privateMtf,undefined);
@@ -89,6 +90,26 @@ async function main(){
  assert.equal(privateData.body.privateChartReadOnly,true);
  assert.equal(privateData.body.privateStructure.mode,"PRIVATE_READONLY_TECHNICAL_OBSERVATIONS");
  assert.equal(privateData.body.privateStructure.signal,"WAIT");
+ const privateWatch=privateData.body.privateTechnicalWatch;
+ assert.equal(privateWatch.mode,"PRIVATE_FROZEN_V3_TECHNICAL_WATCH_ONLY");
+ assert.equal(privateWatch.signal,"WAIT");
+ assert.equal(privateWatch.executable,false);
+ assert.equal(privateWatch.tradeEligible,false);
+ assert.equal(privateWatch.paperOrdersAllowed,false);
+ assert.equal(privateWatch.liveOrdersAllowed,false);
+ assert.equal(privateWatch.sourceRightsVerified,false);
+ assert.equal(privateWatch.brokerBidAskCostsVerified,false);
+ assert.equal(privateWatch.firstSeenAtDecisionVerified,false);
+ assert.equal(privateWatch.retrospectiveOnly,true);
+ assert.equal(privateWatch.providerRequestsMade,0);
+ assert.equal(privateWatch.brokerOrdersSent,0);
+ assert.equal(privateWatch.entry,null);
+ assert.equal(privateWatch.stopLoss,null);
+ assert.equal(privateWatch.takeProfit,null);
+ assert.ok(["WAIT","WATCH_BUY","WATCH_SELL"].includes(privateWatch.watchLabel));
+ for(const p of ['"open"','"high"','"low"','"close"','"bid"','"ask"'])
+   assert.equal(JSON.stringify(privateWatch).includes(p),false);
+
  assert.equal(privateData.body.privateStructure.executable,false);
  assert.equal(privateData.body.privateStructure.tradeEligible,false);
  assert.equal(privateData.body.privateStructure.newsAndMacroIncluded,false);
@@ -150,6 +171,9 @@ async function main(){
  }
  assert.equal(checked,1);
  assert.equal(first.calls.length,4,"Cache avoids redundant rapid requests");
+ // Watch comes from already cached read-only OHLC, not a new provider
+ // request, external macro assertion or paper engine invocation.
+ assert.equal(checked,1);
 
  const denied=await api.snapshot({fetchFn:first.fetch,nowMs:()=>NOW+7000,
    authorization:auth,verifyViewer:async()=>false});
