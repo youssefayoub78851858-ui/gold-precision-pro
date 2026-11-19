@@ -63,6 +63,44 @@ for(const tf of Object.keys(WIDTH))
   good.observedAtDecision[tf]+good.firstSeenAfterDecision[tf]+
   good.legacyWithoutFirstSeen[tf]);
 a(good.blockers.includes("UPSTREAM_BROKER_DATA_RIGHTS_UNVERIFIED"));
+// Critical H4/H1 case: an older bar can be inside stale-age limits
+// and still have enough contiguous history when the newest CLOSED bar
+// has never been received. Do not mislabel that old bar "latest".
+const longMature=fixture(384),longBase=assess(longMature);
+safe(longBase);
+a.equal(longBase.localGeometryObserved,true);
+for(const tf of Object.keys(WIDTH))
+ a.equal(longBase.latestEligibleClosedObservedAtDecision[tf],true);
+const missingNewestH4=structuredClone(longMature);
+delete missingNewestH4.firstObservedClosedUTC.H4[
+ missingNewestH4.frames.H4.at(-1).datetime];
+const missingNewestH4Result=assess(missingNewestH4);
+safe(missingNewestH4Result);
+a.equal(missingNewestH4Result.technicalWarmupMissing.H4,0);
+a.equal(missingNewestH4Result.latestEligibleClosedObservedAtDecision.H4,false);
+a.equal(missingNewestH4Result.localGeometryObserved,false);
+a.equal(missingNewestH4Result.localTimingAndParityCheck,"NOT_PROVEN");
+a(missingNewestH4Result.blockers.includes(
+ "H4_LATEST_ELIGIBLE_CLOSED_BAR_NOT_OBSERVED_AT_DECISION"));
+const missingNewestH1=structuredClone(longMature);
+delete missingNewestH1.firstObservedClosedUTC.H1[
+ missingNewestH1.frames.H1.at(-1).datetime];
+const missingNewestH1Result=assess(missingNewestH1);
+safe(missingNewestH1Result);
+a.equal(missingNewestH1Result.technicalWarmupMissing.H1,0);
+a.equal(missingNewestH1Result.latestEligibleClosedObservedAtDecision.H1,false);
+a.equal(missingNewestH1Result.localGeometryObserved,false);
+a(missingNewestH1Result.blockers.includes(
+ "H1_LATEST_ELIGIBLE_CLOSED_BAR_NOT_OBSERVED_AT_DECISION"));
+const delayedNewestH4=structuredClone(longMature);
+delayedNewestH4.firstObservedClosedUTC.H4[
+ delayedNewestH4.frames.H4.at(-1).datetime]=
+ iso(Date.parse(delayedNewestH4.asOfUTC)+300000);
+const delayedNewestH4Result=assess(delayedNewestH4);
+safe(delayedNewestH4Result);
+a.equal(delayedNewestH4Result.firstSeenAfterDecision.H4,1);
+a.equal(delayedNewestH4Result.latestEligibleClosedObservedAtDecision.H4,false);
+a.equal(delayedNewestH4Result.localGeometryObserved,false);
 // Legacy bars are unknown, NOT automatically assigned a receipt.
 const legacy=structuredClone(mature);
 delete legacy.firstObservedClosedUTC;
