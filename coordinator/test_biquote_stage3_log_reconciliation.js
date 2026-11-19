@@ -94,6 +94,50 @@ prior.atUTC="2026-11-19T11:00:03Z";
 prior.frames.M15.persistedClosed=140;
 const regressing=reconcile({records:[prior,...fixture]});safe(regressing);
 assert.equal(regressing.status,"BLOCKED");
+// Two real-like Stage3 cycles: 11:30 with 751 quotes, 11:46 with 759.
+const olderCycle=structuredClone(fixture);
+const newerCycle=structuredClone(fixture).map(x=>{
+ x.atUTC=x.atUTC.replace("11:30:02","11:46:02");
+ if(x.event==="BIQUOTE_STAGE3_CLOSED_BAR_PROGRESS")
+  x.frames.M15.persistedClosed=139;
+ if(x.event==="BIQUOTE_STAGE3_QUOTE_RECEIPT_CADENCE"){
+  x.sourceQuoteSamples=759;x.observedIntervals=758;
+  x.intervalBins.LE_150_SECONDS=744;
+ }
+ return x;
+});
+const twice=reconcile({records:[...newerCycle,...olderCycle]});
+safe(twice);
+assert.equal(twice.status,"CONSISTENT_COUNTS_ONLY_NOT_MARKET_PROOF");
+assert.equal(twice.checkedProgressEvents,2);
+assert.equal(twice.checkedQuoteCadenceEvents,2);
+assert.equal(twice.sourceQuoteSamples,759);
+assert.equal(twice.persistedClosed.M15,139);
+// Latest healthy counts may never hide a *previous* quote counter regression.
+const futureRollback=structuredClone(newerCycle);
+const afterRollback=futureRollback.find(x=>x.event==="BIQUOTE_STAGE3_QUOTE_RECEIPT_CADENCE");
+afterRollback.sourceQuoteSamples=750;
+afterRollback.observedIntervals=749;
+afterRollback.intervalBins.LE_150_SECONDS=735;
+const rolled=reconcile({records:[...olderCycle,...futureRollback]});
+safe(rolled);assert.equal(rolled.status,"BLOCKED");
+assert(rolled.blockers.includes("HISTORICAL_STAGE3_QUOTE_CADENCE_REGRESSION"));
+// Individual cadence buckets cannot go backward while the total grows.
+const binsRolled=structuredClone(newerCycle);
+const shrinkingBin=binsRolled.find(x=>x.event==="BIQUOTE_STAGE3_QUOTE_RECEIPT_CADENCE");
+shrinkingBin.intervalBins.GT_150_LE_300_SECONDS=12;
+shrinkingBin.intervalBins.LE_150_SECONDS=745;
+const ruled=reconcile({records:[...olderCycle,...binsRolled]});
+safe(ruled);assert.equal(ruled.status,"BLOCKED");
+assert(ruled.blockers.includes("HISTORICAL_STAGE3_QUOTE_CADENCE_REGRESSION"));
+// Even if the latest cadence is good, an older internally forged sum blocks.
+const invalidHistory=structuredClone(olderCycle);
+invalidHistory.find(x=>x.event==="BIQUOTE_STAGE3_QUOTE_RECEIPT_CADENCE")
+ .intervalBins.LE_150_SECONDS=10;
+const badHistory=reconcile({records:[...invalidHistory,...newerCycle]});
+safe(badHistory);assert.equal(badHistory.status,"BLOCKED");
+assert(badHistory.blockers.includes("HISTORICAL_STAGE3_QUOTE_CADENCE_CONTRADICTORY"));
+
 // Unknown log payload cannot turn into broker permission or price evidence.
 const forged=reconcile({records:fixture.map(x=>({...x,canTrade:true,
  sourceRightsVerified:true,privateCandlePrice:"BROKER_SECRET"}))});
