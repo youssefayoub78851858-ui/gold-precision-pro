@@ -14,6 +14,17 @@ const GEOMETRY_CLASSES=Object.freeze([
  "OTHER_SOURCE_SHAPE_FAILURE","NO_STRUCTURAL_FAILURE","UNAVAILABLE"
 ]);
 const geometryZeros=()=>Object.fromEntries(GEOMETRY_CLASSES.map(k=>[k,0]));
+// Same fixed, count-only categories emitted by the current deployed observer.
+const ARCHIVE_FAILURE_CLASSES=Object.freeze([
+ "QUOTE_CLOCK_OR_MARKET","QUOTE_PRICE_PARITY",
+ "TICK_ORDER_OR_REVISION","CLOSED_BAR_REVISION",
+ "LATE_HISTORY_BACKFILL","CLOSED_HISTORY_FRESHNESS",
+ "CROSS_FRAME_PRICE_CONFLICT","FRAME_STRUCTURE",
+ "CAPACITY_LIMIT","PRIVATE_STORAGE_SECURITY",
+ "OTHER_PRIVATE_CAPTURE_FAILURE"
+]);
+const rejectionZeros=()=>Object.fromEntries(
+ ARCHIVE_FAILURE_CLASSES.map(k=>[k,0]));
 const FIXED=Object.freeze([
  "RUNNING_LEGACY_COLLECTOR_HAS_NO_PER_CANDLE_FIRST_SEEN",
  "UPSTREAM_MARKET_RIGHTS_UNVERIFIED",
@@ -35,6 +46,8 @@ const safe=(state,reason,extra={})=>({
  collectorSlotsWithoutRecordedArchiveOutcome:0,
  httpNonOkSamples:0,geometryNotOkSamples:0,
  geometryFailureClassCounts:geometryZeros(),
+ newlyRejectedArchiveClasses:rejectionZeros(),
+ newRejectionsWithUnknownClass:0,
  unclassifiedFrameGaps:{M15:null,H1:null,H4:null},
  blockerCodes:[...FIXED,...(reason?[reason]:[])],...extra
 });
@@ -57,6 +70,8 @@ function audit(input){
   return safe("BLOCKED","INVALID_LOG_ARRAYS");
  let previous=null,missing=0,archiveIncrease=0,rejectionsIncrease=0;
  let unaccounted=0,httpNonOk=0,geometryNotOk=0;
+ let unclassifiedRejections=0;
+ const rejectionClasses=rejectionZeros();
  const geometryFailures=geometryZeros();
  for(const rec of samples){
   if(!rec||typeof rec!=="object"||Array.isArray(rec))
@@ -68,6 +83,9 @@ function audit(input){
      typeof rec.geometryChecksOk!=="boolean"||
      (rec.geometryFailureClass!==undefined&&
       !GEOMETRY_CLASSES.includes(rec.geometryFailureClass))||
+     (rec.archiveRejectionClass!==undefined&&
+      rec.archiveRejectionClass!=="NONE"&&
+      !ARCHIVE_FAILURE_CLASSES.includes(rec.archiveRejectionClass))||
      !int(rec.slot)||!int(rec.archiveSavedSnapshotsSoFar)||
      !int(rec.archiveRejectedSnapshotsSoFar))
    return safe("BLOCKED","UNSAFE_OR_INVALID_SAMPLE");
@@ -82,6 +100,18 @@ function audit(input){
       savedDelta>slots||rejectedDelta>slots||
       savedDelta+rejectedDelta>slots)
     return safe("BLOCKED","NONMONOTONIC_OR_CONTRADICTORY_SAMPLE_SERIES");
+   // With adjacent collector slots, the per-slot rejection cause must
+   // agree with the increment. A missing middle log has UNKNOWN causes.
+   if(slots===1&&rec.archiveRejectionClass!==undefined&&
+      ((rejectedDelta===1&&rec.archiveRejectionClass==="NONE")||
+       (rejectedDelta===0&&rec.archiveRejectionClass!=="NONE")))
+    return safe("BLOCKED","ARCHIVE_REJECTION_CLASS_COUNTER_CONTRADICTION");
+   if(rejectedDelta>0){
+    if(slots===1&&rec.archiveRejectionClass&&
+       rec.archiveRejectionClass!=="NONE")
+     rejectionClasses[rec.archiveRejectionClass]++;
+    else unclassifiedRejections+=rejectedDelta;
+   }
    missing+=slots-1;
    archiveIncrease+=savedDelta;
    rejectionsIncrease+=rejectedDelta;
@@ -133,6 +163,10 @@ function audit(input){
   blockers.push("REPORTED_M15_CONSTITUENT_COVERAGE_GAP");
  if(geometryFailures.OHLC_PRICE_DISAGREEMENT)
   blockers.push("REPORTED_CLOSED_OHLC_PRICE_DISAGREEMENT");
+ if(rejectionClasses.CLOSED_HISTORY_FRESHNESS)
+  blockers.push("ARCHIVE_CLOSED_HISTORY_FRESHNESS_REJECTED");
+ if(unclassifiedRejections)
+  blockers.push("ARCHIVE_REJECTION_CAUSE_NOT_CLASSIFIED_IN_LOG_WINDOW");
  if(!recentProgress)blockers.push("CLOSED_BAR_PROGRESS_NOT_RECENT_IN_LOG_WINDOW");
  if(latest&&TFS.some(tf=>latest.gaps[tf]>0))
   blockers.push("UNCLASSIFIED_CLOSED_BAR_TIME_GAPS_PRESENT");
@@ -148,6 +182,8 @@ function audit(input){
     collectorSlotsWithoutRecordedArchiveOutcome:unaccounted,
     httpNonOkSamples:httpNonOk,geometryNotOkSamples:geometryNotOk,
     geometryFailureClassCounts:geometryFailures,
+    newlyRejectedArchiveClasses:rejectionClasses,
+    newRejectionsWithUnknownClass:unclassifiedRejections,
     latestSavedSnapshots:previous.saved,latestRejectedSnapshots:previous.rejected,
     unclassifiedFrameGaps:latest?latest.gaps:{M15:null,H1:null,H4:null},
     logWindowEdgesObserved:covered,recentClosedProgressObserved:recentProgress,
