@@ -35,7 +35,7 @@ function base(status,extra={}){
   legacyWithoutFirstSeen:ZERO(),contiguousObservedClosed:ZERO(),
   technicalWarmupMissing:{M15:WARMUP,H1:WARMUP,H4:WARMUP},
   paperHistoryMissing:{M15:PAPER,H1:PAPER,H4:PAPER},
-  localTimingAndParityCheck:"NOT_PROVEN",...extra};
+  localTimingAndParityCheck:"NOT_PROVEN",localGeometryObserved:false,...extra};
 }
 function parseRows(rows,tf){
  const width=WIDTH[tf];
