@@ -21,7 +21,7 @@ const safe=Object.freeze({mode:"BIQUOTE_V3_CHRONOLOGICAL_RECONSTRUCTION_ONLY",
 function stamp(value){
  if(typeof value!=="string"||!/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(value))return NaN;
  const t=Date.parse(value);
- return Number.isFinite(t)&&new Date(t).toISOString()===value?t:NaN;
+ return Number.isFinite(t)&&new Date(t).toISOString().replace(".000Z","Z")===value?t:NaN;
 }
 function parseRows(rows,width){
  if(!Array.isArray(rows)||rows.length>MAX_BARS)throw Error("INVALID_ARCHIVE_FRAME");
