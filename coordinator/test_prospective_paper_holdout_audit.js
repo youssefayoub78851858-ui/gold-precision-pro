@@ -22,6 +22,9 @@ const trade=(i,gross=2)=>({
  entryUTC:iso(start+3600000*i+60000),
  exitUTC:iso(start+3600000*i+1800000),
  firstObservedClosedUTC:iso(start+3600000*i+1860000),
+ // M15 candle closed BEFORE decision; receipt is after that close.
+ signalClosedUTC:iso(start+3600000*i),
+ signalFirstObservedUTC:iso(start+3600000*i),
  grossPnLUsd:gross,spreadUsd:.4,slippageUsd:.1,commissionUsd:.1,
  initialRiskUsd:2,entryPrice:"SECRET_PRICE"
 });
@@ -55,6 +58,10 @@ for(const data of [
  {...packet([trade(1)]),trades:[trade(1),trade(1)]},
  {...packet([trade(2),trade(1)])},
  {...packet([trade(1)]),trades:[{...trade(1),firstObservedClosedUTC:iso(start+3600000)}]},
+ {...packet([trade(1)]),trades:[{...trade(1),signalClosedUTC:iso(start+3600000+900000)}]},
+ {...packet([trade(1)]),trades:[{...trade(1),signalFirstObservedUTC:iso(start+3600000+900000)}]},
+ {...packet([trade(1)]),trades:[{...trade(1),signalClosedUTC:"2026-11-18T01:05:00Z"}]},
+ {...packet([trade(1)]),trades:[{...trade(1),signalFirstObservedUTC:undefined}]},
  {...packet([trade(1)]),trades:[{...trade(1),decisionUTC:iso(start+3600000+120000)}]},
  {...packet([trade(1)]),trades:[{...trade(1),spreadUsd:-1}]},
  {...packet([trade(1)]),trades:[{...trade(1),commissionUsd:NaN}]},
