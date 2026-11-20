@@ -4,7 +4,9 @@ This module does not establish a session or accept an API key. Capital session
 tokens can authorize trades; strict external egress restrictions are ALSO
 needed before real credentials are provisioned. No HTTP at import.
 """
+import datetime as dt
 import json
+import os
 import re
 import ssl
 from urllib.parse import urlsplit, parse_qsl
@@ -12,6 +14,7 @@ from urllib.request import (
     Request, build_opener, HTTPSHandler, HTTPRedirectHandler, ProxyHandler,
 )
 from capital_demo_offline_adapter import DEMO_BASE_URL, RESOLUTIONS, _valid_epic
+from capital_demo_private_get_boundary import ENABLE_ENV, RIGHTS_ENV, ENABLE_VALUE
 
 MAX_BYTES = 1048576
 
@@ -37,9 +40,20 @@ def _validate(method, url, headers):
     if (params["resolution"] not in {r for r, _ in RESOLUTIONS.values()}
             or params["max"] != "1000"):
         raise ValueError("DEMO_RESOLUTION_OR_LIMIT_INVALID")
+    clocks = []
     for key in ("from", "to"):
-        if not re.fullmatch(r"20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d", params[key]):
+        value = params[key]
+        if not re.fullmatch(r"20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d", value):
             raise ValueError("DEMO_UTC_BOUND_INVALID")
+        try:
+            clocks.append(dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S"))
+        except ValueError:
+            raise ValueError("DEMO_UTC_BOUND_INVALID") from None
+    width = next(seconds for resolution, seconds in RESOLUTIONS.values()
+                 if resolution == params["resolution"])
+    if not (clocks[0] < clocks[1]
+            and (clocks[1] - clocks[0]).total_seconds() <= 900 * width):
+        raise ValueError("DEMO_BOUNDED_TIME_WINDOW_REQUIRED")
     if not isinstance(headers, dict) or set(headers) != {"CST", "X-SECURITY-TOKEN"}:
         raise ValueError("DEMO_SESSION_HEADERS_ONLY")
     if any(not isinstance(v, str) or re.fullmatch(
@@ -47,12 +61,19 @@ def _validate(method, url, headers):
         raise ValueError("DEMO_SESSION_TOKEN_FORMAT_INVALID")
 
 
-def demo_https_price_get(method, url, headers, *, opener=None):
+def demo_https_price_get(method, url, headers, *, opener=None,
+                         explicit_operator_approval=False):
     """One no-redirect Demo GET; opener injection is used for offline tests.
 
     Do not call directly except through a separately approved, private,
     egress-filtered reader. Returns raw JSON only to that private reader.
     """
+    # A caller must not bypass the private gateway by calling the raw
+    # transport. These latches are not independent rights attestation.
+    if (os.environ.get(ENABLE_ENV) != ENABLE_VALUE
+            or os.environ.get(RIGHTS_ENV) != ENABLE_VALUE
+            or explicit_operator_approval is not True):
+        raise ValueError("PRIVATE_DEMO_TRANSPORT_NOT_APPROVED")
     _validate(method, url, headers)
     request = Request(url, headers=headers, method="GET")
     client = opener if opener is not None else build_opener(

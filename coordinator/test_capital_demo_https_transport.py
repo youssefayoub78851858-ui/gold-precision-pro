@@ -1,8 +1,14 @@
 """No-network GET allowlist tests. No API account or provider calls."""
 import json
+import os
 import unittest
+from unittest.mock import patch
 from urllib.request import Request
-from capital_demo_https_transport import demo_https_price_get, NoRedirect, MAX_BYTES
+from capital_demo_https_transport import demo_https_price_get as _live_transport, NoRedirect, MAX_BYTES
+from capital_demo_private_get_boundary import ENABLE_ENV, RIGHTS_ENV, ENABLE_VALUE
+
+def demo_https_price_get(*args, **kwargs):
+    return _live_transport(*args, explicit_operator_approval=True, **kwargs)
 
 URL=("https://demo-api-capital.backend-capital.com/api/v1/prices/TEST.GOLD.EPIC"
      "?resolution=MINUTE_15&from=2026-11-20T08%3A00%3A00"
@@ -28,6 +34,35 @@ class FakeOpener:
 
 
 class DemoHttpsTests(unittest.TestCase):
+    def setUp(self):
+        env = patch.dict(os.environ, {
+            ENABLE_ENV: ENABLE_VALUE, RIGHTS_ENV: ENABLE_VALUE})
+        env.start()
+        self.addCleanup(env.stop)
+
+    def test_inert_without_both_flags_and_independent_operator_approval(self):
+        fake=FakeOpener(FakeReply())
+        with patch.dict(os.environ, {ENABLE_ENV: "", RIGHTS_ENV: ""}):
+            with self.assertRaisesRegex(ValueError, "NOT_APPROVED"):
+                _live_transport("GET", URL, TOKENS, opener=fake,
+                                explicit_operator_approval=True)
+        with self.assertRaisesRegex(ValueError, "NOT_APPROVED"):
+            _live_transport("GET", URL, TOKENS, opener=fake)
+        self.assertEqual(fake.calls, [])
+
+    def test_bad_or_reversed_or_unbounded_clock_window_rejected(self):
+        fake=FakeOpener(FakeReply())
+        candidates=[
+            URL.replace("11%3A45%3A01","07%3A45%3A01"),
+            URL.replace("2026-11-20T08","2026-02-30T08"),
+            URL.replace("from=2026-11-20T08","from=2025-11-20T08"),
+        ]
+        for u in candidates:
+            with self.subTest(url=u):
+                with self.assertRaises(ValueError):
+                    demo_https_price_get("GET",u,TOKENS,opener=fake)
+        self.assertEqual(fake.calls, [])
+
     def test_only_fixed_demo_get(self):
         fake=FakeOpener(FakeReply(json.dumps({
             "epic":"TEST.GOLD.EPIC","resolution":"MINUTE_15","prices":[]
