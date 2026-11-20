@@ -13,8 +13,8 @@ EPIC="TEST.GOLD.EPIC"
 WIDTH={"M15":900,"H1":3600,"H4":14400}
 
 
-def sample():
-    p=plan_demo_closed_history(EPIC,START,END,ASOF,bars_per_call=17)
+def sample(start=START,end=END,asof=ASOF,bars_per_call=17):
+    p=plan_demo_closed_history(EPIC,start,end,asof,bars_per_call=bars_per_call)
     assert p["status"]=="INERT_PLAN_ONLY"
     out={}
     for frame,parts in p["requests"].items():
@@ -60,6 +60,9 @@ class OfflineBatchSafetyTests(unittest.TestCase):
         self.assertEqual(result["status"],"LOCAL_GEOMETRY_ONLY_NOT_ADMITTED")
         self.assertEqual(result["receivedClosedCounts"],{"M15":16,"H1":4,"H4":1})
         self.assertEqual(result["unverifiedMissingUTCGridSlots"],{"M15":0,"H1":0,"H4":0})
+        self.assertEqual(result["minimumWarmupMissing"],{"M15":34,"H1":46,"H4":49})
+        self.assertFalse(result["allFramesHave50ClosedBars"])
+        self.assertEqual(result["reason"],"NO_50_BAR_WARMUP_OR_INDEPENDENT_BROKER_EVIDENCE")
         self.assertEqual(result["crossFrameParityCounts"]["H4"]["fullyCoveredMatched"],1)
         self.assertEqual(result["directH4FromH1ParityCounts"]["fullyCoveredMatched"],1)
         self.assertFalse(result["observedPriceConflict"])
@@ -69,6 +72,26 @@ class OfflineBatchSafetyTests(unittest.TestCase):
         self.assertNotIn("EPIC",str(result))
         self.assertNotIn("snapshotTimeUTC",str(result))
         self.assertNotIn("private",str(result).lower())
+
+    def test_50_h4_local_synthetic_history_is_not_a_real_data_or_trade_clearance(self):
+        # 200h is exactly 800 M15, 200 H1, 50 H4 on the synthetic UTC
+        # grid. This is NOT an independently verified broker session.
+        p,resp=sample(
+            "2026-10-01T00:00:00Z",
+            "2026-10-09T08:00:00Z",
+            "2026-10-10T00:00:00Z",
+            bars_per_call=900
+        )
+        o=audit_disabled_history_pages(p,resp)
+        self.wait(o)
+        self.assertEqual(o["status"],"LOCAL_GEOMETRY_ONLY_NOT_ADMITTED")
+        self.assertEqual(o["receivedClosedCounts"],{"M15":800,"H1":200,"H4":50})
+        self.assertEqual(o["minimumWarmupMissing"],{"M15":0,"H1":0,"H4":0})
+        self.assertTrue(o["allFramesHave50ClosedBars"])
+        self.assertTrue(o["localCrossFrameParityFullyCovered"])
+        self.assertEqual(o["reason"],"NO_INDEPENDENT_BROKER_RIGHTS_RECEIPTS_COSTS_OR_FORWARD_HOLDOUT")
+        self.assertNotIn("4000",str(o))
+        self.assertNotIn("TEST.GOLD.EPIC",str(o))
 
     def test_missing_slot_not_misrepresented_as_complete_calendar(self):
         p,resp=sample()
