@@ -71,3 +71,53 @@ This file is a portable GitHub handoff, not a ChatGPT saved-memory entry.
   **untouched, externally corroborated after-cost prospective** paper
   outcomes remain mandatory. Code and offline CI cannot invent them.
 
+
+## 2026-11-20 06:16 UTC collector and paper-signal chronology follow-up
+
+- Checked GitHub review branch, active Render demo, private coordinator logs
+  and support inbox. Last verified private metadata at **2026-11-20
+  06:16:02 UTC**: closed stored M15=209, H1=52, H4=13; strict contiguous
+  tails M15=29, H1=7, H4=13; missing UTC grid M15=8, H1=2,
+  H4=0. These are read-only, historical log counters, NOT independently
+  broker-attested market data, and do not prove individual price quotes.
+- The BiQuote-support-declared November 2026 calendar (not the independently
+  verified upstream MT5 broker calendar) yields, by the existing H4 capture
+  horizon gate, an **optimistic best strictly contiguous H4 run of 18**
+  before the current Nov25 UTC capture end, given the Nov20 13-H4
+  observation. 11 full closed 4-hour weekend slots reset the tail; the
+  largest vendor-scenario tail at capture end is 13. Both 21-H4 initial
+  warmup and 50-H4 strict paper-history thresholds are unreachable
+  **under this stated provider scenario** within current consent.
+  The generic no-break mathematical total stored cap is 42 H4.
+  This is conditional arithmetic, NOT actual broker schedule proof.
+- New fail-closed improvement to `prospective_paper_holdout_audit.js`:
+  each purported paper trade must include an aligned M15
+  `signalClosedUTC` and a `signalFirstObservedUTC` not later than
+  `decisionUTC`. An exit receipt is insufficient to prove that the
+  signal inputs were known at decision time. The new timestamps remain
+  untrusted caller assertions, and no automatic paper/live order is allowed.
+- Added regression cases for missing signal receipt, future signal,
+  non-grid close and signal first observed after a claimed decision.
+  GitHub four-stage offline CI **PASS** on `f5857133`,
+  run `44687228521`.
+- Pinned new no-secrets/no-prices regression for the latest Nov20
+  collector count and conservative weekend horizon. GitHub four-stage
+  offline CI **PASS** on `bf839140`,
+  run `44687412787`.
+- The live review demo remains on an earlier reviewed commit; this
+  batch changed only offline audit/tests, so **no Render deploy**,
+  persistent collection change, or production change was made.
+- No new BiQuote / CFI / Twelve Data / Massive / Databento support reply
+  after Nov18 was found at the time of this check. Existing BiQuote
+  upstream-broker identity and schedule clarification remains unanswered.
+- External requirements for qualified trade suggestions remain:
+  (a) rights of original MT5 broker, broker-specific holidays/DST,
+  (b) independent closed history with per-bar first-seen timestamps,
+  quote freshness, execution BID/ASK spread/slippage/fees,
+  (c) authenticated and synchronized GC, DXY/yields and news context,
+  (d) an untouched prospective paper holdout with broker-realistic costs
+  and a defensible forward performance evaluation.
+  There is **no** real or paper-trade authorization: `signal=WAIT`,
+  `executable=false`. A future broker-calendar-aware method may count
+  actual consecutive tradable H4 bars without fabricating weekend bars,
+  but it is NOT implemented or licensed by this hypothetical report.
