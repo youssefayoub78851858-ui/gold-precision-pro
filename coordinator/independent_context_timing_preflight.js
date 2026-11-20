@@ -16,6 +16,7 @@ const REQUIRED=Object.freeze({
  HEADLINES:{kind:"PUBLISHED_NEWS_HEADLINE",maxAgeMs:60*60000}
 });
 const KEYS=Object.keys(REQUIRED);
+const GC_CONTRACT=/^GC[FGHJKMNQUVXZ][0-9]{1,4}$/;
 const ISO=/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/;
 function at(s){
  if(typeof s!=="string"||!ISO.test(s))return NaN;
@@ -54,9 +55,13 @@ function inspect(input){
   }
   // Reject extra fields (prices, source/license claims, trust switches,
   // arbitrary user names, credentials). Never reflect unknown data.
+  const isGC=name==="GC_TRADES"||name==="GC_DEPTH";
+  const keys=isGC?
+    "contract,firstAvailableUTC,kind,observedUTC,receivedUTC":
+    "firstAvailableUTC,kind,observedUTC,receivedUTC";
   if(!item||typeof item!=="object"||Array.isArray(item)||
-     Object.keys(item).sort().join(",")!==
-       "firstAvailableUTC,kind,observedUTC,receivedUTC")
+     Object.keys(item).sort().join(",")!==keys||
+     (isGC&&(!GC_CONTRACT.test(item.contract)||typeof item.contract!=="string")))
   {
    perLayer[name]={status:"INVALID_METADATA",timeSuitable:false,sourceQualified:false};
    counts.blocked++;continue;
@@ -89,11 +94,33 @@ function inspect(input){
     timeSuitable:true,sourceQualified:false};
   counts.recent++;
  }
+ // Exchange-trade timestamps and order-book updates from DIFFERENT GC
+ // contracts, or snapshots separated by too much time, cannot confirm
+ // the same futures flow. Both labels are still caller-asserted, not
+ // exchange/Databento entitlements or independent clock evidence.
+ let gcPairStatus="GC_PAIR_UNAVAILABLE_OR_NOT_TIME_SUITABLE";
+ if(perLayer.GC_TRADES?.timeSuitable===true&&
+    perLayer.GC_DEPTH?.timeSuitable===true){
+   const trades=evidence.GC_TRADES,depth=evidence.GC_DEPTH;
+   const skew=Math.abs(at(trades.observedUTC)-at(depth.observedUTC));
+   if(trades.contract!==depth.contract||skew>60000){
+     gcPairStatus=trades.contract!==depth.contract?
+       "GC_CONTRACT_MISMATCH":"GC_TRADE_DEPTH_CLOCK_SKEW";
+     for(const key of ["GC_TRADES","GC_DEPTH"]){
+       perLayer[key]={status:gcPairStatus,timeSuitable:false,
+         sourceQualified:false};
+     }
+     counts.recent-=2;counts.blocked+=2;
+   }else gcPairStatus="MATCHED_UNATTESTED_GC_LABELS_AND_CLOCKS_ONLY";
+ }
  const status=counts.blocked?"CONTEXT_TIMING_CONFLICTS":
   counts.missing?"INCOMPLETE_CONTEXT":
   "ONLY_UNATTESTED_CLOCKS_NOT_TRADING_PROOF";
  return {...base(status,"NO_INDEPENDENT_SOURCE_ENTITLEMENT_OR_RECEIPT_ATTESTATION"),
-  perLayer,summary:counts};
+  perLayer,summary:counts,gcTradeDepthCrossCheck:{
+    status:gcPairStatus,exchangeProven:false,
+    contractRollVerified:false,providerCredentialsAccessed:false
+  }};
 }
 module.exports={inspect};
 if(require.main===module){
