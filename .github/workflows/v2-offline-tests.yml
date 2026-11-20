@@ -358,6 +358,9 @@ jobs:
         run: |
           node test_ultimate_v2.js
           python -m unittest -v test_ultimate_v2
+      - name: Public V2 shadow quarantine with frozen strategy unchanged (offline)
+        working-directory: coordinator
+        run: node test_ultimate_v2_public_shadow.js
       - name: Reinterpret existing archives under Ultimate v2 (not a fresh holdout)
         run: |
           python coordinator/ultimate_forward_plan.py research/ultimate-v2-prospective-plan.json
