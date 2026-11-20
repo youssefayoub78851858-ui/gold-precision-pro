@@ -29,6 +29,8 @@ const trade=(i,gross=2)=>({
  contextClosedUTC:{H1:iso(start+3600000*i),H4:iso(start+Math.floor(i/4)*14400000)},
  contextFirstObservedUTC:{H1:iso(start+3600000*i),H4:iso(start+Math.floor(i/4)*14400000)},
  grossPnLUsd:gross,spreadUsd:.4,slippageUsd:.1,commissionUsd:.1,
+ grossPnLConvention:"MID_MARK_BEFORE_SPREAD_SLIPPAGE_COMMISSION",
+ initialRiskConvention:"STOP_LOSS_PLUS_TOTAL_MODELED_COSTS_USD",
  initialRiskUsd:2,entryPrice:"SECRET_PRICE"
 });
 const packet=trades=>({dataOrigin:ORIGIN,freezeUTC:iso(start),
@@ -45,6 +47,10 @@ a.equal(good.statistics.averageNetR,-.55);
 a.equal(good.statistics.winRate,.5);
 a.equal(good.statistics.maxRealizedDrawdownUsd,3.6);
 a.equal(good.statistics.sampleSizeAtLeast30,false);
+a.equal(good.statistics.grossPnLConvention,
+ "MID_MARK_BEFORE_SPREAD_SLIPPAGE_COMMISSION");
+a.equal(good.statistics.initialRiskConvention,
+ "STOP_LOSS_PLUS_TOTAL_MODELED_COSTS_USD");
 const allWins=evaluate({
  ...packet(Array.from({length:32},(_,i)=>trade(i+1))),
  asOfUTC:iso(start+40*3600000)
@@ -76,6 +82,13 @@ for(const data of [
  {...packet([trade(1)]),trades:[{...trade(1),spreadUsd:-1}]},
  {...packet([trade(1)]),trades:[{...trade(1),commissionUsd:NaN}]},
  {...packet([trade(1)]),trades:[{...trade(1),initialRiskUsd:0}]},
+ {...packet([trade(1)]),trades:[{...trade(1),grossPnLConvention:undefined}]},
+ {...packet([trade(1)]),trades:[{...trade(1),
+   grossPnLConvention:"BID_ASK_EXECUTED_ALREADY_INCLUDES_SPREAD"}]},
+ {...packet([trade(1)]),trades:[{...trade(1),initialRiskConvention:undefined}]},
+ {...packet([trade(1)]),trades:[{...trade(1),initialRiskConvention:
+   "STOP_DISTANCE_EXCLUDES_FEES"}]},
+ {...packet([trade(1)]),trades:[{...trade(1),initialRiskUsd:0.6}]},
  {...packet([trade(1)]),trades:[{...trade(1),initialRiskUsd:0.00001}]},
  {...packet([trade(1)]),trades:[{...trade(1),initialRiskUsd:Number.MIN_VALUE}]},
  // A stale M15 closed candle must not be used to justify a fresh order.
