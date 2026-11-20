@@ -118,6 +118,7 @@ function reviewFourStages(input){
           mode:contextTiming.mode,
           status:clocksAligned?contextTiming.status:'NO_ALIGNED_CONTEXT_TIMES',
           perLayer:contextTiming.perLayer,summary:contextTiming.summary,
+          gcTradeDepthCrossCheck:contextTiming.gcTradeDepthCrossCheck||null,
           decisionClockAligned:clocksAligned,
           sourceIndependentlyAttested:false,
           contextCanAuthorizeTrading:false
