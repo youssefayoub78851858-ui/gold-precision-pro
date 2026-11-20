@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#081522">
+<title>Gold Precision — XAUUSD Live Research</title>
+<style>
+:root{color-scheme:dark;--bg:#081522;--panel:#11283a;--line:#294253;--muted:#9fb5c2;--text:#f2f5f6;--gold:#f4c96b;--ok:#79d7b6;--bad:#ffaf9d}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#0b1d2f,#07111c);color:var(--text);font:15px/1.48 system-ui,-apple-system,'Segoe UI',Arial,sans-serif;min-height:100vh}
+main{max-width:700px;margin:0 auto;padding:16px 13px 28px}header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}header h1{font-size:20px;margin:0}header p{margin:3px 0 0;color:var(--muted);font-size:12px}
+.pill{font-size:11px;font-weight:800;letter-spacing:.2px;border-radius:100px;padding:6px 10px;background:#3b2c14;color:var(--gold);white-space:nowrap;border:1px solid #5b4528}
+.panel{border:1px solid var(--line);border-radius:17px;padding:15px;background:var(--panel);margin-bottom:11px;box-shadow:0 3px 15px #0002}h2{font-size:14px;color:var(--muted);margin:0 0 9px;font-weight:600}
+.top{display:grid;grid-template-columns:1fr 1fr;gap:10px}.val{font-size:27px;font-weight:760;letter-spacing:-.5px;font-variant-numeric:tabular-nums;direction:ltr;text-align:right}.val small{font-size:13px;color:var(--muted);font-weight:400}.bid{color:var(--ok)}.ask{color:var(--gold)}
+.sub{color:var(--muted);font-size:12px;margin-top:6px}.row{display:flex;justify-content:space-between;align-items:center;gap:7px}.row span:last-child{font-variant-numeric:tabular-nums}.status{padding:10px 12px;border-radius:11px;background:#0b1c2a;color:var(--bad);border:1px solid var(--line);margin-bottom:12px;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.frame{padding:12px;border:1px solid var(--line);border-radius:14px;background:#132d40;min-width:0}.frame h3{font-size:15px;margin:0 0 10px;color:var(--gold)}.frame .close{font-size:21px;direction:ltr;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}.frame .time{color:var(--muted);font-size:11px;direction:ltr;text-align:right;min-height:27px;margin-top:3px}.frame .mini{font-size:11px;color:var(--muted);margin-top:9px}
+button{background:#e4b759;color:#092030;font-weight:750;border:0;padding:12px 15px;border-radius:10px;font-size:14px;cursor:pointer}button:disabled{opacity:.55;cursor:wait}
+.notice{font-size:12px;color:var(--muted);line-height:1.6}strong{color:var(--text)}.foot{color:var(--muted);font-size:11px;text-align:center;margin-top:18px}a{color:var(--gold)}
+@media(max-width:390px){.grid{gap:5px}.frame{padding:8px}.frame .close{font-size:17px}.val{font-size:22px}header h1{font-size:18px}}
+</style>
+</head>
+<body>
+<main>
+<header><div><h1>Gold Precision <span style="color:var(--gold)">XAUUSD</span></h1><p>شاشة بحث مباشرة — BiQuote العام، وليس Capital.com</p></div><div class="pill">RESEARCH · WAIT</div></header>
+<div class="status" id="state" role="status" aria-live="polite">بانتظار جلب بيانات السوق… لا إشارات تداول.</div>
+<section class="panel"><h2>آخر عرض أسعار الذهب (Bid / Ask)</h2><div class="top"><div><div class="sub">سعر البيع BID</div><div class="val bid" id="bid">—</div></div><div><div class="sub">سعر الشراء ASK</div><div class="val ask" id="ask">—</div></div></div><div class="row sub"><span>السبريد (دولار/أونصة)</span><span id="spread">—</span></div><div class="row sub"><span>وقت السعر UTC</span><span id="quoteTime">—</span></div></section>
+<section class="panel"><div class="row"><h2 style="margin:0">آخر شموع مغلقة فقط · MID</h2><button id="refresh" type="button">تحديث</button></div><div class="grid" style="margin-top:12px">
+<div class="frame"><h3>M15</h3><div class="close" id="m15">—</div><div class="time" id="m15time">—</div><div class="mini" id="m15count">—</div></div>
+<div class="frame"><h3>H1</h3><div class="close" id="h1">—</div><div class="time" id="h1time">—</div><div class="mini" id="h1count">—</div></div>
+<div class="frame"><h3>H4</h3><div class="close" id="h4">—</div><div class="time" id="h4time">—</div><div class="mini" id="h4count">—</div></div>
+</div><p class="notice" style="margin-bottom:0">كل الشموع الظاهرة من بيانات MID وقد تشمل تاريخاً أولياً مختلف الأساس. انقطاع ساعات السوق أو نقص الشموع ما بيتم ملؤه بأسعار مفترضة.</p></section>
+<section class="panel"><div class="row"><h2 style="margin:0">جاهزية التداول</h2><strong style="color:var(--gold)">WAIT</strong></div><p class="notice">هذه شاشة مراقبة شخصية. لا أوامر شراء/بيع، لا مفاتيح API، لا حساب تداول، لا تخزين سجل، ولا تنبيهات ربح. لا نعتبر بيانات BiQuote بديلاً مطابقاً لشموع وسيطك أو لمصادر GC وDXY والأخبار.</p><div class="row sub"><span>آخر فحص على هاتفك</span><span id="checked">—</span></div></section>
+<p class="foot">مصدر العرض: <a href="https://biquote.io/docs/" target="_blank" rel="noopener noreferrer">BiQuote Public API</a> · لا تترك الشاشة مفتوحة إذا لا تحتاج المراقبة. عند الانتقال لتطبيق آخر يتوقف التحديث.</p>
+</main>
+<script>
+(()=>{'use strict';
+const HOST='https://biquote.io';
+const ROUTES=Object.freeze({quote:'/api/XAUUSD?allowStale=false',M15:'/api/XAUUSD/ohlc?interval=15m&limit=192',H1:'/api/XAUUSD/ohlc?interval=1h&limit=168',H4:'/api/XAUUSD/ohlc?interval=4h&limit=180'});
+const WIDTH=Object.freeze({M15:900000,H1:3600000,H4:14400000});
+const CODES=Object.freeze({M15:'m15',H1:'h1',H4:'h4'});
+const $$=id=>document.getElementById(id);
+let active=false;
+const fmt=n=>Number(n).toFixed(2);
+const iso=s=>{const n=Date.parse(s);return typeof s==='string'&&/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|\+00:00)$/.test(s)&&Number.isFinite(n)?n:NaN;};
+const ok=n=>typeof n==='number'&&Number.isFinite(n)&&n>0&&n<1e8;
+function blankQuote(){for(const id of ['bid','ask','spread','quoteTime'])$$(id).textContent='—';}
+function blankFrames(){for(const id of ['m15','h1','h4']){ $$(id).textContent='—';$$(id+'time').textContent='—';$$(id+'count').textContent='غير مثبت'; }}
+async function get(path){const controller=new AbortController();const deadline=setTimeout(()=>controller.abort(),8000);try{const r=await fetch(HOST+path,{signal:controller.signal,cache:'no-store',credentials:'omit',redirect:'error',headers:{Accept:'application/json'}});if(!r.ok)throw Error('HTTP');const data=await r.json();if(!data||typeof data!=='object'||Array.isArray(data))throw Error('DATA');return data;}finally{clearTimeout(deadline);}}
+function quote(q,now){const time=iso(q?.timestamp);if(q?.symbol!=='XAUUSD'||q.stale===true||q.marketState!=='open'||!ok(q.bid)||!ok(q.ask)||q.ask<q.bid||!Number.isFinite(time)||time>now+5000||now-time>30000){blankQuote();return false;}
+$$('bid').textContent=fmt(q.bid);$$('ask').textContent=fmt(q.ask);$$('spread').textContent=fmt(q.ask-q.bid);$$('quoteTime').textContent=new Date(time).toISOString().replace('T',' ').slice(0,19)+' UTC';return true;}
+function frame(d,tf,now){const id=CODES[tf],interval={M15:'15m',H1:'1h',H4:'4h'}[tf],width=WIDTH[tf];
+if(d?.symbol!=='XAUUSD'||d.interval!==interval||!Array.isArray(d.bars))throw Error('FRAME');
+const valid=[];let prev=Infinity;
+for(const b of d.bars){const t=iso(b?.openTime);if(!Number.isFinite(t)||t>=prev||t%width!==0||!['boolean'].includes(typeof b.isOpen)||!['open','high','low','close'].every(k=>ok(b[k]))||b.low>Math.min(b.open,b.close)||b.high<Math.max(b.open,b.close)||b.high<b.low)throw Error('CANDLE');prev=t;
+if(!b.isOpen&&t+width<=now)valid.push(b);else if(!b.isOpen)throw Error('NONCLOSED');}
+const last=valid[0];if(!last){$$(id).textContent='—';$$(id+'time').textContent='لا شمعة مغلقة';$$(id+'count').textContent='0 شمعة';return false;}
+$$(id).textContent=fmt(last.close);$$(id+'time').textContent=new Date(iso(last.openTime)+width).toISOString().slice(5,16).replace('T',' ')+' UTC';$$(id+'count').textContent=valid.length+' شمعة مغلقة';return true;
+}
+async function refresh(){if(active||document.hidden)return;active=true;$$('refresh').disabled=true;const now=Date.now();blankQuote();blankFrames();$$('state').textContent='جاري فحص البيانات…';
+try{const results=await Promise.allSettled(Object.keys(ROUTES).map(async key=>[key,await get(ROUTES[key])]));if(document.hidden)return;const received={};for(const r of results){if(r.status==='fulfilled')received[r.value[0]]=r.value[1];}
+const fresh=received.quote?quote(received.quote,Date.now()):false;let matched=0;for(const tf of Object.keys(CODES)){try{if(received[tf]&&frame(received[tf],tf,Date.now()))matched++;}catch(_){ /* Invalid frame intentionally blank and marked unusable. */}}
+if(!fresh)$$('state').textContent='WAIT · سعر غير حي أو السوق مغلق. لا نعرضه كسعر مباشر.';
+else if(matched!==3)$$('state').textContent='WAIT · السعر حديث لكن بيانات الشموع ناقصة أو غير صالحة.';
+else $$('state').textContent='WAIT · سعر حديث و3 أطر معروضة للمراقبة فقط، بلا توصيات.';
+$$('checked').textContent=new Date().toISOString().slice(11,19)+' UTC';
+}catch(_){blankQuote();blankFrames();$$('state').textContent='WAIT · تعذّر فحص المصدر. لا أسعار مفترضة.';}
+finally{active=false;$$('refresh').disabled=false;}
+}
+$$('refresh').addEventListener('click',refresh);
+setInterval(()=>{if(!document.hidden)refresh();},25000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();else {blankQuote();$$('state').textContent='WAIT · الشاشة في الخلفية، عرض السعر الحي متوقف.';}});
+refresh();
+})();
+</script>
+</body>
+</html>

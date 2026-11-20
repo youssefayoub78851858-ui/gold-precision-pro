@@ -1,0 +1,30 @@
+name: Review-only direct BiQuote mobile viewer safety
+
+on:
+  push:
+    branches:
+      - review/v2-portable-tests-20261109
+    paths:
+      - 'coordinator/biquote_mobile_direct_research.html'
+      - 'coordinator/test_biquote_mobile_direct_research.py'
+      - '.github/workflows/biquote-mobile-direct-readonly.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-ui-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Static source and node syntax (no market requests)
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_mobile_direct_research
