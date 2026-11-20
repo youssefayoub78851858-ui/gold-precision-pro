@@ -1,0 +1,46 @@
+name: Check direct mobile HTML preview and BiQuote browser CORS (no credentials)
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - '.github/workflows/mobile-direct-link-preflight.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-link:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Read-only public preview probe (no price logging or persistence)
+        shell: bash
+        run: |
+          python - <<'PY'
+          from urllib.request import Request, urlopen
+          from urllib.error import URLError, HTTPError
+          BASE="youssefayoub78851858-ui/gold-precision-pro"
+          P="coordinator/biquote_mobile_direct_research.html"
+          options={
+            "githack":f"https://raw.githack.com/{BASE}/review/v2-portable-tests-20261109/{P}",
+            "githubpages":f"https://youssefayoub78851858-ui.github.io/gold-precision-pro/{P}",
+          }
+          for name,url in options.items():
+            try:
+              req=Request(url,headers={"User-Agent":"GoldPrecision-Mobile-Public-Preflight/1.0","Accept":"text/html"},method="GET")
+              with urlopen(req,timeout=14) as r:
+                data=r.read(40000).decode("utf-8","replace")
+                print("STATIC",name,"status",r.status,"mime",r.headers.get("Content-Type"),"isViewer",("<title>Gold Precision" in data and "function technical(" in data),"consent",("confirmation" in data.lower() or "consent" in data.lower()))
+            except (URLError,HTTPError,OSError,ValueError) as e:
+              print("STATIC",name,"unavailable",type(e).__name__)
+          try:
+            req=Request("https://biquote.io/api/XAUUSD?allowStale=false",headers={"Origin":"https://raw.githack.com","User-Agent":"GoldPrecision-Mobile-CORS-Preflight/1.0","Accept":"application/json"},method="GET")
+            with urlopen(req,timeout=12) as r:
+              print("BIQUOTE_CORS","status",r.status,"allowOrigin",r.headers.get("Access-Control-Allow-Origin","MISSING"),"mime",r.headers.get("Content-Type","MISSING"))
+              # Never read, store, publish or log market values.
+          except (URLError,HTTPError,OSError,ValueError) as e:
+            print("BIQUOTE_CORS","unavailable",type(e).__name__)
+          PY
