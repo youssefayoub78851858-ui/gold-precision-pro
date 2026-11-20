@@ -8,6 +8,13 @@ const MODE="GOLD_PRECISION_PRE_SIGNAL_MILESTONES_V1";
 const START=Date.parse("2026-11-18T00:00:00Z");
 const WIDTH=Object.freeze({M15:900000,H1:3600000,H4:14400000});
 const FRAMES=Object.keys(WIDTH);
+// A fully CLOSED H4 period spans 16 M15 and four H1 constituents.
+// A claimed 21/50-H4 multi-frame milestone cannot rely on merely
+// 21/50 M15 and H1 candle counts. This is a NECESSARY upper-bound
+// check, not independent provenance or per-bar timestamp proof.
+const H4_CONSTITUENTS=Object.freeze({M15:16,H1:4,H4:1});
+const MIN_21=Object.freeze({M15:336,H1:84,H4:21});
+const MIN_50=Object.freeze({M15:800,H1:200,H4:50});
 const NUM=x=>Number.isSafeInteger(x)&&x>=0&&x<=20000000;
 const ISO=/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/;
 const utc=x=>typeof x==="string"&&ISO.test(x)&&Number.isFinite(Date.parse(x))&&
@@ -90,7 +97,11 @@ function summarize(input){
   p.warmupCrossFrameMatchedH4===21&&q.h4FullyCoveredCompared<21);
  const ledgerConflict=ledgerProvided&&(!sameCycle||parityCountContradiction);
  const h4=validPoint?p.contiguousObservedClosed.H4:null;
- const local21=validPoint&&!ledgerConflict&&
+ const enough21=!!(validPoint&&FRAMES.every(tf=>
+   p.contiguousObservedClosed?.[tf]>=MIN_21[tf]));
+ const enough50=!!(validPoint&&FRAMES.every(tf=>
+   p.contiguousObservedClosed?.[tf]>=MIN_50[tf]));
+ const local21=validPoint&&enough21&&!ledgerConflict&&
   FRAMES.every(tf=>p.technicalWarmupMissing?.[tf]===0)&&
   p.status==="LOCAL_GEOMETRY_ONLY_NOT_TRADE_READY"&&
   p.technicalWarmupMissing.H4===0&&p.warmupCrossFrameMatchedH4===21&&
@@ -99,7 +110,7 @@ function summarize(input){
   FRAMES.every(tf=>p.latestExpectedUTCGridClosedObservedAtDecision?.[tf]===true&&
    p.latestEligibleClosedObservedAtDecision?.[tf]===true)&&
   p.localGeometryObserved===true;
- const local50=local21&&
+ const local50=local21&&enough50&&
   FRAMES.every(tf=>p.paperHistoryMissing?.[tf]===0);
  const stages=[
   {id:"SOURCE_RIGHTS_AND_SESSION",state:"EXTERNAL_EVIDENCE_REQUIRED",complete:false,
@@ -110,6 +121,11 @@ function summarize(input){
    local21?"LOCAL_21_H4_ONLY_PAPER_HISTORY_PENDING":
    validPoint?"LOCAL_H4_HISTORY_INCOMPLETE_OR_UNVERIFIED":"NO_VALID_POINT_IN_TIME_REPORT",
    complete:false,requiredTechnicalH4:21,requiredPaperH4:50,
+   required21H4Constituents:{...MIN_21},
+   required50H4Constituents:{...MIN_50},
+   local21H4ConstituentCountsSufficient:enough21,
+   local50H4ConstituentCountsSufficient:enough50,
+   perBarConstituentIdentityNotAuthenticated:true,
    observedContiguousH4:h4,remainingToTechnicalH4:h4===null?null:Math.max(0,21-h4),
    remainingToPaperH4:h4===null?null:Math.max(0,50-h4),
    localWarmupCrossFrameVerified:local21,
