@@ -25,7 +25,7 @@
     {
       "id": "ultimate-context-events-v2",
       "filesSHA256": {
-        "coordinator/ultimate_v2.js": "556a41af3598c29ec37b23d66240bb6df25c4d2db4f66779cce20d561efa588e",
+        "coordinator/ultimate_v2.js": "0f4ab8d55d6be7b09481ba298dd6a943379fcd0232338aa05ea59521642a82e3",
         "coordinator/ultimate_v2_contracts.js": "3e4f979348e061f23b090128f59c390f7bcabe76e17520246869397882874f06",
         "coordinator/ultimate_v2_intake.py": "e3bdb6b78d3182890b639eec0fe0c952a99d57a9c9b0dd154e48012ecbfcde4f",
         "coordinator/ultimate_v2_replay.js": "7d710211f9f1bc1fad45d3860d4fbd879ed6234d8ac8f654652932b3a0e6a306",
@@ -35,7 +35,7 @@
       "automaticPaperSwitch": false,
       "realTradingEnabled": false,
       "networkEnabled": false,
-      "comparison": "Same development archives, not an independent holdout; synthetic-only candidates are quarantined as WAIT"
+      "comparison": "Same development archives, not an independent holdout"
     }
   ]
 }
