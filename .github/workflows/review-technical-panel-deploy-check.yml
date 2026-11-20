@@ -15,7 +15,7 @@ jobs:
         shell: bash
         run: |
           python - <<'PY'
-          import urllib.request,time
+          import urllib.request,urllib.error,time
           url='https://gold-precision-v3-review-demo.onrender.com/review-dashboard.html'
           req=urllib.request.Request(url,headers={'Accept':'text/html','User-Agent':'GPP-review-technical-marker-check/1'},method='GET')
           present=False
@@ -32,4 +32,31 @@ jobs:
               print('PUBLIC_REVIEW_HTML_REACHABLE',False)
             if attempt<2:time.sleep(4)
           print('DEPLOY_EVIDENCE', 'PRESENT' if present else 'NOT_YET_CONFIRMED')
+          assert present, 'Review technical panel missing from live Render'
+          base='https://gold-precision-v3-review-demo.onrender.com'
+          jsreq=urllib.request.Request(base+'/review-dashboard.js',headers={'Accept':'application/javascript','User-Agent':'GPP-review-auto-refresh-check/1'},method='GET')
+          with urllib.request.urlopen(jsreq,timeout=32) as response:
+            source=response.read(110000).decode('utf-8','replace')
+            checks={
+              'auto_poll_60_seconds': 'AUTO_POLL_MS=60000' in source,
+              'bounded_stale_history': 'MAX_STALE_MS=600000' in source,
+              'explicit_stale_status': 'لقطة قديمة' in source,
+              'cookie_gate_before_market': 'biquote-viewer-status' in source,
+              'visibility_pauses_market': 'document.visibilityState==="hidden"' in source,
+              'no_executable_trade': 'executable:true' not in source,
+            }
+          print('LIVE_AUTOMATIC_REVIEW_ASSETS',checks)
+          assert all(checks.values()),'New automatic review JS not deployed'
+          unauth=urllib.request.Request(base+'/api/v3/ultimate/biquote-viewer-status',
+                    headers={'Accept':'application/json'},method='GET')
+          try:
+            urllib.request.urlopen(unauth,timeout=32)
+            raise AssertionError('Anonymous session status unexpectedly succeeded')
+          except urllib.error.HTTPError as e:
+            body=e.read(4096)
+            data=__import__('json').loads(body)
+            assert e.code==401 and data.get('viewerSessionReady') is False
+            assert data.get('marketDataRequested') is False
+            assert data.get('ordersSent')==0
+            print('ANONYMOUS_MARKET_POLLING_GUARD','PASS')
           PY
