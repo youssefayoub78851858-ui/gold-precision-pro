@@ -43,7 +43,15 @@ function evaluate(input){
   ids.add(t.id);
   const decision=stamp(t.decisionUTC),entry=stamp(t.entryUTC),
    exit=stamp(t.exitUTC),receipt=stamp(t.firstObservedClosedUTC);
-  if(![decision,entry,exit,receipt].every(Number.isFinite)||
+  // Separately assert when the M15 signal's CLOSED candle first became
+  // visible. An exit receipt cannot establish that the signal existed
+  // before the order decision (no "tomorrow's candle" leakage).
+  // These are UNATTESTED caller-supplied times, never broker proof.
+  const signalClosed=stamp(t.signalClosedUTC),
+        signalSeen=stamp(t.signalFirstObservedUTC);
+  if(![decision,entry,exit,receipt,signalClosed,signalSeen].every(Number.isFinite)||
+   signalClosed%900000!==0||signalClosed>signalSeen||
+   signalSeen>decision||signalClosed>decision||
    decision<freeze||decision<prevExit||entry<decision||exit<=entry||
    receipt<exit||receipt<lastReceipt||receipt>asOf||exit>asOf)
    return blocked("BLOCKED","LOOKAHEAD_OR_NONCHRONOLOGICAL_PAPER_TRADE");
