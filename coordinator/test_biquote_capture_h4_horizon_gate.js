@@ -125,6 +125,36 @@ assert.equal(friday.providerDeclaredH4Projection.paperHistory50ReachableUnderDec
 assert(friday.blockers.includes("H4_21_WARMUP_UNREACHABLE_WITHIN_PROVIDER_DECLARED_WEEKEND_SCENARIO"));
 assert.equal(friday.captureExtended,false);
 assert.equal(friday.brokerSessionCalendarVerified,false);
+// SANITIZED read-only Render checkpoint: Friday 20 Nov 09:46:02 UTC.
+// New observed 14 H4 bars do not convert the Nov25 deadline into
+// 21 contiguous H4 once the provider-declared weekend pause is applied.
+// Vendor's schedule is unverified against the unnamed original broker.
+// NO capture extension, no hypothetical backfill and no trade admission.
+const currentCheckpoint=assessWindow({
+ ...input,
+ asOfUTC:"2026-11-20T09:46:02Z",
+ persistedClosedCounts:{M15:223,H1:55,H4:14},
+ contiguousClosedCounts:{M15:43,H1:10,H4:14}
+});
+safe(currentCheckpoint);
+assert.equal(currentCheckpoint.hypotheticalFutureH4Closures,28);
+assert.equal(currentCheckpoint.maxPossibleStoredH4,42);
+assert.equal(currentCheckpoint.maxPossibleContiguousH4,42);
+assert.equal(currentCheckpoint.theoreticalWarmupH4ReachableByWindowEnd,true);
+assert.equal(currentCheckpoint.paperH4HistoryReachableByWindowEnd,false);
+const fridayNov20=currentCheckpoint.providerDeclaredH4Projection;
+assert.equal(fridayNov20.providerDeclaredFullPauseH4Slots,11);
+assert.equal(fridayNov20.maxPossibleClosedH4FutureSlotsUnderDeclaration,17);
+assert.equal(fridayNov20.maxPossibleContiguousH4AtAnyTimeUnderDeclaration,18);
+assert.equal(fridayNov20.maxPossibleContiguousH4AtCaptureEndUnderDeclaration,13);
+assert.equal(fridayNov20.technicalWarmup21ReachableUnderDeclaration,false);
+assert.equal(fridayNov20.paperHistory50ReachableUnderDeclaration,false);
+assert.equal(fridayNov20.originalBrokerScheduleVerified,false);
+assert.equal(fridayNov20.consentExtended,false);
+assert.equal(currentCheckpoint.captureExtended,false);
+assert.equal(currentCheckpoint.brokerRightsVerified,false);
+assert(currentCheckpoint.blockers.includes(
+ "H4_21_WARMUP_UNREACHABLE_WITHIN_PROVIDER_DECLARED_WEEKEND_SCENARIO"));
 // Invented data, consent extensions and unbounded windows fail closed.
 for(const mutate of [
  x=>{x.origin="REAL_BROKER_APPROVED";},
