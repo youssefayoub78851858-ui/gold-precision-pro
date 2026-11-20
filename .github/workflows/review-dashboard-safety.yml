@@ -9,6 +9,8 @@ on:
       - 'coordinator/biquote_mtf_readiness.js'
       - 'coordinator/v3_multitimeframe.js'
       - 'coordinator/tests/review_dashboard_safety.test.js'
+      - 'coordinator/test_ultimate_v2_public_shadow.js'
+      - 'coordinator/ultimate_v2_public_shadow.js'
       - '.github/workflows/review-dashboard-safety.yml'
   workflow_dispatch:
 jobs:
@@ -30,3 +32,5 @@ jobs:
           node --check coordinator/v3_multitimeframe.js
       - name: Run offline safety regression tests
         run: node --test coordinator/tests/review_dashboard_safety.test.js
+      - name: Verify seven-layer public shadow quarantine (offline)
+        run: node coordinator/test_ultimate_v2_public_shadow.js
