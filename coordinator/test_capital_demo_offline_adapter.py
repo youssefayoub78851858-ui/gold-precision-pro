@@ -4,7 +4,8 @@ import datetime as dt
 import unittest
 
 from capital_demo_offline_adapter import (
-    DEMO_BASE_URL, demo_price_get_blueprint, review_capital_demo_pages
+    DEMO_BASE_URL, demo_price_get_blueprint, review_capital_demo_pages,
+    audit_demo_get_only_request
 )
 
 NOW = dt.datetime(2026, 11, 16, 12, 15, tzinfo=dt.timezone.utc)
@@ -230,6 +231,74 @@ class CapitalDemoOfflineTests(unittest.TestCase):
             demo_price_get_blueprint(EPIC,"M15",NOW,NOW)
         with self.assertRaisesRegex(ValueError,"UNSUPPORTED_RESOLUTION"):
             demo_price_get_blueprint(EPIC,"M5",NOW-dt.timedelta(days=1),NOW)
+
+    def test_demo_history_request_is_inert_and_denies_all_trading_escape_paths(self):
+        blueprint = demo_price_get_blueprint(
+            EPIC, "M15", NOW-dt.timedelta(days=1), NOW
+        )
+        ok = audit_demo_get_only_request(blueprint)
+        self.assertEqual(ok["status"], "DEMO_HISTORICAL_GET_SHAPE_ONLY_NOT_AUTHORIZED")
+        self.assertTrue(ok["requestShapeAcceptable"])
+        self.assertEqual(ok["signal"], "WAIT")
+        self.assertFalse(ok["executable"])
+        self.assertFalse(ok["networkAllowed"])
+        self.assertFalse(ok["orderEndpointsSupported"])
+        self.assertFalse(ok["liveEndpointSupported"])
+        self.assertFalse(ok["dataRightsVerified"])
+        self.assertEqual(ok["providerRequestsMade"], 0)
+        self.assertEqual(ok["httpRequestsMade"], 0)
+        self.assertNotIn("path", ok)
+        self.assertNotIn("query", ok)
+
+        bad = [
+            lambda x: x.update(method="POST"),
+            lambda x: x.update(method="DELETE"),
+            lambda x: x.update(baseUrl="https://api-capital.backend-capital.com"),
+            lambda x: x.update(baseUrl="https://demo-api-capital.backend-capital.com.evil.invalid"),
+            lambda x: x.update(baseUrl="http://demo-api-capital.backend-capital.com"),
+            lambda x: x.update(baseUrl=DEMO_BASE_URL + "/"),
+            lambda x: x.update(path="/api/v1/positions"),
+            lambda x: x.update(path="/api/v1/workingorders"),
+            lambda x: x.update(path="/api/v1/session"),
+            lambda x: x.update(path="/api/v1/prices/../positions"),
+            lambda x: x.update(path="/api/v1/prices/XAU%2FUSD"),
+            lambda x: x.update(path="/api/v1/prices/OTHER?apikey=SECRET"),
+            lambda x: x.update(enabled=True),
+            lambda x: x.update(requiresExplicitCloudRights=False),
+            lambda x: x.update(providerRequestsMade=1),
+            lambda x: x.update(providerRequestsMade=False),
+            lambda x: x.update(providerRequestsMade=0.0),
+            lambda x: x.update(containsCredentials=True),
+            lambda x: x.update(Authorization="Bearer SECRET"),
+            lambda x: x.update(query={"resolution": "MINUTE_15", "max": 1000}),
+            lambda x: x["query"].update(apiKey="SECRET"),
+            lambda x: x["query"].update(resolution=["MINUTE_15"]),
+            lambda x: x["query"].update(resolution="MINUTE_1"),
+            lambda x: x["query"].update(max=999),
+            lambda x: x["query"].update(max=True),
+            lambda x: x["query"].update(max=1000.0),
+            lambda x: x["query"].update(**{"from": "2026-13-45T00:00:00"}),
+            lambda x: x["query"].update(**{"from": "2026-11-15T00:00:00Z"}),
+            lambda x: x["query"].update(**{"to": "2026-11-14T00:00:00"}),
+            lambda x: x["query"].update(**{"from": []}),
+        ]
+        for mutate in bad:
+            with self.subTest(mutator=str(mutate)):
+                attempt = copy.deepcopy(blueprint)
+                mutate(attempt)
+                denied = audit_demo_get_only_request(attempt)
+                self.assertEqual(denied["status"], "BLOCKED")
+                self.assertFalse(denied["requestShapeAcceptable"])
+                self.assertEqual(denied["signal"], "WAIT")
+                self.assertFalse(denied["executable"])
+                self.assertFalse(denied["networkAllowed"])
+                self.assertFalse(denied["orderEndpointsSupported"])
+                self.assertEqual(denied["httpRequestsMade"], 0)
+                self.assertNotIn("SECRET", str(denied))
+        for malformed in (None, {}, [], "GET", 1):
+            denied = audit_demo_get_only_request(malformed)
+            self.assertEqual(denied["status"], "BLOCKED")
+            self.assertFalse(denied["networkAllowed"])
 
     def test_utc_as_of_and_epic_are_mandatory(self):
         for now in (NOW.replace(tzinfo=None),"2026-11-16T14:15:00+02:00"):
