@@ -49,6 +49,11 @@ function validCountLedger(q){
  return FRAMES.every(tf=>NUM(q.storedClosed?.[tf])&&
    NUM(q.contiguousClosed?.[tf])&&
    q.contiguousClosed[tf]<=q.storedClosed[tf])&&
+   [q.h4FullyCoveredCompared,q.h4NotFullyCovered,
+    q.h4FullyCoveredDisagreed,q.h4UnverifiedOrNotCompared].every(NUM)&&
+   q.h4FullyCoveredCompared+q.h4UnverifiedOrNotCompared===q.storedClosed.H4&&
+   q.h4NotFullyCovered<=q.h4UnverifiedOrNotCompared&&
+   q.h4FullyCoveredDisagreed<=q.h4FullyCoveredCompared&&
    q.h4WarmupDeficit===Math.max(0,21-q.contiguousClosed.H4)&&
    q.h4PaperHistoryDeficit===Math.max(0,50-q.contiguousClosed.H4);
 }
@@ -76,7 +81,14 @@ function summarize(input){
  // headline. Missing ledger is permissible only as an explicitly weaker
  // point-in-time-only diagnostic, never approval for trade execution.
  const ledgerProvided=q!==undefined;
- const ledgerConflict=ledgerProvided&&!sameCycle;
+ // A ledger with fewer than 21 M15-covered H4 comparisons cannot
+ // corroborate a point report claiming 21 fully parity-matched H4 bars.
+ // Aggregate overlap counts are UNORDERED: passing is necessary, not
+ // sufficient to prove the latest 21 H4 or any vendor entitlement.
+ const parityCountContradiction=!!(sameCycle&&
+  p.warmupCrossFrameFullyVerified===true&&
+  p.warmupCrossFrameMatchedH4===21&&q.h4FullyCoveredCompared<21);
+ const ledgerConflict=ledgerProvided&&(!sameCycle||parityCountContradiction);
  const h4=validPoint?p.contiguousObservedClosed.H4:null;
  const local21=validPoint&&!ledgerConflict&&
   FRAMES.every(tf=>p.technicalWarmupMissing?.[tf]===0)&&
@@ -103,6 +115,9 @@ function summarize(input){
    localWarmupCrossFrameVerified:local21,
    independentPerBarParityProven:false,countOnlyLedgerRecognized:validCounts,
    countLedgerProvided:ledgerProvided,countLedgerConflictsWithPointInTime:ledgerConflict,
+   countLedgerParityShortfall:parityCountContradiction,
+   h4ArchiveM15OverlapComparedCountOnly:sameCycle?q.h4FullyCoveredCompared:null,
+   h4ArchiveM15ParityUnverifiedCountOnly:sameCycle?q.h4UnverifiedOrNotCompared:null,
    countLedgerSameDecisionCycle:sameCycle,countLedgerCanAuthorizeTrades:false},
   {id:"MACRO_GC_ORDER_FLOW",state:"REALTIME_PROVENANCE_AND_SYNC_UNVERIFIED",complete:false,
    reason:"NO_LICENSED_SYNCHRONIZED_DXY_YIELDS_GC_AND_NEWS_EVIDENCE"},
