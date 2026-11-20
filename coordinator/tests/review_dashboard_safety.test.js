@@ -104,3 +104,29 @@ test("snapshot rejects absent rights and research safety fields",()=>{
   status:"OBSERVED_READONLY_UNVERIFIED"};
  assert.equal(validateSnapshot(packet,now),null);
 });
+
+test("private V3 technical watch blocks unauthenticated and unlicensed observations",()=>{
+ const {observe}=require("../biquote_private_v3_watch");
+ const anonymous=observe({origin:"PUBLIC",chart:chart(now)});
+ assert.equal(anonymous.signal,"WAIT");
+ assert.equal(anonymous.executable,false);
+ assert.equal(anonymous.entry,null);
+ assert.equal(anonymous.stopLoss,null);
+ assert.equal(anonymous.takeProfit,null);
+ assert.equal(anonymous.reason,"NOT_AUTHENTICATED_PERSONAL_CHART");
+ const noRights=observe({origin:"AUTHENTICATED_PERSONAL_BIQUOTE_PRIVATE_CHART",
+  priceBasis:"UNKNOWN",chart:chart(now)});
+ assert.equal(noRights.signal,"WAIT");
+ assert.equal(noRights.reason,"MIXED_OR_UNVERIFIED_PRICE_BASIS");
+ assert.equal(noRights.liveOrdersAllowed,false);
+});
+test("private V3 watch refuses unsupported cross-frame evidence",()=>{
+ const {observe}=require("../biquote_private_v3_watch");
+ const x=observe({origin:"AUTHENTICATED_PERSONAL_BIQUOTE_PRIVATE_CHART",
+  priceBasis:"MID_WITH_POSSIBLE_BID_SEED",sourceSnapshotStatus:"WAIT_CROSS_FRAME_GAPS",
+  chart:chart(now),asOfUTC:new Date(now).toISOString()});
+ assert.equal(x.signal,"WAIT");
+ assert.equal(x.status,"WAIT_CROSS_FRAME_EVIDENCE");
+ assert.equal(x.reason,"SOURCE_HAS_UNRESOLVED_CROSS_FRAME_GAPS");
+ assert.equal(x.brokerOrdersSent,0);
+});
