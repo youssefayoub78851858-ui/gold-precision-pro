@@ -54,6 +54,9 @@ class MultiSourceOfflineTests(unittest.TestCase):
         self.assert_wait(result)
         self.assertEqual(len(result["layers"]), 9)
         self.assertEqual(result["layers"]["DXY"]["status"], "NOT_CONNECTED")
+        self.assertIn("Capital.com Demo", result["layers"]["XAUUSD_BBO"]["providerCandidate"])
+        self.assertFalse(result["layers"]["XAUUSD_BBO"]["liveReady"])
+        self.assertFalse(result["layers"]["XAUUSD_BBO"]["researchAdmitted"])
         self.assertEqual(result["layers"]["US02Y"]["status"], "FREE_DAILY_REFERENCE_CANDIDATE")
         self.assertEqual(result["layers"]["US10Y"]["status"], "FREE_DAILY_REFERENCE_CANDIDATE")
         self.assertEqual(result["layers"]["GC_DEPTH"]["status"], "NOT_CONNECTED")
@@ -65,6 +68,16 @@ class MultiSourceOfflineTests(unittest.TestCase):
         self.assert_wait(result)
         self.assertEqual(result["layers"]["XAUUSD_BBO"]["syntheticClosedBars"],
                          {"M15": 16, "H1": 4, "H4": 1})
+        self.assertEqual(result["layers"]["XAUUSD_BBO"]["status"],
+                         "ALTERNATE_MASSIVE_SYNTHETIC_GEOMETRY_ONLY")
+        self.assertEqual(result["layers"]["XAUUSD_BBO"]["fixtureProvider"],
+                         "MASSIVE_SYNTHETIC_ALTERNATE_NOT_SELECTED_CAPITAL_DEMO")
+        self.assertFalse(result["layers"]["XAUUSD_BBO"]["selectedCapitalDemoHistoryValidated"])
+        self.assertIn("Capital.com Demo", result["layers"]["XAUUSD_BBO"]["providerCandidate"])
+        self.assertIn(
+            "CAPITAL_DEMO_SELECTED_XAUUSD_RENDER_RIGHTS_KYC_AND_REAL_BID_ASK_SESSION_PARITY",
+            result["remainingExternalRequirements"]
+        )
         self.assertEqual(result["layers"]["GC_TRADES"]["status"], "SYNTHETIC_SCHEMA_ONLY")
         self.assertEqual(result["layers"]["GC_DEPTH"]["status"], "SYNTHETIC_SCHEMA_ONLY")
         self.assertEqual(result["diagnosticOnlySyntheticTemporalComparison"]["status"],
