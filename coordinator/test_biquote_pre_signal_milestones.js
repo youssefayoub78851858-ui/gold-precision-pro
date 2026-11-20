@@ -96,12 +96,16 @@ const counts={mode:"BIQUOTE_H4_EVIDENCE_QUALITY_LEDGER_COUNTS_ONLY",
  stage3ReportAtUTC:pt.asOfUTC,
  storedClosed:pt.storedClosedCounts,contiguousClosed:pt.contiguousObservedClosed,
  h4WarmupDeficit:10,h4PaperHistoryDeficit:39,
+ h4FullyCoveredCompared:2,h4NotFullyCovered:7,
+ h4FullyCoveredDisagreed:0,h4UnverifiedOrNotCompared:9,
  privateQuote:"VERY_PRIVATE_QUOTE"};
 const countReport=summarize({pointInTime:pt,countEvidence:counts});
 safe(countReport);a.equal(countReport.stages[1].countOnlyLedgerRecognized,true);
 a.equal(countReport.stages[1].countLedgerSameDecisionCycle,true);
 a.equal(countReport.stages[1].countLedgerProvided,true);
 a.equal(countReport.stages[1].countLedgerConflictsWithPointInTime,false);
+a.equal(countReport.stages[1].h4ArchiveM15OverlapComparedCountOnly,2);
+a.equal(countReport.stages[1].h4ArchiveM15ParityUnverifiedCountOnly,9);
 a.equal(countReport.stages[1].countLedgerCanAuthorizeTrades,false);
 a.equal(countReport.stages[1].independentPerBarParityProven,false);
 const mismatchedCount=summarize({pointInTime:pt,countEvidence:
@@ -118,13 +122,18 @@ a.equal(fakeCount.stages[1].countLedgerSameDecisionCycle,false);
 a.equal(fakeCount.stages[1].countLedgerConflictsWithPointInTime,true);
 // Conflicting or invalid second ledger cannot inflate the headline to 21/50.
 const pt21=point(21,true),pt50=point(50,true);
-const ledgerFor=p=>({
- ...counts,stage3ReportAtUTC:p.asOfUTC,
- storedClosed:p.storedClosedCounts,
- contiguousClosed:p.contiguousObservedClosed,
- h4WarmupDeficit:Math.max(0,21-p.contiguousObservedClosed.H4),
- h4PaperHistoryDeficit:Math.max(0,50-p.contiguousObservedClosed.H4)
-});
+const ledgerFor=p=>{
+ const covered=Math.min(21,p.storedClosedCounts.H4);
+ return {...counts,stage3ReportAtUTC:p.asOfUTC,
+  storedClosed:p.storedClosedCounts,
+  contiguousClosed:p.contiguousObservedClosed,
+  h4FullyCoveredCompared:covered,
+  h4NotFullyCovered:0,h4FullyCoveredDisagreed:0,
+  h4UnverifiedOrNotCompared:p.storedClosedCounts.H4-covered,
+  h4WarmupDeficit:Math.max(0,21-p.contiguousObservedClosed.H4),
+  h4PaperHistoryDeficit:Math.max(0,50-p.contiguousObservedClosed.H4)
+ };
+};
 const cross21=summarize({pointInTime:pt21,
  countEvidence:{...ledgerFor(pt21),stage3ReportAtUTC:
    iso(Date.parse(pt21.asOfUTC)+1000)}});
@@ -144,6 +153,26 @@ const goodPair=summarize({pointInTime:pt50,countEvidence:ledgerFor(pt50)});
 safe(goodPair);
 a.equal(goodPair.local50H4Observed,true);
 a.equal(goodPair.stages[1].countLedgerSameDecisionCycle,true);
+// Same counts and timestamps STILL contradict full 21-H4 parity when
+// the source log has only 2 complete H4-M15 comparisons.
+const lowParity={...ledgerFor(pt50),h4FullyCoveredCompared:2,
+ h4UnverifiedOrNotCompared:pt50.storedClosedCounts.H4-2};
+const lowParityReport=summarize({pointInTime:pt50,countEvidence:lowParity});
+safe(lowParityReport);
+a.equal(lowParityReport.stages[1].countLedgerSameDecisionCycle,true);
+a.equal(lowParityReport.stages[1].countOnlyLedgerRecognized,true);
+a.equal(lowParityReport.stages[1].countLedgerParityShortfall,true);
+a.equal(lowParityReport.stages[1].countLedgerConflictsWithPointInTime,true);
+a.equal(lowParityReport.stages[1].state,"CONFLICTING_OR_INVALID_CROSS_REPORTS");
+a.equal(lowParityReport.local21H4Observed,false);
+a.equal(lowParityReport.local50H4Observed,false);
+// Corrupt parity counters cannot make a source count ledger valid.
+const malformedParity=summarize({pointInTime:pt50,countEvidence:{
+ ...ledgerFor(pt50),h4FullyCoveredCompared:1000
+}});
+safe(malformedParity);
+a.equal(malformedParity.stages[1].countLedgerConflictsWithPointInTime,true);
+a.equal(malformedParity.stages[1].countOnlyLedgerRecognized,false);
 // A forged H4-ready point summary with M15/H1 too short cannot claim
 // multiframe EMA warmup or 50-H4 paper history.
 const shortM15=point(50,true);
