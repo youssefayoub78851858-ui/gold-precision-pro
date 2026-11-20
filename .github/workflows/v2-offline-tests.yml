@@ -321,6 +321,9 @@ jobs:
           node test_ultimate_news_impact.js
           python -m unittest -v test_ultimate_http test_ultimate_replay test_ultimate_paper test_ultimate_connectors test_ultimate_walkforward test_ultimate_intake
 
+      - name: Offline release chronology guard outside frozen V2
+        working-directory: coordinator
+        run: python -m unittest -v test_offline_calendar_release_gate
       - name: Recorded BID walk-forward comparison (offline, no provider)
         run: python coordinator/ultimate_walkforward.py research/recorded/2026-09-bid.json research/recorded/2026-10-bid.json --output /tmp/ultimate-walkforward.json
 
