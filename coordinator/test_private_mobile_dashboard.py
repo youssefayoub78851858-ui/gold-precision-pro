@@ -32,6 +32,19 @@ class PrivateMobileDashboardTests(unittest.TestCase):
         self.assertNotIn("api_token=",HTML)
         self.assertNotIn("CUTOVER_MODE=live",HTML)
 
+    def test_selected_capital_demo_display_is_conservative_and_mobile_safe(self):
+        self.assertIn('id="capital-selected-source"', HTML)
+        self.assertIn("مصدر الذهب المختار: Capital.com Demo", HTML)
+        self.assertIn('id="capital-source-state"', HTML)
+        self.assertIn("WAIT — مصدر Capital.com غير متصل بعد", HTML)
+        self.assertIn("مفاتيح API تسمح بالتداول", HTML)
+        self.assertIn("FXCM — مصدر بديل غير مفعّل", HTML)
+        self.assertNotIn("id=\"capital-live-signal\"", HTML)
+        self.assertNotIn("/api/v1/positions", HTML)
+        self.assertNotIn("CAPITAL_DEMO_PRIVATE_PRICE_GET_ENABLED", HTML)
+        self.assertNotIn("CST:", HTML)
+        self.assertNotIn("X-SECURITY-TOKEN:", HTML)
+
     def test_authenticated_monitor_uses_one_sealed_vault_snapshot(self):
         # Concurrent data capture may write a new vault while the mobile
         # status is evaluated. Three panels must share one sealed snapshot.
