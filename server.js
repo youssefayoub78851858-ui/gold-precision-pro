@@ -91,6 +91,19 @@ const server = http.createServer(async (req, res) => {
       return reply(503,{status:"VIEWER_SESSION_UNAVAILABLE"});
     }
   }
+  // Anonymous dashboard visits never trigger upstream quotes. The private
+  // viewer check returns only a safe boolean, not market data or credentials.
+  if(paperPath==="/api/v3/ultimate/biquote-viewer-status"){
+    if(!DEMO_MODE)return send(res,404,{signal:"WAIT",executable:false});
+    if(req.method!=="GET")return send(res,405,{signal:"WAIT",executable:false});
+    const session=require("./coordinator/biquote_viewer_session");
+    const ready=session.authenticated(req.headers);
+    res.writeHead(ready?200:401,{"Content-Type":"application/json; charset=utf-8",
+      "Cache-Control":"private, no-store","Vary":"Cookie",
+      "X-Content-Type-Options":"nosniff","Referrer-Policy":"no-referrer"});
+    return res.end(JSON.stringify({signal:"WAIT",executable:false,
+      viewerSessionReady:ready,marketDataRequested:false,ordersSent:0}));
+  }
   // Separate public BIQUOTE technical observations from the offline paper
   // chart. Raw quote prices require the existing private viewer secret,
   // verified by the private coordinator. No credentials or raw bars public.
