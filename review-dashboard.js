@@ -175,10 +175,55 @@
    return "WAIT · "+v.watchLabel+" — مراقبة فنية رجعية فقط، بلا دخول أو وقف أو هدف";
   return "WAIT — تغطية H1/H4 مع M15 أو الشروط الفنية غير مكتملة";
  }
+ // Only for the authenticated, currently fresh private H4 chart:
+ // compare a vendor-declared (not broker-certified) market-session tail
+ // with the raw four-hour UTC tail. Never accept a supplied readiness,
+ // broker rights flag, price or trade direction from this diagnostic.
+ function vendorH4SessionLabel(result){
+  const v=result?.d?.privateVendorH4Tail,rows=result?.chart?.H4;
+  const fallback="H4: جدول وسيط MT5 غير مثبت؛ لا اعتماد للتسلسل السوقي";
+  if(!Array.isArray(rows)||!rows.length||!v||
+     v.mode!=="BIQUOTE_VENDOR_DECLARED_H4_ADJACENCY_RESEARCH_ONLY"||
+     v.status!=="PROVIDER_DECLARED_PAUSE_SCENARIO_NOT_TRADING_PROOF"||
+     v.signal!=="WAIT"||v.executable!==false||
+     v.originalBrokerIdentified!==false||
+     v.originalBrokerCalendarVerified!==false||
+     v.brokerMarketDataRightsVerified!==false||
+     v.all21H4M15ParityVerified!==false||
+     v.perBarFirstSeenVerified!==false||
+     v.researchWarmupApproved!==false||
+     v.paperOrdersAllowed!==false||v.liveOrdersAllowed!==false||
+     v.brokerOrdersSent!==0||v.paperOrdersSent!==0||
+     v.providerRequestsMade!==0||v.missingCandlesSynthesized!==0)
+   return fallback;
+  const number=x=>Number.isSafeInteger(x)&&x>=0&&x<=48;
+  if(![v.observedClosedH4Bars,v.strictUtcH4Tail,
+    v.providerDeclaredSessionAdjacentH4Tail,
+    v.providerDeclaredPauseGapPairs,
+    v.providerDeclaredPauseMissingH4Slots,
+    v.unexplainedGapPairs,v.unknownCalendarGapPairs].every(number)||
+    v.observedClosedH4Bars!==rows.length||
+    v.strictUtcH4Tail<1||
+    v.providerDeclaredSessionAdjacentH4Tail<v.strictUtcH4Tail||
+    v.providerDeclaredSessionAdjacentH4Tail>rows.length||
+    v.providerScenarioReached21H4!==
+      (v.providerDeclaredSessionAdjacentH4Tail>=21))
+    return fallback;
+  let localTail=1;
+  for(let i=rows.length-1;i>0;i--){
+   if(rows[i].t-rows[i-1].t!==WIDTH.H4)break;
+   localTail++;
+  }
+  if(localTail!==v.strictUtcH4Tail)return fallback;
+  return "H4 مغلقة: "+v.observedClosedH4Bars+
+   " | UTC متتالية: "+v.strictUtcH4Tail+
+   " | حسب استراحات BiQuote: "+v.providerDeclaredSessionAdjacentH4Tail+
+   " (توضيحي فقط؛ جدول الوسيط الأصلي وحقوق المصدر غير مثبتين)";
+ }
  // Pure validators are exposed only to local Node offline tests.
  if(typeof module!=="undefined"&&module.exports)
   module.exports={validateChart,validateSnapshot,localLatestParity,
-    localCoveredParityAudit,researchWatch};
+    localCoveredParityAudit,researchWatch,vendorH4SessionLabel};
  if(typeof document==="undefined")return;
  const $=id=>document.getElementById(id);
  let frame="M15",state=null,pending=false,expiry=0;
@@ -209,6 +254,8 @@
   $("trend-status").textContent="غير متاح";
   $("watch-status").textContent="WAIT";
   $("parity-status").textContent="تطابق الفريمات: غير متحقق";
+  $("vendor-h4-session").textContent=
+    "H4: جدول وسيط MT5 غير مثبت؛ لا اعتماد للتسلسل السوقي";
   $("chart-status").textContent="لا تُعرض أسعار غير متحققة أو شموع مفتوحة";
   blank("WAIT — لا توجد شموع خاصة موثقة");
  }
@@ -324,6 +371,7 @@
    $("parity-status").textContent=localLatestParity(verified.chart)
      ?"تطابق أحدث M15 / H1 / H4: متحقق محلياً (لا يثبت اكتمال التاريخ)"
      :"تطابق أحدث M15 / H1 / H4: غير متحقق — WAIT";
+   $("vendor-h4-session").textContent=vendorH4SessionLabel(verified);
    $("quality-status").textContent="M15 "+packet.frameSummary.M15.closedCount+
      " | H1 "+packet.frameSummary.H1.closedCount+
      " | H4 "+packet.frameSummary.H4.closedCount+
