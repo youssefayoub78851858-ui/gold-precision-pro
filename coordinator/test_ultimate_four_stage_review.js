@@ -148,4 +148,61 @@ a.equal(status.perLayer.GC_DEPTH.sourceQualified,false);
 a.equal(mismatch.signal,"WAIT");
 a.equal(mismatch.executable,false);
 a.equal(mismatch.hypotheticalSyntheticPlan,null);
+// A vendor-declared weekend research sequence may span missing CLOSED
+// market slots, but must NEVER displace the strict UTC-grid data gate,
+// attest an original broker, leak raw receipts or authorize trades.
+const vendorAsOf="2026-11-23T09:00:00Z";
+const vendorH4={
+ origin:"UNATTESTED_VENDOR_NOV2026_H4_OPEN_AND_RECEIPT_TIMES_ONLY",
+ asOfUTC:vendorAsOf,
+ bars:[
+  {openUTC:"2026-11-20T16:00:00Z",firstSeenClosedUTC:"2026-11-20T20:00:30Z"},
+  {openUTC:"2026-11-20T20:00:00Z",firstSeenClosedUTC:"2026-11-22T23:01:00Z"},
+  {openUTC:"2026-11-22T20:00:00Z",firstSeenClosedUTC:"2026-11-23T00:00:30Z"}
+ ],
+ brokerPermissionVerified:true,originalBrokerCalendarVerified:true,
+ rawBid:98765.43,privateToken:"H4_SECRET_DO_NOT_EXPOSE"
+};
+const vendorView=reviewFourStages({
+ dataOrigin:"RECORDED_UNVERIFIED",
+ snapshot:{...source,asOfUTC:vendorAsOf},
+ h4SessionTimeEvidence:vendorH4
+});
+const vendorResult=vendorView.stages.data.vendorConditionalH4Timing;
+a.equal(vendorResult.mode,"BIQUOTE_VENDOR_SESSION_H4_OFFLINE_DIAGNOSTIC_V1");
+a.equal(vendorResult.status,"VENDOR_CONDITIONAL_COUNTS_ONLY_NOT_TRADE_READY");
+a.equal(vendorResult.decisionClockAligned,true);
+a.equal(vendorResult.rawUtcGridTail,1);
+a.equal(vendorResult.vendorConditionalSessionTail,3);
+a.equal(vendorResult.providerDeclaredFullyClosedH4SlotsBridged,11);
+a.equal(vendorResult.originalBrokerSessionCalendarVerified,false);
+a.equal(vendorResult.sourceRightsVerified,false);
+a.equal(vendorResult.canReplaceStrictDataGate,false);
+a.equal(vendorResult.sessionTimesCanAuthorizeTrades,false);
+a.equal(vendorView.stages.data.status,"BLOCKED");
+a.equal(vendorView.signal,"WAIT");
+a.equal(vendorView.executable,false);
+a.equal(vendorView.paperOrdersAllowed,false);
+a.equal(vendorView.hypotheticalSyntheticPlan,null);
+a(!JSON.stringify(vendorResult).includes("H4_SECRET_DO_NOT_EXPOSE"));
+a(!JSON.stringify(vendorResult).includes("98765.43"));
+a(!JSON.stringify(vendorResult).includes("openUTC"));
+a(!JSON.stringify(vendorResult).includes("firstSeenClosedUTC"));
+const stalePacket=reviewFourStages({
+ dataOrigin:"RECORDED_UNVERIFIED",snapshot:{...source,asOfUTC:clock},
+ h4SessionTimeEvidence:vendorH4
+});
+a.equal(stalePacket.stages.data.vendorConditionalH4Timing.status,
+ "NO_ALIGNED_H4_SESSION_TIMES");
+a.equal(stalePacket.stages.data.vendorConditionalH4Timing.decisionClockAligned,false);
+a.equal(stalePacket.signal,"WAIT");
+const contaminated=structuredClone(vendorH4);
+contaminated.bars[0].openPrice=12345678;
+const contaminatedView=reviewFourStages({
+ dataOrigin:"RECORDED_UNVERIFIED",snapshot:{...source,asOfUTC:vendorAsOf},
+ h4SessionTimeEvidence:contaminated
+});
+a.equal(contaminatedView.stages.data.vendorConditionalH4Timing.status,"BLOCKED");
+a(!JSON.stringify(contaminatedView).includes("12345678"));
+a.equal(contaminatedView.signal,"WAIT");
 console.log('PASS four-stage closed-only geometry, synthetic BUY entry/SL/TP, independent context veto, holdout/paper blockers, no lookahead or trade');
