@@ -53,36 +53,39 @@ class PreSubscriptionAudit(unittest.TestCase):
         self.assertTrue(all(s["status"] == "CODE_PREFLIGHT_FAILED" for s in r["stages"]))
         self.assertFalse(r["liveTradingAuthorized"])
 
-    def test_removed_guard_is_blocking(self):
-        with tempfile.TemporaryDirectory() as t:
-            root = pathlib.Path(t)
+    def test_removed_selected_capital_guard_is_blocking(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
             for group in CHECKS.values():
                 for relative, guards in group:
                     p = root / relative
                     p.parent.mkdir(parents=True, exist_ok=True)
                     p.write_text(" ".join(guards))
-            (root / "coordinator/eodhd_ws_bridge.js").write_text("XAUUSD")
-            r = build_report(root)
-        gold = next(s for s in r["stages"] if s["id"] == "gold_prices")
-        self.assertEqual(gold["status"], "CODE_PREFLIGHT_FAILED")
-        self.assertTrue(any("EODHD_CONNECT_APPROVED" in issue
-                            for issue in gold["blockingCodeChecks"]))
-
-    def test_selected_capital_code_guard_missing_fails_closed(self):
-        with tempfile.TemporaryDirectory() as t:
-            root = pathlib.Path(t)
-            for group in CHECKS.values():
-                for relative, guards in group:
-                    p = root / relative
-                    p.parent.mkdir(parents=True, exist_ok=True)
-                    p.write_text(" ".join(guards))
-            p = root / "coordinator/capital_demo_https_transport.py"
-            p.write_text("NoRedirect HTTPSHandler")
+            (root / "coordinator/capital_demo_private_get_boundary.py").write_text(
+                "CAPITAL_DEMO_PRIVATE_PRICE_GET_ENABLED")
             report = build_report(root)
-        gold = next(item for item in report["stages"] if item["id"] == "gold_prices")
+        gold = next(s for s in report["stages"] if s["id"] == "gold_prices")
         self.assertEqual(gold["status"], "CODE_PREFLIGHT_FAILED")
-        self.assertTrue(any("PRIVATE_DEMO_TRANSPORT_NOT_APPROVED" in c
-                            for c in gold["blockingCodeChecks"]))
+        self.assertTrue(any("CAPITAL_DEMO_PRIVATE_RIGHTS_DOCUMENTED" in issue
+                            for issue in gold["blockingCodeChecks"]))
+        self.assertFalse(report["liveDataValidated"])
+
+    def test_unselected_eodhd_and_fxcm_files_are_not_capital_requirements(self):
+        # Only the selected provider's code belongs in primary gold readiness.
+        self.assertFalse(any(
+            "eodhd_" in path.lower() or "fxcm_" in path.lower()
+            for path, _ in CHECKS["gold_prices"]))
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            for group in CHECKS.values():
+                for relative, guards in group:
+                    p = root / relative
+                    p.parent.mkdir(parents=True, exist_ok=True)
+                    p.write_text(" ".join(guards))
+            # No EODHD, FXCM or Massive code at all in this fake tree.
+            report = build_report(root)
+        self.assertTrue(report["preSubscriptionStaticChecksPassed"])
+        self.assertEqual(report["selectedGoldProvider"], "CAPITAL_COM_DEMO")
         self.assertFalse(report["liveDataValidated"])
         self.assertFalse(report["executable"])
 
