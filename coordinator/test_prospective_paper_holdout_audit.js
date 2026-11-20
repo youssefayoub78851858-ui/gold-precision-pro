@@ -25,6 +25,9 @@ const trade=(i,gross=2)=>({
  // M15 candle closed BEFORE decision; receipt is after that close.
  signalClosedUTC:iso(start+3600000*i),
  signalFirstObservedUTC:iso(start+3600000*i),
+ // H1/H4 need independently closed and first-seen BEFORE decision too.
+ contextClosedUTC:{H1:iso(start+3600000*i),H4:iso(start+Math.floor(i/4)*14400000)},
+ contextFirstObservedUTC:{H1:iso(start+3600000*i),H4:iso(start+Math.floor(i/4)*14400000)},
  grossPnLUsd:gross,spreadUsd:.4,slippageUsd:.1,commissionUsd:.1,
  initialRiskUsd:2,entryPrice:"SECRET_PRICE"
 });
@@ -62,6 +65,13 @@ for(const data of [
  {...packet([trade(1)]),trades:[{...trade(1),signalFirstObservedUTC:iso(start+3600000+900000)}]},
  {...packet([trade(1)]),trades:[{...trade(1),signalClosedUTC:"2026-11-18T01:05:00Z"}]},
  {...packet([trade(1)]),trades:[{...trade(1),signalFirstObservedUTC:undefined}]},
+ {...packet([trade(1)]),trades:[{...trade(1),contextClosedUTC:undefined}]},
+ {...packet([trade(1)]),trades:[{...trade(1),contextClosedUTC:{H1:iso(start+3600000)}}]},
+ {...packet([trade(1)]),trades:[{...trade(1),contextFirstObservedUTC:{H1:iso(start+3600000),H4:"not-a-time"}}]},
+ {...packet([trade(1)]),trades:[{...trade(1),contextClosedUTC:{H1:iso(start+3600000+900000),H4:iso(start)}}]},
+ {...packet([trade(1)]),trades:[{...trade(1),contextClosedUTC:{H1:iso(start+3600000),H4:iso(start+14400000)}}]},
+ {...packet([trade(1)]),trades:[{...trade(1),contextFirstObservedUTC:{H1:iso(start+3600000+60000),H4:iso(start)}}]},
+ {...packet([trade(1)]),trades:[{...trade(1),contextFirstObservedUTC:{H1:iso(start+3600000),H4:iso(start+3600000+60000)}}]},
  {...packet([trade(1)]),trades:[{...trade(1),decisionUTC:iso(start+3600000+120000)}]},
  {...packet([trade(1)]),trades:[{...trade(1),spreadUsd:-1}]},
  {...packet([trade(1)]),trades:[{...trade(1),commissionUsd:NaN}]},
@@ -73,4 +83,8 @@ for(const data of [
   const x=evaluate(data);safe(x);
   a.equal(x.status,"BLOCKED");
 }
+const missingContext=evaluate({...packet([trade(1)]),trades:[{
+ ...trade(1),contextFirstObservedUTC:{H1:iso(start+3600000),H4:iso(start+3600000+60000)}
+}]});
+a.equal(missingContext.reason,"MULTITIMEFRAME_CONTEXT_NOT_KNOWN_AT_DECISION");
 console.log("PASS sanitized prospective paper arithmetic: costs, net R, drawdown, chronology, no source/trading authorization");
