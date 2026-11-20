@@ -701,7 +701,7 @@ document.addEventListener('DOMContentLoaded',function(){
       c.kycRequiredBeforeRealDemoAPIUse!==true||
       c.providerRequestsMade!==0||c.ordersSent!==0||
       c.executable!==false||c.signal!=='WAIT')throw Error('UNSAFE_KYC_GATE');
-   kyc.textContent='Capital.com Demo مختار لكنه غير متصل. توثيق الهوية مؤجّل لآخر إجراء مطلوب منك، بعد موافقة الشركة على حقوق البيانات. حتى بعد التوثيق لازم اختبار تاريخ BID/ASK والتداول الورقي. WAIT — لا مفتاح ولا صفقات.';
+   if(kyc)kyc.textContent='Capital.com Demo مختار لكنه غير متصل. توثيق الهوية مؤجّل لآخر إجراء مطلوب منك، بعد موافقة الشركة على حقوق البيانات. حتى بعد التوثيق لازم اختبار تاريخ BID/ASK والتداول الورقي. WAIT — لا مفتاح ولا صفقات.';
    const nodes=[];
    for(const [id,name] of Object.entries(names)){
     const layer=v.layers[id];
@@ -727,7 +727,7 @@ document.addEventListener('DOMContentLoaded',function(){
    item.textContent='تعذّر التحقق من وضع المصادر — لا تعتبر أي مصدر جاهزاً';
    grid.appendChild(item);
    status.textContent='WAIT — حالة المصادر غير متاحة';
-   kyc.textContent='WAIT — تعذّر فحص تأجيل التوثيق. لا ترسل أي بيانات هوية أو مفاتيح API؛ لا يوجد إذن لتشغيل الصفقات.';
+   if(kyc)kyc.textContent='WAIT — تعذّر فحص تأجيل التوثيق. لا ترسل أي بيانات هوية أو مفاتيح API؛ لا يوجد إذن لتشغيل الصفقات.';
    const decisionProof=document.getElementById("gdc-source-proof");
    if(decisionProof)decisionProof.textContent=
      "متطلبات المصادر: تعذّر التحقق؛ العدد غير معروف، ولا يوجد إثبات لاتصال GC / DXY / السندات / الأخبار.";
