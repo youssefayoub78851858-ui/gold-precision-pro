@@ -100,6 +100,8 @@ const counts={mode:"BIQUOTE_H4_EVIDENCE_QUALITY_LEDGER_COUNTS_ONLY",
 const countReport=summarize({pointInTime:pt,countEvidence:counts});
 safe(countReport);a.equal(countReport.stages[1].countOnlyLedgerRecognized,true);
 a.equal(countReport.stages[1].countLedgerSameDecisionCycle,true);
+a.equal(countReport.stages[1].countLedgerProvided,true);
+a.equal(countReport.stages[1].countLedgerConflictsWithPointInTime,false);
 a.equal(countReport.stages[1].countLedgerCanAuthorizeTrades,false);
 a.equal(countReport.stages[1].independentPerBarParityProven,false);
 const mismatchedCount=summarize({pointInTime:pt,countEvidence:
@@ -107,10 +109,61 @@ const mismatchedCount=summarize({pointInTime:pt,countEvidence:
 safe(mismatchedCount);
 a.equal(mismatchedCount.stages[1].countOnlyLedgerRecognized,true);
 a.equal(mismatchedCount.stages[1].countLedgerSameDecisionCycle,false);
+a.equal(mismatchedCount.stages[1].countLedgerConflictsWithPointInTime,true);
+a.equal(mismatchedCount.stages[1].state,"CONFLICTING_OR_INVALID_CROSS_REPORTS");
 const fakeCount=summarize({pointInTime:pt,countEvidence:
  {...counts,storedClosed:{...counts.storedClosed,H4:1000}}});
 safe(fakeCount);
 a.equal(fakeCount.stages[1].countLedgerSameDecisionCycle,false);
+a.equal(fakeCount.stages[1].countLedgerConflictsWithPointInTime,true);
+// Conflicting or invalid second ledger cannot inflate the headline to 21/50.
+const pt21=point(21,true),pt50=point(50,true);
+const ledgerFor=p=>({
+ ...counts,stage3ReportAtUTC:p.asOfUTC,
+ storedClosed:p.storedClosedCounts,
+ contiguousClosed:p.contiguousObservedClosed,
+ h4WarmupDeficit:Math.max(0,21-p.contiguousObservedClosed.H4),
+ h4PaperHistoryDeficit:Math.max(0,50-p.contiguousObservedClosed.H4)
+});
+const cross21=summarize({pointInTime:pt21,
+ countEvidence:{...ledgerFor(pt21),stage3ReportAtUTC:
+   iso(Date.parse(pt21.asOfUTC)+1000)}});
+safe(cross21);a.equal(cross21.local21H4Observed,false);
+a.equal(cross21.stages[1].state,"CONFLICTING_OR_INVALID_CROSS_REPORTS");
+a.equal(cross21.stages[1].countLedgerConflictsWithPointInTime,true);
+const cross50=summarize({pointInTime:pt50,
+ countEvidence:{...ledgerFor(pt50),
+   storedClosed:{...pt50.storedClosedCounts,H4:51}}});
+safe(cross50);a.equal(cross50.local50H4Observed,false);
+a.equal(cross50.stages[1].state,"CONFLICTING_OR_INVALID_CROSS_REPORTS");
+const malformed=summarize({pointInTime:pt50,
+ countEvidence:{...ledgerFor(pt50),tradeEligible:true}});
+safe(malformed);a.equal(malformed.local50H4Observed,false);
+a.equal(malformed.stages[1].countLedgerConflictsWithPointInTime,true);
+const goodPair=summarize({pointInTime:pt50,countEvidence:ledgerFor(pt50)});
+safe(goodPair);
+a.equal(goodPair.local50H4Observed,true);
+a.equal(goodPair.stages[1].countLedgerSameDecisionCycle,true);
+// A forged H4-ready point summary with M15/H1 too short cannot claim
+// multiframe EMA warmup or 50-H4 paper history.
+const shortM15=point(50,true);
+shortM15.storedClosedCounts.M15=10;
+shortM15.observedAtDecision.M15=10;
+shortM15.contiguousObservedClosed.M15=10;
+shortM15.technicalWarmupMissing.M15=11;
+shortM15.paperHistoryMissing.M15=40;
+const overclaim=summarize({pointInTime:shortM15});
+safe(overclaim);a.equal(overclaim.local21H4Observed,false);
+a.equal(overclaim.local50H4Observed,false);
+const shortPaper=point(50,true);
+shortPaper.storedClosedCounts.H1=30;
+shortPaper.observedAtDecision.H1=30;
+shortPaper.contiguousObservedClosed.H1=30;
+shortPaper.technicalWarmupMissing.H1=0;
+shortPaper.paperHistoryMissing.H1=20;
+const noPaper=summarize({pointInTime:shortPaper});
+safe(noPaper);a.equal(noPaper.local21H4Observed,true);
+a.equal(noPaper.local50H4Observed,false);
 const inconsistent=summarize({pointInTime:{...point(50,true),
  paperHistoryMissing:{...point(50,true).paperHistoryMissing,H4:30}}});
 safe(inconsistent);a.equal(inconsistent.stages[1].observedContiguousH4,null);
