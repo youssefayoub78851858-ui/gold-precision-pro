@@ -158,6 +158,10 @@ class CapitalDemoOfflineTests(unittest.TestCase):
         good = review_capital_demo_pages(packets, EPIC, NOW)
         self.check_wait(good)
         self.assertTrue(good["fullCrossFrameCoverageVerified"])
+        self.assertEqual(good["h4FromH1BidAskParity"], {
+            "fullyCoveredMatched": 1, "fullyCoveredDisagreed": 0,
+            "notFullyCovered": 0
+        })
         self.assertEqual(good["crossFrameBidAskParity"], {
             "H1": {"fullyCoveredMatched": 4, "fullyCoveredDisagreed": 0,
                    "notFullyCovered": 0},
@@ -189,6 +193,28 @@ class CapitalDemoOfflineTests(unittest.TestCase):
                       incomplete["blockingReasons"])
         self.assertFalse(incomplete["dataRightsVerified"])
         self.assertFalse(incomplete["orderEndpointsSupported"])
+        # Even with partial M15 history, independently compare the
+        # original H1/H4 BID and ASK OHLC. Missing M15 is NOT repaired.
+        self.assertEqual(incomplete["h4FromH1BidAskParity"]["fullyCoveredMatched"], 1)
+
+        direct_bad = copy.deepcopy(partial)
+        direct_bad["H4"][0]["prices"][0]["highPrice"]["ask"] = 4004.3
+        independent = review_capital_demo_pages(direct_bad, EPIC, NOW)
+        self.check_wait(independent)
+        self.assertEqual(independent["crossFrameBidAskParity"]["H4"]["notFullyCovered"], 1)
+        self.assertEqual(independent["h4FromH1BidAskParity"]["fullyCoveredDisagreed"], 1)
+        self.assertIn("H4_H1_DIRECT_BID_ASK_AGGREGATION_MISMATCH",
+                      independent["blockingReasons"])
+        self.assertFalse(independent["fullCrossFrameCoverageVerified"])
+
+        missing_hour = copy.deepcopy(packets)
+        missing_hour["H1"][0]["prices"].pop(1)
+        no_hour = review_capital_demo_pages(missing_hour, EPIC, NOW)
+        self.check_wait(no_hour)
+        self.assertEqual(no_hour["h4FromH1BidAskParity"]["notFullyCovered"], 1)
+        self.assertIn("H4_H1_DIRECT_BID_ASK_COVERAGE_INCOMPLETE",
+                      no_hour["blockingReasons"])
+        self.assertFalse(no_hour["fullCrossFrameCoverageVerified"])
 
     def test_request_blueprint_demo_only_not_executable(self):
         blueprint=demo_price_get_blueprint(EPIC,"M15",NOW-dt.timedelta(days=1),NOW)
