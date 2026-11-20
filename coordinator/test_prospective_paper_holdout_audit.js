@@ -76,6 +76,18 @@ for(const data of [
  {...packet([trade(1)]),trades:[{...trade(1),spreadUsd:-1}]},
  {...packet([trade(1)]),trades:[{...trade(1),commissionUsd:NaN}]},
  {...packet([trade(1)]),trades:[{...trade(1),initialRiskUsd:0}]},
+ {...packet([trade(1)]),trades:[{...trade(1),initialRiskUsd:0.00001}]},
+ {...packet([trade(1)]),trades:[{...trade(1),initialRiskUsd:Number.MIN_VALUE}]},
+ // A stale M15 closed candle must not be used to justify a fresh order.
+ {...packet([trade(1)]),trades:[{...trade(1),signalClosedUTC:iso(start),
+    signalFirstObservedUTC:iso(start)}]},
+ // H1 or H4 must also be sufficiently recent for the decision.
+ {...packet([trade(2)]),trades:[{...trade(2),
+    contextClosedUTC:{H1:iso(start),H4:iso(start)},
+    contextFirstObservedUTC:{H1:iso(start),H4:iso(start)}}]},
+ {...packet([trade(5)]),trades:[{...trade(5),
+    contextClosedUTC:{H1:iso(start+5*3600000),H4:iso(start)},
+    contextFirstObservedUTC:{H1:iso(start+5*3600000),H4:iso(start)}}]},
  {...packet([trade(1)]),trades:[{...trade(1),side:"WAIT"}]},
  {...packet([trade(1)]),trades:[{...trade(1),grossPnLUsd:"2"}]},
  {...packet([trade(1)]),trades:Array.from({length:2001},()=>trade(1))}
@@ -83,6 +95,23 @@ for(const data of [
   const x=evaluate(data);safe(x);
   a.equal(x.status,"BLOCKED");
 }
+// Trade 2 cannot claim a completed past result when it made its
+// decision BEFORE the independent first-observed close of trade 1.
+const second={...trade(2),
+ decisionUTC:iso(start+3600000+1800000+30000),
+ signalClosedUTC:iso(start+3600000+1800000),
+ signalFirstObservedUTC:iso(start+3600000+1800000),
+ contextClosedUTC:{H1:iso(start+3600000),H4:iso(start)},
+ contextFirstObservedUTC:{H1:iso(start+3600000),H4:iso(start)}
+};
+const pastOutcomeNotYetKnown=evaluate(packet([trade(1),second]));
+safe(pastOutcomeNotYetKnown);
+a.equal(pastOutcomeNotYetKnown.status,"BLOCKED");
+a.equal(pastOutcomeNotYetKnown.reason,"LOOKAHEAD_OR_NONCHRONOLOGICAL_PAPER_TRADE");
+const pennyRisk=evaluate(packet([{...trade(1),initialRiskUsd:0.01}]));
+safe(pennyRisk);
+a.equal(pennyRisk.status,"UNATTESTED_PAPER_ARITHMETIC_ONLY");
+a(Number.isFinite(pennyRisk.statistics.averageNetR));
 const missingContext=evaluate({...packet([trade(1)]),trades:[{
  ...trade(1),contextFirstObservedUTC:{H1:iso(start+3600000),H4:iso(start+3600000+60000)}
 }]});
