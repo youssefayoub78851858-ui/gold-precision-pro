@@ -1,5 +1,5 @@
 'use strict';
-// Gold API Premium pre-purchase audit ONLY. No API key, HTTP client, subscription,
+// Gold API FREE-or-Premium pre-connection audit ONLY. No API key, HTTP client, subscription,
 // broker equivalence, trade or self-attested session calendar.
 const {aggregate}=require('./eodhd_ws_bridge');
 const WIDTH=900000;
@@ -11,18 +11,27 @@ const reason=(code)=>({status:'BLOCKED',signal:'WAIT',executable:false,
   counts:{M15:0,H1:0,H4:0},finalizedSeriesVerified:false});
 function staticStatus(){
  return {...reason('NO_AUTHORIZED_XAUUSD_OHLC_HISTORY'),
-   mode:'GOLD_API_PREMIUM_PREPURCHASE_ONLY',monthlyUsd:10,
+   mode:'GOLD_API_FREE_KEY_FIRST_PREPURCHASE_ONLY',monthlyUsd:10,
    freeSpotAvailable:true,priceEndpointDisplayOnly:true,
+   // Provider documentation (2026-11-20): a FREE account API key permits
+   // up to 10 combined history/OHLC requests per hour. $10/month Premium
+   // is OPTIONAL for unlimited historical requests. No account or key was
+   // accessed here and no network call has been authorized.
+   freeHistoryAndOhlcRequestsPerHour:10,
+   freeHistoryKeyRequired:true,freeHistoryKeyConfigured:false,
+   premiumOptionalNotRequiredForInitialOfflineAudit:true,
    premiumKeyConfigured:false,subscriptionPurchased:false,
    liveOHLCVerified:false,licensedBrokerBidAsk:false,
    sessionAndHistoryVerified:false,
    documentation:{
-     ohlc:'https://gold-api.com/llms.txt',
+     ohlc:'https://gold-api.com/docs',
+     faq:'https://gold-api.com/faqs',
      pricing:'https://gold-api.com/pricing',
      terms:'https://gold-api.com/terms'
    },
    blockingReasons:[
-     'PREMIUM_API_KEY_NOT_CONFIGURED',
+     'FREE_HISTORY_API_KEY_NOT_CONFIGURED',
+     'FREE_OHLC_QUOTA_ONLY_10_REQUESTS_PER_HOUR',
      'OHLC_IS_ONE_RANGE_NOT_A_NATIVE_SERIES',
      'HISTORICAL_INTERVAL_CONTINUITY_UNTESTED',
      'PRICE_BASIS_AND_BROKER_SPREAD_UNKNOWN',
