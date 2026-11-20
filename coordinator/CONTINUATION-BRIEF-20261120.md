@@ -319,3 +319,51 @@ This file is a portable GitHub handoff, not a ChatGPT saved-memory entry.
   entitlements and broker costs, and untouched independent
   after-cost holdout performance are still unresolved.
   `WAIT`, `executable=false` remain compulsory.
+
+## 2026-11-20 audited H4 milestone cross-report consistency
+
+- Initial reviewed GitHub branch HEAD `e780ab4e`; V2 full offline CI
+  `44706904769` SUCCESS. At 2026-11-20 09:02:02 UTC, the
+  **private** Render coordinator published sanitized *count-only*
+  closed-bar progress: M15 persisted=220 / strict UTC-grid tail=40,
+  H1 persisted=55 / tail=10, H4 persisted=14 / tail=14;
+  unclassified gaps M15=8, H1=2, H4=0; signal WAIT,
+  sourceRightsVerified=false. Overlap summary in same cycle:
+  H1 10/10 full M15 comparisons, H4 only **2 of 14**
+  with full M15 constituents; **12 of 14** not fully covered.
+  This is NOT independently verified vendor parity or first-seen.
+- No fresh support reply from BiQuote, CFI, Twelve Data,
+  Massive or Databento appeared in the queried Gmail window.
+- Strengthened `biquote_pre_signal_milestones.js` and its offline
+  regression tests. An optionally supplied separately-computed
+  count evidence ledger must agree with point-in-time report
+  timestamp and ALL M15/H1/H4 persisted and contiguous counts.
+  A supplied invalid, missing, mismatched or wrong-cycle ledger
+  now *suppresses* any positive `local21H4Observed` or
+  `local50H4Observed` status. Headline explicitly becomes
+  `CONFLICTING_OR_INVALID_CROSS_REPORTS`.
+- A purported H4 warmup now requires zero shortfall on **all**
+  M15, H1, H4 timeframes, and 50-H4 paper history likewise
+  requires zero 50-bar shortfall on all three frames.
+- Validated aggregate M15/H4 overlap counter arithmetic in the
+  count-only ledger. Even if timestamp and stored counts agree,
+  a report claiming 21 per-bar H4-M15 matched warmup *conflicts*
+  with a count ledger showing only 2 fully compared H4 bars.
+  Outputs show aggregate H4 compared/unverified counts explicitly,
+  always marked count-only and never treated as the latest H4
+  identity, a license or a trading proof.
+- Checked with regression cases for 21/50 H4 claims, 2-of-50
+  overlap, fake counts, mismatched decision cycles, missing M15
+  warmup, insufficient H1 paper history, broker verification
+  spoofs and private price suppression. GitHub four-stage
+  acceptance **SUCCESS** on code commit `3572ccb9`, run
+  <https://github.com/youssefayoub78851858-ui/gold-precision-pro/actions/runs/44709272367>.
+  The full V2 CI `44709272100` was still in progress
+  when this report paragraph was drafted: do not infer its result.
+- No source rights, original MT5 broker calendar, real GC/ICE DXY
+  entitlements, execution BBO/slippage costs or prospective
+  after-cost results were established. No data backfill, vault
+  mutation, collector extension/restart, public/production deploy,
+  credential, paid API call, auto-paper or real order. The
+  independent trading-admission path remains closed:
+  `signal=WAIT`, `executable=false`.
