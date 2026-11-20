@@ -36,11 +36,22 @@ jobs:
                 print("STATIC",name,"status",r.status,"mime",r.headers.get("Content-Type"),"isViewer",("<title>Gold Precision" in data and "function technical(" in data),"consent",("confirmation" in data.lower() or "consent" in data.lower()))
             except (URLError,HTTPError,OSError,ValueError) as e:
               print("STATIC",name,"unavailable",type(e).__name__)
-          try:
-            req=Request("https://biquote.io/api/XAUUSD?allowStale=false",headers={"Origin":"https://raw.githack.com","User-Agent":"GoldPrecision-Mobile-CORS-Preflight/1.0","Accept":"application/json"},method="GET")
-            with urlopen(req,timeout=12) as r:
-              print("BIQUOTE_CORS","status",r.status,"allowOrigin",r.headers.get("Access-Control-Allow-Origin","MISSING"),"mime",r.headers.get("Content-Type","MISSING"))
-              # Never read, store, publish or log market values.
-          except (URLError,HTTPError,OSError,ValueError) as e:
-            print("BIQUOTE_CORS","unavailable",type(e).__name__)
+          routes={
+            "quote":"https://biquote.io/api/XAUUSD?allowStale=false",
+            "M15":"https://biquote.io/api/XAUUSD/ohlc?interval=15m&limit=192",
+            "H1":"https://biquote.io/api/XAUUSD/ohlc?interval=1h&limit=168",
+            "H4":"https://biquote.io/api/XAUUSD/ohlc?interval=4h&limit=180",
+          }
+          for label,url in routes.items():
+            try:
+              req=Request(url,headers={"Origin":"https://raw.githack.com","User-Agent":"GoldPrecision-Mobile-CORS-Preflight/1.0","Accept":"application/json"},method="GET")
+              with urlopen(req,timeout=12) as r:
+                allow=r.headers.get("Access-Control-Allow-Origin","MISSING")
+                passed=r.status==200 and allow in ("*", "https://raw.githack.com")
+                print("BIQUOTE_CORS",label,"status",r.status,"allowOrigin",allow,"browserAccessOK",passed)
+                if not passed: raise AssertionError("CORS_BLOCKED_"+label)
+                # Never read, store, publish or log quote or OHLC content.
+            except (URLError,HTTPError,OSError,ValueError) as e:
+              print("BIQUOTE_CORS",label,"unavailable",type(e).__name__)
+              raise
           PY
