@@ -403,6 +403,9 @@ jobs:
       - name: Synthetic broker cost arithmetic and risk block (offline only)
         working-directory: coordinator
         run: python -m unittest -v test_paper_cost_preflight
+      - name: Synthetic broker spread slippage fee stress without paper orders (offline)
+        working-directory: coordinator
+        run: python -m unittest -v test_offline_broker_cost_stress
       - name: Paper trade admission guard and spoofed signal fail-closed (offline)
         working-directory: coordinator
         run: python -m unittest -v test_paper_admission_gate
