@@ -280,6 +280,8 @@
  if(typeof document==="undefined")return;
  const $=id=>document.getElementById(id);
  let frame="M15",state=null,pending=false,expiry=0;
+ const AUTO_POLL_MS=60000, MAX_STALE_MS=600000;
+ let autoEnabled=false,viewerReady=false,checkingViewer=false,nextPollAt=Infinity;
  // Every user-initiated fetch has a generation. Android can hide or
  // navigate away while a request or JSON body is in flight; response
  // completion must not resurrect private prices after that transition.
@@ -350,14 +352,32 @@
     :"WAIT · لا توجد شموع متتابعة كافية لعرض المؤشرات.";
  }
 
+
+ // Bounded historical-on-screen display, never a live quote or a trade signal.
+ // Hidden/pagehide or ten minutes without a valid update clears all private values.
+ function markStale(message){
+  if(!state)return false;
+  if(document.visibilityState==="hidden"||Date.now()-state.at>MAX_STALE_MS){
+   reset("WAIT — آخر بيانات تجاوزت حد الاحتفاظ؛ يلزم تحديث جديد");
+   return false;
+  }
+  $("decision").textContent="WAIT";
+  $("watch-status").textContent="WAIT · لا فرصة صالحة";
+  $("trend-status").textContent="غير مؤهل لإشارة";
+  $("data-state").textContent="● لقطة قديمة · ليست مباشرة";
+  $("source").textContent="BiQuote آخر مشاهدة تاريخية · MID وربما تاريخ BID · ليست سعراً للتنفيذ";
+  $("reason").textContent=message||"WAIT — آخر لقطة قديمة؛ فحص تلقائي مستمر";
+  $("technical-note").textContent=
+    "المؤشرات المعروضة تاريخية فقط من شموع مغلقة؛ ليست توصية تداول.";
+  $("auto-state").textContent="تلقائي · بيانات قديمة";
+  return true;
+ }
+
  function draw(){
   if(!state){blank("WAIT — لا توجد شموع مؤهلة");return;}
   // Mobile browsers often throttle background timers. Selecting a new
   // timeframe MUST synchronously clear the price and WATCH when expired.
-  if(Date.now()>expiry){
-   reset("WAIT — انتهت صلاحية سعر المشاهدة؛ اضغط تحديث للتحقق من جديد");
-   return;
-  }
+  if(Date.now()>expiry&&!markStale("WAIT — أحدث لقطة قديمة، التحديث التلقائي يعمل"))return;
   const rows=state.chart[frame].slice(-45),svg=$("candles");
   if(rows.length<2)return blank("WAIT — لا توجد شموع كافية");
   const lo=Math.min(...rows.map(x=>x.low)),
@@ -400,7 +420,8 @@
    svg.appendChild(label);
   }
   $("chart-status").textContent=frame+" — "+rows.length+
-    " شمعة BiQuote مغلقة، MID وربما بذرة BID · عرض شخصي غير قابل للتنفيذ";
+    " شمعة BiQuote مغلقة، MID وربما بذرة BID · "+
+    (Date.now()>expiry?"تاريخية قديمة · ":"")+"عرض شخصي غير قابل للتنفيذ";
  }
  document.querySelectorAll("[data-frame]").forEach(btn=>
   btn.addEventListener("click",()=>{
@@ -410,33 +431,32 @@
    draw();
   }));
  const refresh=$("refresh");
- refresh.addEventListener("click",async()=>{
-  if(pending)return;
+ // All observed snapshots remain WAIT; no broker, paper or live order routes.
+ async function refreshSnapshot(){
+  if(pending||document.visibilityState==="hidden")return;
   pending=true;refresh.disabled=true;
-  const myEpoch=++requestEpoch;
-  reset("WAIT — جارٍ تدقيق مصدر BiQuote الخاص عند الطلب");
+  const ownEpoch=++requestEpoch;
+  if(!state)reset("WAIT — جارٍ فحص المصدر الخاص");
+  else markStale("WAIT — جارٍ طلب لقطة جديدة، السابقة تاريخية فقط");
+  $("auto-state").textContent="تحديث تلقائي · جارٍ الفحص";
   try{
    const response=await fetch("/api/v3/ultimate/biquote-observation",{
-    method:"GET",credentials:"same-origin",cache:"no-store",
-    redirect:"error",headers:{Accept:"application/json"},
-    signal:AbortSignal.timeout(15000)
+     method:"GET",credentials:"same-origin",cache:"no-store",
+     redirect:"error",headers:{Accept:"application/json"},
+     signal:AbortSignal.timeout(15000)
    });
    if(response.status===401||response.status===403)throw Error("SESSION_REQUIRED");
    if(response.status===429)throw Error("RATE_LIMITED");
    if(response.status===503){
-    // The read-only endpoint exposes fixed, non-sensitive reason codes.
-    // Never treat any unavailable observation as a trading signal.
     let code="";
     try{
      if(/^application\/json(?:\s*;|\s*$)/i.test(response.headers.get("content-type")||"")){
-      const unavailable=await response.json();
+      const d=await response.json();
       const allowed=["PROVIDER_REPORTED_CLOSED","CLOSED_CANDLE_STALE",
        "QUOTE_STALE_OR_UNVERIFIED","PUBLIC_HTTP_UNAVAILABLE",
        "PUBLIC_FEED_INVALID_STALE_OR_UNAVAILABLE","LATEST_QUOTE_NO_LONGER_FRESH"];
-      if(unavailable?.signal==="WAIT"&&unavailable?.executable===false&&
-         Array.isArray(unavailable.blockerCodes)&&
-         allowed.includes(unavailable.blockerCodes[0]))
-       code=unavailable.blockerCodes[0];
+      if(d?.signal==="WAIT"&&d?.executable===false&&Array.isArray(d.blockerCodes)&&
+        allowed.includes(d.blockerCodes[0]))code=d.blockerCodes[0];
      }
     }catch(_ignored){}
     throw Error(code||"DATA_UNAVAILABLE");
@@ -446,72 +466,130 @@
     throw Error("INVALID_RESPONSE_TYPE");
    const packet=await response.json();
    const verified=validateSnapshot(packet,Date.now());
-   if(myEpoch!==requestEpoch||document.visibilityState==="hidden")
+   if(ownEpoch!==requestEpoch||document.visibilityState==="hidden")
     throw Error("PAGE_CHANGED_DURING_PRIVATE_FETCH");
    if(!verified)throw Error("PRIVATE_SESSION_OR_DATA_INVALID");
-   state=verified;expiry=Date.now()+Math.min(15000,
-    Math.max(1000,30000-(Date.now()-verified.at)));
+   state=verified;
+   viewerReady=true;
+   expiry=Date.now()+Math.min(15000,Math.max(1000,30000-(Date.now()-verified.at)));
+   nextPollAt=Date.now()+AUTO_POLL_MS;
    const latest=verified.chart.M15.at(-1);
    $("price").textContent=format(latest.close);
    $("timestamp").textContent="إغلاق M15 المرصود: "+
      clock(latest.t+WIDTH.M15)+" بيروت · آخر فحص "+clock(verified.at);
    $("source").textContent="BiQuote XAUUSD خاص للبحث فقط · MID وربما تاريخ BID · ليس سعر MT5 لحظي ولا سعر تنفيذ";
    $("data-state").textContent="● BiQuote · مشاهدة خاصة متحققة مؤقتاً";
+   $("auto-state").textContent="تلقائي كل 60 ثانية · الصفحة مفتوحة";
    renderTechnical(verified.chart);
-    $("trend-status").textContent="غير مؤهل لإشارة";
+   $("trend-status").textContent="غير مؤهل لإشارة";
    $("watch-status").textContent="WAIT · مراقبة";
    $("parity-status").textContent=localLatestParity(verified.chart)
-     ?"تطابق أحدث M15 / H1 / H4: متحقق محلياً (لا يثبت اكتمال التاريخ)"
-     :"تطابق أحدث M15 / H1 / H4: غير متحقق — WAIT";
+    ?"تطابق أحدث M15 / H1 / H4: متحقق محلياً (لا يثبت اكتمال التاريخ)"
+    :"تطابق أحدث M15 / H1 / H4: غير متحقق — WAIT";
    $("vendor-h4-session").textContent=vendorH4SessionLabel(verified);
    $("quality-status").textContent="M15 "+packet.frameSummary.M15.closedCount+
-     " | H1 "+packet.frameSummary.H1.closedCount+
-     " | H4 "+packet.frameSummary.H4.closedCount+
-     " شمعة مغلقة محفوظة لدى مزوّد العرض؛ لا يثبت تاريخ الأرشيف الكامل";
+    " | H1 "+packet.frameSummary.H1.closedCount+" | H4 "+packet.frameSummary.H4.closedCount+
+    " شمعة مغلقة لدى المزوّد؛ لا يثبت الأرشيف الكامل";
    $("reason").textContent=researchWatch(verified)+
-     " | التوصيات المعتمدة محجوبة بسبب حقوق الوسيط وGC والأخبار والتكاليف واختبار الأداء";
+    " | لا توصيات معتمدة قبل حقوق الوسيط وGC والأخبار والتكاليف واختبار الأداء";
    $("decision").textContent="WAIT";draw();
   }catch(error){
-   const reason={
-    PROVIDER_REPORTED_CLOSED:"WAIT — مزوّد BiQuote أعلن إغلاق السوق؛ لا نعرض شموعاً أو توصيات.",
-    CLOSED_CANDLE_STALE:"WAIT — الشموع المغلقة قديمة؛ يجب انتظار تحديث M15/H1/H4.",
-    QUOTE_STALE_OR_UNVERIFIED:"WAIT — سعر BID/ASK قديم أو غير مؤكد.",
-    PUBLIC_HTTP_UNAVAILABLE:"WAIT — مزوّد البيانات لا يستجيب حالياً.",
-    PUBLIC_FEED_INVALID_STALE_OR_UNAVAILABLE:"WAIT — البيانات غير مكتملة أو غير صالحة للتحليل.",
-    LATEST_QUOTE_NO_LONGER_FRESH:"WAIT — انتهت صلاحية أحدث سعر قبل إتمام الفحص.",
-    RATE_LIMITED:"WAIT — الطلبات محدودة مؤقتاً؛ جرّب لاحقاً."
+   if(ownEpoch!==requestEpoch||document.visibilityState==="hidden")return;
+   const reasons={
+    PROVIDER_REPORTED_CLOSED:"WAIT — مزوّد BiQuote أعلن إغلاق السوق.",
+    CLOSED_CANDLE_STALE:"WAIT — لم تتحدث الشموع المغلقة.",
+    QUOTE_STALE_OR_UNVERIFIED:"WAIT — السعر الجديد قديم أو غير متحقق.",
+    PUBLIC_HTTP_UNAVAILABLE:"WAIT — مصدر البيانات لا يستجيب حالياً.",
+    PUBLIC_FEED_INVALID_STALE_OR_UNAVAILABLE:"WAIT — بيانات المصدر غير مكتملة.",
+    LATEST_QUOTE_NO_LONGER_FRESH:"WAIT — انتهت صلاحية السعر أثناء الفحص.",
+    RATE_LIMITED:"WAIT — حدّ الطلبات؛ سنخفف معدل التحديث."
    };
-   reset(error.message==="SESSION_REQUIRED"
-    ?"WAIT — جلسة المشاهدة الخاصة غير مفعّلة في هذا المتصفح. افتح Ultimate وأدخل الرمز هناك، ثم ارجع واضغط تحديث."
-    :reason[error.message]||"WAIT — تعذّر التحقق من بيانات BiQuote الحديثة أو الجلسة. افتح Ultimate للتأكد من الجلسة، ثم أعد المحاولة.");
+   if(["SESSION_REQUIRED","PRIVATE_SESSION_OR_DATA_INVALID"].includes(error.message)){
+    viewerReady=false;nextPollAt=Infinity;
+    reset(error.message==="SESSION_REQUIRED"?
+     "WAIT — جلسة المشاهدة غير مفعّلة؛ افتح Ultimate لتجديدها.":
+     "WAIT — لم نتمكن من إثبات صلاحية الجلسة أو البيانات.");
+   }else{
+    const message=reasons[error.message]||
+      "WAIT — تعذّر فحص بيانات جديدة؛ آخر لقطة تاريخية فقط.";
+    if(!markStale(message))reset(message);
+    nextPollAt=Date.now()+(error.message==="RATE_LIMITED"?180000:AUTO_POLL_MS);
+    $("auto-state").textContent=error.message==="RATE_LIMITED"?
+     "تلقائي · إعادة بعد 3 دقائق":"تلقائي · محاولة خلال دقيقة";
+   }
   }finally{pending=false;refresh.disabled=false;}
- });
- // Presentation-only expiry: NO background quote calls, no stored prices.
- // Clear on background/navigation as well: Android may defer the timer, and
- // BFCache/back navigation must not resurrect a private market snapshot.
- if(typeof document.addEventListener==="function")
+ }
+ refresh.addEventListener("click",refreshSnapshot);
+ // This preliminary same-origin cookie check has NO upstream market requests.
+ // Anonymous visitors do not start automatic BiQuote polling.
+ async function startAuto(){
+  if(!autoEnabled||checkingViewer||pending||document.visibilityState==="hidden")return;
+  checkingViewer=true;const ownEpoch=++requestEpoch;
+  try{
+   const response=await fetch("/api/v3/ultimate/biquote-viewer-status",{
+    method:"GET",credentials:"same-origin",cache:"no-store",
+    redirect:"error",headers:{Accept:"application/json"},
+    signal:AbortSignal.timeout(9000)
+   });
+   const packet=response.status===200?await response.json():null;
+   if(ownEpoch!==requestEpoch||document.visibilityState==="hidden")return;
+   if(response.status!==200||packet?.viewerSessionReady!==true||
+     packet?.signal!=="WAIT"||packet?.executable!==false){
+    viewerReady=false;nextPollAt=Infinity;
+    reset("WAIT — جلسة المشاهدة غير مفعلة؛ افتح Ultimate لتسجيل الدخول.");
+   }else{
+    viewerReady=true;nextPollAt=Date.now();
+   }
+  }catch(_error){
+   if(ownEpoch!==requestEpoch||document.visibilityState==="hidden")return;
+   viewerReady=false;nextPollAt=Date.now()+AUTO_POLL_MS;
+   if(!markStale("WAIT — فحص الجلسة تعذر مؤقتاً"))
+    reset("WAIT — تعذر فحص الجلسة؛ ستجري محاولة تلقائية.");
+  }finally{checkingViewer=false;}
+  if(viewerReady&&autoEnabled&&document.visibilityState!=="hidden")
+   await refreshSnapshot();
+ }
+ if(typeof document.addEventListener==="function"){
+  document.addEventListener("DOMContentLoaded",()=>{
+   autoEnabled=true;void startAuto();
+  });
   document.addEventListener("visibilitychange",()=>{
    if(document.visibilityState==="hidden"){
-    requestEpoch++;
-    if(state||pending)
-     reset("WAIT — خرجت من شاشة المشاهدة؛ اضغط تحديث لتحقق جديد");
-   }else if(expiry&&Date.now()>expiry)
-    reset("WAIT — انتهت صلاحية السعر المرصود؛ اضغط تحديث");
+    requestEpoch++;viewerReady=false;nextPollAt=Infinity;
+    reset("WAIT — الشاشة بالخلفية؛ تم مسح بيانات المشاهدة الخاصة.");
+   }else if(autoEnabled)void startAuto();
   });
+ }
  if(typeof window!=="undefined"&&typeof window.addEventListener==="function"){
   window.addEventListener("pagehide",()=>{
-   requestEpoch++;
-   if(state||pending)
-    reset("WAIT — غادرت الصفحة؛ الردود القديمة ملغاة");
+   requestEpoch++;autoEnabled=false;viewerReady=false;nextPollAt=Infinity;
+   reset("WAIT — غادرت الشاشة؛ لم نحتفظ بالأسعار الخاصة.");
+  });
+  window.addEventListener("pageshow",()=>{
+   if(!autoEnabled){autoEnabled=true;void startAuto();}
   });
   window.addEventListener("focus",()=>{
+   if(document.visibilityState==="hidden")return;
    if(expiry&&Date.now()>expiry)
-    reset("WAIT — انتهت صلاحية البيانات بعد الرجوع للصفحة");
+    markStale("WAIT — آخر لقطة تاريخية، وليست سعراً مباشراً.");
+   if(autoEnabled&&!checkingViewer&&!pending&&Date.now()>=nextPollAt){
+    if(viewerReady)void refreshSnapshot();
+    else void startAuto();
+   }
   });
  }
  setInterval(()=>{
-  if(expiry&&Date.now()>expiry)
-   reset("WAIT — انتهت صلاحية السعر المرصود. اضغط تحديث لطلب فحص جديد");
+  if(document.visibilityState==="hidden")return;
+  if(state){
+   if(Date.now()-state.at>MAX_STALE_MS)
+    reset("WAIT — تجاوزت آخر بيانات عشر دقائق؛ تم مسحها.");
+   else if(Date.now()>expiry)
+    markStale("WAIT — الشموع المعروضة تاريخية؛ يجري التحديث تلقائياً.");
+  }
+  if(autoEnabled&&!checkingViewer&&!pending&&Date.now()>=nextPollAt){
+   if(viewerReady)void refreshSnapshot();
+   else void startAuto();
+  }
  },5000);
- reset("WAIT — التحديث يدوي. إن كانت جلسة المشاهدة مفعلة من Ultimate، اضغط تحديث.");
+ reset("WAIT — فحص تلقائي عند فتح الشاشة بجلسة مشاهدة خاصة صالحة.");
 })();
