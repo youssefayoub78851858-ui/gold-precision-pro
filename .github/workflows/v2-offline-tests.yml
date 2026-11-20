@@ -50,6 +50,9 @@ jobs:
       - name: Capital.com Demo bounded historical backfill request plan (offline, no broker)
         working-directory: coordinator
         run: python -m unittest -v test_capital_demo_historical_batch_plan
+      - name: Capital Demo exact M15 H1 H4 first receipt and constituent chronology (offline)
+        working-directory: coordinator
+        run: python -m unittest -v test_capital_demo_receipt_preflight
       - name: Capital.com Demo immutable batch response checks (synthetic offline, no market)
         working-directory: coordinator
         run: python -m unittest -v test_capital_demo_offline_batch_audit
