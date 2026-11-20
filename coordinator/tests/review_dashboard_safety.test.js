@@ -130,3 +130,29 @@ test("private V3 watch refuses unsupported cross-frame evidence",()=>{
  assert.equal(x.reason,"SOURCE_HAS_UNRESOLVED_CROSS_FRAME_GAPS");
  assert.equal(x.brokerOrdersSent,0);
 });
+
+test("research-only MTF alignment cannot authorize orders",()=>{
+ const {makeMtfReadiness}=require("../biquote_mtf_readiness");
+ const frame=(close,ema20)=>({state:"OBSERVATION_ONLY",sessionCalendarVerified:false,
+  executable:false,tradeEligible:false,validForEntry:false,signal:"WAIT",
+  contiguousBars:24,unclassifiedGapsInChart:0,ema20,lastClosed:close});
+ const analysis={frames:{M15:frame(3001,3000),H1:frame(3001,3000),H4:frame(3001,3000)}};
+ const comparison={H1:{completeMatches:2,completeMismatches:0,incompleteM15Groups:0},
+  H4:{completeMatches:1,completeMismatches:0,incompleteM15Groups:0}};
+ const x=makeMtfReadiness(analysis,comparison);
+ assert.equal(x.alignment,"OBSERVATION_ALL_ABOVE_EMA20");
+ assert.equal(x.signal,"WAIT");
+ assert.equal(x.tradeEligible,false);
+ assert.equal(x.executable,false);
+ assert.equal(x.researchEligible,false);
+ assert.ok(x.blockerCodes.includes("PROFITABILITY_NOT_INDEPENDENTLY_VALIDATED"));
+ assert.ok(x.blockerCodes.includes("UNDERLYING_MT5_DATA_RIGHTS_UNVERIFIED"));
+});
+test("MTF readiness refuses invalid or partial higher-frame evidence",()=>{
+ const {makeMtfReadiness}=require("../biquote_mtf_readiness");
+ const x=makeMtfReadiness({frames:{}},{});
+ assert.equal(x.state,"INVALID_INPUT_BLOCKED");
+ assert.equal(x.alignment,"NOT_ASSESSABLE");
+ assert.equal(x.signal,"WAIT");
+ assert.equal(x.executable,false);
+});
