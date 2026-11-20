@@ -80,6 +80,7 @@ const context={
    firstAvailableUTC:"2026-11-20T05:58:01Z",
    receivedUTC:"2026-11-20T05:58:02Z"},
   GC_TRADES:{kind:"COMEX_GC_EXCHANGE_TRADES_NOT_CFD",
+   contract:"GCZ2026",
    observedUTC:"2026-11-20T05:59:00Z",
    firstAvailableUTC:"2026-11-20T05:59:01Z",
    receivedUTC:"2026-11-20T05:59:02Z"}
@@ -103,6 +104,8 @@ a.equal(alignedContext.decisionClockAligned,true);
 a.equal(alignedContext.perLayer.DXY.timeSuitable,true);
 a.equal(alignedContext.perLayer.GC_TRADES.timeSuitable,true);
 a.equal(alignedContext.perLayer.GC_DEPTH.status,"MISSING");
+a.equal(alignedContext.gcTradeDepthCrossCheck.status,
+ "GC_PAIR_UNAVAILABLE_OR_NOT_TIME_SUITABLE");
 a.equal(alignedContext.sourceIndependentlyAttested,false);
 a.equal(alignedContext.contextCanAuthorizeTrading,false);
 a.equal(aligned.stages.confirmation.sourceRightsVerified,false);
