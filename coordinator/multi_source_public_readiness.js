@@ -34,6 +34,32 @@ function snapshot(){
   verifiedLiveLayerCount:0,requiredLayerCount:IDS.length,
   sourceRequestsMade:0,providerRequestsMade:0,secretReads:0,payments:0,
   publicLicensedDataShown:false,privateAccountRead:false,
+  capitalDemoPreKyc:{
+   mode:'CAPITAL_DEMO_DEFER_USER_KYC_UNTIL_FINAL_CONNECTION_HANDOFF',
+   selectedPrimaryCandidate:true,
+   credentialRequestedNow:false,kycRequestedNow:false,
+   kycRequiredBeforeRealDemoAPIUse:true,
+   identityDocumentsCollected:false,tradingKeyCollected:false,
+   permissionToStoreOnPrivateRenderConfirmed:false,
+   brokerSessionScheduleIndependentlyVerified:false,
+   actualDemoHistoryReceived:false,
+   endToEndPaperHoldoutValidated:false,
+   connected:false,providerRequestsMade:0,ordersSent:0,
+   nextUserAction:'NONE_WHILE_OFFLINE_PREPARATION_CONTINUES',
+   nextExternalDependency:'WRITTEN_PRIVATE_RENDER_DATA_RIGHTS_AND_RETENTION_REPLY',
+   workPossibleWithoutKyc:[
+    'OFFLINE_GET_ONLY_DEMO_ROUTE_ALLOWLIST_TESTS',
+    'SYNTHETIC_BID_ASK_M15_H1_H4_AGGREGATION_TESTS',
+    'OFFLINE_SPREAD_COST_AND_PAPER_AUDIT_TESTS',
+    'COLLECTOR_COUNTS_ONLY_READONLY_AUDIT'
+   ],
+   postKycStillRequired:[
+    'COMPANY_PERMISSION_FOR_PRIVATE_CLOUD_DATA_STORAGE',
+    'INDEPENDENT_DEMO_EPIC_AND_MARKET_SESSION_VERIFICATION',
+    'REAL_DEMO_HISTORY_VALIDATION_AND_FORWARD_HOLDOUT'
+   ],
+   signal:'WAIT',executable:false,paperOrdersAllowed:false
+  },
   layers,
   warning:'This is a static coverage checklist, NOT a live health check, market data, or proof of licensing'
  };
