@@ -56,6 +56,9 @@ jobs:
       - name: Capital Demo exact M15 H1 H4 first receipt and constituent chronology (offline)
         working-directory: coordinator
         run: python -m unittest -v test_capital_demo_receipt_preflight
+      - name: Capital Demo strict HTTPS price GET anti-redirect tests (no provider)
+        working-directory: coordinator
+        run: python -m unittest -v test_capital_demo_https_transport
       - name: Capital Demo private narrow price GET and trading-capable key isolation (mock only)
         working-directory: coordinator
         run: python -m unittest -v test_capital_demo_private_get_boundary
