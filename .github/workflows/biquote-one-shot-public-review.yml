@@ -1,3 +1,4 @@
+# On-demand one-shot public XAUUSD diagnostic, no keys, no persistence.
 name: BiQuote one-shot public XAUUSD evidence (no credentials or orders)
 on:
   push:
