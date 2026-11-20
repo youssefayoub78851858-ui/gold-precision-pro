@@ -13,6 +13,8 @@ const SIGNAL_MAX_AGE_MS=900000;
 // Risk is expressed in real dollar cents for descriptive R arithmetic.
 // Sub-cent or subnormal 'risk' falsely creates massive/infinite R.
 const MIN_INITIAL_RISK_USD=0.01;
+const GROSS_BASIS="MID_MARK_BEFORE_SPREAD_SLIPPAGE_COMMISSION";
+const RISK_BASIS="STOP_LOSS_PLUS_TOTAL_MODELED_COSTS_USD";
 const ISO=/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/;
 const stamp=x=>typeof x==="string"&&ISO.test(x)&&Number.isFinite(Date.parse(x))&&
  new Date(x).toISOString().slice(0,19)===x.slice(0,19)?Date.parse(x):NaN;
@@ -75,11 +77,22 @@ function evaluate(input){
      decision-end<=CONTEXT_WIDTH[tf]+SIGNAL_MAX_AGE_MS;
   }))return blocked("BLOCKED","MULTITIMEFRAME_CONTEXT_NOT_KNOWN_AT_DECISION");
   prevExit=exit;lastReceipt=receipt;
+  // Gross PnL must EXCLUDE all modeled spread/slippage/commission;
+  // a broker BID/ASK filled outcome ALREADY includes spread and would be
+  // double charged here. The stated TOTAL R risk includes all such costs.
+  // Both conventions are caller-asserted, NOT an independently verified fill.
+  if(t.grossPnLConvention!==GROSS_BASIS||
+     t.initialRiskConvention!==RISK_BASIS)
+   return blocked("BLOCKED","AMBIGUOUS_PAPER_COST_OR_RISK_BASIS");
   if(!pnl(t.grossPnLUsd)||!usd(t.spreadUsd)||!usd(t.slippageUsd)||
    !usd(t.commissionUsd)||!usd(t.initialRiskUsd)||
    t.initialRiskUsd<MIN_INITIAL_RISK_USD)
    return blocked("BLOCKED","UNVERIFIED_OR_INVALID_PAPER_COST_FIELDS");
   const cost=t.spreadUsd+t.slippageUsd+t.commissionUsd;
+  // If even modeled fees consume the risk, no positive stop distance
+  // remains: counting it as a legitimate risk-sized trade is misleading.
+  if(t.initialRiskUsd<=cost)
+   return blocked("BLOCKED","MODELED_COSTS_CONSUME_TOTAL_PAPER_RISK");
   const net=t.grossPnLUsd-cost;
   const ratio=net/t.initialRiskUsd;
   if(!Number.isFinite(net)||!Number.isFinite(ratio))
@@ -101,6 +114,8 @@ function evaluate(input){
    profitFactor:loss>0?round(profit/loss):null,
    maxRealizedDrawdownUsd:round(maxDD,2),
    sampleSizeAtLeast30:n>=30,
+   grossPnLConvention:GROSS_BASIS,
+   initialRiskConvention:RISK_BASIS,
    inference:"DESCRIPTIVE_ONLY_NOT_STATISTICAL_PROOF",
    pricesAndIndividualFillsReturned:false
   }};
