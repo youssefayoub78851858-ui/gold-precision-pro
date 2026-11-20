@@ -245,7 +245,7 @@ test("session-checked foreground auto refresh preserves stale history but not tr
  const js=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.js"),"utf8");
  const ui=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.html"),"utf8");
  const server=fs.readFileSync(path.resolve(__dirname,"../../server.js"),"utf8");
- assert.ok(js.includes("const AUTO_POLL_MS=20000, MAX_STALE_MS=600000"));
+ assert.ok(js.includes("const AUTO_POLL_MS=10000, SOURCE_ERROR_BACKOFF_MS=30000, MAX_STALE_MS=600000"));
  assert.ok(js.includes('document.addEventListener("DOMContentLoaded"'));
  assert.ok(js.includes('"/api/v3/ultimate/biquote-viewer-status"'));
  assert.ok(js.includes('packet?.viewerSessionReady!==true'));
