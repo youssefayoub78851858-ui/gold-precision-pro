@@ -11,6 +11,11 @@ on:
       - 'coordinator/tests/review_dashboard_safety.test.js'
       - 'coordinator/test_ultimate_v2_public_shadow.js'
       - 'coordinator/ultimate_v2_public_shadow.js'
+      - 'coordinator/ultimate_v2.js'
+      - 'coordinator/ultimate_v2_contracts.js'
+      - 'coordinator/test_ultimate_v2.js'
+      - 'coordinator/v3_ultimate.js'
+      - 'coordinator/fixtures/ultimate-synthetic.json'
       - '.github/workflows/review-dashboard-safety.yml'
   workflow_dispatch:
 jobs:
@@ -30,7 +35,14 @@ jobs:
           node --check coordinator/biquote_private_v3_watch.js
           node --check coordinator/biquote_mtf_readiness.js
           node --check coordinator/v3_multitimeframe.js
+          node --check coordinator/test_ultimate_v2_public_shadow.js
+          node --check coordinator/ultimate_v2_public_shadow.js
+          node --check coordinator/ultimate_v2.js
+          node --check coordinator/ultimate_v2_contracts.js
+          node --check coordinator/test_ultimate_v2.js
       - name: Run offline safety regression tests
         run: node --test coordinator/tests/review_dashboard_safety.test.js
+      - name: Verify frozen Ultimate v2 offline contracts
+        run: node coordinator/test_ultimate_v2.js
       - name: Verify seven-layer public shadow quarantine (offline)
         run: node coordinator/test_ultimate_v2_public_shadow.js
