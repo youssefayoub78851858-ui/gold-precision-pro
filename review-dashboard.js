@@ -220,10 +220,63 @@
    " | حسب استراحات BiQuote: "+v.providerDeclaredSessionAdjacentH4Tail+
    " (توضيحي فقط؛ جدول الوسيط الأصلي وحقوق المصدر غير مثبتين)";
  }
+
+ // Display-only, strictly contiguous CLOSED UTC bar indicators.
+ // This local calculation NEVER approves a trading signal or broker market data.
+ const TECHNICAL_MIN=21;
+ function technicalObservations(chart){
+  const out={};
+  for(const tf of TF){
+   const rows=chart?.[tf],tail=[],width=WIDTH[tf];
+   if(!Array.isArray(rows)||rows.length>MAX){out[tf]={status:"INSUFFICIENT",count:0};continue;}
+   for(let i=rows.length-1;i>=0;i--){
+    const b=rows[i],newer=tail[0];
+    if(!b||!Number.isFinite(b.t)||b.t%width!==0||
+       !["open","high","low","close"].every(k=>finite(b[k]))||
+       b.high<Math.max(b.open,b.close)||b.low>Math.min(b.open,b.close)||b.high<b.low||
+       (newer&&newer.t-b.t!==width))break;
+    tail.unshift(b);
+   }
+   if(tail.length<TECHNICAL_MIN){
+    out[tf]={status:"INSUFFICIENT",count:tail.length};continue;
+   }
+   const closes=tail.map(b=>b.close);
+   let ema=closes.slice(0,20).reduce((x,y)=>x+y,0)/20;
+   for(let i=20;i<closes.length;i++)ema=(closes[i]*2+ema*19)/21;
+   let gains=0,losses=0;
+   for(let i=1;i<=14;i++){
+    const delta=closes[i]-closes[i-1];
+    gains+=Math.max(0,delta);losses+=Math.max(0,-delta);
+   }
+   gains/=14;losses/=14;
+   for(let i=15;i<closes.length;i++){
+    const delta=closes[i]-closes[i-1];
+    gains=(gains*13+Math.max(0,delta))/14;
+    losses=(losses*13+Math.max(0,-delta))/14;
+   }
+   const rsi=losses===0?(gains===0?50:100):100-100/(1+gains/losses);
+   const ranges=[];
+   for(let i=1;i<tail.length;i++){
+    const b=tail[i],prev=tail[i-1].close;
+    ranges.push(Math.max(b.high-b.low,Math.abs(b.high-prev),Math.abs(b.low-prev)));
+   }
+   let atr=ranges.slice(0,14).reduce((x,y)=>x+y,0)/14;
+   for(let i=14;i<ranges.length;i++)atr=(atr*13+ranges[i])/14;
+   if(![ema,rsi,atr].every(Number.isFinite)||rsi<0||rsi>100||atr<0){
+    out[tf]={status:"INVALID",count:tail.length};continue;
+   }
+   const close=closes.at(-1);
+   out[tf]={status:"LOCAL_CLOSED_MID_ONLY",count:tail.length,
+    ema20:ema,rsi14:rsi,atr14:atr,
+    closeVsEma:close>ema?"ABOVE":close<ema?"BELOW":"EQUAL"};
+  }
+  return out;
+ }
+
  // Pure validators are exposed only to local Node offline tests.
  if(typeof module!=="undefined"&&module.exports)
   module.exports={validateChart,validateSnapshot,localLatestParity,
-    localCoveredParityAudit,researchWatch,vendorH4SessionLabel};
+    localCoveredParityAudit,researchWatch,vendorH4SessionLabel,technicalObservations};
  if(typeof document==="undefined")return;
  const $=id=>document.getElementById(id);
  let frame="M15",state=null,pending=false,expiry=0;
@@ -251,6 +304,7 @@
   $("reason").textContent=message||"WAIT — لا توجد توصية قابلة للتنفيذ";
   $("quality-status").textContent="WAIT — البيانات غير مؤهّلة";
   $("data-state").textContent="● غير متصل / غير متحقق";
+  resetTechnical();
   $("trend-status").textContent="غير متاح";
   $("watch-status").textContent="WAIT";
   $("parity-status").textContent="تطابق الفريمات: غير متحقق";
@@ -259,6 +313,43 @@
   $("chart-status").textContent="لا تُعرض أسعار غير متحققة أو شموع مفتوحة";
   blank("WAIT — لا توجد شموع خاصة موثقة");
  }
+ 
+ function resetTechnical(){
+  $("technical-short").textContent="غير متاح";
+  $("technical-note").textContent="لا قراءة فنية قبل جلسة خاصة وبيانات مغلقة حديثة.";
+  for(const tf of TF){
+   const id=tf.toLowerCase();
+   $(id+"-technical").textContent="—";
+   for(const k of ["ema","rsi","atr"])
+    $(id+"-"+k).textContent="—";
+   $(id+"-technical-quality").textContent="WAIT · غير متاح";
+  }
+ }
+ function renderTechnical(chart){
+  const all=technicalObservations(chart);
+  let count=0;
+  for(const tf of TF){
+   const metric=all[tf],id=tf.toLowerCase();
+   if(metric.status!=="LOCAL_CLOSED_MID_ONLY"){
+    $(id+"-technical").textContent="غير كافٍ";
+    for(const k of ["ema","rsi","atr"])$(id+"-"+k).textContent="—";
+    $(id+"-technical-quality").textContent="WAIT · "+metric.count+"/21 شمعة UTC متتابعة";
+    continue;
+   }
+   count++;
+   $(id+"-technical").textContent=metric.closeVsEma==="ABOVE"?"الإغلاق فوق EMA20":
+     metric.closeVsEma==="BELOW"?"الإغلاق تحت EMA20":"الإغلاق عند EMA20";
+   $(id+"-ema").textContent=format(metric.ema20);
+   $(id+"-rsi").textContent=metric.rsi14.toFixed(1);
+   $(id+"-atr").textContent=format(metric.atr14);
+   $(id+"-technical-quality").textContent=metric.count+" شمعة MID مغلقة UTC";
+  }
+  $("technical-short").textContent=count?count+"/3 مرصودة":"غير كافٍ";
+  $("technical-note").textContent=count
+    ?"مؤشرات MID محلية فقط؛ ليست إشارة، ولا تثبت حقوق المصدر أو تطابق أسعار الوسيط."
+    :"WAIT · لا توجد شموع متتابعة كافية لعرض المؤشرات.";
+ }
+
  function draw(){
   if(!state){blank("WAIT — لا توجد شموع مؤهلة");return;}
   // Mobile browsers often throttle background timers. Selecting a new
@@ -366,7 +457,8 @@
      clock(latest.t+WIDTH.M15)+" بيروت · آخر فحص "+clock(verified.at);
    $("source").textContent="BiQuote XAUUSD خاص للبحث فقط · MID وربما تاريخ BID · ليس سعر MT5 لحظي ولا سعر تنفيذ";
    $("data-state").textContent="● BiQuote · مشاهدة خاصة متحققة مؤقتاً";
-   $("trend-status").textContent="غير مؤهل لإشارة";
+   renderTechnical(verified.chart);
+    $("trend-status").textContent="غير مؤهل لإشارة";
    $("watch-status").textContent="WAIT · مراقبة";
    $("parity-status").textContent=localLatestParity(verified.chart)
      ?"تطابق أحدث M15 / H1 / H4: متحقق محلياً (لا يثبت اكتمال التاريخ)"

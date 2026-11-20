@@ -3,7 +3,7 @@
 // No provider requests, credentials, orders or external dependencies.
 const test=require("node:test");
 const assert=require("node:assert/strict");
-const {validateChart,validateSnapshot,localLatestParity,researchWatch}=
+const {validateChart,validateSnapshot,localLatestParity,researchWatch,technicalObservations}=
  require("../../review-dashboard.js");
 const W={M15:900000,H1:3600000,H4:14400000};
 function chart(at){
@@ -198,4 +198,44 @@ test("21-H4 audit cannot be certified by one truncated provider snapshot",()=>{
  assert.equal(x.singleSnapshotCanProve21H4M15Parity,false);
  assert.equal(x.archiveRequiredForFullWindow,true);
  assert.equal(x.archiveCurrentlyVerified,false);
+});
+
+test("closed UTC source candles support descriptive EMA RSI ATR only",()=>{
+ const series=technicalObservations(validateChart(chart(now),now));
+ for(const tf of Object.keys(W)){
+  assert.equal(series[tf].status,"LOCAL_CLOSED_MID_ONLY");
+  assert.equal(series[tf].count,24);
+  assert.equal(series[tf].ema20,3001);
+  assert.equal(series[tf].rsi14,50);
+  assert.ok(series[tf].atr14>0);
+  assert.equal(series[tf].closeVsEma,"EQUAL");
+ }
+ assert.ok(!JSON.stringify(series).includes("BUY"));
+ assert.ok(!JSON.stringify(series).includes("SELL"));
+});
+test("gap in a recent H4 candle blocks H4 indicator but not M15",()=>{
+ const x=chart(now);x.H4.splice(16,1);
+ const series=technicalObservations(validateChart(x,now));
+ assert.equal(series.H4.status,"INSUFFICIENT");
+ assert.equal(series.H4.count,7);
+ assert.equal(series.H4.ema20,undefined);
+ assert.equal(series.M15.status,"LOCAL_CLOSED_MID_ONLY");
+});
+test("malformed or absent chart never fabricates indicators",()=>{
+ const result=technicalObservations({M15:[null],H1:[],H4:null});
+ for(const tf of Object.keys(W))assert.notEqual(result[tf]?.status,"LOCAL_CLOSED_MID_ONLY");
+});
+test("main Render review UI folds indicators and clears private metrics",()=>{
+ const fs=require("node:fs"),path=require("node:path");
+ const html=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.html"),"utf8");
+ const js=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.js"),"utf8");
+ assert.match(html,/<details id="technical" class="panel technical-panel">/);
+ assert.ok(!html.includes('<details id="technical" open'));
+ for(const tf of ["m15","h1","h4"])
+  for(const suffix of ["technical","ema","rsi","atr","technical-quality"])
+   assert.ok(html.includes('id="'+tf+'-'+suffix+'"'));
+ assert.ok(js.includes("resetTechnical();"));
+ assert.ok(js.includes("renderTechnical(verified.chart);"));
+ assert.ok(js.includes("if(Date.now()>expiry)"));
+ assert.ok(!js.includes("order_send("));
 });
