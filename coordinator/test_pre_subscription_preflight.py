@@ -15,6 +15,23 @@ class PreSubscriptionAudit(unittest.TestCase):
         self.assertEqual(r["payments"], 0)
         self.assertEqual(r["networkCalls"], 0)
         self.assertEqual(r["secretReads"], 0)
+        self.assertEqual(r["selectedGoldProvider"], "CAPITAL_COM_DEMO")
+        self.assertTrue(r["legacyEodhdAlternativeNotSelected"])
+        primary = r["selectedCapitalDemoReadiness"]
+        self.assertEqual(primary["selectedProvider"], "CAPITAL_COM_DEMO")
+        self.assertEqual(primary["status"], "UNCONNECTED_RESTRICTED_STANDBY")
+        self.assertEqual(primary["signal"], "WAIT")
+        self.assertFalse(primary["rightsVerified"])
+        self.assertFalse(primary["brokerAccountVerified"])
+        self.assertFalse(primary["readOnlyApiKeyGranted"])
+        self.assertFalse(primary["paperOrdersAllowed"])
+        self.assertFalse(primary["researchEligible"])
+        self.assertFalse(primary["liveMarketDataAvailable"])
+        self.assertEqual(primary["providerRequestsMade"], 0)
+        self.assertEqual(primary["offlineHistoricalBlueprint"]["plannedGETRequests"], 4)
+        self.assertEqual(primary["offlineHistoricalBlueprint"]["expectedUTCGridClosedSlots"],
+                         {"M15": 960, "H1": 240, "H4": 60})
+        self.assertFalse(primary["offlineHistoricalBlueprint"]["actualSessionOrMarketDataProven"])
         self.assertEqual(r["eodhdFirstDayBootstrapPlan"]["signal"], "WAIT")
         self.assertEqual(r["eodhdFirstDayBootstrapPlan"]["historyMath"]["minimumClosedM15For50CompleteH4"], 800)
         self.assertFalse(r["eodhdFirstDayBootstrapPlan"]["sourceCompatibility"]["mayMergeHistoricalAndStreamBars"])
@@ -50,6 +67,24 @@ class PreSubscriptionAudit(unittest.TestCase):
         self.assertEqual(gold["status"], "CODE_PREFLIGHT_FAILED")
         self.assertTrue(any("EODHD_CONNECT_APPROVED" in issue
                             for issue in gold["blockingCodeChecks"]))
+
+    def test_selected_capital_code_guard_missing_fails_closed(self):
+        with tempfile.TemporaryDirectory() as t:
+            root = pathlib.Path(t)
+            for group in CHECKS.values():
+                for relative, guards in group:
+                    p = root / relative
+                    p.parent.mkdir(parents=True, exist_ok=True)
+                    p.write_text(" ".join(guards))
+            p = root / "coordinator/capital_demo_https_transport.py"
+            p.write_text("NoRedirect HTTPSHandler")
+            report = build_report(root)
+        gold = next(item for item in report["stages"] if item["id"] == "gold_prices")
+        self.assertEqual(gold["status"], "CODE_PREFLIGHT_FAILED")
+        self.assertTrue(any("PRIVATE_DEMO_TRANSPORT_NOT_APPROVED" in c
+                            for c in gold["blockingCodeChecks"]))
+        self.assertFalse(report["liveDataValidated"])
+        self.assertFalse(report["executable"])
 
     def test_never_contacts_network_or_exports_credentials(self):
         with patch("socket.socket", side_effect=AssertionError("no network")):
