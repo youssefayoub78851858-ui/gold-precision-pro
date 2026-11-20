@@ -41,9 +41,10 @@ def plan_demo_closed_history(epic, start_utc, end_utc, as_of_utc, *, bars_per_ca
     """Plan exact UTC-grid slots across three frames, no authority to run.
 
     end_utc is EXCLUSIVE of the last candle OPEN. The corresponding last
-    candle must have CLOSED by as_of_utc. Each request's 'to' may include
-    an additional opening slot, so response validation must use our stated
-    [start, end) window, never blindly trust endpoint max or boundaries.
+    candle must have CLOSED by as_of_utc. The provider query 'to' is one
+    SECOND after the last desired OPEN, not the next candle's OPEN; this
+    avoids inclusive-to responses silently adding a future/next-window bar.
+    Responses still must be checked against [start, end) by timestamp.
     """
     try:
         if not _valid_epic(epic):
@@ -74,7 +75,10 @@ def plan_demo_closed_history(epic, start_utc, end_utc, as_of_utc, *, bars_per_ca
             while remaining:
                 take = min(remaining, bars_per_call)
                 stop = current + dt.timedelta(seconds=take*width)
-                spec = demo_price_get_blueprint(epic, frame, current, stop)
+                # Capital filters by snapshotTimeUTC; 'to' might be inclusive.
+                # End 1 second after last EXPECTED open, before next slot.
+                to_filter = stop - dt.timedelta(seconds=width-1)
+                spec = demo_price_get_blueprint(epic, frame, current, to_filter)
                 inspected = audit_demo_get_only_request(spec)
                 if inspected["requestShapeAcceptable"] is not True or inspected["networkAllowed"] is not False:
                     raise ValueError("UNSAFE_REQUEST_BLUEPRINT")
