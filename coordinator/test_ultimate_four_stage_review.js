@@ -125,4 +125,27 @@ a.equal(contradicted.stages.confirmation.externalContextTiming.status,
 a.equal(contradicted.stages.confirmation.externalContextTiming.perLayer.GC_TRADES.status,
  "INVALID_OR_LATE_RECEIPT");
 a.equal(contradicted.signal,"WAIT");
+// Even paired GC-looking packets cannot confirm exchange activity when
+// their futures contract labels disagree. They are offline metadata only.
+const crossContract=structuredClone(context);
+crossContract.items.GC_DEPTH={
+ kind:"COMEX_GC_MBP_OR_MBO_NOT_CFD",
+ contract:"GCG2027",
+ observedUTC:"2026-11-20T05:59:10Z",
+ firstAvailableUTC:"2026-11-20T05:59:11Z",
+ receivedUTC:"2026-11-20T05:59:12Z"
+};
+const mismatch=reviewFourStages({
+ dataOrigin:"SYNTHETIC_TEST_ONLY",snapshot:{...source,asOfUTC:clock},
+ contextTimeEvidence:crossContract
+});
+const status=mismatch.stages.confirmation.externalContextTiming;
+a.equal(status.status,"CONTEXT_TIMING_CONFLICTS");
+a.equal(status.gcTradeDepthCrossCheck.status,"GC_CONTRACT_MISMATCH");
+a.equal(status.contextCanAuthorizeTrading,false);
+a.equal(status.sourceIndependentlyAttested,false);
+a.equal(status.perLayer.GC_DEPTH.sourceQualified,false);
+a.equal(mismatch.signal,"WAIT");
+a.equal(mismatch.executable,false);
+a.equal(mismatch.hypotheticalSyntheticPlan,null);
 console.log('PASS four-stage closed-only geometry, synthetic BUY entry/SL/TP, independent context veto, holdout/paper blockers, no lookahead or trade');
