@@ -49,9 +49,22 @@ def validate(name, row):
         if not isinstance(row.get('events'), list):
             raise ValueError('Events required')
         for event in row['events']:
+            if not isinstance(event, dict):
+                raise ValueError('Invalid event object')
+            event_time = utc(event['timeUTC'])
             if utc(event['publishedUTC']) > available or event.get('impact') not in ('low', 'medium', 'high'):
                 raise ValueError('Unknown or future publication')
-            utc(event['timeUTC'])
+            if name == 'calendar' and event_time > available:
+                # Scheduled future releases are known in advance, not their
+                # results or surprise. Offline consistency only, not proof
+                # of vendor rights or independent release timestamps.
+                released_fields = ('actual', 'actualValue', 'actual_value',
+                                   'surprise', 'surpriseValue', 'surprise_value',
+                                   'revisedActual')
+                if any(event.get(field) is not None for field in released_fields):
+                    raise ValueError('Future calendar actual/surprise leaked')
+                if str(event.get('status', '')).lower() in ('released', 'completed'):
+                    raise ValueError('Future calendar marked released')
         if name == 'headlines' and any(utc(e['timeUTC']) > available for e in row['events']):
             raise ValueError('Future headline')
         start, end = utc(row['coverageStartUTC']), utc(row['coverageEndUTC'])
