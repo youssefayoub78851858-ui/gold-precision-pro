@@ -8,6 +8,7 @@
 const MODE="GOLD_PROSPECTIVE_PAPER_HOLDOUT_OFFLINE_V1";
 const ORIGIN="UNATTESTED_SANITIZED_PAPER_LEDGER";
 const FIRST=Date.parse("2026-11-18T00:00:00Z");
+const CONTEXT_WIDTH=Object.freeze({H1:3600000,H4:14400000});
 const ISO=/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/;
 const stamp=x=>typeof x==="string"&&ISO.test(x)&&Number.isFinite(Date.parse(x))&&
  new Date(x).toISOString().slice(0,19)===x.slice(0,19)?Date.parse(x):NaN;
@@ -55,6 +56,17 @@ function evaluate(input){
    decision<freeze||decision<prevExit||entry<decision||exit<=entry||
    receipt<exit||receipt<lastReceipt||receipt>asOf||exit>asOf)
    return blocked("BLOCKED","LOOKAHEAD_OR_NONCHRONOLOGICAL_PAPER_TRADE");
+  // The M15 signal alone does not prove that its H1/H4 context was
+  // closed and received BEFORE the same decision. Require both; untrusted
+  // timestamps may only yield descriptive arithmetic, never approval.
+  const closed=t.contextClosedUTC,seen=t.contextFirstObservedUTC;
+  const exact=x=>x&&typeof x==="object"&&!Array.isArray(x)&&
+   Object.keys(x).sort().join(",")==="H1,H4";
+  if(!exact(closed)||!exact(seen)||!Object.keys(CONTEXT_WIDTH).every(tf=>{
+    const end=stamp(closed[tf]),receiptAt=stamp(seen[tf]);
+    return Number.isFinite(end)&&Number.isFinite(receiptAt)&&
+     end%CONTEXT_WIDTH[tf]===0&&end<=receiptAt&&receiptAt<=decision;
+  }))return blocked("BLOCKED","MULTITIMEFRAME_CONTEXT_NOT_KNOWN_AT_DECISION");
   prevExit=exit;lastReceipt=receipt;
   if(!pnl(t.grossPnLUsd)||!usd(t.spreadUsd)||!usd(t.slippageUsd)||
    !usd(t.commissionUsd)||!usd(t.initialRiskUsd)||t.initialRiskUsd===0)
