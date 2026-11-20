@@ -55,7 +55,18 @@ class CapitalInertHistoryPlanTests(unittest.TestCase):
                 self.assertFalse(r["containsCredentials"])
                 self.assertEqual(r["providerRequestsMade"], 0)
                 self.assertEqual(r["query"]["from"]+"Z", previous)
-                self.assertEqual(r["query"]["to"]+"Z", item["expectedEndExclusiveUTC"])
+                end_exclusive = dt.datetime.fromisoformat(
+                    item["expectedEndExclusiveUTC"].replace("Z","+00:00")
+                )
+                requested_last_open_plus_one = end_exclusive - dt.timedelta(seconds=width-1)
+                self.assertEqual(
+                    r["query"]["to"]+"Z",
+                    requested_last_open_plus_one.isoformat().replace("+00:00","Z")
+                )
+                self.assertLess(
+                    dt.datetime.fromisoformat(r["query"]["to"]+"+00:00"),
+                    end_exclusive
+                )
                 length = (dt.datetime.fromisoformat(item["expectedEndExclusiveUTC"].replace("Z","+00:00")) -
                           dt.datetime.fromisoformat(previous.replace("Z","+00:00"))).total_seconds()
                 self.assertEqual(length, width*item["expectedClosedSlots"])
