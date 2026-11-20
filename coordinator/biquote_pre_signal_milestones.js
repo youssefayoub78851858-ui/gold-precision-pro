@@ -71,19 +71,30 @@ function summarize(input){
  const sameCycle=!!(validCounts&&validPoint&&q.stage3ReportAtUTC===p.asOfUTC&&
   FRAMES.every(tf=>q.storedClosed[tf]===p.storedClosedCounts[tf]&&
    q.contiguousClosed[tf]===p.contiguousObservedClosed[tf]));
+ // When a separate count-only ledger IS supplied, it cannot disagree
+ // with point-in-time receipts and still leave a positive "locally ready"
+ // headline. Missing ledger is permissible only as an explicitly weaker
+ // point-in-time-only diagnostic, never approval for trade execution.
+ const ledgerProvided=q!==undefined;
+ const ledgerConflict=ledgerProvided&&!sameCycle;
  const h4=validPoint?p.contiguousObservedClosed.H4:null;
- const local21=validPoint&&p.status==="LOCAL_GEOMETRY_ONLY_NOT_TRADE_READY"&&
+ const local21=validPoint&&!ledgerConflict&&
+  FRAMES.every(tf=>p.technicalWarmupMissing?.[tf]===0)&&
+  p.status==="LOCAL_GEOMETRY_ONLY_NOT_TRADE_READY"&&
   p.technicalWarmupMissing.H4===0&&p.warmupCrossFrameMatchedH4===21&&
   p.warmupCrossFrameFullyVerified===true&&
   p.localTimingAndParityCheck==="LOCAL_ONLY_NOT_INDEPENDENT"&&
   FRAMES.every(tf=>p.latestExpectedUTCGridClosedObservedAtDecision?.[tf]===true&&
    p.latestEligibleClosedObservedAtDecision?.[tf]===true)&&
   p.localGeometryObserved===true;
- const local50=local21&&p.paperHistoryMissing.H4===0;
+ const local50=local21&&
+  FRAMES.every(tf=>p.paperHistoryMissing?.[tf]===0);
  const stages=[
   {id:"SOURCE_RIGHTS_AND_SESSION",state:"EXTERNAL_EVIDENCE_REQUIRED",complete:false,
    reason:"BIQUOTE_PRIVATE_USE_PERMISSION_IS_NOT_UPSTREAM_BROKER_ATTESTATION"},
-  {id:"CLOSED_HISTORY_AND_PARITY",state:local50?"LOCAL_50_H4_ONLY_NOT_MARKET_PROOF":
+  {id:"CLOSED_HISTORY_AND_PARITY",state:ledgerConflict?
+   "CONFLICTING_OR_INVALID_CROSS_REPORTS":
+   local50?"LOCAL_50_H4_ONLY_NOT_MARKET_PROOF":
    local21?"LOCAL_21_H4_ONLY_PAPER_HISTORY_PENDING":
    validPoint?"LOCAL_H4_HISTORY_INCOMPLETE_OR_UNVERIFIED":"NO_VALID_POINT_IN_TIME_REPORT",
    complete:false,requiredTechnicalH4:21,requiredPaperH4:50,
@@ -91,6 +102,7 @@ function summarize(input){
    remainingToPaperH4:h4===null?null:Math.max(0,50-h4),
    localWarmupCrossFrameVerified:local21,
    independentPerBarParityProven:false,countOnlyLedgerRecognized:validCounts,
+   countLedgerProvided:ledgerProvided,countLedgerConflictsWithPointInTime:ledgerConflict,
    countLedgerSameDecisionCycle:sameCycle,countLedgerCanAuthorizeTrades:false},
   {id:"MACRO_GC_ORDER_FLOW",state:"REALTIME_PROVENANCE_AND_SYNC_UNVERIFIED",complete:false,
    reason:"NO_LICENSED_SYNCHRONIZED_DXY_YIELDS_GC_AND_NEWS_EVIDENCE"},
