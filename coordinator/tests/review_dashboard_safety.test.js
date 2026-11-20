@@ -156,3 +156,33 @@ test("MTF readiness refuses invalid or partial higher-frame evidence",()=>{
  assert.equal(x.signal,"WAIT");
  assert.equal(x.executable,false);
 });
+
+test("MTF OHLC mismatch stays WAIT and records a blocker",()=>{
+ const {makeMtfReadiness}=require("../biquote_mtf_readiness");
+ const frame=()=>({state:"OBSERVATION_ONLY",sessionCalendarVerified:false,
+  executable:false,tradeEligible:false,validForEntry:false,signal:"WAIT",
+  contiguousBars:24,unclassifiedGapsInChart:0,ema20:3000,lastClosed:3001});
+ const analysis={frames:{M15:frame(),H1:frame(),H4:frame()}};
+ const comparisons={H1:{completeMatches:1,completeMismatches:1,incompleteM15Groups:0},
+  H4:{completeMatches:1,completeMismatches:0,incompleteM15Groups:0}};
+ const x=makeMtfReadiness(analysis,comparisons);
+ assert.equal(x.quality,"OHLC_MISMATCH");
+ assert.ok(x.blockerCodes.includes("CROSS_FRAME_OHLC_MISMATCH"));
+ assert.equal(x.signal,"WAIT");
+ assert.equal(x.tradeEligible,false);
+ assert.equal(x.executable,false);
+});
+test("MTF missing constituent M15 bars stays WAIT",()=>{
+ const {makeMtfReadiness}=require("../biquote_mtf_readiness");
+ const frame=()=>({state:"OBSERVATION_ONLY",sessionCalendarVerified:false,
+  executable:false,tradeEligible:false,validForEntry:false,signal:"WAIT",
+  contiguousBars:24,unclassifiedGapsInChart:0,ema20:3000,lastClosed:3001});
+ const analysis={frames:{M15:frame(),H1:frame(),H4:frame()}};
+ const comparisons={H1:{completeMatches:1,completeMismatches:0,incompleteM15Groups:2},
+  H4:{completeMatches:1,completeMismatches:0,incompleteM15Groups:0}};
+ const x=makeMtfReadiness(analysis,comparisons);
+ assert.equal(x.quality,"PARTIAL_M15_CONSTITUENTS");
+ assert.ok(x.blockerCodes.includes("INCOMPLETE_M15_CONSTITUENTS"));
+ assert.equal(x.signal,"WAIT");
+ assert.equal(x.executable,false);
+});
