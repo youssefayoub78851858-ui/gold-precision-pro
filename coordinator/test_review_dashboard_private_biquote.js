@@ -63,6 +63,55 @@ a.deepEqual(completeAudit,{
  H4:{fullyCovered:2,disagreed:0}
 });
 a.match(mod.researchWatch(good),/^WAIT · WATCH_BUY/);
+// Vendor-declared H4 closure count can be shown descriptively ONLY;
+// unverified broker-calendar/rights assertions must not be reflected.
+const h4Times=[
+ "2026-11-20T16:00:00Z","2026-11-20T20:00:00Z",
+ "2026-11-22T20:00:00Z","2026-11-23T00:00:00Z",
+ "2026-11-23T04:00:00Z"
+].map(t=>({t:Date.parse(t)}));
+const vendorBase={
+ mode:"BIQUOTE_VENDOR_DECLARED_H4_ADJACENCY_RESEARCH_ONLY",
+ status:"PROVIDER_DECLARED_PAUSE_SCENARIO_NOT_TRADING_PROOF",
+ signal:"WAIT",executable:false,
+ originalBrokerIdentified:false,originalBrokerCalendarVerified:false,
+ brokerMarketDataRightsVerified:false,all21H4M15ParityVerified:false,
+ perBarFirstSeenVerified:false,researchWarmupApproved:false,
+ paperOrdersAllowed:false,liveOrdersAllowed:false,
+ brokerOrdersSent:0,paperOrdersSent:0,providerRequestsMade:0,
+ missingCandlesSynthesized:0,
+ observedClosedH4Bars:5,strictUtcH4Tail:3,
+ providerDeclaredSessionAdjacentH4Tail:5,
+ providerDeclaredPauseGapPairs:1,providerDeclaredPauseMissingH4Slots:11,
+ unexplainedGapPairs:0,unknownCalendarGapPairs:0,
+ providerScenarioReached21H4:false,
+ token:"H4_PRIVATE_DO_NOT_RENDER"
+};
+const label=mod.vendorH4SessionLabel({
+ chart:{H4:h4Times},d:{privateVendorH4Tail:vendorBase}
+});
+a.match(label,/UTC متتالية: 3/);
+a.match(label,/حسب استراحات BiQuote: 5/);
+a.match(label,/حقوق المصدر غير مثبتين/);
+a(!label.includes("H4_PRIVATE_DO_NOT_RENDER"));
+for(const mutate of [
+ v=>{v.signal="BUY";},
+ v=>{v.executable=true;},
+ v=>{v.originalBrokerCalendarVerified=true;},
+ v=>{v.brokerMarketDataRightsVerified=true;},
+ v=>{v.researchWarmupApproved=true;},
+ v=>{v.providerScenarioReached21H4=true;},
+ v=>{v.strictUtcH4Tail=4;},
+ v=>{v.providerDeclaredSessionAdjacentH4Tail=100;},
+ v=>{v.observedClosedH4Bars=50;},
+ v=>{v.missingCandlesSynthesized=1;}
+]){
+ const v=structuredClone(vendorBase);mutate(v);
+ a.match(mod.vendorH4SessionLabel({chart:{H4:h4Times},
+  d:{privateVendorH4Tail:v}}),/جدول وسيط MT5 غير مثبت/);
+}
+a.match(mod.vendorH4SessionLabel(good),/جدول وسيط MT5 غير مثبت/);
+
 // Even an older fully covered H1 or H4 disagreement, outside the last
 // H1/H4 but inside the private M15 snapshot, MUST suppress WATCH.
 for(const mutate of [
@@ -159,7 +208,8 @@ class Node {
 }
 const nodes=Object.fromEntries(["candles","price","timestamp","source",
  "reason","decision","quality-status","chart-status","refresh",
- "data-state","trend-status","watch-status","parity-status"].map(k=>[k,new Node()]));
+ "data-state","trend-status","watch-status","parity-status",
+ "vendor-h4-session"].map(k=>[k,new Node()]));
 const tabs=["15min","1h","4h"].map(tf=>{
  const n=new Node();n.dataset.frame=tf;return n;
 });
@@ -191,6 +241,7 @@ vm.runInNewContext(script,context,{timeout:3000});
 a.equal(calls.length,0,"NO background market calls");
 a.equal(nodes.decision.textContent,"WAIT");
 a.equal(nodes.price.textContent,"غير متاح");
+a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير مثبت/);
 (async()=>{
  await nodes.refresh.handlers.click();
  a.equal(calls.length,1);
@@ -202,6 +253,7 @@ a.equal(nodes.price.textContent,"غير متاح");
  a.equal(nodes.decision.textContent,"WAIT");
  a(nodes.price.textContent.includes("2,000"));
  a(nodes.reason.textContent.includes("WATCH_BUY"));
+ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير مثبت/);
  a(!JSON.stringify(nodes).includes("NOT_FOR_UI"));
  tabs[1].handlers.click();
  a(nodes["chart-status"].textContent.startsWith("H1"));
@@ -213,6 +265,7 @@ a.equal(nodes.price.textContent,"غير متاح");
  a.equal(nodes.price.textContent,"غير متاح");
  a.equal(nodes["watch-status"].textContent,"WAIT");
  a(!nodes.reason.textContent.includes("WATCH_BUY"));
+ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير مثبت/);
  a.equal(calls.length,1,"No background refresh on tab switch");
  timeNow=NOW;
  await nodes.refresh.handlers.click();
