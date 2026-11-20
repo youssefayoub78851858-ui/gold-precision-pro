@@ -11,6 +11,12 @@ a.equal(s.signal,'WAIT');a.equal(s.executable,false);
 a.equal(s.researchEligible,false);a.equal(s.paperOrdersAllowed,false);
 a.equal(s.allLayersLive,false);a.equal(s.completeStackReady,false);
 a.equal(s.verifiedLiveLayerCount,0);a.equal(s.requiredLayerCount,9);
+// Capital Demo is the explicitly selected XAUUSD candidate only, never
+// a connected/approved feed or order-capable integration.
+a.match(s.layers.XAUUSD_BBO.providerCandidate,/Capital\.com Demo/);
+a.match(s.layers.XAUUSD_BBO.requiredEvidence,/CLOUD_STORAGE_RIGHTS/);
+a.equal(s.layers.XAUUSD_BBO.liveReady,false);
+a.equal(s.layers.XAUUSD_BBO.researchAdmitted,false);
 for(const k of ['sourceRequestsMade','providerRequestsMade','secretReads','payments'])a.equal(s[k],0);
 a.deepEqual(Object.keys(s.layers),m.layers.map(x=>x.id));
 for(const x of m.layers){
