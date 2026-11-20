@@ -121,7 +121,10 @@ const pastOutcomeNotYetKnown=evaluate(packet([trade(1),second]));
 safe(pastOutcomeNotYetKnown);
 a.equal(pastOutcomeNotYetKnown.status,"BLOCKED");
 a.equal(pastOutcomeNotYetKnown.reason,"LOOKAHEAD_OR_NONCHRONOLOGICAL_PAPER_TRADE");
-const pennyRisk=evaluate(packet([{...trade(1),initialRiskUsd:0.01}]));
+// Exact one-cent TOTAL risk is mathematically finite only when the
+// modeled friction is genuinely zero in this synthetic isolated test.
+const pennyRisk=evaluate(packet([{...trade(1),initialRiskUsd:0.01,
+ spreadUsd:0,slippageUsd:0,commissionUsd:0}]));
 safe(pennyRisk);
 a.equal(pennyRisk.status,"UNATTESTED_PAPER_ARITHMETIC_ONLY");
 a(Number.isFinite(pennyRisk.statistics.averageNetR));
