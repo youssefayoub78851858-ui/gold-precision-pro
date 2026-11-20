@@ -9,7 +9,7 @@ COPY eodhd_ws_bridge.js eodhd_private_readiness.py eodhd_review_monitor.py eodhd
 COPY biquote_offline_source_audit.py biquote_overlap_evidence.py biquote_session_gap_audit.py biquote_quote_mid_parity.py biquote_sampled_spread_buckets.py biquote_quote_cadence.py biquote_public_one_shot.py biquote_24h_observer.py biquote_seven_day_review.py biquote_private_forward_vault.py biquote_forward_shadow_review.py biquote_24h_final_verdict.py private_forward_capacity_preflight.py ultimate_batch_acceptance.py /app/
 # Frozen research modules: Node runs offline against owner-only forward vault.
 # They are not connected to MT5, order endpoints or the public demo.
-COPY v3_ultimate.js ultimate_four_stage_review.js ultimate_signal_quality.js ultimate_signal_quality_report.js ultimate_shadow_admission.js /app/
+COPY v3_ultimate.js ultimate_four_stage_review.js independent_context_timing_preflight.js ultimate_signal_quality.js ultimate_signal_quality_report.js ultimate_shadow_admission.js /app/
 ENV DATA_DIR=/var/data/gold-live PYTHONUNBUFFERED=1
 STOPSIGNAL SIGTERM
 CMD ["python3", "/app/entrypoint.py"]
