@@ -19,8 +19,8 @@ CHECKS = {
         ("coordinator/entrypoint.py", ["/api/v3/monitor/dashboard", "monitor_ready=authenticated"]),
     ],
     "gold_prices": [
-        # SELECTED primary: Capital.com Demo. Legacy EODHD is still
-        # independently audited below, but must not be marketed as primary.
+        # SELECTED primary: Capital.com Demo. EODHD/FXCM are retained
+        # elsewhere as unselected alternate code, not mandatory here.
         ("coordinator/capital_demo_private_get_boundary.py",
          ["CAPITAL_DEMO_PRIVATE_PRICE_GET_ENABLED",
           "CAPITAL_DEMO_PRIVATE_RIGHTS_DOCUMENTED",
@@ -45,6 +45,11 @@ CHECKS = {
          ["مصدر الذهب المختار: Capital.com Demo", "WAIT"]),
         ("coordinator/CAPITAL-DEMO-PRIVATE-HANDOFF.md",
          ["Capital.com Demo", "GET /api/v1/prices/{epic}"]),
+        # Provider-neutral shared closed-frame safety must remain intact.
+        ("coordinator/xauusd_feed_gate.py",
+         ["SourcePolicy", "intake_payload", "expectedOpenTimes"]),
+        ("coordinator/xauusd_research_pipeline.py",
+         ["run_research_pipeline", "researchEligible"]),
     ],
     "context_and_news": [
         ("coordinator/h15_official_rss.js", ["DGS2", "DGS10"]),

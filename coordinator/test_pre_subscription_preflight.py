@@ -70,6 +70,24 @@ class PreSubscriptionAudit(unittest.TestCase):
                             for issue in gold["blockingCodeChecks"]))
         self.assertFalse(report["liveDataValidated"])
 
+    def test_selected_source_still_requires_shared_closed_candle_guard(self):
+        self.assertIn("coordinator/xauusd_feed_gate.py",
+                      [path for path, _ in CHECKS["gold_prices"]])
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            for group in CHECKS.values():
+                for relative, guards in group:
+                    p = root / relative
+                    p.parent.mkdir(parents=True, exist_ok=True)
+                    p.write_text(" ".join(guards))
+            (root / "coordinator/xauusd_feed_gate.py").write_text(
+                "SourcePolicy")
+            report = build_report(root)
+        gold = next(s for s in report["stages"] if s["id"] == "gold_prices")
+        self.assertEqual(gold["status"], "CODE_PREFLIGHT_FAILED")
+        self.assertTrue(any("expectedOpenTimes" in issue
+                            for issue in gold["blockingCodeChecks"]))
+
     def test_unselected_eodhd_and_fxcm_files_are_not_capital_requirements(self):
         # Only the selected provider's code belongs in primary gold readiness.
         self.assertFalse(any(
