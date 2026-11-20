@@ -14,6 +14,7 @@ on:
       - 'coordinator/biquote_forward_shadow_review.py'
       - 'coordinator/test_biquote_forward_shadow_review.py'
       - 'coordinator/ultimate_four_stage_review.js'
+      - 'coordinator/test_ultimate_four_stage_review.js'
       - 'coordinator/paper_admission_gate.py'
       - 'coordinator/test_paper_admission_gate.py'
       - 'coordinator/biquote_signal_data_readiness.js'
