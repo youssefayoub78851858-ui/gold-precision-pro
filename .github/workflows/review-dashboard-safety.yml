@@ -5,6 +5,9 @@ on:
       - review/v2-portable-tests-20261109
     paths:
       - 'review-dashboard.js'
+      - 'coordinator/biquote_private_v3_watch.js'
+      - 'coordinator/biquote_mtf_readiness.js'
+      - 'coordinator/v3_multitimeframe.js'
       - 'coordinator/tests/review_dashboard_safety.test.js'
       - '.github/workflows/review-dashboard-safety.yml'
   workflow_dispatch:
@@ -19,6 +22,11 @@ jobs:
         with:
           node-version: '22'
       - name: Check JavaScript syntax
-        run: node --check review-dashboard.js && node --check coordinator/tests/review_dashboard_safety.test.js
+        run: |
+          node --check review-dashboard.js
+          node --check coordinator/tests/review_dashboard_safety.test.js
+          node --check coordinator/biquote_private_v3_watch.js
+          node --check coordinator/biquote_mtf_readiness.js
+          node --check coordinator/v3_multitimeframe.js
       - name: Run offline safety regression tests
         run: node --test coordinator/tests/review_dashboard_safety.test.js
