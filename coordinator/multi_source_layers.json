@@ -4,8 +4,8 @@
   "layers": [
     {
       "id": "XAUUSD_BBO",
-      "providerCandidate": "Massive",
-      "requiredEvidence": "HISTORICAL_BID_ASK_AND_LIVE_QUOTE_PARITY"
+      "providerCandidate": "Capital.com Demo (selected; unconnected; data rights pending)",
+      "requiredEvidence": "CAPITAL_DEMO_CLOUD_STORAGE_RIGHTS_AND_KYC_BID_ASK_M15_H1_H4_SESSION_PARITY_AND_BROKER_COSTS"
     },
     {
       "id": "GC_TRADES",
