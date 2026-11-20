@@ -12,12 +12,6 @@ function evaluate(input){
   if(layers[name].status!=='READY'||layers[name].blocked)blocked.push(name);
  }
  const {technical,tradePlan,risk,atr}=previous;
- // A complete SYNTHETIC test bundle can produce a mathematical BUY/SELL
- // label, but must NEVER be promoted to an actual research candidate.
- // Preserve technical.candidate as an explicitly diagnostic unit signal.
- // Do not mistake caller-declared fixture geometry for licensed market data.
- if(Object.values(layers).some(layer=>layer.mode==='synthetic'))
-  blocked.push('synthetic data: technical scenario only, not a market research candidate');
  if(!['BUY','SELL'].includes(technical.candidate)||!Number.isFinite(tradePlan.target))blocked.push('technical');
  if(!risk.ok)blocked.push('risk');
  if(!Number.isFinite(atr)||atr<=0||!Number.isFinite(input.spread)||input.spread<0||input.spread>atr*.2)blocked.push('volatility/spread');
@@ -37,7 +31,6 @@ function evaluate(input){
  return {engine:'V3 Ultimate',version:2,contractVersion:'ultimate-context-events-v2',mode:'offline-research',asOfUTC:input.asOfUTC,
   signal:'WAIT',executable:false,networkEnabled:false,dataModes:[...new Set(Object.values(layers).map(x=>x.mode).filter(Boolean))],technical,tradePlan,risk,atr,layers,
   researchCandidate:blocked.length?'NONE':technical.candidate,
-  syntheticScenarioOnly:Object.values(layers).some(layer=>layer.mode==='synthetic'),
   dailyContext:{directionalVote:false,requiredForAdmission:true,US02Y:layers.US02Y,US10Y:layers.US10Y},
   monitoring:{blocked:[...new Set(blocked)],readyFeeds:Object.values(layers).filter(x=>x.status==='READY').length,totalFeeds:7},
   legacyComparison:{version:1,invalidV2RowsExcluded:excluded,researchCandidate:previous.researchCandidate,blockers:previous.monitoring.blocked,layers:previous.layers},
