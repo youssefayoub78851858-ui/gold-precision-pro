@@ -17,6 +17,28 @@ a.match(s.layers.XAUUSD_BBO.providerCandidate,/Capital\.com Demo/);
 a.match(s.layers.XAUUSD_BBO.requiredEvidence,/CLOUD_STORAGE_RIGHTS/);
 a.equal(s.layers.XAUUSD_BBO.liveReady,false);
 a.equal(s.layers.XAUUSD_BBO.researchAdmitted,false);
+const handoff=s.capitalDemoPreKyc;
+a.equal(handoff.mode,'CAPITAL_DEMO_DEFER_USER_KYC_UNTIL_FINAL_CONNECTION_HANDOFF');
+a.equal(handoff.selectedPrimaryCandidate,true);
+a.equal(handoff.kycRequestedNow,false);
+a.equal(handoff.credentialRequestedNow,false);
+a.equal(handoff.kycRequiredBeforeRealDemoAPIUse,true);
+a.equal(handoff.identityDocumentsCollected,false);
+a.equal(handoff.tradingKeyCollected,false);
+a.equal(handoff.permissionToStoreOnPrivateRenderConfirmed,false);
+a.equal(handoff.actualDemoHistoryReceived,false);
+a.equal(handoff.connected,false);
+a.equal(handoff.providerRequestsMade,0);
+a.equal(handoff.ordersSent,0);
+a.equal(handoff.signal,'WAIT');
+a.equal(handoff.executable,false);
+a.equal(handoff.paperOrdersAllowed,false);
+a.equal(handoff.nextUserAction,'NONE_WHILE_OFFLINE_PREPARATION_CONTINUES');
+a.equal(handoff.beforeKycExternalPrerequisite,'COMPANY_PERMISSION_FOR_PRIVATE_CLOUD_DATA_STORAGE_AND_RETENTION');
+a.equal(handoff.workPossibleWithoutKyc.length,4);
+a.equal(handoff.afterKycValidationRequired.length,2);
+for(const unsafe of ['apiKey','identityDocument','apiSecret','liveUrl','token'])
+ a.equal(Object.prototype.hasOwnProperty.call(handoff,unsafe),false);
 for(const k of ['sourceRequestsMade','providerRequestsMade','secretReads','payments'])a.equal(s[k],0);
 a.deepEqual(Object.keys(s.layers),m.layers.map(x=>x.id));
 for(const x of m.layers){
