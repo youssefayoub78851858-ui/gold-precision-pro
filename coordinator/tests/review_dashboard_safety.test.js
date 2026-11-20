@@ -236,6 +236,25 @@ test("main Render review UI folds indicators and clears private metrics",()=>{
    assert.ok(html.includes('id="'+tf+'-'+suffix+'"'));
  assert.ok(js.includes("resetTechnical();"));
  assert.ok(js.includes("renderTechnical(verified.chart);"));
- assert.ok(js.includes("if(Date.now()>expiry)"));
+ assert.ok(js.includes("if(Date.now()>expiry&&!markStale"));
  assert.ok(!js.includes("order_send("));
+});
+
+test("session-checked foreground auto refresh preserves stale history but not tradability",()=>{
+ const fs=require("node:fs"),path=require("node:path");
+ const js=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.js"),"utf8");
+ const ui=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.html"),"utf8");
+ const server=fs.readFileSync(path.resolve(__dirname,"../../server.js"),"utf8");
+ assert.ok(js.includes("const AUTO_POLL_MS=60000, MAX_STALE_MS=600000"));
+ assert.ok(js.includes('document.addEventListener("DOMContentLoaded"'));
+ assert.ok(js.includes('"/api/v3/ultimate/biquote-viewer-status"'));
+ assert.ok(js.includes('packet?.viewerSessionReady!==true'));
+ assert.ok(js.includes("function markStale("));
+ assert.ok(js.includes('$("decision").textContent="WAIT"'));
+ assert.ok(js.includes('document.visibilityState==="hidden"'));
+ assert.ok(server.includes("const ready=session.authenticated(req.headers);"));
+ assert.ok(server.includes("marketDataRequested:false,ordersSent:0"));
+ assert.ok(ui.includes('id="auto-state"'));
+ assert.ok(!js.includes("localStorage"));
+ assert.ok(!js.includes("sessionStorage"));
 });

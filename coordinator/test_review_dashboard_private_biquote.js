@@ -209,7 +209,7 @@ class Node {
 const nodes=Object.fromEntries(["candles","price","timestamp","source",
  "reason","decision","quality-status","chart-status","refresh",
  "data-state","trend-status","watch-status","parity-status",
- "vendor-h4-session","technical-short","technical-note",
+ "vendor-h4-session","technical-short","technical-note","auto-state",
  ...["m15","h1","h4"].flatMap(tf=>
    ["technical","ema","rsi","atr","technical-quality"].map(s=>tf+"-"+s))
  ].map(k=>[k,new Node()]));
@@ -269,12 +269,11 @@ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير م�
  // private prices and WATCH, without any new upstream request.
  timeNow=NOW+20000;
  tabs[0].handlers.click();
- a.equal(nodes.price.textContent,"غير متاح");
- a.equal(nodes["technical-short"].textContent,"غير متاح");
- a.equal(nodes["m15-ema"].textContent,"—");
- a.equal(nodes["h1-rsi"].textContent,"—");
- a.equal(nodes["h4-atr"].textContent,"—");
- a.equal(nodes["watch-status"].textContent,"WAIT");
+ a(nodes.price.textContent.includes("2,000"),"Old historical close remains visible");
+ a.equal(nodes["technical-short"].textContent,"3/3 مرصودة");
+ a.notEqual(nodes["m15-ema"].textContent,"—");
+ a.match(nodes["data-state"].textContent,/قديمة/);
+ a.equal(nodes["watch-status"].textContent,"WAIT · لا فرصة صالحة");
  a(!nodes.reason.textContent.includes("WATCH_BUY"));
  a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير مثبت/);
  a.equal(calls.length,1,"No background refresh on tab switch");
@@ -296,7 +295,8 @@ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير م�
  a(nodes.price.textContent.includes("2,000"));
  timeNow=NOW+20000;
  windowEvents.focus();
- a.equal(nodes.price.textContent,"غير متاح");
+ a(nodes.price.textContent.includes("2,000"));
+ a.match(nodes["data-state"].textContent,/قديمة/);
  a(!nodes.reason.textContent.includes("WATCH_BUY"));
  a.equal(calls.length,4);
  a.equal(typeof intervalCallback,"function");
@@ -358,5 +358,45 @@ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير م�
  a.equal(nodes.decision.textContent,"WAIT");
  windowEvents.pagehide();
  a.equal(nodes.price.textContent,"غير متاح");
+
+ // Auto-start must check HttpOnly viewer session first, then poll read-only
+ // observations every minute only while the page is visible.
+ timeNow=NOW;
+ const autoCalls=[];
+ context.fetch=async(url,options)=>{
+  autoCalls.push({url,options});
+  if(url==="/api/v3/ultimate/biquote-viewer-status")
+   return {status:200,json:async()=>({signal:"WAIT",executable:false,
+      viewerSessionReady:true,marketDataRequested:false,ordersSent:0})};
+  const x=packet();
+  x.observedUTC=new Date(timeNow).toISOString();
+  x.quoteUTC=new Date(timeNow-1500).toISOString();
+  return {status:200,headers:{get:k=>k==="content-type"?
+     "application/json; charset=utf-8":null},json:async()=>x};
+ };
+ documentEvents.DOMContentLoaded();
+ for(let i=0;i<25;i++)await Promise.resolve();
+ a.equal(autoCalls[0]?.url,"/api/v3/ultimate/biquote-viewer-status");
+ a.equal(autoCalls[0]?.options.credentials,"same-origin");
+ a.equal(autoCalls.filter(x=>x.url==="/api/v3/ultimate/biquote-observation").length,1);
+ a(nodes.price.textContent.includes("2,000"),"Auto startup displays closed bars");
+ timeNow=NOW+61000;
+ intervalCallback();
+ for(let i=0;i<25;i++)await Promise.resolve();
+ a.equal(autoCalls.filter(x=>x.url==="/api/v3/ultimate/biquote-observation").length,2);
+ a.equal(nodes.decision.textContent,"WAIT");
+ document.visibilityState="hidden";
+ documentEvents.visibilitychange();
+ const n=autoCalls.length;
+ timeNow=NOW+122000;intervalCallback();
+ a.equal(autoCalls.length,n,"No polling while tab hidden");
+ a.equal(nodes.price.textContent,"غير متاح","Hidden privacy wipe");
+ document.visibilityState="visible";
+ documentEvents.visibilitychange();
+ for(let i=0;i<25;i++)await Promise.resolve();
+ a.equal(autoCalls.filter(x=>x.url==="/api/v3/ultimate/biquote-viewer-status").length,2);
+ a.equal(autoCalls.filter(x=>x.url==="/api/v3/ultimate/biquote-observation").length,3);
+ a.equal(nodes.decision.textContent,"WAIT");
+ windowEvents.pagehide();
  console.log("PASS private mobile candle data gates, older H4 parity, Android BFCache/in-flight cancellation, no background requests and zero orders");
 })().catch(e=>{console.error(e);process.exitCode=1;});
