@@ -122,6 +122,59 @@ def _normalize_frame(pages, frame, as_of, expected_epic):
     }
 
 
+def _same(a, b):
+    return abs(a-b) <= max(0.00001, abs(b)*1e-8)
+
+
+def _price_parity(whole, members):
+    if not members:
+        return False
+    return all(
+        _same(whole[name], expected)
+        for name, expected in {
+            "open": members[0]["open"],
+            "high": max(x["high"] for x in members),
+            "low": min(x["low"] for x in members),
+            "close": members[-1]["close"]
+        }.items()
+    )
+
+
+def _cross_frame_bid_ask_parity(rows):
+    """Offline source geometry only; missing lower bars cannot count as matches.
+
+    Check both BID and ASK independently against the exact 4/16 M15
+    components. Never compare unrelated time ranges or fill broker breaks.
+    """
+    maps = {
+        side: {row["openTime"]: row for row in rows["M15"][side]}
+        for side in ("bid", "ask")
+    }
+    report = {}
+    for frame, quarters in (("H1", 4), ("H4", 16)):
+        counts = {"fullyCoveredMatched": 0, "fullyCoveredDisagreed": 0,
+                  "notFullyCovered": 0}
+        for bid_whole, ask_whole in zip(rows[frame]["bid"], rows[frame]["ask"]):
+            opened = dt.datetime.fromisoformat(
+                bid_whole["openTime"].replace("Z", "+00:00")
+            )
+            stamps = [
+                (opened + dt.timedelta(minutes=15*i)).isoformat().replace("+00:00", "Z")
+                for i in range(quarters)
+            ]
+            bid_parts = [maps["bid"].get(t) for t in stamps]
+            ask_parts = [maps["ask"].get(t) for t in stamps]
+            if any(x is None for x in bid_parts + ask_parts):
+                counts["notFullyCovered"] += 1
+            elif (_price_parity(bid_whole, bid_parts) and
+                  _price_parity(ask_whole, ask_parts)):
+                counts["fullyCoveredMatched"] += 1
+            else:
+                counts["fullyCoveredDisagreed"] += 1
+        report[frame] = counts
+    return report
+
+
 def _valid_epic(value):
     # Never assume a guessed symbol is the official Capital Gold epic.
     return (isinstance(value, str) and ".." not in value
@@ -171,6 +224,11 @@ def review_capital_demo_pages(responses_by_frame, epic, as_of_utc):
     result["duplicatePageBoundaryRows"] = {
         tf: rows[tf]["duplicatePageBoundaryRows"] for tf in RESOLUTIONS
     }
+    result["crossFrameBidAskParity"] = _cross_frame_bid_ask_parity(rows)
+    result["fullCrossFrameCoverageVerified"] = all(
+        data["notFullyCovered"] == 0 and data["fullyCoveredDisagreed"] == 0
+        for data in result["crossFrameBidAskParity"].values()
+    )
     result["stagedBidFrames"] = {tf: rows[tf]["bid"] for tf in RESOLUTIONS}
     result["stagedAskFrames"] = {tf: rows[tf]["ask"] for tf in RESOLUTIONS}
     result["blockingReasons"] = [
@@ -180,6 +238,10 @@ def review_capital_demo_pages(responses_by_frame, epic, as_of_utc):
         "HISTORICAL_BID_ASK_PARITY_NOT_PROVEN_WITH_LIVE_DEMO",
         "NO_RESEARCH_OR_TRADING_ADMISSION"
     ]
+    if any(x["fullyCoveredDisagreed"] for x in result["crossFrameBidAskParity"].values()):
+        result["blockingReasons"].append("H1_H4_M15_BID_ASK_AGGREGATION_MISMATCH")
+    if any(x["notFullyCovered"] for x in result["crossFrameBidAskParity"].values()):
+        result["blockingReasons"].append("H1_H4_M15_BID_ASK_COVERAGE_INCOMPLETE")
     if any(result["minimumWarmupMissing"].values()):
         result["blockingReasons"].append("50_CLOSED_BARS_PER_FRAME_NOT_PROVEN")
     return result
