@@ -49,6 +49,17 @@ class MobileResearchTests(unittest.TestCase):
         self.assertIn("ليس Capital.com",HTML)
         self.assertIn("لا تخزين سجل",HTML)
 
+    def test_descriptive_observation_requires_contiguous_closed_bars(self):
+        for expected in (
+            "function ema20(", "function rsi14(", "function atr14(",
+            "function technical(", "last-older!==width",
+            "if(!b.isOpen&&t+width<=now)valid.push(b)",
+            "technical(valid,tf)", "RESEARCH · WAIT",
+            "لا إشارات تداول", "OPEN_NOT_FIRST",
+        ):
+            with self.subTest(expected=expected):
+                self.assertIn(expected,HTML)
+
     def test_inline_javascript_is_syntactically_valid(self):
         self.assertEqual(HTML.count("<script>"),1)
         self.assertEqual(HTML.count("</script>"),1)

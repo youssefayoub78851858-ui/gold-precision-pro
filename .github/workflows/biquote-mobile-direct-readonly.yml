@@ -7,6 +7,7 @@ on:
     paths:
       - 'coordinator/biquote_mobile_direct_research.html'
       - 'coordinator/test_biquote_mobile_direct_research.py'
+      - 'coordinator/test_biquote_mobile_indicators.js'
       - '.github/workflows/biquote-mobile-direct-readonly.yml'
   workflow_dispatch:
 
@@ -28,3 +29,6 @@ jobs:
       - name: Static source and node syntax (no market requests)
         working-directory: coordinator
         run: python -m unittest -v test_biquote_mobile_direct_research
+      - name: Browser logic mock simulation, no market requests
+        working-directory: coordinator
+        run: node test_biquote_mobile_indicators.js

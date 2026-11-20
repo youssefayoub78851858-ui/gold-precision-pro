@@ -17,6 +17,12 @@ main{max-width:700px;margin:0 auto;padding:16px 13px 28px}header{display:flex;ga
 button{background:#e4b759;color:#092030;font-weight:750;border:0;padding:12px 15px;border-radius:10px;font-size:14px;cursor:pointer}button:disabled{opacity:.55;cursor:wait}
 .notice{font-size:12px;color:var(--muted);line-height:1.6}strong{color:var(--text)}.foot{color:var(--muted);font-size:11px;text-align:center;margin-top:18px}a{color:var(--gold)}
 @media(max-width:390px){.grid{gap:5px}.frame{padding:8px}.frame .close{font-size:17px}.val{font-size:22px}header h1{font-size:18px}}
+
+/* Collapsible technical observation: no orders and no signal-admission logic */
+details.tech{padding:0;overflow:hidden}details.tech summary{cursor:pointer;list-style:none;padding:14px 15px;font-weight:700;color:var(--gold);display:flex;align-items:center;justify-content:space-between;gap:8px}
+details.tech summary:after{content:'+';font-size:20px}details.tech[open] summary:after{content:'−'}details.tech summary::-webkit-details-marker{display:none}
+.techbody{padding:0 13px 14px}.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.metric{background:#0b2030;border:1px solid var(--line);border-radius:12px;padding:9px 7px;min-width:0}.metric h3{margin:0 0 7px;color:var(--gold);font-size:14px}.metric p{font-size:11px;display:flex;justify-content:space-between;gap:4px;margin:7px 0;color:var(--muted);flex-wrap:wrap}.metric strong{font-size:12px;font-variant-numeric:tabular-nums;direction:ltr}.metric .note{font-size:10px;color:var(--muted)}
+@media(max-width:370px){.metrics{gap:4px}.metric{padding:7px 5px}.metric strong{font-size:11px}}
 </style>
 </head>
 <body>
@@ -29,6 +35,13 @@ button{background:#e4b759;color:#092030;font-weight:750;border:0;padding:12px 15
 <div class="frame"><h3>H1</h3><div class="close" id="h1">—</div><div class="time" id="h1time">—</div><div class="mini" id="h1count">—</div></div>
 <div class="frame"><h3>H4</h3><div class="close" id="h4">—</div><div class="time" id="h4time">—</div><div class="mini" id="h4count">—</div></div>
 </div><p class="notice" style="margin-bottom:0">كل الشموع الظاهرة من بيانات MID وقد تشمل تاريخاً أولياً مختلف الأساس. انقطاع ساعات السوق أو نقص الشموع ما بيتم ملؤه بأسعار مفترضة.</p></section>
+<details class="panel tech" id="technical"><summary>الرصد الفني للشموع المغلقة — EMA20 · RSI14 · ATR14</summary><div class="techbody">
+<div class="metrics">
+<div class="metric"><h3>M15</h3><p><span>آخر شمعة</span><strong id="m15move">—</strong></p><p><span>EMA20</span><strong id="m15ema">—</strong></p><p><span>RSI14</span><strong id="m15rsi">—</strong></p><p><span>ATR14</span><strong id="m15atr">—</strong></p><div class="note" id="m15coverage">—</div></div>
+<div class="metric"><h3>H1</h3><p><span>آخر شمعة</span><strong id="h1move">—</strong></p><p><span>EMA20</span><strong id="h1ema">—</strong></p><p><span>RSI14</span><strong id="h1rsi">—</strong></p><p><span>ATR14</span><strong id="h1atr">—</strong></p><div class="note" id="h1coverage">—</div></div>
+<div class="metric"><h3>H4</h3><p><span>آخر شمعة</span><strong id="h4move">—</strong></p><p><span>EMA20</span><strong id="h4ema">—</strong></p><p><span>RSI14</span><strong id="h4rsi">—</strong></p><p><span>ATR14</span><strong id="h4atr">—</strong></p><div class="note" id="h4coverage">—</div></div>
+</div><p class="notice">حسابات وصفية على الشموع MID المغلقة والمتجاورة زمنياً فقط؛ أي فجوة توقف تسلسل المؤشرات، وما منملأ الشموع المفقودة. إذا البيانات مش كافية بتظهر شرطة. هاي مش إشارة شراء/بيع، ولا إثبات لحقوق استخدام المصدر أو مطابقة سعر وسيطك.</p>
+</div></details>
 <section class="panel"><div class="row"><h2 style="margin:0">جاهزية التداول</h2><strong style="color:var(--gold)">WAIT</strong></div><p class="notice">هذه شاشة مراقبة شخصية. لا أوامر شراء/بيع، لا مفاتيح API، لا حساب تداول، لا تخزين سجل، ولا تنبيهات ربح. لا نعتبر بيانات BiQuote بديلاً مطابقاً لشموع وسيطك أو لمصادر GC وDXY والأخبار.</p><div class="row sub"><span>آخر فحص على هاتفك</span><span id="checked">—</span></div></section>
 <p class="foot">مصدر العرض: <a href="https://biquote.io/docs/" target="_blank" rel="noopener noreferrer">BiQuote Public API</a> · لا تترك الشاشة مفتوحة إذا لا تحتاج المراقبة. عند الانتقال لتطبيق آخر يتوقف التحديث.</p>
 </main>
@@ -44,17 +57,29 @@ const fmt=n=>Number(n).toFixed(2);
 const iso=s=>{const n=Date.parse(s);return typeof s==='string'&&/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|\+00:00)$/.test(s)&&Number.isFinite(n)?n:NaN;};
 const ok=n=>typeof n==='number'&&Number.isFinite(n)&&n>0&&n<1e8;
 function blankQuote(){for(const id of ['bid','ask','spread','quoteTime'])$$(id).textContent='—';}
-function blankFrames(){for(const id of ['m15','h1','h4']){ $$(id).textContent='—';$$(id+'time').textContent='—';$$(id+'count').textContent='غير مثبت'; }}
+function blankFrames(){for(const id of ['m15','h1','h4']){ $$(id).textContent='—';$$(id+'time').textContent='—';$$(id+'count').textContent='غير مثبت';for(const key of ['move','ema','rsi','atr'])$$(id+key).textContent='—';$$(id+'coverage').textContent='غير مثبت'; }}
 async function get(path){const controller=new AbortController();const deadline=setTimeout(()=>controller.abort(),8000);try{const r=await fetch(HOST+path,{signal:controller.signal,cache:'no-store',credentials:'omit',redirect:'error',headers:{Accept:'application/json'}});if(!r.ok)throw Error('HTTP');const data=await r.json();if(!data||typeof data!=='object'||Array.isArray(data))throw Error('DATA');return data;}finally{clearTimeout(deadline);}}
 function quote(q,now){const time=iso(q?.timestamp);if(q?.symbol!=='XAUUSD'||q.stale===true||q.marketState!=='open'||!ok(q.bid)||!ok(q.ask)||q.ask<q.bid||!Number.isFinite(time)||time>now+5000||now-time>30000){blankQuote();return false;}
 $$('bid').textContent=fmt(q.bid);$$('ask').textContent=fmt(q.ask);$$('spread').textContent=fmt(q.ask-q.bid);$$('quoteTime').textContent=new Date(time).toISOString().replace('T',' ').slice(0,19)+' UTC';return true;}
+
+function ema20(rows){if(rows.length<20)return null;const values=rows.map(r=>r.close);let e=values.slice(0,20).reduce((a,b)=>a+b,0)/20;const alpha=2/21;for(let i=20;i<values.length;i++)e=alpha*values[i]+(1-alpha)*e;return e;}
+function rsi14(rows){if(rows.length<15)return null;const values=rows.map(r=>r.close);let gains=0,losses=0;for(let i=1;i<=14;i++){const delta=values[i]-values[i-1];gains+=Math.max(delta,0);losses+=Math.max(-delta,0);}gains/=14;losses/=14;for(let i=15;i<values.length;i++){const d=values[i]-values[i-1];gains=(gains*13+Math.max(d,0))/14;losses=(losses*13+Math.max(-d,0))/14;}if(gains===0&&losses===0)return 50;return losses===0?100:100-100/(1+gains/losses);}
+function atr14(rows){if(rows.length<15)return null;const tr=[];for(let i=1;i<rows.length;i++){const b=rows[i],prior=rows[i-1].close;tr.push(Math.max(b.high-b.low,Math.abs(b.high-prior),Math.abs(b.low-prior)));}let a=tr.slice(0,14).reduce((x,y)=>x+y,0)/14;for(let i=14;i<tr.length;i++)a=(a*13+tr[i])/14;return a;}
+function technical(rowsNewestFirst,tf){const id=CODES[tf],width=WIDTH[tf];if(!rowsNewestFirst.length)return;
+// Start from latest CLOSED candle; stop at the first missing or time-skipped slot.
+const run=[rowsNewestFirst[0]];for(let i=1;i<rowsNewestFirst.length;i++){const last=iso(run[run.length-1].openTime),older=iso(rowsNewestFirst[i].openTime);if(last-older!==width)break;run.push(rowsNewestFirst[i]);}
+const rows=run.reverse(),last=rows[rows.length-1],before=rows.length>1?rows[rows.length-2]:null;
+$$(id+'move').textContent=before?(last.close>before.close?'↑ ارتفاع':last.close<before.close?'↓ انخفاض':'→ ثابت'):'—';
+const e=ema20(rows),r=rsi14(rows),a=atr14(rows);
+$$(id+'ema').textContent=e===null?'—':fmt(e);$$(id+'rsi').textContent=r===null?'—':r.toFixed(1);$$(id+'atr').textContent=a===null?'—':fmt(a);
+$$(id+'coverage').textContent=rows.length+' شمعة متجاورة'+(rows.length<20?' · مؤشرات ناقصة':' · وصف فقط');}
 function frame(d,tf,now){const id=CODES[tf],interval={M15:'15m',H1:'1h',H4:'4h'}[tf],width=WIDTH[tf];
 if(d?.symbol!=='XAUUSD'||d.interval!==interval||!Array.isArray(d.bars))throw Error('FRAME');
-const valid=[];let prev=Infinity;
-for(const b of d.bars){const t=iso(b?.openTime);if(!Number.isFinite(t)||t>=prev||t%width!==0||!['boolean'].includes(typeof b.isOpen)||!['open','high','low','close'].every(k=>ok(b[k]))||b.low>Math.min(b.open,b.close)||b.high<Math.max(b.open,b.close)||b.high<b.low)throw Error('CANDLE');prev=t;
+const valid=[];let prev=Infinity;let index=0;
+for(const b of d.bars){const t=iso(b?.openTime);if(!Number.isFinite(t)||t>=prev||t%width!==0||typeof b.isOpen!=='boolean'||!['open','high','low','close'].every(k=>ok(b[k]))||b.low>Math.min(b.open,b.close)||b.high<Math.max(b.open,b.close)||b.high<b.low)throw Error('CANDLE');prev=t;if(b.isOpen&&index!==0)throw Error('OPEN_NOT_FIRST');index++;
 if(!b.isOpen&&t+width<=now)valid.push(b);else if(!b.isOpen)throw Error('NONCLOSED');}
 const last=valid[0];if(!last){$$(id).textContent='—';$$(id+'time').textContent='لا شمعة مغلقة';$$(id+'count').textContent='0 شمعة';return false;}
-$$(id).textContent=fmt(last.close);$$(id+'time').textContent=new Date(iso(last.openTime)+width).toISOString().slice(5,16).replace('T',' ')+' UTC';$$(id+'count').textContent=valid.length+' شمعة مغلقة';return true;
+$$(id).textContent=fmt(last.close);$$(id+'time').textContent=new Date(iso(last.openTime)+width).toISOString().slice(5,16).replace('T',' ')+' UTC';$$(''+id+'count').textContent=valid.length+' شمعة مغلقة';technical(valid,tf);return true;
 }
 async function refresh(){if(active||document.hidden)return;active=true;$$('refresh').disabled=true;const now=Date.now();blankQuote();blankFrames();$$('state').textContent='جاري فحص البيانات…';
 try{const results=await Promise.allSettled(Object.keys(ROUTES).map(async key=>[key,await get(ROUTES[key])]));if(document.hidden)return;const received={};for(const r of results){if(r.status==='fulfilled')received[r.value[0]]=r.value[1];}
