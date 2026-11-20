@@ -66,9 +66,13 @@ def audit_disabled_history_pages(plan, pages):
                 if not isinstance(reply, dict) or "prices" not in reply:
                     return fail("MALFORMED_PROVIDER_RESPONSE")
                 expected_resolution = chunk["request"]["query"]["resolution"]
-                if reply.get("resolution", expected_resolution) != expected_resolution:
+                # Fail closed: missing provenance is NOT proof of the
+                # requested Gold instrument or requested bar resolution.
+                # A proxy or an accidentally wrong endpoint can otherwise
+                # supply plausible OHLC without proving its identity.
+                if reply.get("resolution") != expected_resolution:
                     return fail("BROKER_RESOLUTION_MISMATCH")
-                if reply.get("epic", epic) != epic:
+                if reply.get("epic") != epic:
                     return fail("BROKER_EPIC_MISMATCH")
                 prices = reply["prices"]
                 if not isinstance(prices, list) or len(prices) > 1000:
