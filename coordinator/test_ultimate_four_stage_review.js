@@ -21,6 +21,9 @@ a.equal(ready.profitabilityProven,false);
 a.equal(ready.stages.data.status,'GEOMETRY_ONLY');
 a.equal(ready.stages.analysis.researchCandidate,'BUY');
 a.equal(ready.stages.confirmation.status,'INDEPENDENT_CONTEXT_NOT_VERIFIED');
+a.equal(ready.stages.confirmation.externalContextTiming.status,'NO_ALIGNED_CONTEXT_TIMES');
+a.equal(ready.stages.confirmation.externalContextTiming.decisionClockAligned,false);
+a.equal(ready.stages.confirmation.externalContextTiming.contextCanAuthorizeTrading,false);
 a.equal(ready.stages.validation.status,'NEW_HOLDOUT_AND_EXECUTION_COSTS_NOT_VALIDATED');
 a.equal(ready.stages.validation.independentNetExpectancy,null);
 a.equal(ready.hypotheticalSyntheticPlan.direction,'BUY');
@@ -65,4 +68,58 @@ a.equal(realClaim.signal,'WAIT');
 a.equal(realClaim.hypotheticalSyntheticPlan,null);
 a.equal(realClaim.profitabilityProven,false);
 a.equal(dataGeometry(source.frames,source.asOfUTC).state,'GEOMETRY_ONLY');
+// An independent-looking chronology report from a DIFFERENT decision
+// cannot be attributed to a particular frozen four-stage snapshot.
+const clock="2026-11-20T06:00:00Z";
+const context={
+ origin:"UNATTESTED_SANITIZED_CONTEXT_TIMES_ONLY",
+ decisionUTC:clock,asOfUTC:clock,
+ items:{
+  DXY:{kind:"INDEX_QUOTE_NOT_EXCHANGE_DXY",
+   observedUTC:"2026-11-20T05:58:00Z",
+   firstAvailableUTC:"2026-11-20T05:58:01Z",
+   receivedUTC:"2026-11-20T05:58:02Z"},
+  GC_TRADES:{kind:"COMEX_GC_EXCHANGE_TRADES_NOT_CFD",
+   observedUTC:"2026-11-20T05:59:00Z",
+   firstAvailableUTC:"2026-11-20T05:59:01Z",
+   receivedUTC:"2026-11-20T05:59:02Z"}
+ },token:"NEVER_SHARE_THIS",sourceRightsVerified:true
+};
+const crossedDecision=reviewFourStages({
+ dataOrigin:"SYNTHETIC_TEST_ONLY",snapshot:source,
+ contextTimeEvidence:context
+});
+a.equal(crossedDecision.stages.confirmation.externalContextTiming.status,
+ 'NO_ALIGNED_CONTEXT_TIMES');
+a.equal(crossedDecision.stages.confirmation.externalContextTiming.decisionClockAligned,false);
+const aligned=reviewFourStages({
+ dataOrigin:"SYNTHETIC_TEST_ONLY",snapshot:{...source,asOfUTC:clock},
+ contextTimeEvidence:context
+});
+const alignedContext=aligned.stages.confirmation.externalContextTiming;
+a.equal(alignedContext.mode,"GOLD_EXTERNAL_CONTEXT_TIMING_PREFLIGHT_OFFLINE_V1");
+a.equal(alignedContext.status,"INCOMPLETE_CONTEXT");
+a.equal(alignedContext.decisionClockAligned,true);
+a.equal(alignedContext.perLayer.DXY.timeSuitable,true);
+a.equal(alignedContext.perLayer.GC_TRADES.timeSuitable,true);
+a.equal(alignedContext.perLayer.GC_DEPTH.status,"MISSING");
+a.equal(alignedContext.sourceIndependentlyAttested,false);
+a.equal(alignedContext.contextCanAuthorizeTrading,false);
+a.equal(aligned.stages.confirmation.sourceRightsVerified,false);
+a.equal(aligned.signal,"WAIT");a.equal(aligned.executable,false);
+a.equal(aligned.paperOrdersAllowed,false);
+a.equal(aligned.hypotheticalSyntheticPlan,null);
+a(!JSON.stringify(alignedContext).includes("NEVER_SHARE_THIS"));
+a(!JSON.stringify(alignedContext).includes("sourceRightsVerified"));
+const late=structuredClone(context);
+late.items.GC_TRADES.receivedUTC="2026-11-20T06:00:05Z";
+const contradicted=reviewFourStages({
+ dataOrigin:"SYNTHETIC_TEST_ONLY",snapshot:{...source,asOfUTC:clock},
+ contextTimeEvidence:late
+});
+a.equal(contradicted.stages.confirmation.externalContextTiming.status,
+ "CONTEXT_TIMING_CONFLICTS");
+a.equal(contradicted.stages.confirmation.externalContextTiming.perLayer.GC_TRADES.status,
+ "INVALID_OR_LATE_RECEIPT");
+a.equal(contradicted.signal,"WAIT");
 console.log('PASS four-stage closed-only geometry, synthetic BUY entry/SL/TP, independent context veto, holdout/paper blockers, no lookahead or trade');
