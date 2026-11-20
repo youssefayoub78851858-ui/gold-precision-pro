@@ -95,11 +95,17 @@ class PreSubscriptionAudit(unittest.TestCase):
             for path, _ in CHECKS["gold_prices"]))
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
+            # Some shared files are checked by multiple stages. Build
+            # their UNION, otherwise a later requirement overwrites the
+            # first stage's mock and creates a false readiness failure.
+            required = {}
             for group in CHECKS.values():
                 for relative, guards in group:
-                    p = root / relative
-                    p.parent.mkdir(parents=True, exist_ok=True)
-                    p.write_text(" ".join(guards))
+                    required.setdefault(relative, set()).update(guards)
+            for relative, guards in required.items():
+                p = root / relative
+                p.parent.mkdir(parents=True, exist_ok=True)
+                p.write_text(" ".join(sorted(guards)))
             # No EODHD, FXCM or Massive code at all in this fake tree.
             report = build_report(root)
         self.assertTrue(report["preSubscriptionStaticChecksPassed"])
