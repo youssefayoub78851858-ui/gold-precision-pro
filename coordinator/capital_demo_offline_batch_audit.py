@@ -25,7 +25,11 @@ def _base(status, reason):
         "credentialsUsed": False, "networkAllowed": False,
         "providerRequestsMade": 0, "brokerOrdersSent": 0,
         "receivedClosedCounts": {"M15": 0, "H1": 0, "H4": 0},
-        "unverifiedMissingUTCGridSlots": {"M15": 0, "H1": 0, "H4": 0}
+        "unverifiedMissingUTCGridSlots": {"M15": 0, "H1": 0, "H4": 0},
+        # A locally complete short sample is NOT the 50-candle
+        # cross-frame research/paper warmup. Rights still override it.
+        "minimumWarmupMissing": {"M15": 50, "H1": 50, "H4": 50},
+        "allFramesHave50ClosedBars": False
     }
 
 
@@ -108,6 +112,12 @@ def audit_disabled_history_pages(plan, pages):
         result.update({
             "receivedClosedCounts": received,
             "unverifiedMissingUTCGridSlots": missing,
+            "minimumWarmupMissing": {
+                frame: max(0, 50 - received[frame]) for frame in RESOLUTIONS
+            },
+            "allFramesHave50ClosedBars": all(
+                received[frame] >= 50 for frame in RESOLUTIONS
+            ),
             "crossFrameParityCounts": parity,
             "directH4FromH1ParityCounts": direct,
             "bidAskShapeAccepted": True,
@@ -123,7 +133,11 @@ def audit_disabled_history_pages(plan, pages):
             result["reason"] = "MISSING_UTC_SLOTS_OR_CROSS_FRAME_CONSTITUENTS_UNVERIFIED"
         else:
             result["status"] = "LOCAL_GEOMETRY_ONLY_NOT_ADMITTED"
-            result["reason"] = "NO_INDEPENDENT_BROKER_RIGHTS_RECEIPTS_COSTS_OR_FORWARD_HOLDOUT"
+            result["reason"] = (
+                "NO_50_BAR_WARMUP_OR_INDEPENDENT_BROKER_EVIDENCE"
+                if not result["allFramesHave50ClosedBars"] else
+                "NO_INDEPENDENT_BROKER_RIGHTS_RECEIPTS_COSTS_OR_FORWARD_HOLDOUT"
+            )
         return result
     except (KeyError, IndexError, TypeError, ValueError, OverflowError, AttributeError):
         return fail("UNTRUSTED_OR_INVALID_OFFLINE_BATCH_DATA")
