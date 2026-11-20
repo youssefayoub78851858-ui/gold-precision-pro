@@ -136,6 +136,60 @@ class CapitalDemoOfflineTests(unittest.TestCase):
         self.assertEqual(r["closedBarCounts"]["M15"],2)
         self.assertIn("INDEPENDENT_BROKER_SESSION_AND_SNAPSHOT_CLOCK_MISSING",r["blockingReasons"])
 
+    def test_independent_bid_ask_h1_h4_m15_parity_and_missing_coverage(self):
+        # Exactly 16 M15, four H1 and one H4, all CLOSED and aligned.
+        # Fabricated in memory; never a provider or broker observation.
+        start = dt.datetime(2026, 11, 16, 8, tzinfo=dt.timezone.utc)
+        widths = {"M15": 900, "H1": 3600, "H4": 14400}
+        counts = {"M15": 16, "H1": 4, "H4": 1}
+        packets = {}
+        for frame, count in counts.items():
+            page = sample_page(frame, count)
+            for i, row in enumerate(page["prices"]):
+                row["snapshotTimeUTC"] = (
+                    start + dt.timedelta(seconds=i*widths[frame])
+                ).strftime("%Y-%m-%dT%H:%M:%S")
+                for key, value in (("openPrice", 4000),
+                                   ("highPrice", 4002),
+                                   ("lowPrice", 3998),
+                                   ("closePrice", 4001)):
+                    row[key] = {"bid": value, "ask": value+0.3}
+            packets[frame] = [page]
+        good = review_capital_demo_pages(packets, EPIC, NOW)
+        self.check_wait(good)
+        self.assertTrue(good["fullCrossFrameCoverageVerified"])
+        self.assertEqual(good["crossFrameBidAskParity"], {
+            "H1": {"fullyCoveredMatched": 4, "fullyCoveredDisagreed": 0,
+                   "notFullyCovered": 0},
+            "H4": {"fullyCoveredMatched": 1, "fullyCoveredDisagreed": 0,
+                   "notFullyCovered": 0}
+        })
+        self.assertNotIn("H1_H4_M15_BID_ASK_AGGREGATION_MISMATCH",
+                         good["blockingReasons"])
+
+        corrupted = copy.deepcopy(packets)
+        corrupted["M15"][0]["prices"][4]["highPrice"] = {
+            "bid": 4004, "ask": 4004.3
+        }
+        bad = review_capital_demo_pages(corrupted, EPIC, NOW)
+        self.check_wait(bad)
+        self.assertFalse(bad["fullCrossFrameCoverageVerified"])
+        self.assertEqual(bad["crossFrameBidAskParity"]["H1"]["fullyCoveredDisagreed"], 1)
+        self.assertEqual(bad["crossFrameBidAskParity"]["H4"]["fullyCoveredDisagreed"], 1)
+        self.assertIn("H1_H4_M15_BID_ASK_AGGREGATION_MISMATCH", bad["blockingReasons"])
+
+        partial = copy.deepcopy(packets)
+        partial["M15"][0]["prices"].pop(4)
+        incomplete = review_capital_demo_pages(partial, EPIC, NOW)
+        self.check_wait(incomplete)
+        self.assertFalse(incomplete["fullCrossFrameCoverageVerified"])
+        self.assertEqual(incomplete["crossFrameBidAskParity"]["H1"]["notFullyCovered"], 1)
+        self.assertEqual(incomplete["crossFrameBidAskParity"]["H4"]["notFullyCovered"], 1)
+        self.assertIn("H1_H4_M15_BID_ASK_COVERAGE_INCOMPLETE",
+                      incomplete["blockingReasons"])
+        self.assertFalse(incomplete["dataRightsVerified"])
+        self.assertFalse(incomplete["orderEndpointsSupported"])
+
     def test_request_blueprint_demo_only_not_executable(self):
         blueprint=demo_price_get_blueprint(EPIC,"M15",NOW-dt.timedelta(days=1),NOW)
         self.assertEqual(blueprint["baseUrl"],DEMO_BASE_URL)
