@@ -303,3 +303,68 @@ def demo_price_get_blueprint(epic, frame, start_utc, end_utc):
         "enabled": False, "requiresExplicitCloudRights": True,
         "providerRequestsMade": 0, "containsCredentials": False
     }
+
+
+def audit_demo_get_only_request(blueprint):
+    """Offline deny-by-default boundary for a FUTURE Capital Demo history reader.
+
+    Validates only an INERT history-request specification. Does not connect,
+    authenticate, log secrets, grant source rights or authorize order calls.
+    This deliberately rejects all POST methods, /session, live domains,
+    redirects encoded as URLs, unknown query params and enabled requests.
+    """
+    result = {
+        "mode": "CAPITAL_DEMO_GET_ONLY_INERT_REQUEST_SHAPE_AUDIT",
+        "status": "BLOCKED", "reason": "INVALID_OR_UNTRUSTED_REQUEST",
+        "requestShapeAcceptable": False,
+        "signal": "WAIT", "executable": False, "researchEligible": False,
+        "dataRightsVerified": False, "tradeEligible": False,
+        "paperTradingAllowed": False, "providerRequestsMade": 0,
+        "httpRequestsMade": 0, "credentialsUsed": False,
+        "networkAllowed": False, "orderEndpointsSupported": False,
+        "liveEndpointSupported": False
+    }
+    if not isinstance(blueprint, dict) or set(blueprint) != {
+        "method", "baseUrl", "path", "query", "enabled",
+        "requiresExplicitCloudRights", "providerRequestsMade", "containsCredentials"
+    }:
+        return result
+    if (blueprint["method"] != "GET" or blueprint["baseUrl"] != DEMO_BASE_URL or
+            blueprint["enabled"] is not False or
+            blueprint["requiresExplicitCloudRights"] is not True or
+            blueprint["providerRequestsMade"] != 0 or
+            isinstance(blueprint["providerRequestsMade"], bool) or
+            blueprint["containsCredentials"] is not False):
+        return result
+    path = blueprint["path"]
+    prefix = "/api/v1/prices/"
+    if not isinstance(path, str) or not path.startswith(prefix) or not _valid_epic(path[len(prefix):]):
+        return result
+    query = blueprint["query"]
+    if not isinstance(query, dict) or set(query) != {"resolution", "from", "to", "max"}:
+        return result
+    if (query["resolution"] not in {frame[0] for frame in RESOLUTIONS.values()} or
+            query["max"] != 1000 or isinstance(query["max"], bool)):
+        return result
+    try:
+        values = []
+        for name in ("from", "to"):
+            value = query[name]
+            if not isinstance(value, str) or not re.fullmatch(
+                r"20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d", value
+            ):
+                return result
+            parsed = dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
+            if parsed.strftime("%Y-%m-%dT%H:%M:%S") != value:
+                return result
+            values.append(parsed)
+        if values[0] >= values[1]:
+            return result
+    except (TypeError, ValueError):
+        return result
+    result.update({
+        "status": "DEMO_HISTORICAL_GET_SHAPE_ONLY_NOT_AUTHORIZED",
+        "reason": "CLOUD_DATA_RIGHTS_AND_TRADING_ENABLED_KEY_NOT_APPROVED",
+        "requestShapeAcceptable": True
+    })
+    return result
