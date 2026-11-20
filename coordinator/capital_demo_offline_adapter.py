@@ -175,6 +175,38 @@ def _cross_frame_bid_ask_parity(rows):
     return report
 
 
+def _direct_h1_h4_bid_ask_parity(rows):
+    """Compare the independent H1 and H4 provider frames, even if M15 is absent.
+
+    An H4 needs exactly four aligned, closed H1 members for BOTH BID and
+    ASK. Gaps are not fabricated and no license/trading claim is possible.
+    """
+    hourly = {
+        side: {row["openTime"]: row for row in rows["H1"][side]}
+        for side in ("bid", "ask")
+    }
+    counts = {"fullyCoveredMatched": 0, "fullyCoveredDisagreed": 0,
+              "notFullyCovered": 0}
+    for bid_whole, ask_whole in zip(rows["H4"]["bid"], rows["H4"]["ask"]):
+        opened = dt.datetime.fromisoformat(
+            bid_whole["openTime"].replace("Z", "+00:00")
+        )
+        stamps = [
+            (opened + dt.timedelta(hours=i)).isoformat().replace("+00:00", "Z")
+            for i in range(4)
+        ]
+        bid_parts = [hourly["bid"].get(t) for t in stamps]
+        ask_parts = [hourly["ask"].get(t) for t in stamps]
+        if any(x is None for x in bid_parts + ask_parts):
+            counts["notFullyCovered"] += 1
+        elif (_price_parity(bid_whole, bid_parts) and
+              _price_parity(ask_whole, ask_parts)):
+            counts["fullyCoveredMatched"] += 1
+        else:
+            counts["fullyCoveredDisagreed"] += 1
+    return counts
+
+
 def _valid_epic(value):
     # Never assume a guessed symbol is the official Capital Gold epic.
     return (isinstance(value, str) and ".." not in value
@@ -225,9 +257,11 @@ def review_capital_demo_pages(responses_by_frame, epic, as_of_utc):
         tf: rows[tf]["duplicatePageBoundaryRows"] for tf in RESOLUTIONS
     }
     result["crossFrameBidAskParity"] = _cross_frame_bid_ask_parity(rows)
+    result["h4FromH1BidAskParity"] = _direct_h1_h4_bid_ask_parity(rows)
     result["fullCrossFrameCoverageVerified"] = all(
         data["notFullyCovered"] == 0 and data["fullyCoveredDisagreed"] == 0
-        for data in result["crossFrameBidAskParity"].values()
+        for data in list(result["crossFrameBidAskParity"].values()) +
+                    [result["h4FromH1BidAskParity"]]
     )
     result["stagedBidFrames"] = {tf: rows[tf]["bid"] for tf in RESOLUTIONS}
     result["stagedAskFrames"] = {tf: rows[tf]["ask"] for tf in RESOLUTIONS}
@@ -242,6 +276,10 @@ def review_capital_demo_pages(responses_by_frame, epic, as_of_utc):
         result["blockingReasons"].append("H1_H4_M15_BID_ASK_AGGREGATION_MISMATCH")
     if any(x["notFullyCovered"] for x in result["crossFrameBidAskParity"].values()):
         result["blockingReasons"].append("H1_H4_M15_BID_ASK_COVERAGE_INCOMPLETE")
+    if result["h4FromH1BidAskParity"]["fullyCoveredDisagreed"]:
+        result["blockingReasons"].append("H4_H1_DIRECT_BID_ASK_AGGREGATION_MISMATCH")
+    if result["h4FromH1BidAskParity"]["notFullyCovered"]:
+        result["blockingReasons"].append("H4_H1_DIRECT_BID_ASK_COVERAGE_INCOMPLETE")
     if any(result["minimumWarmupMissing"].values()):
         result["blockingReasons"].append("50_CLOSED_BARS_PER_FRAME_NOT_PROVEN")
     return result
