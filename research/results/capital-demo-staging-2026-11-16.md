@@ -28,3 +28,22 @@ Capital.com acknowledged historical response anomalies where some ASK candle com
 6. Paper trading remains disabled until reliable and permitted feed, cost model and independent tests are complete; actual trades always require separate explicit authorization.
 
 No branch other than review/v2-portable-tests-20261109 is modified. No deployment, cutover, provider requests or subscription.
+
+## 20 November 2026 — single-source decision (review only)
+
+**Selected XAUUSD BID/ASK candidate: Capital.com Demo**, replacing Massive as the primary *candidate* in the offline nine-layer source registry. This is a **choice of provider to pursue, not a claim of connection, licensed rights, or signal readiness**. BiQuote remains a distinct private observational/research feed only; Gold API is a reference-only no-subscription test and is not the primary trading data source. No paid provider is authorized by this decision.
+
+Decision basis:
+- Capital.com support confirmed a Lebanon Demo can use historical Gold BID/ASK M15, H1 and H4 without data/API fees; key access depends on identity verification and already-enabled 2FA. A reply is still pending on private Render candle storage, retention, private backtests and simulated trades.
+- Capital Demo keys have trading privileges and can work with live or demo host URLs; the existing offline-only adapter and strictly inert GET-only allowlist cannot by themselves eliminate the risk of a future real connection. No credential, broker login, cloud API request or live-account endpoint has been used.
+- The existing offline adapter now checks bid/ask M15→H1, M15→H4 and H1→H4 parity with no gap fabrication. V2 offline CI passed on commit `503ab3ec` before this decision-only update.
+- Massive forex historical OHLC and BBO endpoint documentation is available but the symbol-specific XAUUSD entitlement, rights and price/permission basis were not independently verified; don't assume the connected read-only research tool grants permission to store data on Render.
+- EODHD and Gold API do not independently demonstrate the broker-specific BID/ASK M15/H1/H4 and private retention rights needed for this system, and there is no reason to purchase either before settling the selected free Demo path.
+
+**Only remaining handoff before a connected, provider-approved trial:**
+1. Compliance reply in writing specifying that personal authenticated one-user Render GET-only XAUUSD history, private closed-candle storage, retained backtests and prospective paper study are allowed and stating retention limits. An explicit refusal means this provider is not usable for that workflow.
+2. The owner completes Capital identity verification themselves using the company's official site/app. It cannot be performed by ChatGPT and must not involve sharing identity documents, a trading-enabled key or password in chat.
+3. A separately reviewed isolated Demo-only credential holder with enforced hostname and method/path restrictions; determine Gold epic from the official Demo GET markets response; obtain dated session calendar and run real closed BID/ASK parity + after-cost holdout. Current offline code **is not** a live client.
+4. For the full aspirational system, independent DXY/yields, GC and timestamped economic/news data remain distinct candidate layers, not proven real-time inputs. Any provisional recommendation would need honest omissions and conservative WAIT rules.
+
+**Status today:** `signal=WAIT`, `executable=false`, `researchEligible=false`, `tradeEligible=false`, no auto paper/live orders, no new spending, no new private collector deployment and no production edit.
