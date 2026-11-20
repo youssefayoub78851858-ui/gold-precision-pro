@@ -9,6 +9,7 @@ const {evaluate}=require('./v3_ultimate');
 const {review}=require('./ultimate_signal_quality_report');
 const {checkFrame}=require('./v3_multitimeframe');
 const {inspect:inspectContextTiming}=require('./independent_context_timing_preflight');
+const {inspect:inspectVendorH4Session}=require('./biquote_session_h4_continuity_audit');
 
 const TIMEFRAMES=Object.freeze({M15:15,H1:60,H4:240});
 const CONTEXT=Object.freeze(['DXY','US02Y','US10Y','GC','calendar','headlines','orderFlow']);
@@ -73,6 +74,14 @@ function reviewFourStages(input){
     contextPacket.decisionUTC===asOfUTC&&contextPacket.asOfUTC===asOfUTC;
   const contextTiming=clocksAligned?
     inspectContextTiming(contextPacket):inspectContextTiming({});
+  // Optional, separate Nov-2026 vendor-SUPPORT weekend exercise. Keep the
+  // calendar check isolated from strict UTC-grid data geometry, which is
+  // still the unchanged research/admission gate. Never infer a broker
+  // attestation from a user-supplied or archived local receipt timestamp.
+  const h4Packet=input?.h4SessionTimeEvidence;
+  const h4ClockAligned=!!h4Packet&&h4Packet.asOfUTC===asOfUTC;
+  const h4Timing=h4ClockAligned?
+    inspectVendorH4Session(h4Packet):inspectVendorH4Session({});
   let core=null,independent=null;
   if(!invalid && snapshot && typeof snapshot==='object'){
     try{
@@ -102,7 +111,27 @@ function reviewFourStages(input){
     asOfUTC:invalid?null:asOfUTC,dataOrigin:origin||'UNVERIFIED',
     stages:{
       data:{status:data.state,checks:data.frames,
-        blockers:[...data.blockers,'UPSTREAM_LICENSE_AND_BROKER_SESSION_NOT_ATTESTED']},
+        blockers:[...data.blockers,'UPSTREAM_LICENSE_AND_BROKER_SESSION_NOT_ATTESTED'],
+        // Separate vendor-conditional research clock, never an approval.
+        vendorConditionalH4Timing:{
+          mode:h4Timing.mode,
+          status:h4ClockAligned?h4Timing.status:'NO_ALIGNED_H4_SESSION_TIMES',
+          reason:h4ClockAligned?h4Timing.reason:'NO_ALIGNED_H4_SESSION_TIMES',
+          decisionClockAligned:h4ClockAligned,
+          barsWithLocalReceipt:h4Timing.barsWithLocalReceipt,
+          rawUtcGridTail:h4Timing.rawUtcGridTail,
+          vendorConditionalSessionTail:h4Timing.vendorConditionalSessionTail,
+          providerDeclaredFullyClosedH4SlotsBridged:
+            h4Timing.providerDeclaredFullyClosedH4SlotsBridged,
+          missingProviderOpenH4Slots:h4Timing.missingProviderOpenH4Slots,
+          unknownScheduleSlots:h4Timing.unknownScheduleSlots,
+          conditional21H4Reached:h4Timing.conditional21H4Reached,
+          conditional50H4Reached:h4Timing.conditional50H4Reached,
+          originalBrokerSessionCalendarVerified:false,
+          sourceRightsVerified:false,
+          canReplaceStrictDataGate:false,
+          sessionTimesCanAuthorizeTrades:false
+        }},
       analysis:{status:core?'FROZEN_ENGINE_EVALUATED':'BLOCKED',
         technicalCandidate:technical,
         researchCandidate:synthetic?candidate:'NONE',
