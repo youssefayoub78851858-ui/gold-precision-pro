@@ -77,4 +77,24 @@ const newsRiskReport=assessPublicShadow(newsRisk);wait(newsRiskReport);
 assert.equal(newsRiskReport.contextFramesStructurallyReady,7);
 assert.ok(!JSON.stringify(newsRiskReport).includes('BUY'));
 
+// Regression matrix: stale macro, mismatched GC contract, missing order-flow
+// provenance, incomplete news coverage and emergency risk stop must all stay
+// quarantined. These are offline fixtures, never market evidence.
+const blockedScenarios={
+ staleDXY:x=>{x.feeds.DXY.observedUTC='2026-11-10T11:50:00Z';},
+ mismatchedGC:x=>{x.feeds.orderFlow.contract='GCG2027';},
+ unlicensedOrderFlow:x=>{x.feeds.orderFlow.licensed=false;},
+ newsContinuityLost:x=>{x.feeds.headlines.continuityVerified=false;},
+ emergencyKillSwitch:x=>{x.risk.killSwitch=true;}
+};
+for(const [scenario,mutate] of Object.entries(blockedScenarios)){
+ const x=fixture('recorded');mutate(x);
+ assert.equal(evaluate(x).researchCandidate,'NONE',scenario);
+ const result=assessPublicShadow(x);wait(result);
+ assert.equal(result.researchCandidate,'NONE',scenario);
+ assert.equal(result.brokerOrdersSent,0,scenario);
+ assert.ok(!JSON.stringify(result).includes('BUY'),scenario);
+ assert.ok(!JSON.stringify(result).includes('SELL'),scenario);
+}
+
 console.log('PASS frozen Ultimate v2 unchanged; public adapter suppresses all synthetic/spoofed recorded candidates and orders');
