@@ -217,3 +217,53 @@ This file is a portable GitHub handoff, not a ChatGPT saved-memory entry.
   untouched forward net performance. Offline code cannot complete
   these evidence-dependent milestones unaided. No credible qualified
   BUY/SELL/Entry/SL/TP is justified yet.
+
+## 2026-11-20 07:16 UTC GC contract/depth coherence batch
+
+- Verified initial branch HEAD `0dfeb437`, full V2 offline GitHub CI
+  `44693608828` **SUCCESS** and four-stage CI `44690994296`
+  success. The existing Render **review** deployment was `0dfeb437`;
+  the **private collector** remained on `b01574f2`. No production
+  deployment or private collector change was made in this batch.
+- Latest private Render count-only collector record at **2026-11-20
+  07:16:02 UTC**: M15 213 stored / 33 strict contiguous; H1 53 stored
+  / 8 contiguous; H4 13 stored / 13 contiguous. M15 8, H1 2,
+  H4 0 missing raw UTC slots. H4 archive-to-M15 overlap compared
+  **1 fully covered H4**, 12 lacked complete M15 window coverage;
+  no mismatches were found in that lone complete comparison. This is
+  NOT full parity, independent source proof or a qualified quote.
+- No `BIQUOTE_SEVEN_DAY_CAPACITY_STOP` or
+  `BIQUOTE_SEVEN_DAY_VAULT_AUDIT_BLOCKED` event was seen in the
+  bounded Render log check. No new reply from BiQuote, CFI, Twelve
+  Data, Massive or Databento after 2026-11-19 was found in Gmail.
+- An offline *seven-source timing preflight* existed already; now
+  `coordinator/independent_context_timing_preflight.js` additionally
+  requires both `GC_TRADES` and `GC_DEPTH` to carry an explicitly
+  bounded exchange-futures `GC{month}{year}` contract identifier.
+  Both must identify **the same contract** and their claimed event
+  timestamps must differ by **no more than 60 seconds**. GCZ2026
+  vs GCG2027, CFD ticker substitutions, invalid identifiers and
+  excessively skewed packets fail to confirm GC. This is validation
+  of **UNATTESTED offline metadata**, not evidence that an actual
+  CME/COMEX quote/feed exists, or that the contract roll is valid.
+- Four-stage `ultimate_four_stage_review.js` now includes the
+  sanitized `gcTradeDepthCrossCheck` result in its isolated
+  no-trade confirmation diagnostics. Added end-to-end test of
+  cross-contract rejection to `test_ultimate_four_stage_review.js`,
+  including `WAIT`, zero orders, no exposure of raw source data.
+- Added missing `test_ultimate_four_stage_review.js` path to
+  `.github/workflows/gold-four-stage-batch-offline.yml`, so edits
+  to four-stage tests trigger the actual acceptance workflow.
+- Several intermediate CI jobs failed while the GC fixture was
+  being brought into sync with stricter source metadata. The
+  **final integrated code** on `7cec33dc` passed four-stage run
+  `44695416297`, and Ultimate signal-quality run
+  `44695416439`. After the end-to-end new mismatch regression,
+  Ultimate signal-quality run `44695586778` **SUCCESS** on
+  `e692991c`. Final additional workflow trigger fix on
+  `c26f0780`; see GitHub Actions for its complete post-change CI.
+- No actual GC/ICE/BiQuote entitlement was activated. All
+  independent source rights, original MT5 broker schedule,
+  intraday DXY, GC MBO/MBP-10, broker execution costs and untouched
+  prospective after-cost paper outcomes remain unverified. Trading
+  recommendation state remains `WAIT`; `executable=false`.
