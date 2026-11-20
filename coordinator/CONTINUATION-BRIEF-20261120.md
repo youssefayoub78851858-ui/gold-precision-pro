@@ -267,3 +267,55 @@ This file is a portable GitHub handoff, not a ChatGPT saved-memory entry.
   intraday DXY, GC MBO/MBP-10, broker execution costs and untouched
   prospective after-cost paper outcomes remain unverified. Trading
   recommendation state remains `WAIT`; `executable=false`.
+
+## 2026-11-20 second prospective paper-cost audit: one-trade-at-a-time clocks
+
+- Verified initial branch head `366ed188` and successful complete
+  V2 offline CI run `44695748346`. Read-only private Render collector
+  count at **2026-11-20 08:46:03 UTC**: M15 stored=219 /
+  strictly contiguous=39; H1 stored=54 / contiguous=9;
+  H4 stored=14 / contiguous=14, sourceRightsVerified=false,
+  signal=WAIT. M15 has 8 and H1 has 2 unclassified raw-grid
+  missing slots, H4 has 0. These are unverified **counts**, not a
+  tradeable price or an independently verified broker calendar.
+- No new vendor reply found in Gmail after 2026-11-19 when checked
+  for BiQuote, CFI, Twelve Data, Massive and Databento.
+- Strengthened `coordinator/prospective_paper_holdout_audit.js`:
+  require the last closed M15 signal to be no older than 15 minutes
+  at the claimed decision; the H1 and H4 context must also be
+  closed, observed, and reasonably recent. A new trade cannot
+  assume knowledge of the previous trade's result before its
+  declared first-observed exit receipt. Reject sub-cent risk
+  values that create meaningless/infinite R scores; check finite
+  per-trade net/R arithmetic.
+- Resolved a consequential ambiguity in paper profitability:
+  an input must explicitly declare its gross PnL as **mid-price
+  mark BEFORE spread, slippage and commission**. A claimed gross
+  outcome based on actual BID/ASK fills already including spread
+  is NOT accepted by this simplified subtraction model, so
+  spread cannot be charged twice in a purported result. The
+  `initialRiskUsd` denominator must explicitly mean **total
+  stop risk INCLUDING all modeled trading costs**, and costs
+  cannot consume all that risk. These are assertions from an
+  UNATTESTED offline ledger only; they are not broker proof.
+- Added regression tests for stale frame context, chronology
+  leakage between successive paper positions, zero/sub-cent
+  risk, ambiguous PnL cost basis, and costs exceeding stop
+  risk. The first isolated one-cent boundary fixture erroneously
+  retained nonzero cost and correctly failed; it was corrected
+  to a synthetic zero-cost mathematical boundary. No changes
+  to real or paper trading permission.
+- GitHub four-stage offline CI **SUCCESS** on `64ce13e0`,
+  <https://github.com/youssefayoub78851858-ui/gold-precision-pro/actions/runs/44706728295>.
+  Full V2 CI on `64ce13e0` was in progress when this
+  report section was authored, run `44706728247`; never
+  infer a result before Github reports it.
+- This batch modifies **only the review branch**, offline
+  ledger code/tests and this text. No private collector
+  cutoff extension, paid provider calls, credentials, source
+  approvals, public/production deploys or broker/paper orders.
+  External vendor rights, broker schedule/calendar, true
+  point-in-time matched M15/H1/H4 history, real GC and DXY
+  entitlements and broker costs, and untouched independent
+  after-cost holdout performance are still unresolved.
+  `WAIT`, `executable=false` remain compulsory.
