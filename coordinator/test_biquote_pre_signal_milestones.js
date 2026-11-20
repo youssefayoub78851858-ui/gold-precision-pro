@@ -58,9 +58,18 @@ const warmup=summarize({pointInTime:point(21,true)});safe(warmup);
 a.equal(warmup.local21H4Observed,true);
 a.equal(warmup.local50H4Observed,false);
 a.equal(warmup.stages[1].state,"LOCAL_21_H4_ONLY_PAPER_HISTORY_PENDING");
+a.deepEqual(warmup.stages[1].required21H4Constituents,
+ {M15:336,H1:84,H4:21});
+a.equal(warmup.stages[1].local21H4ConstituentCountsSufficient,true);
+a.equal(warmup.stages[1].local50H4ConstituentCountsSufficient,false);
+a.equal(warmup.stages[1].perBarConstituentIdentityNotAuthenticated,true);
 const fifty=summarize({pointInTime:point(50,true)});safe(fifty);
 a.equal(fifty.local50H4Observed,true);
 a.equal(fifty.stages[1].state,"LOCAL_50_H4_ONLY_NOT_MARKET_PROOF");
+a.deepEqual(fifty.stages[1].required50H4Constituents,
+ {M15:800,H1:200,H4:50});
+a.equal(fifty.stages[1].local50H4ConstituentCountsSufficient,true);
+a.equal(fifty.stages[1].perBarConstituentIdentityNotAuthenticated,true);
 const forged=summarize({pointInTime:{...point(50,true),signal:"BUY",
  executable:true,sourceRightsVerified:true},countEvidence:{
  mode:"BIQUOTE_H4_EVIDENCE_QUALITY_LEDGER_COUNTS_ONLY",signal:"BUY",
@@ -184,6 +193,36 @@ shortM15.paperHistoryMissing.M15=40;
 const overclaim=summarize({pointInTime:shortM15});
 safe(overclaim);a.equal(overclaim.local21H4Observed,false);
 a.equal(overclaim.local50H4Observed,false);
+// An alleged 21-H4 warmup needs ALL its 336 closed M15 and 84 H1
+// constituents, even if their individual warmup deficits (21 each)
+ // happen to be zero. This test does not prove the bars actually match.
+for(const [tf,min] of [["M15",336],["H1",84]]){
+ const short=point(21,true);
+ short.storedClosedCounts[tf]=min-1;
+ short.observedAtDecision[tf]=min-1;
+ short.contiguousObservedClosed[tf]=min-1;
+ short.technicalWarmupMissing[tf]=0;
+ short.paperHistoryMissing[tf]=Math.max(0,50-(min-1));
+ const out=summarize({pointInTime:short});safe(out);
+ a.equal(out.stages[1].local21H4ConstituentCountsSufficient,false);
+ a.equal(out.local21H4Observed,false);
+ a.equal(out.local50H4Observed,false);
+}
+// Even a full 50-H4 raw tail cannot establish a 50-H4 paper dataset
+// from 50 H1 bars or 799 M15 bars.
+for(const [tf,min] of [["M15",800],["H1",200]]){
+ const short=point(50,true);
+ short.storedClosedCounts[tf]=min-1;
+ short.observedAtDecision[tf]=min-1;
+ short.contiguousObservedClosed[tf]=min-1;
+ short.technicalWarmupMissing[tf]=0;
+ short.paperHistoryMissing[tf]=0;
+ const out=summarize({pointInTime:short});safe(out);
+ a.equal(out.stages[1].local21H4ConstituentCountsSufficient,true);
+ a.equal(out.stages[1].local50H4ConstituentCountsSufficient,false);
+ a.equal(out.local21H4Observed,true);
+ a.equal(out.local50H4Observed,false);
+}
 const shortPaper=point(50,true);
 shortPaper.storedClosedCounts.H1=30;
 shortPaper.observedAtDecision.H1=30;
@@ -191,8 +230,9 @@ shortPaper.contiguousObservedClosed.H1=30;
 shortPaper.technicalWarmupMissing.H1=0;
 shortPaper.paperHistoryMissing.H1=20;
 const noPaper=summarize({pointInTime:shortPaper});
-safe(noPaper);a.equal(noPaper.local21H4Observed,true);
+safe(noPaper);a.equal(noPaper.local21H4Observed,false);
 a.equal(noPaper.local50H4Observed,false);
+a.equal(noPaper.stages[1].local21H4ConstituentCountsSufficient,false);
 const inconsistent=summarize({pointInTime:{...point(50,true),
  paperHistoryMissing:{...point(50,true).paperHistoryMissing,H4:30}}});
 safe(inconsistent);a.equal(inconsistent.stages[1].observedContiguousH4,null);
