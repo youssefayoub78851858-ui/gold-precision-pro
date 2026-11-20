@@ -164,3 +164,56 @@ This file is a portable GitHub handoff, not a ChatGPT saved-memory entry.
   history across M15/H1/H4, independent execution BID/ASK costs and
   synchronized DXY/US yields/news/GC order flow, and untouched prospective
   net-of-cost performance. Current action: `WAIT`, `executable:false`.
+
+## 2026-11-20 offline macro, GC and news chronology batch
+
+- Verification at the beginning of this batch: review-branch HEAD
+  `559e1872`; GitHub V2 offline workflow `44690041439` completed with
+  SUCCESS. The Render private coordinator stayed on `b01574f2`, and
+  public review UI stayed on the earlier `2d38050c` deployment.
+- Latest accessible sanitized Render count log:
+  `2026-11-20T06:46:02Z`: M15=211 stored/31 contiguous, H1=52
+  stored/7 contiguous, H4=13 stored/13 contiguous, 8 M15 and 2 H1
+  unclassified missing slots, zero H4 missing slots; `WAIT`, original
+  broker rights false. This is historical collector **count metadata**,
+  not a fresh authenticated broker quote.
+- No new replies found after 2026-11-18 from BiQuote / CFI / Twelve
+  Data / Massive / Databento when queried this batch. Do not claim
+  a reply or fabricate upstream source rights.
+- Official BiQuote documentation still uses the generic MT5
+  `MetaTrader 5 (Broker 1)` source label, and the public BiQuote SDK
+  README expressly describes FX/gold CFD quotes as **not an exchange
+  consolidated trade tape**. Public source:
+  <https://biquote.io/docs/> and
+  <https://github.com/halitcanbaba/biquote-sdk/blob/main/README.md>.
+  Thus `XAUUSD` from BiQuote cannot supply CME `GC_TRADES`,
+  `GC_DEPTH` (MBO/MBP-10), or a licensed independent ICE DXY source.
+- New `coordinator/independent_context_timing_preflight.js` and
+  `test_independent_context_timing_preflight.js` validate **offline,
+  caller-supplied untrusted metadata only**, across:
+  `DXY`, `GC_TRADES`, `GC_DEPTH`, `US02Y`, `US10Y`,
+  `CALENDAR`, `HEADLINES`. The preflight rejects:
+  impossible/late first availability, market-time evidence received
+  after a purported decision, stale data, news published in the future,
+  fake GC-CFD substitution, unexpected source/payload types and
+  injected entitlement flags. It keeps scheduled future events
+  separate from **published actual** data, and official daily yields
+  explicitly DAILY-ONLY, never intraday rates.
+- It returns no prices, secret strings, vendor raw items or trades.
+  Even with apparently valid event clocks, all source identity/
+  upstream license/independent receipt/validation flags remain false,
+  `signal=WAIT`, `executable=false`, and zero real/paper orders.
+- Integrated the new test in four-stage GitHub offline CI,
+  **SUCCESS** on commit `96132735`, run
+  <https://github.com/youssefayoub78851858-ui/gold-precision-pro/actions/runs/44690994296>.
+  This is unit-test success, not live multi-source connectivity.
+- No changes to `main`, `backup-v1`, Render production, broker,
+  paid provider accounts, or private collector deployment. No new
+  charge, feed activation or live/paper trading.
+- Stop condition remains unmet: original MT5 broker entitlement and
+  session proof; fresh, independently attested fully reconciled closed
+  XAUUSD M15/H1/H4; truly licensed GC, independent DXY and timely macro
+  releases; broker-specific execution BBO/spread/slippage fees; and
+  untouched forward net performance. Offline code cannot complete
+  these evidence-dependent milestones unaided. No credible qualified
+  BUY/SELL/Entry/SL/TP is justified yet.
