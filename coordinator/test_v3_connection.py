@@ -70,5 +70,7 @@ class Connection(unittest.TestCase):
   included=set()
   for line in (ROOT/'Dockerfile').read_text().splitlines():
    if line.startswith('COPY '):included.update(shlex.split(line)[1:-1])
-  for name in ['v3_trade_plan.js','v3_multitimeframe.js','v3_market_structure.js']:self.assertIn(name,included);self.assertTrue((ROOT/name).is_file())
+  for name in ['v3_trade_plan.js','v3_multitimeframe.js','v3_market_structure.js',
+               'ultimate_four_stage_review.js','independent_context_timing_preflight.js']:
+   self.assertIn(name,included);self.assertTrue((ROOT/name).is_file())
 if __name__=='__main__':unittest.main()
