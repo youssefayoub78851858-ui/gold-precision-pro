@@ -20,7 +20,7 @@ const make=()=>({
  appendChild(x){this.children.push(x)},replaceChildren(...x){this.children=x},
 });
 const nodes=new Map();
-for(const id of ["multi-source-check","multi-source-state","multi-source-grid","gdc-source-proof"])
+for(const id of ["multi-source-check","multi-source-state","multi-source-grid","gdc-source-proof","capital-kyc-handoff"])
  nodes.set(id,make());
 const document={
  getElementById:id=>nodes.get(id)||null,
@@ -28,15 +28,12 @@ const document={
  createTextNode:text=>({textContent:text})
 };
 const window={addEventListener:(k,f)=>{events[k]=f}};
-const normal={
- mode:"OFFLINE_MULTISOURCE_CAPABILITY_AUDIT",signal:"WAIT",
- executable:false,researchEligible:false,paperOrdersAllowed:false,
- verifiedLiveLayerCount:0,requiredLayerCount:9,sourceRequestsMade:0,
- providerRequestsMade:0,publicLicensedDataShown:false,
- layers:Object.fromEntries(names.map(x=>[x,{status:
-   ["US02Y","US10Y"].includes(x)?"FREE_DAILY_REFERENCE_CANDIDATE":"NOT_CONNECTED",
-   liveReady:false,researchAdmitted:false}]))
-};
+// Use the actual offline registry contract so the real pre-KYC field is
+// tested without forging or weakening decision-board safety checks.
+const normal=require("./coordinator/multi_source_public_readiness").snapshot();
+assert.equal(normal.capitalDemoPreKyc.kycRequestedNow,false);
+assert.equal(normal.capitalDemoPreKyc.connected,false);
+assert.equal(normal.capitalDemoPreKyc.signal,"WAIT");
 async function fetch(url,opts){
  calls.push({url,opts});
  assert.equal(url,"/api/v3/ultimate/multi-source-readiness");
@@ -59,6 +56,8 @@ const status=nodes.get("multi-source-state");
  assert.match(proof.textContent,/الثابت فقط/);
  assert.match(status.textContent,/0 من 9 مصادر حقيقية/);
  assert.equal(nodes.get("multi-source-grid").children.length,9);
+ assert.match(nodes.get("capital-kyc-handoff").textContent,/توثيق الهوية مؤجّل/);
+ assert.match(nodes.get("capital-kyc-handoff").textContent,/WAIT/);
  state="forged";
  await button.onclick();
  assert.match(proof.textContent,/العدد غير معروف/);
