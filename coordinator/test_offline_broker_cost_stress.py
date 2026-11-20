@@ -57,10 +57,10 @@ class CostStressTests(unittest.TestCase):
         self.assertEqual(out["status"], "BLOCKED_BY_SYNTHETIC_COST_STRESS")
         self.assertEqual(out["baselineFrictionUsd"], .67)
         self.assertEqual(out["baselineRiskBudgetUsd"], .25)
-        self.assertEqual(out["scenariosChecked"], 3)
+        self.assertEqual(out["scenariosChecked"], 4)
         self.assertFalse(out["stressRiskWithinBudget"])
-        self.assertEqual(out["worstScenario"], "wide_spread")
-        self.assertAlmostEqual(out["worstModeledStopLossPlusCostsUsd"], 6.47)
+        self.assertEqual(out["worstScenario"], "simultaneous_worst")
+        self.assertAlmostEqual(out["worstModeledStopLossPlusCostsUsd"], 7.28)
         self.assertTrue(all(not x["hypotheticalRiskWithinBudget"]
                             for x in out["results"]))
 
@@ -92,6 +92,16 @@ class CostStressTests(unittest.TestCase):
                 out = inspect_stress(case)
                 self.safe(out)
                 self.assertEqual(out["status"], "BLOCKED")
+
+    def test_multiplier_on_zero_fee_is_not_adverse_stress(self):
+        zeros = {**BASE, "spreadUsdPerOunce": 0,
+                 "entrySlippageUsdPerOunce": 0,
+                 "exitSlippageUsdPerOunce": 0,
+                 "commissionRoundTripUsdPerLot": 0}
+        out = inspect_stress(packet(baseline=zeros))
+        self.safe(out)
+        self.assertEqual(out["status"], "BLOCKED")
+        self.assertEqual(out["reason"], "NO_EFFECTIVE_COST_STRESS")
 
     def test_no_network_and_no_private_prices(self):
         with patch.object(socket, "socket", side_effect=AssertionError("NO NETWORK")):

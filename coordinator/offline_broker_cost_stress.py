@@ -86,6 +86,29 @@ def inspect_stress(packet):
                 "hypotheticalRiskWithinBudget": calc["hypotheticalRiskWithinBudget"],
                 "frictionConsumesFullRiskBudget": calc["frictionConsumesFullRiskBudget"],
             })
+        # Individual shocks are insufficient: the maximum costs may
+        # strike simultaneously. Compute the componentwise worst case
+        # independently of any optimistic scenario set supplied by caller.
+        combined = {field: max(item[field] for item in variants)
+                    for field in FACTORS}
+        combined_input = dict(baseline)
+        combined_input["spreadUsdPerOunce"] *= combined["spreadMultiplier"]
+        combined_input["entrySlippageUsdPerOunce"] *= combined["entrySlippageMultiplier"]
+        combined_input["exitSlippageUsdPerOunce"] *= combined["exitSlippageMultiplier"]
+        combined_input["commissionRoundTripUsdPerLot"] *= combined["commissionMultiplier"]
+        joint = synthetic_scenario_cost(combined_input)
+        reports.append({
+            "scenario": "simultaneous_worst",
+            "modeledFrictionUsd": joint["totalFrictionUsd"],
+            "stopLossPlusCostsUsd": joint["lossAtStopInclCostsUsd"],
+            "riskBudgetUsd": joint["riskBudgetUsd"],
+            "hypotheticalRiskWithinBudget": joint["hypotheticalRiskWithinBudget"],
+            "frictionConsumesFullRiskBudget": joint["frictionConsumesFullRiskBudget"],
+        })
+        # A multiplier on an assumed zero fee does not establish an
+        # adverse-cost exercise. Never pass a no-effect stress.
+        if joint["totalFrictionUsd"] <= base["totalFrictionUsd"]:
+            return _blocked("NO_EFFECTIVE_COST_STRESS")
         worst = max(reports, key=lambda item: item["stopLossPlusCostsUsd"])
         within = base["hypotheticalRiskWithinBudget"] and all(
             item["hypotheticalRiskWithinBudget"] for item in reports)
