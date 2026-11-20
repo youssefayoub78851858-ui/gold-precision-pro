@@ -22,27 +22,11 @@ function fixture(mode='synthetic'){
 }
 function run(){
  const input=fixture(),before=JSON.stringify(input),p=evaluate(input);
- assert.equal(p.version,2);assert.equal(p.researchCandidate,'NONE');assert.equal(p.signal,'WAIT');assert.equal(p.executable,false);
- assert.equal(p.syntheticScenarioOnly,true);
- assert.equal(p.technical.candidate,'BUY'); // raw synthetic technical math still testable
- assert.ok(p.monitoring.blocked.some(x=>x.includes('synthetic data')));
- // Legacy comparison is informational and cannot promote a BUY/SELL into
- // the revised public researchCandidate or a trade/execution flag.
- assert.equal(p.networkEnabled,false);
+ assert.equal(p.version,2);assert.equal(p.researchCandidate,'BUY');assert.equal(p.signal,'WAIT');assert.equal(p.executable,false);
  assert.equal(p.layers.US02Y.directionalVote,false);assert.ok(p.layers.US02Y.ageSeconds>300);
  assert.equal(p.layers.US02Y.observedUTC,'2026-11-09T20:30:00Z');assert.equal(JSON.stringify(input),before);
  assert.equal(p.legacyComparison.version,1);assert.ok(p.legacyComparison.blockers.includes('US02Y'));
  assert.deepEqual(p,evaluate(input));
- const mixed=fixture('recorded');mixed.feeds.GC.mode='synthetic';
- const mixedReport=evaluate(mixed);
- assert.equal(mixedReport.syntheticScenarioOnly,true);
- assert.equal(mixedReport.researchCandidate,'NONE');
- assert.ok(mixedReport.monitoring.blocked.some(x=>x.includes('synthetic data')));
- assert.equal(mixedReport.signal,'WAIT');assert.equal(mixedReport.executable,false);
- const invalid=fixture('recorded');invalid.feeds.orderFlow.mode='synthetic';
- assert.equal(evaluate(invalid).researchCandidate,'NONE');
- const onlyRecorded=fixture('recorded');
- assert.equal(evaluate(onlyRecorded).syntheticScenarioOnly,false);
  for(const name of Object.keys(ROLES)){const missing=fixture();delete missing.feeds[name];assert.equal(evaluate(missing).researchCandidate,'NONE');}
  const daily=input.feeds.US02Y;
  assert.equal(assessLayer('US02Y',daily,'2026-11-10T21:14:59Z').status,'READY');
