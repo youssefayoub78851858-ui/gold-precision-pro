@@ -332,8 +332,8 @@ def audit_demo_get_only_request(blueprint):
     if (blueprint["method"] != "GET" or blueprint["baseUrl"] != DEMO_BASE_URL or
             blueprint["enabled"] is not False or
             blueprint["requiresExplicitCloudRights"] is not True or
+            type(blueprint["providerRequestsMade"]) is not int or
             blueprint["providerRequestsMade"] != 0 or
-            isinstance(blueprint["providerRequestsMade"], bool) or
             blueprint["containsCredentials"] is not False):
         return result
     path = blueprint["path"]
@@ -343,8 +343,9 @@ def audit_demo_get_only_request(blueprint):
     query = blueprint["query"]
     if not isinstance(query, dict) or set(query) != {"resolution", "from", "to", "max"}:
         return result
-    if (query["resolution"] not in {frame[0] for frame in RESOLUTIONS.values()} or
-            query["max"] != 1000 or isinstance(query["max"], bool)):
+    if (not isinstance(query["resolution"], str) or
+            query["resolution"] not in {frame[0] for frame in RESOLUTIONS.values()} or
+            type(query["max"]) is not int or query["max"] != 1000):
         return result
     try:
         values = []
