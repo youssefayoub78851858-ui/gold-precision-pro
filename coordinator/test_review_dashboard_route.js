@@ -77,10 +77,24 @@ async function main(){
   assert.match(script.headers["content-type"],/application\/javascript/);
   assert.equal(script.headers["cache-control"],"no-store");
   assert(script.body.includes('"/api/v3/ultimate/biquote-observation"'));
+  assert(script.body.includes('"/api/v3/ultimate/biquote-viewer-status"'));
+  assert(script.body.includes("AUTO_POLL_MS=60000"));
   assert(script.body.includes('credentials:"same-origin"'));
   assert(script.body.includes('rawQuoteShown!==true'));
   assert(!script.body.includes("MONITOR_READONLY_TOKEN"));
   assert.equal((await request("/review-dashboard.js","POST")).status,405);
+  // Auth gate is a no-price, no-provider, read-only API. Anonymous requests
+  // are denied and cannot trigger market data polling.
+  const cookieCheck=await request("/api/v3/ultimate/biquote-viewer-status");
+  assert.equal(cookieCheck.status,401);
+  assert.equal(cookieCheck.headers["cache-control"],"private, no-store");
+  const denied=JSON.parse(cookieCheck.body);
+  assert.equal(denied.viewerSessionReady,false);
+  assert.equal(denied.marketDataRequested,false);
+  assert.equal(denied.ordersSent,0);
+  assert.equal(denied.signal,"WAIT");
+  assert.equal(denied.executable,false);
+  assert.equal((await request("/api/v3/ultimate/biquote-viewer-status","POST")).status,405);
   const wrongMethod=await request("/review-dashboard.html","POST");
   assert.equal(wrongMethod.status,405);
   const nav=await request("/review");

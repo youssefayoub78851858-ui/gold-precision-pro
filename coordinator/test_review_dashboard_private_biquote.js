@@ -385,6 +385,7 @@ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير م�
  for(let i=0;i<25;i++)await Promise.resolve();
  a.equal(autoCalls.filter(x=>x.url==="/api/v3/ultimate/biquote-observation").length,2);
  a.equal(nodes.decision.textContent,"WAIT");
+ a.match(nodes["auto-state"].textContent,/فحص السعر بعد/);
  document.visibilityState="hidden";
  documentEvents.visibilitychange();
  const n=autoCalls.length;

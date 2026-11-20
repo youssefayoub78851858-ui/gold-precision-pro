@@ -258,3 +258,15 @@ test("session-checked foreground auto refresh preserves stale history but not tr
  assert.ok(!js.includes("localStorage"));
  assert.ok(!js.includes("sessionStorage"));
 });
+
+test("automatic mobile display shows a countdown but never implies a live quote",()=>{
+ const fs=require("node:fs"),path=require("node:path");
+ const js=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.js"),"utf8");
+ assert.match(js,/function updateAutoLabel\(/);
+ assert.match(js,/Number\.isFinite\(nextPollAt\)/);
+ assert.match(js,/const old=state&&Date\.now\(\)>expiry\?"بيانات قديمة · ":""/);
+ assert.match(js,/updateAutoLabel\(\)/);
+ assert.ok(js.includes('viewerReady?"فحص السعر":"محاولة اتصال"'));
+ assert.ok(!js.includes("localStorage"));
+ assert.ok(!js.includes("executable:true"));
+});

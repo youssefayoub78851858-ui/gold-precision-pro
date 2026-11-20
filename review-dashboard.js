@@ -370,7 +370,30 @@
   $("technical-note").textContent=
     "المؤشرات المعروضة تاريخية فقط من شموع مغلقة؛ ليست توصية تداول.";
   $("auto-state").textContent="تلقائي · بيانات قديمة";
+  updateAutoLabel();
   return true;
+ }
+
+
+ // Foreground-only UI countdown; NEVER treats next poll time as a live tick.
+ function updateAutoLabel(){
+  if(document.visibilityState==="hidden")return;
+  if(pending){
+   $("auto-state").textContent="تلقائي · جاري التحقق";
+   return;
+  }
+  if(checkingViewer){
+   $("auto-state").textContent="تلقائي · فحص الجلسة";
+   return;
+  }
+  if(!Number.isFinite(nextPollAt)){
+   $("auto-state").textContent="تلقائي · يحتاج جلسة خاصة";
+   return;
+  }
+  const seconds=Math.max(0,Math.ceil((nextPollAt-Date.now())/1000));
+  const label=viewerReady?"فحص السعر":"محاولة اتصال";
+  const old=state&&Date.now()>expiry?"بيانات قديمة · ":"";
+  $("auto-state").textContent=old+"تلقائي · "+label+" بعد "+seconds+" ث";
  }
 
  function draw(){
@@ -493,6 +516,7 @@
    $("reason").textContent=researchWatch(verified)+
     " | لا توصيات معتمدة قبل حقوق الوسيط وGC والأخبار والتكاليف واختبار الأداء";
    $("decision").textContent="WAIT";draw();
+   updateAutoLabel();
   }catch(error){
    if(ownEpoch!==requestEpoch||document.visibilityState==="hidden")return;
    const reasons={
@@ -517,7 +541,7 @@
     $("auto-state").textContent=error.message==="RATE_LIMITED"?
      "تلقائي · إعادة بعد 3 دقائق":"تلقائي · محاولة خلال دقيقة";
    }
-  }finally{pending=false;refresh.disabled=false;}
+  }finally{pending=false;refresh.disabled=false;updateAutoLabel();}
  }
  refresh.addEventListener("click",refreshSnapshot);
  // This preliminary same-origin cookie check has NO upstream market requests.
@@ -545,7 +569,7 @@
    viewerReady=false;nextPollAt=Date.now()+AUTO_POLL_MS;
    if(!markStale("WAIT — فحص الجلسة تعذر مؤقتاً"))
     reset("WAIT — تعذر فحص الجلسة؛ ستجري محاولة تلقائية.");
-  }finally{checkingViewer=false;}
+  }finally{checkingViewer=false;updateAutoLabel();}
   if(viewerReady&&autoEnabled&&document.visibilityState!=="hidden")
    await refreshSnapshot();
  }
@@ -590,6 +614,7 @@
    if(viewerReady)void refreshSnapshot();
    else void startAuto();
   }
+  updateAutoLabel();
  },5000);
  reset("WAIT — فحص تلقائي عند فتح الشاشة بجلسة مشاهدة خاصة صالحة.");
 })();
