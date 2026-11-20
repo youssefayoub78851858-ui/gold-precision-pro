@@ -410,3 +410,69 @@ This file is a portable GitHub handoff, not a ChatGPT saved-memory entry.
   change private collector/production on this authority.
   No payments, paid feed calls, deployment or trading.
   `signal=WAIT`, `executable=false`.
+
+## 2026-11-20 vendor-conditional 24/5 H4 continuity and bounded horizon
+
+- Verified initial branch head `c2e3738a`; full V2 offline run
+  `44710143827` success. Latest count-only private Render log
+  at **2026-11-20 09:46:02 UTC** had 223 M15
+  persisted/43 strictly contiguous, 55 H1/10 contiguous,
+  14 H4/14 contiguous. Archive H4-M15 overlap was
+  **2 full** vs **12 incomplete** H4 groups; the collector
+  still reported WAIT and upstream rights unverified.
+- An offline exact snapshot fixture in
+  `test_biquote_capture_h4_horizon_gate.js` proves that
+  even with an overly generous UTC-grid projection of
+  42 stored H4 by the existing `2026-11-25T00:00:00Z`
+  capture end, the BiQuote support-declared November
+  weekend schedule permits **at most 18 strictly
+  contiguous H4 at any point**, with 11 fully closed
+  future H4 slots. It thus cannot reach 21 or 50.
+  This is a conditional vendor-only calendar, NOT proof
+  of the original unnamed broker's holidays or rights.
+- Crucial modeling correction: strictly consecutive
+  four-hour UTC H4 periods cannot reach 50 across a
+  normal 24/5 *weekly* market closure. Keeping 50
+  strict UTC-grid H4 as a permanent eligibility gate
+  would make the paper-history target impossible even
+  after extending collection. A future genuinely
+  broker-verified session-aware sequence is required.
+- Added isolated `biquote_session_h4_continuity_audit.js`
+  and tests. It consumes ONLY caller-supplied H4 open
+  times + locally first-received CLOSED times, then
+  counts raw UTC-grid tail separately from
+  `vendorConditionalSessionTail`; it skips only H4
+  slots completely closed according to the BOUNDED
+  BiQuote support schedule. Any missing slot that the
+  support schedule marks open breaks the conditional
+  tail. It rejects future, out-of-order and
+  unreceived bars, duplicates, injected prices and
+  out-of-November schedule assertions. All rights,
+  broker calendar, execution, paper and live
+  eligibility flags are ALWAYS FALSE and signal WAIT.
+- Regression covers Fri 20 Nov -> Sun 22 Nov weekend:
+  **11 vendor-closed H4 slots** between retained bars,
+  session-aware tail 5 vs raw-grid tail 3, and the
+  opposite case of an unexplained open-market slot
+  that must reset the session-aware tail.
+  Another fixture illustrates that 50 vendor-conditional
+  H4 can be spanned across TWO synthetic market weeks,
+  while 50 strict UTC-grid H4 cannot; this never
+  proves market-source authenticity or permits orders.
+- Wired test into
+  `.github/workflows/gold-four-stage-batch-offline.yml`.
+  Four-stage offline run **SUCCESS**
+  `44715205686` at code commit `97475da4`.
+  Full V2 CI `44715205762` was still in progress
+  when authored; always verify actual Actions outcome.
+- Consent for the EXISTING private bounded collector
+  expires Nov25, and the app does not unilaterally
+  extend it or start new provider calls. No original
+  MT5 broker rights/calendar verification, no GC
+  MBO/MBP-10/DXY licensed source, no broker bid/ask
+  execution economics, no fresh independent paper
+  forward returns, and no real/paper orders. Neither
+  collector, review deployment nor production was
+  restarted/deployed. An independent broker-calendar
+  and source-rights attestation is an EXTERNAL
+  blocker, not a software flag that can be toggled.
