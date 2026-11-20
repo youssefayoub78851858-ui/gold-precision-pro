@@ -87,8 +87,10 @@ def assess_offline_stack(*, as_of_utc, xau_fixture=None, gc_mbo_fixture=None,
             xau = review_synthetic_massive_bbo(xau_fixture, as_of_utc=as_of_utc)
             counts = xau["completeClosedBarCounts"]
             layers["XAUUSD_BBO"].update(
-                status="SYNTHETIC_WARMUP_GEOMETRY_ONLY",
-                reason="BBO_FIXTURE_IS_NOT_LICENSED_MATCHED_LIVE_HISTORY",
+                status="ALTERNATE_MASSIVE_SYNTHETIC_GEOMETRY_ONLY",
+                reason="ALTERNATE_MASSIVE_FIXTURE_CANNOT_VALIDATE_SELECTED_CAPITAL_DEMO",
+                fixtureProvider="MASSIVE_SYNTHETIC_ALTERNATE_NOT_SELECTED_CAPITAL_DEMO",
+                selectedCapitalDemoHistoryValidated=False,
                 syntheticClosedBars={k: counts[k] for k in ("M15", "H1", "H4")},
                 synthetic50H4Reached=xau["minimumClosed50H4MetBySyntheticGeometry"],
                 incompleteM15Discarded=xau["incompleteM15Discarded"])
@@ -148,7 +150,7 @@ def assess_offline_stack(*, as_of_utc, xau_fixture=None, gc_mbo_fixture=None,
         "rejectedFixtures": sorted(set(rejected)),
         "layers": layers,
         "remainingExternalRequirements": [
-            "XAUUSD_REAL_HISTORICAL_BBO_AND_LIVE_SAME_SOURCE_RIGHTS_AND_SESSION_EVIDENCE",
+            "CAPITAL_DEMO_SELECTED_XAUUSD_RENDER_RIGHTS_KYC_AND_REAL_BID_ASK_SESSION_PARITY",
             "GC_REAL_EXCHANGE_TRADES_MBO_MBP10_LICENSE_AND_TIME_PARITY",
             "DXY_APPROVED_INTRADAY_INDEX_AND_GC_CONTRACT_ROLLOVER",
             "US02Y_US10Y_PUBLICATION_LATENCY_AND_DAILY_ONLY_CLASSIFICATION",
