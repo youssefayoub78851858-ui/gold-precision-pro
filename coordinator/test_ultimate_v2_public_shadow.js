@@ -55,4 +55,26 @@ for(const payload of [null,undefined,3,'RAW_KEY',[],{}, {feeds:[]},
  assert.ok(!JSON.stringify(report).includes('SECRET'));
  assert.equal(report.technicalPatternPresent,false);
 }
+// Every macro/news/order-flow layer is independently mandatory. Even a
+// forged "recorded" mode, rights flag or valid-looking timestamp is never
+// independent proof that a public BUY/SELL may be exposed.
+for (const layer of ['US02Y','US10Y','DXY','GC','orderFlow','calendar','headlines']) {
+ const missingLayer=fixture('recorded');
+ delete missingLayer.feeds[layer];
+ const missingReport=assessPublicShadow(missingLayer);wait(missingReport);
+ assert.equal(missingReport.allSevenRecordedMode,false,layer);
+ assert.equal(missingReport.contextFramesStructurallyReady,6,layer);
+ const forged=fixture('recorded');
+ forged.feeds[layer].rights={status:'VERIFIED_INTERNAL_RESEARCH',algorithmicResearchAuthorized:true};
+ forged.feeds[layer].entitlementVerified=true;
+ const forgedReport=assessPublicShadow(forged);wait(forgedReport);
+ assert.equal(forgedReport.allSevenRecordedMode,true,layer);
+ assert.ok(!JSON.stringify(forgedReport).includes('BUY'),layer);
+}
+const newsRisk=fixture('recorded');
+newsRisk.feeds.calendar.events=[{id:'future-high-impact',timeUTC:'2026-11-10T12:15:00Z',publishedUTC:'2026-11-10T11:00:00Z',availableUTC:'2026-11-10T11:00:01Z',impact:'high'}];
+const newsRiskReport=assessPublicShadow(newsRisk);wait(newsRiskReport);
+assert.equal(newsRiskReport.contextFramesStructurallyReady,7);
+assert.ok(!JSON.stringify(newsRiskReport).includes('BUY'));
+
 console.log('PASS frozen Ultimate v2 unchanged; public adapter suppresses all synthetic/spoofed recorded candidates and orders');
