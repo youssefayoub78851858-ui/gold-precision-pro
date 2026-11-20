@@ -73,6 +73,8 @@ for (const layer of ['US02Y','US10Y','DXY','GC','orderFlow','calendar','headline
 }
 const newsRisk=fixture('recorded');
 newsRisk.feeds.calendar.events=[{id:'future-high-impact',timeUTC:'2026-11-10T12:15:00Z',publishedUTC:'2026-11-10T11:00:00Z',availableUTC:'2026-11-10T11:00:01Z',impact:'high'}];
+assert.equal(evaluate(newsRisk).researchCandidate,'NONE');
+assert.equal(evaluate(newsRisk).layers.calendar.blocked,true);
 const newsRiskReport=assessPublicShadow(newsRisk);wait(newsRiskReport);
 assert.equal(newsRiskReport.contextFramesStructurallyReady,7);
 assert.ok(!JSON.stringify(newsRiskReport).includes('BUY'));
