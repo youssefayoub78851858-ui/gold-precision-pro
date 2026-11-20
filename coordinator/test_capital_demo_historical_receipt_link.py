@@ -92,7 +92,7 @@ class LinkTests(unittest.TestCase):
             lambda p: p["receipts"]["frames"]["M15"][0].update(price="SECRET_PRICE"),
             lambda p: p.update(dataOrigin="CAPITAL_DEMO_LIVE"),
             lambda p: p["receipts"]["frames"]["H1"][0].update(
-                firstSeenUTC="2026-11-16T09:00:00Z"),
+                firstSeenUTC="2026-11-16T08:59:59Z"),
         ):
             p = packet()
             mutate(p)
