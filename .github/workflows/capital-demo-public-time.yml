@@ -1,0 +1,30 @@
+name: Capital Demo public time-only connectivity (no account or market data)
+
+on:
+  push:
+    branches:
+      - review/v2-portable-tests-20261109
+    paths:
+      - 'coordinator/capital_demo_public_time_probe.py'
+      - 'coordinator/test_capital_demo_public_time_probe.py'
+      - '.github/workflows/capital-demo-public-time.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  demo-time-only:
+    name: Unauthenticated Demo clock GET, no keys and no market data
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Assert exact host and no-credential boundary (mock only)
+        working-directory: coordinator
+        run: python -m unittest -v test_capital_demo_public_time_probe
+      - name: One unauthenticated GET to Capital DEMO public time endpoint
+        run: python coordinator/capital_demo_public_time_probe.py
