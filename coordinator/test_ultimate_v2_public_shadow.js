@@ -75,6 +75,14 @@ const newsRisk=fixture('recorded');
 newsRisk.feeds.calendar.events=[{id:'future-high-impact',timeUTC:'2026-11-10T12:15:00Z',publishedUTC:'2026-11-10T11:00:00Z',availableUTC:'2026-11-10T11:00:01Z',impact:'high'}];
 assert.equal(evaluate(newsRisk).researchCandidate,'NONE');
 assert.equal(evaluate(newsRisk).layers.calendar.blocked,true);
+const breakingNews=fixture('recorded');
+breakingNews.feeds.headlines.events=[{id:'breaking-high-impact',publishedUTC:'2026-11-10T11:55:00Z',availableUTC:'2026-11-10T11:56:00Z',impact:'high'}];
+assert.equal(evaluate(breakingNews).researchCandidate,'NONE');
+assert.equal(evaluate(breakingNews).layers.headlines.blocked,true);
+const breakingNewsReport=assessPublicShadow(breakingNews);wait(breakingNewsReport);
+assert.equal(breakingNewsReport.researchCandidate,'NONE');
+assert.equal(breakingNewsReport.brokerOrdersSent,0);
+
 const newsRiskReport=assessPublicShadow(newsRisk);wait(newsRiskReport);
 assert.equal(newsRiskReport.contextFramesStructurallyReady,7);
 assert.ok(!JSON.stringify(newsRiskReport).includes('BUY'));
