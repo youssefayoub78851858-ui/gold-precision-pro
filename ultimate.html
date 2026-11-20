@@ -744,14 +744,15 @@ document.addEventListener('DOMContentLoaded',function(){
 <p class="overview-status">الشارت الحالي على الصفحة العامة تجريبي وغير مرخّص لعرض بيانات EODHD المدفوعة. تجميع 800 شمعة وحده لا يثبت دقة المصدر أو اكتمال الجلسات أو نجاح الاستراتيجية.</p>
 </section><hr>
 <section id="gold-api-prepurchase" class="overview" aria-labelledby="gold-api-prepurchase-title">
-<h2 id="gold-api-prepurchase-title">Gold API Premium — فحص الشموع قبل أي دفع</h2>
+<h2 id="gold-api-prepurchase-title">Gold API — جرّب شموع OHLC مجاناً قبل الاشتراك</h2>
 <p id="gold-api-prepurchase-status" role="status">WAIT — السعر الفوري المجاني ليس شموع تداول BID/ASK حقيقية.</p>
 <div class="overview-grid">
-<div class="overview-card">تكلفة Premium<strong>$10 / شهر</strong></div>
-<div class="overview-card">فحص الشموع والتاريخ<strong>غير مؤكد — لا يوجد مفتاح أو اتصال</strong></div>
+<div class="overview-card">الخطة المجانية<strong>10 طلبات OHLC/ساعة بمفتاح مجاني</strong></div>
+<div class="overview-card">Premium اختياري<strong>$10 / شهر — لم يُشترَ</strong></div>
+<div class="overview-card">بيانات M15/H1/H4<strong>غير مؤكدة — لا يوجد مفتاح أو اتصال</strong></div>
 </div>
 <button type="button" id="gold-api-prepurchase-refresh">فحص شروط المصدر (من دون طلب بيانات)</button>
-<p class="overview-status" id="gold-api-prepurchase-reasons">OHLC لمدى زمني واحد لا يثبت سلسلة M15/H1/H4، ولا يؤكد مصدر BID/ASK أو صلاحية الاستخدام داخل المحرك.</p>
+<p class="overview-status" id="gold-api-prepurchase-reasons">الخطة المجانية تتطلّب مفتاحاً مجانياً، والحدّ 10 طلبات/ساعة. كل طلب OHLC يرجع مدى زمنياً واحداً؛ ما زال إثبات M15/H1/H4 وحقوق المصدر وBID/ASK ناقصاً.</p>
 </section><hr>
 <script>
 (function(){
@@ -765,12 +766,16 @@ document.addEventListener('DOMContentLoaded',function(){
    const response=await fetch('/api/v3/ultimate/gold-api-readiness',{cache:'no-store',credentials:'omit',redirect:'error',signal:AbortSignal.timeout(9000)});
    if(!response.ok)throw Error('Unavailable');
    const data=await response.json();
-   if(data.mode!=='GOLD_API_PREMIUM_PREPURCHASE_ONLY'||data.signal!=='WAIT'||
+   if(data.mode!=='GOLD_API_FREE_KEY_FIRST_PREPURCHASE_ONLY'||data.signal!=='WAIT'||
       data.executable!==false||data.researchEligible!==false||
       data.providerRequestsMade!==0||data.premiumKeyConfigured!==false||
+      data.freeHistoryKeyConfigured!==false||
+      data.freeHistoryKeyRequired!==true||
+      data.freeHistoryAndOhlcRequestsPerHour!==10||
+      data.subscriptionPurchased!==false||
       data.liveOHLCVerified!==false||data.monthlyUsd!==10)throw Error('Unsafe response');
-   status.textContent='WAIT — Gold API Premium لم يُختبر ببيانات شموع مرخّصة ومكتملة';
-   reasons.textContent='المصدر مجاني للسعر المرجعي فقط. شراء Premium لا يضمن وحده شموع M15/H1/H4 ولا بيانات BID/ASK أو إمكانية محاكاة التكلفة.';
+   status.textContent='WAIT — مفتاح OHLC المجاني غير مربوط؛ لا طلبات مدفوعة ولا صفقات';
+   reasons.textContent='Gold API يتيح 10 طلبات OHLC/ساعة مجاناً مع مفتاح حساب. كل طلب يمثّل مدى واحداً؛ علينا فحص سلامة M15/H1/H4 وحقوق المصدر أولاً. Premium $10 اختياري، ولا يثبت بيانات BID/ASK.';
   }catch{
    status.textContent='WAIT — فحص Gold API غير متاح في هذه النسخة';
    reasons.textContent='لا توجد إشارة أو صفقة؛ يجب التحقق من الترخيص والشموع قبل أي تفعيل.';
