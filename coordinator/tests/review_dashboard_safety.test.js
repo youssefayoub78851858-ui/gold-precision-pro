@@ -186,3 +186,16 @@ test("MTF missing constituent M15 bars stays WAIT",()=>{
  assert.equal(x.signal,"WAIT");
  assert.equal(x.executable,false);
 });
+
+test("21-H4 audit cannot be certified by one truncated provider snapshot",()=>{
+ const {assess}=require("../biquote_snapshot_capacity_gate");
+ const x=assess();
+ assert.equal(x.signal,"WAIT");
+ assert.equal(x.executable,false);
+ assert.equal(x.requiredContiguousH4,21);
+ assert.equal(x.requiredM15Constituents,336);
+ assert.equal(x.requiredH1Constituents,84);
+ assert.equal(x.singleSnapshotCanProve21H4M15Parity,false);
+ assert.equal(x.archiveRequiredForFullWindow,true);
+ assert.equal(x.archiveCurrentlyVerified,false);
+});
