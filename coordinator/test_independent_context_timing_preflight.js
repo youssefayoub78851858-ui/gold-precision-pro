@@ -12,7 +12,9 @@ const K={
 };
 const decision="2026-11-20T06:00:00Z",asOf="2026-11-20T06:01:00Z";
 const item=(name,observed,available,received)=>({
- kind:K[name],observedUTC:observed,firstAvailableUTC:available,receivedUTC:received});
+ kind:K[name],observedUTC:observed,firstAvailableUTC:available,receivedUTC:received,
+ ...(name.startsWith("GC_")?{contract:"GCZ2026"}:{})
+});
 const packet=()=>({
  origin:"UNATTESTED_SANITIZED_CONTEXT_TIMES_ONLY",
  decisionUTC:decision,asOfUTC:asOf,
@@ -55,6 +57,10 @@ a.equal(perfect.perLayer.CALENDAR.status,"FUTURE_EVENT_SCHEDULE_ONLY");
 a.equal(perfect.perLayer.US02Y.status,"DAILY_REFERENCE_ONLY_NOT_INTRADAY");
 a.equal(perfect.perLayer.GC_TRADES.status,"PLAUSIBLE_UNATTESTED_CLOCK_ONLY");
 a.equal(perfect.allLayersQualified,false);
+a.equal(perfect.gcTradeDepthCrossCheck.status,
+ "MATCHED_UNATTESTED_GC_LABELS_AND_CLOCKS_ONLY");
+a.equal(perfect.gcTradeDepthCrossCheck.exchangeProven,false);
+a.equal(perfect.gcTradeDepthCrossCheck.contractRollVerified,false);
 const noGC=packet();delete noGC.items.GC_DEPTH;
 const no=inspect(noGC);safe(no);
 a.equal(no.status,"INCOMPLETE_CONTEXT");
@@ -66,6 +72,16 @@ const cases=[
  x=>{x.items.HEADLINES.observedUTC="2026-11-20T07:30:00Z";},
  x=>{x.items.HEADLINES.firstAvailableUTC="2026-11-20T05:00:00Z";},
  x=>{x.items.GC_TRADES.kind="CFD_XAUUSD_MARKET_LABELLED_COMEX";},
+ x=>{x.items.GC_DEPTH.contract="GCG2027";},
+ x=>{x.items.GC_TRADES.contract="XAUUSD";},
+ x=>{x.items.GC_TRADES.contract="GCZ20_26";},
+ x=>{x.items.GC_TRADES.contract=undefined;},
+ x=>{x.items.GC_TRADES.observedUTC="2026-11-20T05:59:59Z";
+      x.items.GC_TRADES.firstAvailableUTC="2026-11-20T05:59:59Z";
+      x.items.GC_TRADES.receivedUTC="2026-11-20T05:59:59Z";
+      x.items.GC_DEPTH.observedUTC="2026-11-20T05:58:01Z";
+      x.items.GC_DEPTH.firstAvailableUTC="2026-11-20T05:58:02Z";
+      x.items.GC_DEPTH.receivedUTC="2026-11-20T05:58:03Z";},
  x=>{x.items.GC_TRADES.kind="COMEX_GC_EXCHANGE_TRADES_NOT_CFD";x.items.GC_TRADES.observedUTC="2026-11-20T05:00:00Z";},
  x=>{x.items.US10Y.observedUTC="2026-11-01T21:00:00Z";},
  x=>{x.items.DXY.sourceRightsVerified=true;},
@@ -89,5 +105,13 @@ for(const bad of [
 ]){
  const res=inspect(bad);safe(res);a.equal(res.status,"BLOCKED");
 }
+const mismatched=packet();
+mismatched.items.GC_DEPTH.contract="GCG2027";
+const wrongContract=inspect(mismatched);safe(wrongContract);
+a.equal(wrongContract.gcTradeDepthCrossCheck.status,"GC_CONTRACT_MISMATCH");
+a.equal(wrongContract.perLayer.GC_TRADES.timeSuitable,false);
+a.equal(wrongContract.perLayer.GC_DEPTH.timeSuitable,false);
+a.equal(wrongContract.summary.blocked,2);
+a.equal(wrongContract.summary.recent,2);
 safe(inspect({}));safe(inspect(null));
 console.log("PASS offline context time-preflight: no COMEX-CFD substitution, future macro actual, late news, daily yields remain daily, no orders");
