@@ -121,3 +121,46 @@ This file is a portable GitHub handoff, not a ChatGPT saved-memory entry.
   `executable=false`. A future broker-calendar-aware method may count
   actual consecutive tradable H4 bars without fabricating weekend bars,
   but it is NOT implemented or licensed by this hypothetical report.
+
+## 2026-11-20 second continuation: H1/H4 decision-time evidence
+
+- GitHub review branch verified at `2d38050c` at start of this pass. Its V2
+  offline tests `44687605831` passed, alongside earlier four-stage CI
+  `44687412787`. No changes were made to main, backup-v1 or production.
+- Render coordinator last observed **sanitized read-only** status at
+  `2026-11-20T06:32:03Z`: stored closed M15=210, H1=52, H4=13;
+  consecutive raw-grid tails M15=30, H1=7, H4=13. M15 has 8 and H1 has
+  2 unclassified missing slots; H4 has 0 missing slots. 13 H4 were examined
+  for M15 overlap, but ONLY ONE was fully covered with M15 constituents
+  at that instant; 12 were not fully covered. This is not full multi-frame
+  parity and does NOT establish source rights or tradeable signals.
+- Verified the review Render service had a live deployment of `2d38050c`.
+  Private coordinator collector still runs `b01574f2`, an older version.
+  This batch did NOT redeploy, restart, extend or alter the collector.
+- Audited existing no-trade paper holdout calculation and improved
+  `prospective_paper_holdout_audit.js`: every paper result now requires
+  separate **H1 and H4 closed-candle times and first-observed times** known
+  by the purported decision time, in addition to M15 evidence. Extra or
+  missing context keys, out-of-grid H1/H4 close timestamps, contradictory
+  receipt order, and future-first-seen history must fail closed.
+  All data still have UNATTESTED origin, so passing arithmetic cannot
+  authorize actual paper trading or real BUY/SELL recommendations.
+- Added regressions for missing, invalid, future and contradictory H1/H4
+  context. Four-stage CI PASSED on `2d690eb2` in
+  <https://github.com/youssefayoub78851858-ui/gold-precision-pro/actions/runs/44689481738>.
+- Support inbox check after Nov18 had no new response from BiQuote, CFI,
+  Twelve Data, Massive or Databento. BiQuote's public docs still identify
+  the source generically as `MetaTrader 5 (Broker 1)`, and describe
+  rolling OHLC history around M15=192, H1=168, H4=180; the original
+  broker name and legal rights remain unverified. A public XAUUSD
+  page uses the label `COMEX` yet this alone is NOT evidence of CME
+  exchange trades, MBP-10 or MBO, and MUST NOT be treated as GC order flow.
+  The November 18 request for broker identity and schedule is pending.
+- No real price samples, private vault, provider credentials or other
+  protected market data were copied into this public file. No cost,
+  subscription, live order, or paper order was generated.
+- Finish criterion remains **unmet**: independent upstream broker
+  entitlement and session/DST, qualified point-in-time 21/50 H4-based
+  history across M15/H1/H4, independent execution BID/ASK costs and
+  synchronized DXY/US yields/news/GC order flow, and untouched prospective
+  net-of-cost performance. Current action: `WAIT`, `executable:false`.
