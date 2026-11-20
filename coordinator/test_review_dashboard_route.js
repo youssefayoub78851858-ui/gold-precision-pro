@@ -78,7 +78,7 @@ async function main(){
   assert.equal(script.headers["cache-control"],"no-store");
   assert(script.body.includes('"/api/v3/ultimate/biquote-observation"'));
   assert(script.body.includes('"/api/v3/ultimate/biquote-viewer-status"'));
-  assert(script.body.includes("AUTO_POLL_MS=60000"));
+  assert(script.body.includes("AUTO_POLL_MS=20000"));
   assert(script.body.includes('credentials:"same-origin"'));
   assert(script.body.includes('rawQuoteShown!==true'));
   assert(!script.body.includes("MONITOR_READONLY_TOKEN"));

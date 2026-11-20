@@ -280,7 +280,7 @@
  if(typeof document==="undefined")return;
  const $=id=>document.getElementById(id);
  let frame="M15",state=null,pending=false,expiry=0;
- const AUTO_POLL_MS=60000, MAX_STALE_MS=600000;
+ const AUTO_POLL_MS=20000, MAX_STALE_MS=600000;
  let autoEnabled=false,viewerReady=false,checkingViewer=false,nextPollAt=Infinity;
  // Every user-initiated fetch has a generation. Android can hide or
  // navigate away while a request or JSON body is in flight; response
@@ -502,7 +502,7 @@
      clock(latest.t+WIDTH.M15)+" بيروت · آخر فحص "+clock(verified.at);
    $("source").textContent="BiQuote XAUUSD خاص للبحث فقط · MID وربما تاريخ BID · ليس سعر MT5 لحظي ولا سعر تنفيذ";
    $("data-state").textContent="● BiQuote · مشاهدة خاصة متحققة مؤقتاً";
-   $("auto-state").textContent="تلقائي كل 60 ثانية · الصفحة مفتوحة";
+   $("auto-state").textContent="تلقائي كل 20 ثانية · الصفحة مفتوحة";
    renderTechnical(verified.chart);
    $("trend-status").textContent="غير مؤهل لإشارة";
    $("watch-status").textContent="WAIT · مراقبة";
@@ -539,7 +539,7 @@
     if(!markStale(message))reset(message);
     nextPollAt=Date.now()+(error.message==="RATE_LIMITED"?180000:AUTO_POLL_MS);
     $("auto-state").textContent=error.message==="RATE_LIMITED"?
-     "تلقائي · إعادة بعد 3 دقائق":"تلقائي · محاولة خلال دقيقة";
+     "تلقائي · إعادة بعد 3 دقائق":"تلقائي · محاولة خلال 20 ثانية";
    }
   }finally{pending=false;refresh.disabled=false;updateAutoLabel();}
  }

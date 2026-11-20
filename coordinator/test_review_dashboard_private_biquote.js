@@ -380,7 +380,7 @@ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير م�
  a.equal(autoCalls[0]?.options.credentials,"same-origin");
  a.equal(autoCalls.filter(x=>x.url==="/api/v3/ultimate/biquote-observation").length,1);
  a(nodes.price.textContent.includes("2,000"),"Auto startup displays closed bars");
- timeNow=NOW+61000;
+ timeNow=NOW+21000;
  intervalCallback();
  for(let i=0;i<25;i++)await Promise.resolve();
  a.equal(autoCalls.filter(x=>x.url==="/api/v3/ultimate/biquote-observation").length,2);
@@ -389,7 +389,7 @@ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير م�
  document.visibilityState="hidden";
  documentEvents.visibilitychange();
  const n=autoCalls.length;
- timeNow=NOW+122000;intervalCallback();
+ timeNow=NOW+42000;intervalCallback();
  a.equal(autoCalls.length,n,"No polling while tab hidden");
  a.equal(nodes.price.textContent,"غير متاح","Hidden privacy wipe");
  document.visibilityState="visible";
