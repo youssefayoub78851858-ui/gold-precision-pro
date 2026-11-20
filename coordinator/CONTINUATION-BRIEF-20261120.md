@@ -367,3 +367,46 @@ This file is a portable GitHub handoff, not a ChatGPT saved-memory entry.
   credential, paid API call, auto-paper or real order. The
   independent trading-admission path remains closed:
   `signal=WAIT`, `executable=false`.
+
+## 2026-11-20 cross-frame H4 constituent floors (offline milestones)
+
+- Starting checked HEAD `2998d084`, V2 offline CI `44709465631`
+  **SUCCESS**. As of the last read-only Render count/progress
+  `2026-11-20T09:16:02Z`: M15 persisted 221 / strict UTC
+  contiguous 41; H1 55 / contiguous 10; H4 14 / contiguous 14.
+  H4-to-M15 fully covered archived bars 2 of 14 (12 not fully
+  covered); these are untrusted PRIVATE count diagnostics and NOT
+  source-authorized price observations. No new vendor email.
+- Fixed `biquote_pre_signal_milestones.js` audit gap:
+  a claimed 21-H4 locally matched warmup requires at least
+  21*16=336 contiguous M15 and 21*4=84 contiguous H1
+  in addition to 21 H4. A claimed 50-H4 prospective history
+  requires 50*16=800 contiguous M15 and 50*4=200
+  contiguous H1 in addition to 50 H4. Simply satisfying
+  "21 bars per timeframe" or "50 bars per timeframe"
+  could falsely inflate the milestone without sufficient
+  constituent coverage.
+- Added explicit required cross-frame counts and
+  `local21H4ConstituentCountsSufficient` /
+  `local50H4ConstituentCountsSufficient` to read-only
+  milestone diagnostics. These numbers are NECESSARY, not
+  sufficient: actual per-H4 M15/H1 OHLC parity and local
+  first-seen receipts remain separately required; no
+  independent vendor/broker rights or actual strategy
+  profitability is claimed.
+- Added regressions where the M15 or H1 constituent count is
+  just one bar short, including 799 M15 / 199 H1 against
+  a supposed 50-H4 paper history. All report WAIT, no
+  source rights or real/paper orders. GitHub four-stage
+  isolated acceptance **SUCCESS** on code commit
+  `d6edccbc`: run `44709914305`.
+- V2 full CI on the same code commit was still in
+  progress at note-writing time: run `44709914233`.
+- External blockers remain: original broker MT5 rights and
+  independently verified calendar/DST, legally entitled
+  aligned XAUUSD data, GC trades/depth and independent DXY,
+  broker execution fees/slippage, and untouched prospective
+  net-cost performance. Never extend bounded capture or
+  change private collector/production on this authority.
+  No payments, paid feed calls, deployment or trading.
+  `signal=WAIT`, `executable=false`.
