@@ -102,6 +102,29 @@ assert.equal(projection.providerDeclaredH4Projection.technicalWarmup21ReachableU
 // been validated independently, no implied permission to extend 7 days.
 assert.equal(projection.brokerSessionCalendarVerified,false);
 assert.equal(projection.captureExtended,false);
+// Regression pinned to SANITIZED actual Render metadata from 2026-11-20
+// 06:16 UTC (not a live sample). Support's November calendar is conditional:
+// Friday/Saturday/Sunday break resets H4 tail, so the bounded Nov25
+// collection cannot attain 21 strict sequential H4, let alone 50.
+// Never promote the count ceiling to licensed market evidence.
+const november20={...input,
+ asOfUTC:"2026-11-20T06:16:02Z",
+ persistedClosedCounts:{M15:209,H1:52,H4:13},
+ contiguousClosedCounts:{M15:29,H1:7,H4:13}};
+const friday=assessWindow(november20);
+safe(friday);
+assert.equal(friday.status,"THEORETICAL_COUNT_CEILING_NOT_READINESS");
+assert.equal(friday.rawStoredH4CountReachableByWindowEnd,false);
+assert.equal(friday.maximumPossiblePersistedClosed.H4,42);
+assert.equal(friday.providerDeclaredH4Projection.providerDeclaredFullPauseH4Slots,11);
+assert.equal(friday.providerDeclaredH4Projection.maxPossibleClosedH4FutureSlotsUnderDeclaration,18);
+assert.equal(friday.providerDeclaredH4Projection.maxPossibleContiguousH4AtAnyTimeUnderDeclaration,18);
+assert.equal(friday.providerDeclaredH4Projection.maxPossibleContiguousH4AtCaptureEndUnderDeclaration,13);
+assert.equal(friday.providerDeclaredH4Projection.technicalWarmup21ReachableUnderDeclaration,false);
+assert.equal(friday.providerDeclaredH4Projection.paperHistory50ReachableUnderDeclaration,false);
+assert(friday.blockers.includes("H4_21_WARMUP_UNREACHABLE_WITHIN_PROVIDER_DECLARED_WEEKEND_SCENARIO"));
+assert.equal(friday.captureExtended,false);
+assert.equal(friday.brokerSessionCalendarVerified,false);
 // Invented data, consent extensions and unbounded windows fail closed.
 for(const mutate of [
  x=>{x.origin="REAL_BROKER_APPROVED";},
