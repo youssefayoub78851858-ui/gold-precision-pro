@@ -18,13 +18,21 @@ function staticStatus(){
    // is OPTIONAL for unlimited historical requests. No account or key was
    // accessed here and no network call has been authorized.
    freeHistoryAndOhlcRequestsPerHour:10,
+   // /ohlc/XAU returns ONE requested-range OHLC, not a M15 candle series.
+   // For 336/800 distinct 15m ranges, FREE quota alone implies at least
+   // ceil(336/10)=34 or ceil(800/10)=80 hours of rate-limit capacity.
+   // These are optimistic REQUEST capacity figures, not capture duration
+   // or proof that source candles have broker-equivalent timing or rights.
+   freeMinimumHoursFor336OneRangeRequests:34,
+   freeMinimumHoursFor800OneRangeRequests:80,
    freeHistoryKeyRequired:true,freeHistoryKeyConfigured:false,
    premiumOptionalNotRequiredForInitialOfflineAudit:true,
    premiumKeyConfigured:false,subscriptionPurchased:false,
    liveOHLCVerified:false,licensedBrokerBidAsk:false,
    sessionAndHistoryVerified:false,
    documentation:{
-     ohlc:'https://gold-api.com/docs',
+     ohlc:'https://gold-api.com/llms.txt',
+     docs:'https://gold-api.com/docs',
      faq:'https://gold-api.com/faqs',
      pricing:'https://gold-api.com/pricing',
      terms:'https://gold-api.com/terms'
