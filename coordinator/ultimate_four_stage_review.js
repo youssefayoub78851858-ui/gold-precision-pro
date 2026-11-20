@@ -8,6 +8,7 @@
 const {evaluate}=require('./v3_ultimate');
 const {review}=require('./ultimate_signal_quality_report');
 const {checkFrame}=require('./v3_multitimeframe');
+const {inspect:inspectContextTiming}=require('./independent_context_timing_preflight');
 
 const TIMEFRAMES=Object.freeze({M15:15,H1:60,H4:240});
 const CONTEXT=Object.freeze(['DXY','US02Y','US10Y','GC','calendar','headlines','orderFlow']);
@@ -64,6 +65,14 @@ function reviewFourStages(input){
   const snapshot=input?.snapshot;
   const data=dataGeometry(snapshot?.frames,asOfUTC);
   const invalid=!Number.isFinite(time(asOfUTC));
+  // Untrusted external context may only be compared at the EXACT
+  // snapshot decision time. A credible-looking metadata packet from
+  // another hour must not be presented as confirmation for this plan.
+  const contextPacket=input?.contextTimeEvidence;
+  const clocksAligned=!!contextPacket&&
+    contextPacket.decisionUTC===asOfUTC&&contextPacket.asOfUTC===asOfUTC;
+  const contextTiming=clocksAligned?
+    inspectContextTiming(contextPacket):inspectContextTiming({});
   let core=null,independent=null;
   if(!invalid && snapshot && typeof snapshot==='object'){
     try{
@@ -103,6 +112,16 @@ function reviewFourStages(input){
         qualityWarnings:independent?.qualityDiagnostics?.warnings||[]},
       confirmation:{status:'INDEPENDENT_CONTEXT_NOT_VERIFIED',
         feeds:statuses,blockedLayers:contextBlockers,
+        // Descriptive offline evidence only: no independent source,
+        // rights or broker-native observation time is attested.
+        externalContextTiming:{
+          mode:contextTiming.mode,
+          status:clocksAligned?contextTiming.status:'NO_ALIGNED_CONTEXT_TIMES',
+          perLayer:contextTiming.perLayer,summary:contextTiming.summary,
+          decisionClockAligned:clocksAligned,
+          sourceIndependentlyAttested:false,
+          contextCanAuthorizeTrading:false
+        },
         sourceRightsVerified:false,independentMacroAndOrderFlowVerified:false},
       validation:{status:'NEW_HOLDOUT_AND_EXECUTION_COSTS_NOT_VALIDATED',
         forwardStartUTC:'2026-11-18T00:00:00Z',
