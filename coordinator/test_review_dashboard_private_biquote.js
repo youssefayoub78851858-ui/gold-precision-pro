@@ -209,7 +209,10 @@ class Node {
 const nodes=Object.fromEntries(["candles","price","timestamp","source",
  "reason","decision","quality-status","chart-status","refresh",
  "data-state","trend-status","watch-status","parity-status",
- "vendor-h4-session"].map(k=>[k,new Node()]));
+ "vendor-h4-session","technical-short","technical-note",
+ ...["m15","h1","h4"].flatMap(tf=>
+   ["technical","ema","rsi","atr","technical-quality"].map(s=>tf+"-"+s))
+ ].map(k=>[k,new Node()]));
 const tabs=["15min","1h","4h"].map(tf=>{
  const n=new Node();n.dataset.frame=tf;return n;
 });
@@ -252,6 +255,10 @@ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير م�
  a(!JSON.stringify(calls).includes("Authorization"));
  a.equal(nodes.decision.textContent,"WAIT");
  a(nodes.price.textContent.includes("2,000"));
+ a.equal(nodes["technical-short"].textContent,"3/3 مرصودة");
+ a.notEqual(nodes["m15-ema"].textContent,"—");
+ a.notEqual(nodes["h1-rsi"].textContent,"—");
+ a.notEqual(nodes["h4-atr"].textContent,"—");
  a(nodes.reason.textContent.includes("WATCH_BUY"));
  a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير مثبت/);
  a(!JSON.stringify(nodes).includes("NOT_FOR_UI"));
@@ -263,6 +270,10 @@ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير م�
  timeNow=NOW+20000;
  tabs[0].handlers.click();
  a.equal(nodes.price.textContent,"غير متاح");
+ a.equal(nodes["technical-short"].textContent,"غير متاح");
+ a.equal(nodes["m15-ema"].textContent,"—");
+ a.equal(nodes["h1-rsi"].textContent,"—");
+ a.equal(nodes["h4-atr"].textContent,"—");
  a.equal(nodes["watch-status"].textContent,"WAIT");
  a(!nodes.reason.textContent.includes("WATCH_BUY"));
  a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير مثبت/);
