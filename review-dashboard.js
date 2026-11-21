@@ -426,7 +426,32 @@
      d.releaseAudit.readyForPaperExecution!==false||
      d.releaseAudit.readyForLiveExecution!==false||
      d.releaseAudit.signal!=="WAIT"||
-     d.releaseAudit.executable!==false)return null;
+     d.releaseAudit.executable!==false||
+     d.historicalArchiveAudit?.mode!=="GOLD_HISTORICAL_ACCURACY_EVIDENCE_AUDIT_V1"||
+     d.historicalArchiveAudit.status!=="HASH_CHECKED_DEVELOPMENT_ARCHIVE_NOT_ACCURACY_PROOF"||
+     d.historicalArchiveAudit.archiveHashChecksPassed!==2||
+     d.historicalArchiveAudit.developmentM15Bars!==4884||
+     d.historicalArchiveAudit.independentHoldoutSamples!==0||
+     d.historicalArchiveAudit.independentAccuracyPct!==null||
+     d.historicalArchiveAudit.observedIndependentWinRatePct!==null||
+     d.historicalArchiveAudit.verifiedBrokerCostSamples!==0||
+     d.historicalArchiveAudit.independentlyVerifiedFeedRights!==false||
+     d.historicalArchiveAudit.sourceAuthenticityIndependentlyVerified!==false||
+     d.historicalArchiveAudit.statisticallyValidated!==false||
+     d.historicalArchiveAudit.archiveUsedAsIndependentHoldout!==false||
+     d.historicalArchiveAudit.signal!=="WAIT"||
+     d.historicalArchiveAudit.executable!==false||
+     d.historicalArchiveAudit.paperOrdersAllowed!==false||
+     d.historicalArchiveAudit.liveOrdersAllowed!==false||
+     d.historicalArchiveAudit.providerRequestsMade!==0||
+     d.historicalArchiveAudit.historicalRawPricesReturned!==false||
+     !Array.isArray(d.historicalArchiveAudit.historicDevelopmentWindows)||
+     d.historicalArchiveAudit.historicDevelopmentWindows.length!==2||
+     d.historicalArchiveAudit.historicDevelopmentWindows.some(s=>
+       !["base","stress"].includes(s?.modeledCostScenario)||
+       s.windows?.length!==3||
+       s.windows.some(w=>w.independent!==false||w.ultimateClosedTrades!==0))
+      )return null;
   return {internalOfflineContractsChecked:true,signal:"WAIT",tradeReady:false};
  }
  function validatePreapproval(d){
@@ -509,8 +534,10 @@
     method:"GET",credentials:"omit",cache:"no-store",redirect:"error",
     headers:{Accept:"application/json"},signal:AbortSignal.timeout(8000)});
    if(r.status!==200||
-      !/^application\/json(?:\s*;|\s*$)/i.test(r.headers?.get?.("content-type")||"")||
-      !validateInternalHandoff(await r.json()))throw Error("OFFLINE_HANDOFF_UNVERIFIED");
+      !/^application\/json(?:\s*;|\s*$)/i.test(r.headers?.get?.("content-type")||""))
+     throw Error("OFFLINE_HANDOFF_UNVERIFIED");
+   const report=await r.json();
+   if(!validateInternalHandoff(report))throw Error("OFFLINE_HANDOFF_UNVERIFIED");
    if(own!==internalHandoffEpoch||document.visibilityState==="hidden")return;
    $("internal-gate-src").textContent="المصادر التسعة: وصلة المتطلبات موجودة، الاتصال الحي بعده غير مرخّص";
    $("internal-gate-candles").textContent="M15 / H1 / H4: فحوص الشموع موصولة؛ التاريخ المؤهّل بعده ناقص";
@@ -521,6 +548,10 @@
    const gate= $("release-audit-summary");
    if(gate)gate.textContent=
     "الفحص الداخلي: ٦/٦ عقود برمجية متوافقة؛ الإثبات الخارجي: ٠/٤. لا بيانات مؤهّلة أو إشارات.";
+   const archive=$("historical-archive-audit");
+   if(archive)archive.textContent=
+     "أرشيف تطوير فقط: "+report.historicalArchiveAudit.developmentM15Bars+
+     " شمعة M15 (سبتمبر/أكتوبر)؛ صفر اختبارات مستقلة لدقة الصفقات.";
    note.textContent="بوابة ما قبل الترخيص: الاختبارات المحلية ليست إثبات نجاح GitHub أو ربحية أو ترخيص. القرار WAIT.";
   }catch(_error){
    if(own!==internalHandoffEpoch||document.visibilityState==="hidden")return;
@@ -529,6 +560,9 @@
     $(id).textContent="WAIT — ربط داخلي غير متحقق حالياً";
    const gate=$("release-audit-summary");
    if(gate)gate.textContent="WAIT — لا يوجد فحص جاهزية نهائية موثوق حالياً.";
+   const archive=$("historical-archive-audit");
+   if(archive)archive.textContent=
+     "WAIT — لا يمكن التحقق من أرشيف الاختبار التاريخي؛ لا دقة مثبتة.";
    note.textContent="لا يمكن تأكيد ربط النظام الداخلي حالياً؛ ممنوع تفعيل الإشارات أو الصفقات.";
   }finally{internalHandoffPending=false;}
  }
