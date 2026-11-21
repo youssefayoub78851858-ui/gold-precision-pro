@@ -37,6 +37,7 @@ on:
       - 'coordinator/test_review_dashboard_route.js'
       - 'coordinator/internal_offline_handoff.js'
       - 'coordinator/test_internal_offline_handoff.js'
+      - 'coordinator/test_prelicense_operational_commissioning.py'
       - 'coordinator/tests/review_dashboard_safety.test.js'
       - 'coordinator/biquote_v3_chronological_replay.js'
       - 'coordinator/test_biquote_v3_chronological_replay.js'
@@ -111,6 +112,9 @@ jobs:
           node --check review-dashboard.js
       - name: Private mobile dashboard shows contiguous, not raw H4 trade history
         run: node coordinator/test_private_monitor_signal_readiness.js
+      - name: Pre-license restart and failover operational commissioning (synthetic only)
+        working-directory: coordinator
+        run: python -m unittest -v test_prelicense_operational_commissioning
       - name: Paper account cannot act on synthetic BUY or forged approval
         run: python -m unittest -v coordinator/test_ultimate_four_stage_paper.py
       - name: Underlying vault and final source quality safety tests
