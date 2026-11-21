@@ -67,6 +67,8 @@ async function main(){
   assert(page.body.includes('src="/review-dashboard.js"'));
   assert(!page.body.includes("/api/v3/research"));
   assert(page.body.includes('id="decision"'));
+  assert(page.body.includes("توثيق الحساب وحده لا يكفي"));
+  assert(page.body.includes("موافقة تخزين بيانات Render معلّقة"));
   assert(page.body.includes("WAIT"));
   assert(!page.body.includes("MONITOR_READONLY_TOKEN"));
   const alias=await request("/review-dashboard");
@@ -79,6 +81,7 @@ async function main(){
   assert(script.body.includes('"/api/v3/ultimate/biquote-observation"'));
   assert(script.body.includes('"/api/v3/ultimate/biquote-viewer-status"'));
   assert(script.body.includes("AUTO_POLL_MS=10000"));
+  assert(script.body.includes("الاتصال والتخزين السحابي مغلقان بانتظار موافقة مكتوبة"));
   assert(script.body.includes('credentials:"same-origin"'));
   assert(script.body.includes('rawQuoteShown!==true'));
   assert(!script.body.includes("MONITOR_READONLY_TOKEN"));
