@@ -76,6 +76,12 @@ class PrivateDemoGetTests(unittest.TestCase):
         self.assertEqual(out["status"], "PRIVATE_DEMO_GEOMETRY_ONLY_NOT_ADMITTED")
         self.assertEqual(out["providerRequestsMade"], 1)
         self.assertEqual(out["pageRowsChecked"], 1)
+        self.assertEqual(
+            out["unclassifiedMissingClosedSlots"],
+            CHUNK["expectedClosedSlots"] - 1
+        )
+        self.assertFalse(out["completeUTCGridWindowObserved"])
+        self.assertFalse(out["originalBrokerSessionVerified"])
         self.assertEqual(len(delivered), 1)
         self.assertEqual(len(calls), 1)
         method,url,headers=calls[0]
@@ -128,6 +134,37 @@ class PrivateDemoGetTests(unittest.TestCase):
                     out=self.gate(**params)
                     self.safe(out);self.assertEqual(out["status"],"BLOCKED")
         self.assertEqual(calls,[])
+
+    def test_complete_synthetic_utc_grid_does_not_authorize_trading(self):
+        # Offline-only FULL-grid fixture: complete geometry is NOT provider
+        # rights, first-seen proof, or independent broker session evidence.
+        full = [
+            quote(f"2026-11-20T{8 + i // 4:02d}:{(i % 4)*15:02d}:00")
+            for i in range(CHUNK["expectedClosedSlots"])
+        ]
+        payload = {
+            "epic": "TEST.GOLD.EPIC",
+            "resolution": "MINUTE_15",
+            "prices": full,
+        }
+        calls = []
+        delivered = []
+        with patch.dict(os.environ, {
+            ENABLE_ENV: ENABLE_VALUE, RIGHTS_ENV: ENABLE_VALUE
+        }):
+            out = self.gate(
+                transport=fake_transport(calls, payload=payload),
+                deliver_private=delivered.append,
+            )
+        self.safe(out)
+        self.assertEqual(out["status"], "PRIVATE_DEMO_GEOMETRY_ONLY_NOT_ADMITTED")
+        self.assertEqual(out["pageRowsChecked"], CHUNK["expectedClosedSlots"])
+        self.assertEqual(out["unclassifiedMissingClosedSlots"], 0)
+        self.assertTrue(out["completeUTCGridWindowObserved"])
+        self.assertFalse(out["originalBrokerSessionVerified"])
+        self.assertFalse(out["researchEligible"])
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(len(delivered), 1)
 
     def test_empty_or_over_capacity_pages_never_reach_private_archive(self):
         # An HTTP 200 with no bars is not proof of a captured interval.
