@@ -284,6 +284,35 @@ test("six internal offline modules appear on mobile without accepting forged liv
  assert.ok(js.includes("report.historicalArchiveAudit.developmentM15Bars"));
 });
 
+test("mobile paper report remains unavailable without a verified local ledger",()=>{
+ const {validatePaperReport}=require("../../review-dashboard.js");
+ const {empty}=require("../review_paper_report_bridge");
+ const missing=empty();
+ assert.deepEqual(validatePaperReport(missing),{connected:false,closedTrades:0});
+ for(const forged of [
+   {...missing,closedTrades:5},
+   {...missing,winRate:1},
+   {...missing,netModeledUsd:2500},
+   {...missing,signal:"BUY"},
+   {...missing,executable:true},
+   {...missing,paperOrdersAllowed:true},
+   {...missing,liveOrdersAllowed:true},
+   {...missing,providerRequestsMade:1},
+   {...missing,independentHoldoutValidated:true}
+ ])assert.equal(validatePaperReport(forged),null);
+ const fs=require("node:fs"),path=require("node:path");
+ const html=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.html"),"utf8");
+ const js=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.js"),"utf8");
+ assert(html.includes('id="paper-reports"'));
+ for(const id of ["state","total","net","win","stress","five","week","hundred"])
+   assert(html.includes('id="paper-report-'+id+'"'));
+ assert(js.includes('"/api/v3/ultimate/paper-reports"'));
+ assert(js.includes('validatePaperReport(await r.json())'));
+ assert(js.includes("resetPaperNumbers()"));
+ assert(js.includes('credentials:"same-origin"'));
+ assert(js.includes('void loadPaperReport()'));
+});
+
 test("session-checked foreground auto refresh preserves stale history but not tradability",()=>{
  const fs=require("node:fs"),path=require("node:path");
  const js=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.js"),"utf8");
