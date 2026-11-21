@@ -36,7 +36,8 @@ async function main(){
  const child=spawn(process.execPath,["server.js"],{
   cwd:process.cwd(),
   env:{...process.env,PORT:String(port),DEMO_MODE:"standby",
-   MARKET_DATA_BROKER_URL:"",BROKER_TOKEN:""},
+   MARKET_DATA_BROKER_URL:"",BROKER_TOKEN:"",
+   GOLD_SYNTHETIC_PAPER_JOURNAL:""},
   stdio:"ignore"
  });
  const request=(path,method="GET")=>new Promise((resolve,reject)=>{
@@ -76,6 +77,9 @@ async function main(){
   assert(page.body.includes('id="internal-gate-note"'));
   assert(page.body.includes('id="release-audit-summary"'));
   assert(page.body.includes('id="historical-archive-audit"'));
+  assert(page.body.includes('id="paper-reports"'));
+  assert(page.body.includes('id="paper-report-state"'));
+  assert(page.body.includes('id="paper-report-hundred"'));
   assert(page.body.includes("توثيق الحساب وحده لا يكفي"));
   assert(page.body.includes("موافقة تخزين بيانات Render معلّقة"));
   assert(page.body.includes("WAIT"));
@@ -102,6 +106,7 @@ async function main(){
   assert.equal(script.headers["cache-control"],"no-store");
   assert(script.body.includes('"/api/v3/ultimate/biquote-observation"'));
   assert(script.body.includes('"/api/v3/ultimate/biquote-viewer-status"'));
+  assert(script.body.includes('"/api/v3/ultimate/paper-reports"'));
   assert(script.body.includes("AUTO_POLL_MS=10000"));
   assert(script.body.includes("الاتصال والتخزين السحابي مغلقان بانتظار موافقة مكتوبة"));
   assert(script.body.includes('credentials:"same-origin"'));
@@ -131,6 +136,23 @@ async function main(){
   assert.equal(safe.steps.dxyGcOrderFlow.dxy,"NOT_CONNECTED");
   assert.equal(safe.steps.capitalDemo.connected,false);
   assert.equal((await request("/api/v3/ultimate/preapproval-status","POST")).status,405);
+  const reportGet=await request("/api/v3/ultimate/paper-reports");
+  assert.equal(reportGet.status,200);
+  assert.equal(reportGet.headers["cache-control"],"private, no-store");
+  assert.equal(reportGet.headers["vary"],"Cookie");
+  const paper=JSON.parse(reportGet.body);
+  assert.equal(paper.mode,"GOLD_PRIVATE_OFFLINE_PAPER_REPORT_BRIDGE_V1");
+  assert.equal(paper.status,"NO_PERSISTENT_PAPER_JOURNAL_CONNECTED");
+  assert.equal(paper.privateJournalConnected,false);
+  assert.equal(paper.closedTrades,0);
+  assert.equal(paper.netModeledUsd,null);
+  assert.equal(paper.winRate,null);
+  assert.equal(paper.unverifiedNextM15ForecastAccuracy,null);
+  assert.equal(paper.signal,"WAIT");
+  assert.equal(paper.executable,false);
+  assert.equal(paper.providerRequestsMade,0);
+  assert(!reportGet.body.includes("entryPrice"));
+  assert.equal((await request("/api/v3/ultimate/paper-reports","POST")).status,405);
   const integrated=await request("/api/v3/ultimate/internal-handoff");
   assert.equal(integrated.status,200);
   assert.equal(integrated.headers["cache-control"],"no-store");
