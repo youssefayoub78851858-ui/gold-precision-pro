@@ -31,6 +31,37 @@ assert(a.warnings.includes('COST_ADJUSTED_REWARD_RISK_LOW'));
 assert.equal(a.signal,'WAIT');assert.equal(a.executable,false);assert.equal(a.paperOrdersAllowed,false);
 assert.equal(a.providerRequestsMade,0);assert.equal(a.empiricalWinProbability,null);
 assert.equal(a.qualityScore,null);assert.equal(a.effectOnCandidate,'NONE');
+// Geometry mismatches remain warnings, never confidence scores or orders.
+assert(a.metrics.crossFrameM15.H1.disagreed>0);
+assert(a.metrics.crossFrameM15.H4.disagreed>0);
+assert(a.warnings.includes('H1_M15_CLOSED_OHLC_PARITY_MISMATCH'));
+assert(a.warnings.includes('H4_M15_CLOSED_OHLC_PARITY_MISMATCH'));
+const aligned=structuredClone(source);
+const byTime=new Map(aligned.M15.map(r=>[Date.parse(r.datetime),r]));
+for(const [tf,n] of [['H1',4],['H4',16]]){
+  for(const bar of aligned[tf]){
+    const start=Date.parse(bar.datetime);
+    const parts=Array.from({length:n},(_,i)=>byTime.get(start+i*900000));
+    if(parts.some(x=>!x))continue;
+    bar.open=parts[0].open;
+    bar.high=Math.max(...parts.map(x=>x.high));
+    bar.low=Math.min(...parts.map(x=>x.low));
+    bar.close=parts.at(-1).close;
+  }
+}
+const alignedAudit=diagnostic(aligned,ASOF,tradePlan,risk,layers);
+assert(alignedAudit.metrics.crossFrameM15.H1.matched>0);
+assert(alignedAudit.metrics.crossFrameM15.H4.matched>0);
+assert.equal(alignedAudit.metrics.crossFrameM15.H1.disagreed,0);
+assert.equal(alignedAudit.metrics.crossFrameM15.H4.disagreed,0);
+assert(!alignedAudit.warnings.includes('H1_M15_CLOSED_OHLC_PARITY_MISMATCH'));
+assert(!alignedAudit.warnings.includes('H4_M15_CLOSED_OHLC_PARITY_MISMATCH'));
+const corrupted=structuredClone(aligned);
+corrupted.H1.at(-2).high+=10;
+const corruptAudit=diagnostic(corrupted,ASOF,tradePlan,risk,layers);
+assert(corruptAudit.warnings.includes('H1_M15_CLOSED_OHLC_PARITY_MISMATCH'));
+assert.equal(corruptAudit.signal,'WAIT');
+assert.equal(corruptAudit.empiricalWinProbability,null);
 const costBetter=diagnostic(source,ASOF,{...tradePlan,target:116},risk,layers);
 assert(costBetter.metrics.netRewardRiskEstimate>2.5);
 assert(!costBetter.warnings.includes('COST_ADJUSTED_REWARD_RISK_LOW'));
