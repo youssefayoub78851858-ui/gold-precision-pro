@@ -40,7 +40,9 @@ function evaluate(input){
   return blocked("BLOCKED","INVALID_PAPER_TRADE_SET");
  if(trades.length===0)return blocked("NO_CLOSED_PAPER_TRADES","NO_HOLDOUT_RESULTS_YET");
  let prevExit=freeze,lastReceipt=freeze,peak=0,cumulative=0,maxDD=0,
-  netTotal=0,winCount=0,profit=0,loss=0,rTotal=0,totalCosts=0;
+  netTotal=0,winCount=0,profit=0,loss=0,rTotal=0,totalCosts=0,
+  stressed2xTotal=0,stressed2xWins=0,stressed2xPath=0,
+  stressed2xPeak=0,stressed2xMaxDD=0;
  const ids=new Set();
  for(const t of trades){
   if(!t||typeof t!=="object"||Array.isArray(t)||
@@ -98,6 +100,15 @@ function evaluate(input){
   if(!Number.isFinite(net)||!Number.isFinite(ratio))
    return blocked("BLOCKED","INVALID_PAPER_NET_OR_RISK_RATIO");
   totalCosts+=cost;netTotal+=net;rTotal+=ratio;
+  // Fixed, conservative OFFLINE sensitivity: re-charge twice the already
+  // modeled spread/slippage/commission. Not a broker quote or a fill model.
+  // A profitable nominal result may become negative under this stress.
+  const stressed= t.grossPnLUsd-2*cost;
+  stressed2xTotal+=stressed;
+  if(stressed>0)stressed2xWins++;
+  stressed2xPath+=stressed;
+  stressed2xPeak=Math.max(stressed2xPeak,stressed2xPath);
+  stressed2xMaxDD=Math.max(stressed2xMaxDD,stressed2xPeak-stressed2xPath);
   cumulative+=net;peak=Math.max(peak,cumulative);
   maxDD=Math.max(maxDD,peak-cumulative);
   if(net>0){winCount++;profit+=net;}
@@ -108,6 +119,11 @@ function evaluate(input){
   closedTrades:n,statistics:{
    totalGrossMinusModeledCostsUsd:round(netTotal,2),
    modeledCostsUsd:round(totalCosts,2),
+   // This scenario cannot qualify paper/live signals. Descriptive only.
+   modeledCostDoubleStress:{multiplier:2,
+    netUsd:round(stressed2xTotal,2),winRate:round(stressed2xWins/n),
+    maxRealizedDrawdownUsd:round(stressed2xMaxDD,2),
+    actualBrokerCostEvidence:false,tradeApproval:false},
    averageNetUsd:round(netTotal/n,2),
    averageNetR:round(rTotal/n),
    winRate:round(winCount/n),
