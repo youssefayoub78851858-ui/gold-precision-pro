@@ -485,7 +485,7 @@
     method:"GET",credentials:"omit",cache:"no-store",redirect:"error",
     headers:{Accept:"application/json"},signal:AbortSignal.timeout(8000)});
    if(r.status!==200||
-      !/^application\\/json(?:\\s*;|\\s*$)/i.test(r.headers?.get?.("content-type")||"")||
+      !/^application\/json(?:\s*;|\s*$)/i.test(r.headers?.get?.("content-type")||"")||
       !validateInternalHandoff(await r.json()))throw Error("OFFLINE_HANDOFF_UNVERIFIED");
    if(own!==internalHandoffEpoch||document.visibilityState==="hidden")return;
    $("internal-gate-src").textContent="المصادر التسعة: وصلة المتطلبات موجودة، الاتصال الحي بعده غير مرخّص";
