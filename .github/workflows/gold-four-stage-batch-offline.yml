@@ -62,6 +62,8 @@ on:
       - 'coordinator/test_offline_paper_report_readonly.py'
       - 'coordinator/review_paper_report_bridge.js'
       - 'coordinator/test_review_paper_report_bridge.js'
+      - 'coordinator/paper_persistent_disk_gate.js'
+      - 'coordinator/test_paper_persistent_disk_gate.js'
       - 'coordinator/historical_accuracy_evidence_audit.js'
       - 'coordinator/test_historical_accuracy_evidence_audit.js'
       - 'research/recorded/manifest.json'
@@ -123,6 +125,7 @@ jobs:
       - name: Read-only existing SQLite paper report and no-real-feed bridge
         run: |
           node coordinator/test_review_paper_report_bridge.js
+          node coordinator/test_paper_persistent_disk_gate.js
           cd coordinator
           python -m unittest -v test_offline_paper_report_readonly
       - name: Synthetic paper outcome SQLite journal, replay, tamper and cost-audit integration (offline)
