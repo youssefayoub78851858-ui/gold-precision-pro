@@ -10,8 +10,8 @@ import unittest
 from unittest.mock import patch
 
 from ultimate_paper import PaperAccount
-from xauusd_feed_gate import SourcePolicy
-from xauusd_research_pipeline import run_research_pipeline
+from xauusd_feed_gate import SourcePolicy, intake_payload
+from xauusd_research_pipeline import run_research_pipeline, _fully_covered_m15_parity
 
 ROOT = pathlib.Path(__file__).resolve().parent
 
@@ -197,6 +197,96 @@ class XauUsdResearchPipeline(unittest.TestCase):
         self.assertFalse(result["executable"])
         for key in ("DXY", "GC", "calendar", "headlines", "orderFlow"):
             self.assertNotIn(key, result["v3"].get("feeds", {}))
+
+    def test_recorded_partial_parent_parity_blocks_before_either_engine(self):
+        # Synthetic geometry in 'recorded' shape for an OFFLINE contract test.
+        # Even mock rights + a trusted schedule do not allow incomplete
+        # M15 coverage to reach V3/r2 or a server paper order.
+        from test_xauusd_feed_gate import payload as tiny, NOW as test_now
+        recorded = tiny()
+        recorded["mode"] = "recorded"
+        recorded["priceBasis"] = "BID"
+        independent = {tf: list(f["expectedOpenTimes"])
+                       for tf, f in recorded["frames"].items()}
+        policy = SourcePolicy(True, True, True, True,
+                              "OFFLINE TEST ONLY", "UNIT_TEST_FIXTURE",
+                              "INDEPENDENT OFFLINE TEST SCHEDULE",
+                              independent, expected_price_basis="BID",
+                              price_basis_reference="OFFLINE MOCK BID")
+        accepted = intake_payload(recorded, test_now, policy)
+        self.assertEqual(accepted["status"], "ADMISSIBLE_FOR_RESEARCH_ONLY")
+        self.assertEqual(accepted["crossFrameParity"]["1h"]["uncovered"], 1)
+        self.assertEqual(accepted["crossFrameParity"]["4h"]["uncovered"], 1)
+        with patch("xauusd_research_pipeline.subprocess.run",
+                   side_effect=AssertionError("must never invoke V3/r2")):
+            result = run_research_pipeline(
+                recorded, test_now, policy,
+                {"v3Feeds": {}, "r2Feeds": {}}
+            )
+        self.assertEqual(result["status"], "WAIT_CROSS_FRAME_PARITY_INCOMPLETE")
+        self.assertEqual(result["signal"], "WAIT")
+        self.assertFalse(result["executable"])
+        self.assertFalse(result["researchEligible"])
+        self.assertEqual(result["researchCandidate"], "NONE")
+        self.assertEqual(result["engines"]["v3"], "SKIPPED")
+        self.assertEqual(result["engines"]["paper"], "SKIPPED")
+        self.assertNotIn("paperSnapshot", result)
+        self.assertEqual(result["providerRequestsMade"], 0)
+
+    def test_full_mock_parity_reaches_only_offline_engine_boundary(self):
+        # An exact 16 M15 -> 4 H1 -> 1 H4 reconstruction proves this
+        # geometry gate works, NOT license or profitability. We deliberately
+        # simulate a missing Node process to retain WAIT and no paper input.
+        from test_xauusd_feed_gate import payload as tiny, NOW as test_now
+        start = test_now.replace(hour=8, minute=0)
+        m15 = []
+        for index in range(16):
+            opened = start + dt.timedelta(minutes=15 * index)
+            price = 4000 + .25 * index
+            m15.append({
+                "openTime": opened.isoformat().replace("+00:00", "Z"),
+                "open": price, "high": price + 1,
+                "low": price - 1, "close": price + .5
+            })
+        def merge(rows):
+            return {"openTime": rows[0]["openTime"], "open": rows[0]["open"],
+                    "high": max(x["high"] for x in rows),
+                    "low": min(x["low"] for x in rows),
+                    "close": rows[-1]["close"]}
+        h1 = [merge(m15[i:i + 4]) for i in range(0, 16, 4)]
+        h4 = [merge(m15)]
+        recorded = tiny()
+        recorded["mode"] = "recorded"
+        recorded["priceBasis"] = "BID"
+        recorded["frames"] = {
+            "15min": {"candles": m15,
+                      "expectedOpenTimes": [x["openTime"] for x in m15]},
+            "1h": {"candles": h1,
+                   "expectedOpenTimes": [x["openTime"] for x in h1]},
+            "4h": {"candles": h4,
+                   "expectedOpenTimes": [x["openTime"] for x in h4]}
+        }
+        independent = {tf: list(f["expectedOpenTimes"])
+                       for tf, f in recorded["frames"].items()}
+        policy = SourcePolicy(True, True, True, True,
+                              "OFFLINE MOCK LICENSE NOT REAL", "UNIT_TEST_FIXTURE",
+                              "OFFLINE SESSION REFERENCE",
+                              independent, expected_price_basis="BID",
+                              price_basis_reference="OFFLINE BID QUOTE BASIS")
+        intake = intake_payload(recorded, test_now, policy)
+        self.assertEqual(intake["status"], "ADMISSIBLE_FOR_RESEARCH_ONLY")
+        self.assertEqual(intake["crossFrameParity"]["1h"]["matched"], 4)
+        self.assertEqual(intake["crossFrameParity"]["4h"]["matched"], 1)
+        self.assertTrue(_fully_covered_m15_parity(intake))
+        with patch("xauusd_research_pipeline.subprocess.run",
+                   side_effect=FileNotFoundError("no node in test")) as runner:
+            result = run_research_pipeline(
+                recorded, test_now, policy, {"v3Feeds": {}, "r2Feeds": {}})
+        self.assertEqual(runner.call_count, 1)
+        self.assertEqual(result["status"], "WAIT_ENGINE_FAILURE")
+        self.assertEqual(result["signal"], "WAIT")
+        self.assertFalse(result["researchEligible"])
+        self.assertNotIn("paperSnapshot", result)
 
     def test_engine_outage_returns_wait_without_paper_input(self):
         payload, context, now = fixture_bundle()
