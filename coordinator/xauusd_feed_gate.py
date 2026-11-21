@@ -175,6 +175,42 @@ def validate_frame(interval: str, frame: dict, now: dt.datetime) -> dict:
             "candles": [item[1] for item in parsed]}
 
 
+def check_m15_parent_ohlc_parity(frames: dict) -> dict:
+    """Check ONLY independently closed, fully M15-covered H1/H4 buckets.
+
+    The parent and each constituent are already validated by validate_frame.
+    Partial coverage cannot prove parity and is reported, never filled.
+    This comparison alone does not authenticate a broker's native sessions.
+    """
+    m15 = {parse_utc(candle["openTime"]): candle
+           for candle in frames["15min"]["candles"]}
+    results = {}
+    for interval, count in (("1h", 4), ("4h", 16)):
+        matched = uncovered = mismatched = 0
+        for parent in frames[interval]["candles"]:
+            opened = parse_utc(parent["openTime"])
+            parts = [m15.get(opened + dt.timedelta(minutes=15 * i))
+                     for i in range(count)]
+            if any(part is None for part in parts):
+                uncovered += 1
+                continue
+            expected = {"open": parts[0]["open"],
+                        "high": max(x["high"] for x in parts),
+                        "low": min(x["low"] for x in parts),
+                        "close": parts[-1]["close"]}
+            if all(math.isclose(parent[k], expected[k], rel_tol=1e-8,
+                                abs_tol=0.00001) for k in OHLC):
+                matched += 1
+            else:
+                mismatched += 1
+        results[interval] = {"matched": matched,
+                             "uncovered": uncovered,
+                             "mismatched": mismatched,
+                             "completeHistoryVerified": uncovered == 0 and matched > 0
+                             and mismatched == 0}
+    return results
+
+
 def intake_payload(payload: dict, now: dt.datetime, policy: SourcePolicy) -> dict:
     """Validate a packet; explicitly synthetic packets stay quarantined from research."""
     reasons = []
@@ -237,14 +273,26 @@ def intake_payload(payload: dict, now: dt.datetime, policy: SourcePolicy) -> dic
                 validated[interval] = validate_frame(interval, frames[interval], now_utc)
             except (TypeError, ValueError) as error:
                 reasons.append(f"{interval.upper()}_REJECTED:{error}")
+    parity = None
+    if mode in {"recorded", "live"} and not reasons:
+        # Only claim a comparison when complete M15 constituents were actually
+        # observed. A corresponding H1/H4 that disagrees fails the whole feed.
+        parity = check_m15_parent_ohlc_parity(validated)
+        for parent_interval in ("1h", "4h"):
+            if parity[parent_interval]["mismatched"]:
+                reasons.append(
+                    f"{parent_interval.upper()}_CLOSED_OHLC_PARITY_MISMATCH"
+                )
     if reasons:
         validated = {}
+        parity = None
     synthetic = mode == "synthetic" and not reasons
     status = "SYNTHETIC_TEST_ONLY" if synthetic else "ADMISSIBLE_FOR_RESEARCH_ONLY" if not reasons else "BLOCKED"
     blocking_reasons = ["SYNTHETIC_DATA_NOT_REAL_MARKET_EVIDENCE"] if synthetic else reasons
     return {"status": status,
             "sourceDataMode": mode or "unknown", "provider": provider,
             "instrument": payload.get("instrument"), "frames": validated,
+            "crossFrameParity": parity,
             "blockingReasons": blocking_reasons, "researchEligible": status == "ADMISSIBLE_FOR_RESEARCH_ONLY",
             "signal": "WAIT", "executable": False,
             "sourceRequestsMade": 0, "secretPersisted": False}
