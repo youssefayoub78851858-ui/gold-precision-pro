@@ -147,7 +147,11 @@ def inspect_private_demo_page(chunk, *, cst=None, security_token=None,
             seen.add(stamp)
         # Controlled callback only; raw prices are NOT returned in the report.
         # If downstream archival fails, never claim the page was received.
-        deliver_private(payload)
+        delivery_result = deliver_private(payload)
+        # A private archive callback may explicitly refuse the page; never
+        # count refused storage as a successfully delivered price snapshot.
+        if delivery_result is False:
+            return _result("PRIVATE_DEMO_ARCHIVE_REFUSED_PAGE")
         report = _result("REQUIRES_INDEPENDENT_DATA_RIGHTS_AND_RECEIPT_AUDIT")
         report.update(
             status="PRIVATE_DEMO_GEOMETRY_ONLY_NOT_ADMITTED",
@@ -164,3 +168,7 @@ def inspect_private_demo_page(chunk, *, cst=None, security_token=None,
     except (KeyError, ValueError, TypeError, OverflowError, AttributeError,
             OSError, StopIteration):
         return _result("INVALID_OR_UNAVAILABLE_PRIVATE_PRICE_PAGE")
+    except Exception:
+        # Unexpected transport/storage errors may contain credentials in
+        # their messages. Only a fixed safe code crosses this boundary.
+        return _result("PRIVATE_DEMO_TRANSPORT_OR_ARCHIVE_ERROR")
