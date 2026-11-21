@@ -129,6 +129,28 @@ const server = http.createServer(async (req, res) => {
       return res.end(JSON.stringify({...fallback,status:"OFFLINE_HANDOFF_UNAVAILABLE"}));
     }
   }
+  // Private read-only synthetic paper outcome report. No user-supplied file
+  // path; only an explicitly configured existing local SQLite journal is
+  // eligible. Without one, report NOT CONNECTED, never invented P/L.
+  if(paperPath==="/api/v3/ultimate/paper-reports"){
+    if(!DEMO_MODE)return send(res,404,{signal:"WAIT",executable:false});
+    if(req.method!=="GET")return send(res,405,{signal:"WAIT",executable:false});
+    const session=require("./coordinator/biquote_viewer_session");
+    const result=require("./coordinator/review_paper_report_bridge").inspect({
+      authenticated:session.authenticated(req.headers)
+    });
+    if(result.body.signal!=="WAIT"||result.body.executable!==false||
+       result.body.liveOrdersAllowed!==false||
+       result.body.paperOrdersAllowed!==false||
+       result.body.providerRequestsMade!==0||result.body.brokerOrdersSent!==0||
+       result.body.paperOrdersSent!==0)
+      return send(res,503,{signal:"WAIT",executable:false,
+        status:"UNVERIFIED_PAPER_REPORT"});
+    res.writeHead(result.statusCode,{"Content-Type":"application/json; charset=utf-8",
+      "Cache-Control":"private, no-store","Vary":"Cookie",
+      "X-Content-Type-Options":"nosniff","Referrer-Policy":"no-referrer"});
+    return res.end(JSON.stringify(result.body));
+  }
   if(paperPath==="/api/v3/ultimate/biquote-viewer-status"){
     if(!DEMO_MODE)return send(res,404,{signal:"WAIT",executable:false});
     if(req.method!=="GET")return send(res,405,{signal:"WAIT",executable:false});
