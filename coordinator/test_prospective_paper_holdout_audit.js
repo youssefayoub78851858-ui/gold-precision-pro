@@ -47,6 +47,10 @@ a.equal(good.statistics.averageNetR,-.55);
 a.equal(good.statistics.winRate,.5);
 a.equal(good.statistics.maxRealizedDrawdownUsd,3.6);
 a.equal(good.statistics.sampleSizeAtLeast30,false);
+a.deepEqual(good.statistics.modeledCostDoubleStress,{
+ multiplier:2,netUsd:-3.4,winRate:.5,maxRealizedDrawdownUsd:4.2,
+ actualBrokerCostEvidence:false,tradeApproval:false
+});
 a.equal(good.statistics.grossPnLConvention,
  "MID_MARK_BEFORE_SPREAD_SLIPPAGE_COMMISSION");
 a.equal(good.statistics.initialRiskConvention,
@@ -60,6 +64,13 @@ a.equal(allWins.statistics.sampleSizeAtLeast30,true);
 a.equal(allWins.statistics.profitFactor,null);
 a.equal(allWins.statistics.inference,"DESCRIPTIVE_ONLY_NOT_STATISTICAL_PROOF");
 a.equal(allWins.profitabilityProven,false);
+a.equal(allWins.statistics.modeledCostDoubleStress.netUsd,25.6);
+a.equal(allWins.statistics.modeledCostDoubleStress.tradeApproval,false);
+const stressBreaksNominalWin=evaluate(packet([trade(1,.9)]));
+safe(stressBreaksNominalWin);
+a.equal(stressBreaksNominalWin.statistics.winRate,1);
+a.equal(stressBreaksNominalWin.statistics.modeledCostDoubleStress.winRate,0);
+a.equal(stressBreaksNominalWin.statistics.modeledCostDoubleStress.netUsd,-.3);
 for(const data of [
  {...packet([trade(1)]),dataOrigin:"VERIFIED_REAL_BROKER_FILLED"},
  {...packet([trade(1)]),asOfUTC:iso(start)},
