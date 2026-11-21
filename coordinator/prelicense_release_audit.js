@@ -30,6 +30,8 @@ function assess(handoff){
    obj.independentHoldoutValidated===false&&
    obj.realMarketPriceAvailable===false&&
    obj.externalProviderDecisionDeferredToLastStage===true&&
+   obj.readyForBuySell!==true&&obj.readyForPaperExecution!==true&&
+   obj.readyForLiveExecution!==true&&
    obj.signalCandidate===null&&obj.entry===null&&
    obj.stopLoss===null&&obj.targets===null&&
    obj.stageStatus?.finalProvider==="DEFERRED_NOT_CONNECTED"&&
