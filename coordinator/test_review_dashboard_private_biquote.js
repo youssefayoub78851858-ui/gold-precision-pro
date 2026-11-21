@@ -211,6 +211,7 @@ const nodes=Object.fromEntries(["candles","price","timestamp","source",
  "data-state","trend-status","watch-status","parity-status",
  "vendor-h4-session","technical-short","technical-note","auto-state",
  "m15-continuity","h1-continuity","h4-continuity","continuity-parity","continuity-note",
+ "us02y-daily","us10y-daily","h15-daily-note",
  ...["m15","h1","h4"].flatMap(tf=>
    ["technical","ema","rsi","atr","technical-quality"].map(s=>tf+"-"+s))
  ].map(k=>[k,new Node()]));
@@ -366,6 +367,18 @@ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير م�
  const autoCalls=[];
  context.fetch=async(url,options)=>{
   autoCalls.push({url,options});
+  if(url==="/api/v3/ultimate/free-context")
+   return {status:200,headers:{get:k=>k==="content-type"?
+      "application/json; charset=utf-8":null},json:async()=>({
+    mode:"OFFICIAL_RECORDED_DAILY_CONTEXT",signal:"WAIT",executable:false,
+    liveData:false,dataFresh:false,readyForFiveMinuteGate:false,
+    readyForUltimateTrading:false,allowedRole:"MACRO_DAILY_CONTEXT_ONLY",
+    dataStatus:"DAILY_REFERENCE_ONLY",
+    sourceURL:"https://www.federalreserve.gov/releases/h15/",
+    sourceStatus:"OFFICIAL_FED_RSS_REFRESHED",observedDate:"2026-11-19",
+    rates:[{series:"DGS2",maturityYears:2,latestYieldPct:4.67},
+      {series:"DGS10",maturityYears:10,latestYieldPct:5.11}]
+   })};
   if(url==="/api/v3/ultimate/biquote-viewer-status")
    return {status:200,json:async()=>({signal:"WAIT",executable:false,
       viewerSessionReady:true,marketDataRequested:false,ordersSent:0})};
@@ -381,6 +394,10 @@ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير م�
  a.equal(autoCalls[0]?.options.credentials,"same-origin");
  a.equal(autoCalls.filter(x=>x.url==="/api/v3/ultimate/biquote-observation").length,1);
  a(nodes.price.textContent.includes("2,000"),"Auto startup displays closed bars");
+ a.equal(autoCalls.filter(x=>x.url==="/api/v3/ultimate/free-context").length,1);
+ a.equal(nodes["us02y-daily"].textContent,"4.67%");
+ a.equal(nodes["us10y-daily"].textContent,"5.11%");
+ a.match(nodes["h15-daily-note"].textContent,/H.15 يومي/);
  timeNow=NOW+11000;
  intervalCallback();
  for(let i=0;i<25;i++)await Promise.resolve();
