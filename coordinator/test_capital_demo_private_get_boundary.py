@@ -129,6 +129,39 @@ class PrivateDemoGetTests(unittest.TestCase):
                     self.safe(out);self.assertEqual(out["status"],"BLOCKED")
         self.assertEqual(calls,[])
 
+    def test_empty_or_over_capacity_pages_never_reach_private_archive(self):
+        # An HTTP 200 with no bars is not proof of a captured interval.
+        # Returning more rows than approved CLOSED slots is equally invalid.
+        requests = request()
+        capacity = requests["expectedClosedSlots"]
+        self.assertGreater(capacity, 1)
+        for supplied in ([], [quote("2026-11-20T08:00:00")] * (capacity + 1)):
+            with self.subTest(size=len(supplied)):
+                calls = []
+                delivered = []
+                payload = {
+                    "epic": "TEST.GOLD.EPIC",
+                    "resolution": "MINUTE_15",
+                    "prices": supplied,
+                }
+                with patch.dict(os.environ, {
+                    ENABLE_ENV: ENABLE_VALUE, RIGHTS_ENV: ENABLE_VALUE
+                }):
+                    out = self.gate(
+                        transport=fake_transport(calls, payload=payload),
+                        deliver_private=delivered.append,
+                    )
+                self.safe(out)
+                self.assertEqual(out["status"], "BLOCKED")
+                self.assertEqual(len(calls), 1)
+                self.assertEqual(delivered, [])
+                self.assertEqual(out["pageRowsChecked"], 0)
+                self.assertEqual(out["reason"], (
+                    "BROKER_PRICE_PAGE_EMPTY_NOT_OBSERVED"
+                    if len(supplied) == 0
+                    else "BROKER_PRICE_PAGE_EXCEEDS_APPROVED_WINDOW"
+                ))
+
     def test_bad_price_identity_future_crossing_redirect_dont_deliver(self):
         choices=[
             {"payload":{"epic":"NOT_GOLD","resolution":"MINUTE_15","prices":[]}},
