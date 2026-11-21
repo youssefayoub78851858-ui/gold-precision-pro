@@ -1,0 +1,61 @@
+name: Gold Precision preapproval four tracks (offline only)
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - 'coordinator/preapproval_four_tracks_status.js'
+      - 'coordinator/test_preapproval_four_tracks_status.js'
+      - 'coordinator/test_preapproval_four_tracks.py'
+      - 'coordinator/test_multi_source_readiness.py'
+      - 'coordinator/multi_source_readiness.py'
+      - 'coordinator/test_mbo_order_book.py'
+      - 'coordinator/test_databento_gc_book_preflight.py'
+      - 'coordinator/test_paper_cost_preflight.py'
+      - 'coordinator/test_prospective_paper_holdout_audit.js'
+      - 'coordinator/test_capital_demo_private_end_to_end.py'
+      - 'coordinator/test_capital_demo_https_transport.py'
+      - 'coordinator/test_capital_demo_private_get_boundary.py'
+      - 'review-dashboard.js'
+      - 'review-dashboard.html'
+      - 'server.js'
+      - '.github/workflows/preapproval-four-tracks-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  four-preapproval-tracks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: 1 Official Fed headlines and BLS calendar, no trade votes
+        run: |
+          node coordinator/test_official_macro_review.js
+          node coordinator/test_official_context_stage.js
+      - name: 2 DXY GC MBO and MBP synthetic validation, no licensed feed assumed
+        working-directory: coordinator
+        run: python -m unittest -v test_multi_source_readiness test_databento_gc_book_preflight test_mbo_order_book
+      - name: 3 Paper spread risk stress and anti-lookahead
+        run: |
+          node coordinator/test_prospective_paper_holdout_audit.js
+          cd coordinator
+          python -m unittest -v test_paper_cost_preflight test_paper_admission_gate
+      - name: 4 Capital Demo offline history and dormant GET security, no credentials
+        working-directory: coordinator
+        run: python -m unittest -v test_capital_demo_offline_adapter test_capital_demo_historical_batch_plan test_capital_demo_offline_batch_audit test_capital_demo_private_get_boundary test_capital_demo_https_transport test_capital_demo_private_end_to_end
+      - name: Four tracks integrated and mobile status strictly WAIT
+        run: |
+          node coordinator/test_preapproval_four_tracks_status.js
+          cd coordinator
+          python -m unittest -v test_preapproval_four_tracks
+      - name: Mobile and HTTP read-only regression
+        run: |
+          node --test coordinator/tests/review_dashboard_safety.test.js
+          node coordinator/test_review_dashboard_private_biquote.js
+          node coordinator/test_review_dashboard_route.js

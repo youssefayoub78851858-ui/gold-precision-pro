@@ -97,6 +97,15 @@ async function main(){
   assert.equal((await request("/api/v3/ultimate/biquote-viewer-status","POST")).status,405);
   const wrongMethod=await request("/review-dashboard.html","POST");
   assert.equal(wrongMethod.status,405);
+  const prepared=await request("/api/v3/ultimate/preapproval-status");
+  assert.equal(prepared.status,200);
+  const safe=JSON.parse(prepared.body);
+  assert.equal(safe.mode,"GOLD_PREAPPROVAL_FOUR_TRACKS_V1");
+  assert.equal(safe.signal,"WAIT");
+  assert.equal(safe.executable,false);
+  assert.equal(safe.steps.dxyGcOrderFlow.dxy,"NOT_CONNECTED");
+  assert.equal(safe.steps.capitalDemo.connected,false);
+  assert.equal((await request("/api/v3/ultimate/preapproval-status","POST")).status,405);
   const nav=await request("/review");
   assert.equal(nav.status,200);
   assert(nav.body.includes('href="review-dashboard.html"'));

@@ -93,6 +93,16 @@ const server = http.createServer(async (req, res) => {
   }
   // Anonymous dashboard visits never trigger upstream quotes. The private
   // viewer check returns only a safe boolean, not market data or credentials.
+  // Four-track review status is DEMO-ONLY, no provider calls or secrets.
+  if(paperPath==="/api/v3/ultimate/preapproval-status"){
+    if(!DEMO_MODE)return send(res,404,{signal:"WAIT",executable:false});
+    if(req.method!=="GET")return send(res,405,{signal:"WAIT",executable:false});
+    const out=require("./coordinator/preapproval_four_tracks_status").inspect();
+    if(out.signal!=="WAIT"||out.executable!==false||
+       out.providerRequestsMade!==0||out.brokerOrdersSent!==0)
+      return send(res,503,{signal:"WAIT",executable:false});
+    return send(res,200,out);
+  }
   if(paperPath==="/api/v3/ultimate/biquote-viewer-status"){
     if(!DEMO_MODE)return send(res,404,{signal:"WAIT",executable:false});
     if(req.method!=="GET")return send(res,405,{signal:"WAIT",executable:false});
