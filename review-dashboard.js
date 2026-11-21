@@ -466,7 +466,7 @@
    $("stage-official").textContent="1. Fed / BLS: قراءة أخبار وتقويم رسميين جزئيين فقط، بلا إشارات";
    $("stage-independent").textContent="2. DXY / GC / Order Flow: فحوص بيانات اصطناعية؛ لا بث مرخّص";
    $("stage-paper").textContent="3. الإشارات والورقي: اختبارات السبريد والمخاطر بلا صفقات حقيقية";
-   $("stage-capital").textContent="4. Capital.com Demo: واجهة الربط مُعطّلة حتى موافقة بيانات Render";
+   $("stage-capital").textContent="4. Capital.com Demo: حتى مع توثيق الحساب، الاتصال والتخزين السحابي مغلقان بانتظار موافقة مكتوبة";
    $("stage-note").textContent="الطبقات الأربع لا تزال WAIT وغير مؤهّلة لتنفيذ الصفقات.";
   }catch(_error){
    if(epoch===preapprovalEpoch&&document.visibilityState!=="hidden")
