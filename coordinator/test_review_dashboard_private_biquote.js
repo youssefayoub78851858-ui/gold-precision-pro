@@ -213,6 +213,7 @@ const nodes=Object.fromEntries(["candles","price","timestamp","source",
  "m15-continuity","h1-continuity","h4-continuity","continuity-parity","continuity-note",
  "us02y-daily","us10y-daily","h15-daily-note",
  "news-fed-status","news-bls-status","news-sources-note",
+ "stage-official","stage-independent","stage-paper","stage-capital","stage-note",
  ...["m15","h1","h4"].flatMap(tf=>
    ["technical","ema","rsi","atr","technical-quality"].map(s=>tf+"-"+s))
  ].map(k=>[k,new Node()]));
@@ -368,6 +369,10 @@ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير م�
  const autoCalls=[];
  context.fetch=async(url,options)=>{
   autoCalls.push({url,options});
+  if(url==="/api/v3/ultimate/preapproval-status")
+   return {status:200,headers:{get:k=>k==="content-type"?
+     "application/json; charset=utf-8":null},
+     json:async()=>require("./preapproval_four_tracks_status").inspect()};
   if(url==="/api/v3/ultimate/official-macro")
    return {status:200,headers:{get:k=>k==="content-type"?
       "application/json; charset=utf-8":null},json:async()=>({
@@ -420,6 +425,9 @@ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير م�
  a.equal(autoCalls.filter(x=>x.url==="/api/v3/ultimate/official-macro").length,1);
  a.match(nodes["news-fed-status"].textContent,/Fed synthetic headline/);
  a.match(nodes["news-bls-status"].textContent,/CPI/);
+ a.equal(autoCalls.filter(x=>x.url==="/api/v3/ultimate/preapproval-status").length,1);
+ a.match(nodes["stage-capital"].textContent,/Capital.com Demo/);
+ a.match(nodes["stage-paper"].textContent,/اختبارات السبريد/);
  timeNow=NOW+11000;
  intervalCallback();
  for(let i=0;i<25;i++)await Promise.resolve();

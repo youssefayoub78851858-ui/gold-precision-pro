@@ -113,6 +113,9 @@ main{padding:3px 7px calc(47px + env(safe-area-inset-bottom,0px))}
 .continuity-details summary{cursor:pointer;color:#e8c477;font-size:10px;font-weight:700}
 .continuity-details p{margin:4px 0;overflow-wrap:anywhere}
 #h15-daily-note{font-size:9px;margin:3px 4px;color:#aab6c5}
+.four-stage-rows p{font-size:10px;line-height:1.4;margin:4px 0;overflow-wrap:anywhere}
+#preapproval{margin:5px 0}#preapproval>summary{color:#edc56c;font-size:11px;font-weight:700;cursor:pointer}
+#preapproval>summary small{font-size:9px;color:#adb8c5}
 </style></head><body><main>
 <header class="top"><div><div class="brand">♛ Gold Precision Pro Ultimate</div><div class="sub">تحليل احترافي للذهب · لوحة مراجعة خاصة</div></div><div class="crown">♛</div></header>
 <nav class="tabs"><a class="active" href="#chart">▥ تحليل الذهب</a><a href="#quality">♧ الاختبارات</a><a href="#signal">▤ السجل</a><a href="#settings">⚙ الإعدادات</a></nav>
@@ -127,7 +130,14 @@ main{padding:3px 7px calc(47px + env(safe-area-inset-bottom,0px))}
  </div><p id="technical-note" class="fine" role="status">لا قراءة فنية قبل جلسة خاصة وبيانات مغلقة حديثة.</p></details>
 <div class="quick"><details id="flow" open><summary><span class="tile-icon">◈</span><span class="tile-copy"><b>Order Flow</b><small>تدفّق غير متاح</small></span></summary><div>Footprint / Delta: لا يوجد تدفق GC مرخّص. DOM / Absorption: غير متاح.</div></details><details id="news" open><summary><span class="tile-icon">▣</span><span class="tile-copy"><b>الأخبار الاقتصادية</b><small>لا أخبار حديثة متحققة</small></span></summary><div><p id="news-fed-status" class="fine">Fed: لم يتأكد خبر جديد</p><p id="news-bls-status" class="fine">BLS: التقويم غير متاح</p><p id="news-sources-note" class="fine">تغطية أميركية رسمية جزئية، بلا إشارة تداول.</p></div></details></div>
 <div class="meter"><details id="quality" open><summary>▥ جودة البيانات</summary><div class="quality-body"><div class="quality-ring" aria-label="الجودة غير محسوبة"><span>—</span></div><div class="quality-lines"><p id="quality-status" class="fine">بانتظار الفحص</p><p id="parity-status" class="fine">تطابق M15/H1/H4: غير متحقق</p><p id="vendor-h4-session" class="fine">H4: جدول وسيط MT5 غير مثبت؛ لا اعتماد للتسلسل السوقي</p><details id="continuity-details" class="continuity-details"><summary>▤ استمرارية M15 / H1 / H4</summary><p id="m15-continuity" class="fine">M15 · بانتظار شموع مغلقة متحققة</p><p id="h1-continuity" class="fine">H1 · بانتظار شموع مغلقة متحققة</p><p id="h4-continuity" class="fine">H4 · بانتظار شموع مغلقة متحققة</p><p id="continuity-parity" class="fine">تطابق محلي: غير متاح</p><p id="continuity-note" class="fine">فجوات توقيت UTC قد تشمل توقف السوق، وليست بالضرورة بيانات مفقودة.</p></details><p class="fine">حداثة الشموع: غير مثبتة</p></div></div></details><details id="context" open><summary>♢ حقوق المصدر</summary><p class="fine">BiQuote: مشاهدة خاصة قيد التحقق</p><p class="fine">الترخيص التجاري: غير مثبت</p><p class="fine">الاتجاه H4/H1: <span id="trend-status">غير متاح</span></p><p class="fine">فرص M15: <span id="watch-status">WAIT</span></p></details></div>
-<section id="signal" class="signal"><div class="signal-top"><span>⌛ حالة النظام: <strong id="decision">WAIT</strong></span><span class="pill">executable = false</span></div><p id="reason" role="status" aria-live="polite" class="fine">لا توجد توصية قابلة للتنفيذ قبل اكتمال التحقق.</p></section>
+<details id="preapproval" class="panel"><summary>▤ جاهزية المراحل الأربع <small>اختبارات فقط · WAIT</small></summary><div class="four-stage-rows">
+ <p id="stage-official">1. Fed وBLS: تغطية رسمية أميركية جزئية · ليست إشارات</p>
+ <p id="stage-independent">2. DXY وGC وOrder Flow: اختبارات اصطناعية فقط · بث غير متصل</p>
+ <p id="stage-paper">3. الإشارات والتداول الورقي: اختبارات مخاطر وسبريد فقط · لا تنفيذ</p>
+ <p id="stage-capital">4. Capital.com: مُجهّز من دون اتصال · موافقة Render معلّقة</p>
+ <p id="stage-note" class="fine">العمل البرمجي لا يثبت ترخيص البيانات أو صلاحية الصفقات.</p>
+ </div></details>
+ <section id="signal" class="signal"><div class="signal-top"><span>⌛ حالة النظام: <strong id="decision">WAIT</strong></span><span class="pill">executable = false</span></div><p id="reason" role="status" aria-live="polite" class="fine">لا توجد توصية قابلة للتنفيذ قبل اكتمال التحقق.</p></section>
 <div class="actions"><div class="panel paper">◇ التداول الورقي فقط<br><span class="fine">ليس أمراً تلقائياً</span></div><div class="panel locked">♙ التداول الحقيقي مقفل<br><span class="fine">غير متاح في المراجعة</span></div></div>
 <details id="settings" class="panel"><summary>🔐 تفعيل جلسة BiQuote الخاصة</summary><p class="fine">افتح <a href="/ultimate">Ultimate</a> وأدخل رمز المشاهدة على نفس المتصفح، ثم ارجع واضغط تحديث. لا أسعار عامة أو بيانات افتراضية.</p></details>
 <nav class="footer"><a href="#chart">⌂ الرئيسية</a><a href="#technical">▤ التحليل</a><a href="#quality">♧ الاختبارات</a><a href="#signal">▤ السجل</a><a href="#settings">⚙ الإعدادات</a></nav>

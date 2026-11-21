@@ -3,7 +3,7 @@
 // No provider requests, credentials, orders or external dependencies.
 const test=require("node:test");
 const assert=require("node:assert/strict");
-const {validateChart,validateSnapshot,localLatestParity,researchWatch,technicalObservations,continuityReport,validateDailyH15,validateOfficialMacro}=
+const {validateChart,validateSnapshot,localLatestParity,researchWatch,technicalObservations,continuityReport,validateDailyH15,validateOfficialMacro,validatePreapproval}=
  require("../../review-dashboard.js");
 const W={M15:900000,H1:3600000,H4:14400000};
 function chart(at){
@@ -366,4 +366,19 @@ test("official Fed and BLS metadata are bounded, authentic and cannot enable sig
  const partial=validateOfficialMacro({...a,feeds:{fed:"UNAVAILABLE",bls:"UNAVAILABLE"},
   headlines:[],calendar:[]},at);
  assert.equal(partial.latestFed,null);assert.equal(partial.nextBls,null);
+});
+
+test("four-stage preapproval view cannot promote fabricated ready sources",()=>{
+ const {inspect}=require("../preapproval_four_tracks_status");
+ const data=inspect();
+ assert.equal(validatePreapproval(data).signal,"WAIT");
+ assert.equal(validatePreapproval({...data,executable:true}),null);
+ assert.equal(validatePreapproval({...data,verifiedLiveLayerCount:1}),null);
+ assert.equal(validatePreapproval({...data,steps:{...data.steps,
+  capitalDemo:{...data.steps.capitalDemo,connected:true}}}),null);
+ const fs=require("node:fs"),p=require("node:path");
+ const html=fs.readFileSync(p.resolve(__dirname,"../../review-dashboard.html"),"utf8");
+ for(const id of ["preapproval","stage-official","stage-independent","stage-paper","stage-capital","stage-note"])
+  assert.ok(html.includes('id="'+id+'"'));
+ assert.ok(!html.includes('id="preapproval" open'));
 });

@@ -384,10 +384,27 @@
           signal:"WAIT",executable:false};
  }
 
+
+ function validatePreapproval(d){
+  const keys=["officialNewsCalendar","dxyGcOrderFlow","paperRisk","capitalDemo"];
+  if(!d||d.mode!=="GOLD_PREAPPROVAL_FOUR_TRACKS_V1"||
+     d.status!=="OFFLINE_PREPARATION_ONLY"||d.signal!=="WAIT"||
+     d.executable!==false||d.researchEligible!==false||
+     d.paperOrdersAllowed!==false||d.liveOrdersAllowed!==false||
+     d.allFourTracksTradeReady!==false||d.verifiedLiveLayerCount!==0||
+     d.providerRequestsMade!==0||d.brokerOrdersSent!==0||
+     !d.steps||keys.some(x=>d.steps[x]?.liveTradeReady!==false)||
+     d.steps.dxyGcOrderFlow.dxy!=="NOT_CONNECTED"||
+     d.steps.paperRisk.paperOrdersActivated!==false||
+     d.steps.capitalDemo.connected!==false||
+     d.steps.capitalDemo.privateCloudStorageApproved!==false)return null;
+  return {signal:"WAIT",fourTracksTradeReady:false};
+ }
+
  // Pure validators are exposed only to local Node offline tests.
  if(typeof module!=="undefined"&&module.exports)
   module.exports={validateChart,validateSnapshot,localLatestParity,
-    localCoveredParityAudit,researchWatch,vendorH4SessionLabel,technicalObservations,continuityReport,validateDailyH15,validateOfficialMacro};
+    localCoveredParityAudit,researchWatch,vendorH4SessionLabel,technicalObservations,continuityReport,validateDailyH15,validateOfficialMacro,validatePreapproval};
  if(typeof document==="undefined")return;
  const $=id=>document.getElementById(id);
  let frame="M15",state=null,pending=false,expiry=0;
@@ -395,6 +412,7 @@
  let autoEnabled=false,viewerReady=false,checkingViewer=false,nextPollAt=Infinity;
  let h15Pending=false,h15Epoch=0,nextH15At=0;
  let macroPending=false,macroEpoch=0,nextMacroAt=0;
+ let preapprovalPending=false,preapprovalEpoch=0;
  // Every user-initiated fetch has a generation. Android can hide or
  // navigate away while a request or JSON body is in flight; response
  // completion must not resurrect private prices after that transition.
@@ -432,6 +450,29 @@
  
 
 
+
+
+ async function loadPreapproval(){
+  if(!autoEnabled||preapprovalPending||document.visibilityState==="hidden")return;
+  preapprovalPending=true;const epoch=++preapprovalEpoch;
+  try{
+   const r=await fetch("/api/v3/ultimate/preapproval-status",{
+    method:"GET",credentials:"omit",cache:"no-store",redirect:"error",
+    headers:{Accept:"application/json"},signal:AbortSignal.timeout(8000)});
+   if(r.status!==200||
+      !/^application\/json(?:\s*;|\s*$)/i.test(r.headers?.get?.("content-type")||"")||
+      !validatePreapproval(await r.json()))throw Error("PREAPPROVAL_UNVERIFIED");
+   if(epoch!==preapprovalEpoch||document.visibilityState==="hidden")return;
+   $("stage-official").textContent="1. Fed / BLS: قراءة أخبار وتقويم رسميين جزئيين فقط، بلا إشارات";
+   $("stage-independent").textContent="2. DXY / GC / Order Flow: فحوص بيانات اصطناعية؛ لا بث مرخّص";
+   $("stage-paper").textContent="3. الإشارات والورقي: اختبارات السبريد والمخاطر بلا صفقات حقيقية";
+   $("stage-capital").textContent="4. Capital.com Demo: واجهة الربط مُعطّلة حتى موافقة بيانات Render";
+   $("stage-note").textContent="الطبقات الأربع لا تزال WAIT وغير مؤهّلة لتنفيذ الصفقات.";
+  }catch(_error){
+   if(epoch===preapprovalEpoch&&document.visibilityState!=="hidden")
+    $("stage-note").textContent="لم تُثبت حالة التجهيز على السيرفر؛ القرار WAIT.";
+  }finally{preapprovalPending=false;}
+ }
 
  function unavailableMacro(){
   $("news-fed-status").textContent="Fed: لم يتأكد خبر جديد";
@@ -787,22 +828,22 @@
  }
  if(typeof document.addEventListener==="function"){
   document.addEventListener("DOMContentLoaded",()=>{
-   autoEnabled=true;void startAuto();void loadH15();void loadOfficialMacro();
+   autoEnabled=true;void startAuto();void loadH15();void loadOfficialMacro();void loadPreapproval();
   });
   document.addEventListener("visibilitychange",()=>{
    if(document.visibilityState==="hidden"){
-    requestEpoch++;h15Epoch++;macroEpoch++;viewerReady=false;nextPollAt=Infinity;
+    requestEpoch++;h15Epoch++;macroEpoch++;preapprovalEpoch++;viewerReady=false;nextPollAt=Infinity;
     reset("WAIT — الشاشة بالخلفية؛ تم مسح بيانات المشاهدة الخاصة.");
-   }else if(autoEnabled){void startAuto();void loadH15();void loadOfficialMacro();}
+   }else if(autoEnabled){void startAuto();void loadH15();void loadOfficialMacro();void loadPreapproval();}
   });
  }
  if(typeof window!=="undefined"&&typeof window.addEventListener==="function"){
   window.addEventListener("pagehide",()=>{
-   requestEpoch++;h15Epoch++;macroEpoch++;autoEnabled=false;viewerReady=false;nextPollAt=Infinity;
+   requestEpoch++;h15Epoch++;macroEpoch++;preapprovalEpoch++;autoEnabled=false;viewerReady=false;nextPollAt=Infinity;
    reset("WAIT — غادرت الشاشة؛ لم نحتفظ بالأسعار الخاصة.");
   });
   window.addEventListener("pageshow",()=>{
-   if(!autoEnabled){autoEnabled=true;void startAuto();void loadH15();void loadOfficialMacro();}
+   if(!autoEnabled){autoEnabled=true;void startAuto();void loadH15();void loadOfficialMacro();void loadPreapproval();}
   });
   window.addEventListener("focus",()=>{
    if(document.visibilityState==="hidden")return;
