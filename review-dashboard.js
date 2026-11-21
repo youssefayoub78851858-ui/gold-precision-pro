@@ -454,6 +454,52 @@
       )return null;
   return {internalOfflineContractsChecked:true,signal:"WAIT",tradeReady:false};
  }
+ function validatePaperReport(d){
+  if(!d||d.mode!=="GOLD_PRIVATE_OFFLINE_PAPER_REPORT_BRIDGE_V1"||
+     d.dataOrigin!=="SYNTHETIC_TEST_ONLY"||
+     d.signal!=="WAIT"||d.executable!==false||
+     d.paperOrdersAllowed!==false||d.liveOrdersAllowed!==false||
+     d.independentHoldoutValidated!==false||d.brokerCostsVerified!==false||
+     d.liveMarketDataConnected!==false||d.providerRequestsMade!==0||
+     d.brokerOrdersSent!==0||d.paperOrdersSent!==0||
+     d.unverifiedNextM15ForecastAccuracy!==null)return null;
+  const count=x=>Number.isSafeInteger(x)&&x>=0&&x<=500;
+  const money=x=>x===null||(typeof x==="number"&&Number.isFinite(x)&&Math.abs(x)<=1e7);
+  const validMetric=x=>x===null||(typeof x==="object"&&
+   Number.isSafeInteger(x.closedTrades)&&x.closedTrades>=0&&x.closedTrades<=100&&
+   money(x.netModeledUsd)&&money(x.doubleCostStressNetUsd)&&
+   money(x.maxClosedDrawdownUsd)&&money(x.averageNetR)&&
+   (x.winRate===null||(typeof x.winRate==="number"&&
+      Number.isFinite(x.winRate)&&x.winRate>=0&&x.winRate<=1)));
+  if(!count(d.closedTrades)||!count(d.waitEvents)||!count(d.blockedSourceEvents)||
+     !money(d.netModeledUsd)||!money(d.doubleCostStressNetUsd)||
+     !money(d.maxClosedDrawdownUsd)||!money(d.averageNetR)||
+     (d.winRate!==null&&!(typeof d.winRate==="number"&&
+        Number.isFinite(d.winRate)&&d.winRate>=0&&d.winRate<=1))||
+     !validMetric(d.latestDayUTC)||!validMetric(d.latestWeekUTC)||
+     !validMetric(d.lastFiveTradeBatch)||!validMetric(d.firstHundredClosedTrades))return null;
+  if(d.privateJournalConnected===false){
+   if(d.status!=="NO_PERSISTENT_PAPER_JOURNAL_CONNECTED"||
+      d.provenance!=="NO_PERSISTENT_RESULTS_VERIFIED"||
+      d.closedTrades!==0||d.netModeledUsd!==null||
+      d.winRate!==null||d.latestDayUTC!==null||
+      d.latestWeekUTC!==null||d.lastFiveTradeBatch!==null||
+      d.firstHundredClosedTrades!==null)return null;
+   return {connected:false,closedTrades:0};
+  }
+  if(d.privateJournalConnected!==true||
+     d.status!=="SYNTHETIC_LOCAL_RESULTS_NOT_REAL_MARKET"||
+     d.provenance!=="SANITIZED_SYNTHETIC_LOCAL_LEDGER_NOT_VERIFIED_FORWARD"||
+     (d.closedTrades===0&&[d.netModeledUsd,d.winRate].some(x=>x!==null))||
+     (d.closedTrades>0&&[d.netModeledUsd,d.winRate,d.maxClosedDrawdownUsd].some(x=>x===null))||
+     (d.closedTrades<5&&d.lastFiveTradeBatch!==null)||
+     (d.closedTrades<100&&d.firstHundredClosedTrades!==null))return null;
+  return {connected:true,closedTrades:d.closedTrades,
+    netModeledUsd:d.netModeledUsd,doubleCostStressNetUsd:d.doubleCostStressNetUsd,
+    winRate:d.winRate,maxClosedDrawdownUsd:d.maxClosedDrawdownUsd,
+    latestWeekUTC:d.latestWeekUTC,lastFiveTradeBatch:d.lastFiveTradeBatch,
+    firstHundredClosedTrades:d.firstHundredClosedTrades};
+ }
  function validatePreapproval(d){
   const keys=["officialNewsCalendar","dxyGcOrderFlow","paperRisk","capitalDemo"];
   if(!d||d.mode!=="GOLD_PREAPPROVAL_FOUR_TRACKS_V1"||
@@ -473,7 +519,7 @@
  // Pure validators are exposed only to local Node offline tests.
  if(typeof module!=="undefined"&&module.exports)
   module.exports={validateChart,validateSnapshot,localLatestParity,
-    localCoveredParityAudit,researchWatch,vendorH4SessionLabel,technicalObservations,continuityReport,validateDailyH15,validateOfficialMacro,validatePreapproval,validateInternalHandoff};
+    localCoveredParityAudit,researchWatch,vendorH4SessionLabel,technicalObservations,continuityReport,validateDailyH15,validateOfficialMacro,validatePreapproval,validateInternalHandoff,validatePaperReport};
  if(typeof document==="undefined")return;
  const $=id=>document.getElementById(id);
  let frame="M15",state=null,pending=false,expiry=0;
@@ -483,6 +529,7 @@
  let macroPending=false,macroEpoch=0,nextMacroAt=0;
  let preapprovalPending=false,preapprovalEpoch=0;
  let internalHandoffPending=false,internalHandoffEpoch=0;
+ let paperReportPending=false,paperReportEpoch=0,nextPaperReportAt=0;
  // Every user-initiated fetch has a generation. Android can hide or
  // navigate away while a request or JSON body is in flight; response
  // completion must not resurrect private prices after that transition.
@@ -522,6 +569,57 @@
 
 
 
+ async function loadPaperReport(){
+  if(!$("paper-reports")||!autoEnabled||paperReportPending||
+     document.visibilityState==="hidden"||Date.now()<nextPaperReportAt)return;
+  paperReportPending=true;const epoch=++paperReportEpoch;
+  nextPaperReportAt=Date.now()+120000;
+  try{
+   const r=await fetch("/api/v3/ultimate/paper-reports",{
+    method:"GET",credentials:"same-origin",cache:"no-store",redirect:"error",
+    headers:{Accept:"application/json"},signal:AbortSignal.timeout(18000)});
+   if(r.status!==200||!/^application\\/json(?:\\s*;|\\s*$)/i.test(
+       r.headers?.get?.("content-type")||""))
+     throw Error("PAPER_REPORT_VIEW_UNAVAILABLE");
+   const clean=validatePaperReport(await r.json());
+   if(!clean)throw Error("PAPER_REPORT_UNVERIFIED");
+   if(epoch!==paperReportEpoch||document.visibilityState==="hidden")return;
+   if(!clean.connected){
+    $("paper-report-state").textContent=
+      "لا يوجد سجل ورقي دائم متصل على Render؛ ما في نتائج لنحسبها.";
+    return;
+   }
+   $("paper-report-state").textContent=
+     "سجل محاكاة اصطناعية خاص فقط · غير مرتبط بسوق الذهب الحقيقي";
+   $("paper-report-total").textContent="الصفقات الاصطناعية المغلقة: "+clean.closedTrades;
+   $("paper-report-net").textContent="الصافي بعد التكاليف: "+
+     (clean.netModeledUsd===null?"—":format(clean.netModeledUsd)+" USD");
+   $("paper-report-win").textContent="نسبة ربح المحاكاة: "+
+     (clean.winRate===null?"—":(clean.winRate*100).toFixed(1)+"%")+
+     " · التراجع: "+(clean.maxClosedDrawdownUsd===null?"—":
+       format(clean.maxClosedDrawdownUsd)+" USD");
+   $("paper-report-stress").textContent="صافي مضاعفة التكاليف: "+
+     (clean.doubleCostStressNetUsd===null?"—":
+       format(clean.doubleCostStressNetUsd)+" USD");
+   $("paper-report-five").textContent="آخر دفعة 5 صفقات: "+
+     (clean.lastFiveTradeBatch?"المغلقة من "+
+       clean.lastFiveTradeBatch.closedTradeRange.join("–")+
+       " · الصافي "+format(clean.lastFiveTradeBatch.netModeledUsd)+" USD":"غير متوفرة");
+   $("paper-report-week").textContent="آخر أسبوع UTC: "+
+     (clean.latestWeekUTC?clean.latestWeekUTC.utcStart+" · "+
+      clean.latestWeekUTC.closedTrades+" صفقة · "+
+      (clean.latestWeekUTC.netModeledUsd===null?"—":
+       format(clean.latestWeekUTC.netModeledUsd)+" USD"):"غير متوفر");
+   $("paper-report-hundred").textContent=clean.firstHundredClosedTrades?
+      "أول 100 صفقة محاكاة: "+
+      format(clean.firstHundredClosedTrades.netModeledUsd)+" USD · بلا إثبات دقة":
+      "تقرير أول 100 صفقة: غير متوفر";
+  }catch(_error){
+   if(epoch!==paperReportEpoch||document.visibilityState==="hidden")return;
+   $("paper-report-state").textContent=
+     "WAIT — تعذّر التحقق من سجل النتائج الورقية، ولا توجد نتائج مؤكدة للعرض.";
+  }finally{paperReportPending=false;}
+ }
  async function loadInternalHandoff(){
   // Older cached markup and isolated VM tests may not contain this NEW
   // optional panel. Never throw or disrupt chart/auth refresh in that case.
@@ -942,22 +1040,22 @@
  }
  if(typeof document.addEventListener==="function"){
   document.addEventListener("DOMContentLoaded",()=>{
-   autoEnabled=true;void startAuto();void loadH15();void loadOfficialMacro();void loadPreapproval();void loadInternalHandoff();
+   autoEnabled=true;void startAuto();void loadH15();void loadOfficialMacro();void loadPreapproval();void loadInternalHandoff();void loadPaperReport();
   });
   document.addEventListener("visibilitychange",()=>{
    if(document.visibilityState==="hidden"){
-    requestEpoch++;h15Epoch++;macroEpoch++;preapprovalEpoch++;internalHandoffEpoch++;viewerReady=false;nextPollAt=Infinity;
+    requestEpoch++;h15Epoch++;macroEpoch++;preapprovalEpoch++;internalHandoffEpoch++;paperReportEpoch++;viewerReady=false;nextPollAt=Infinity;
     reset("WAIT — الشاشة بالخلفية؛ تم مسح بيانات المشاهدة الخاصة.");
-   }else if(autoEnabled){void startAuto();void loadH15();void loadOfficialMacro();void loadPreapproval();void loadInternalHandoff();}
+   }else if(autoEnabled){void startAuto();void loadH15();void loadOfficialMacro();void loadPreapproval();void loadInternalHandoff();void loadPaperReport();}
   });
  }
  if(typeof window!=="undefined"&&typeof window.addEventListener==="function"){
   window.addEventListener("pagehide",()=>{
-   requestEpoch++;h15Epoch++;macroEpoch++;preapprovalEpoch++;internalHandoffEpoch++;autoEnabled=false;viewerReady=false;nextPollAt=Infinity;
+   requestEpoch++;h15Epoch++;macroEpoch++;preapprovalEpoch++;internalHandoffEpoch++;paperReportEpoch++;autoEnabled=false;viewerReady=false;nextPollAt=Infinity;
    reset("WAIT — غادرت الشاشة؛ لم نحتفظ بالأسعار الخاصة.");
   });
   window.addEventListener("pageshow",()=>{
-   if(!autoEnabled){autoEnabled=true;void startAuto();void loadH15();void loadOfficialMacro();void loadPreapproval();void loadInternalHandoff();}
+   if(!autoEnabled){autoEnabled=true;void startAuto();void loadH15();void loadOfficialMacro();void loadPreapproval();void loadInternalHandoff();void loadPaperReport();}
   });
   window.addEventListener("focus",()=>{
    if(document.visibilityState==="hidden")return;
@@ -984,6 +1082,7 @@
   }
   updateAutoLabel();
   if(Date.now()>=nextMacroAt)void loadOfficialMacro();
+  if(Date.now()>=nextPaperReportAt)void loadPaperReport();
  },1000);
  reset("WAIT — فحص تلقائي عند فتح الشاشة بجلسة مشاهدة خاصة صالحة.");
 })();
