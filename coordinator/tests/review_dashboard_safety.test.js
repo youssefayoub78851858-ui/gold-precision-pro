@@ -277,7 +277,8 @@ test("six internal offline modules appear on mobile without accepting forged liv
  for(const field of ["src","candles","analysis","macro","paper","provider","note"])
   assert.ok(html.includes('id="internal-gate-'+field+'"'));
  assert.ok(js.includes('"/api/v3/ultimate/internal-handoff"'));
- assert.ok(js.includes('validateInternalHandoff(await r.json())'));
+ assert.ok(js.includes('const report=await r.json()'));
+ assert.ok(js.includes('validateInternalHandoff(report)'));
  assert.ok(js.includes('void loadInternalHandoff()'));
  assert.ok(js.includes('"WAIT — ربط داخلي غير متحقق حالياً"'));
  assert.ok(js.includes("report.historicalArchiveAudit.developmentM15Bars"));
