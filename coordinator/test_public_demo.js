@@ -33,13 +33,20 @@ async function main(){
   assert.equal(status.mode,'DEMO_STANDBY');
   assert.equal(status.providerAccess,false);
   assert.equal(status.trading,'disabled');
+  // On REVIEW DEMO the homepage intentionally opens the compact NEW UI.
+  // The separate /ultimate screen remains available for paper lab and login.
+  const redirect=await fetch(base+'/',{redirect:'manual'});
+  assert.equal(redirect.status,302);
+  assert.equal(redirect.headers.get('location'),'/review-dashboard.html');
+  assert.equal(redirect.headers.get('cache-control'),'no-store');
   const page=await fetch(base+'/');
   assert.equal(page.status,200);
   const html=await page.text();
   assert.match(html,/Gold Precision Pro Ultimate/);
-  assert.match(html,/id="review-overview"/);
-  assert.match(html,/id="overview-signal">WAIT/);
-  assert.match(html,/id="overview-paper"/);
+  assert.match(html,/id="candles"/);
+  assert.match(html,/src="\/review-dashboard\.js"/);
+  assert.match(html,/id="decision">WAIT/);
+  assert.doesNotMatch(html,/id="review-overview"/);
   const reviewPage=await fetch(base+'/review');
   assert.equal(reviewPage.status,200);
   assert.match(await reviewPage.text(),/مراجعة V3/);
@@ -47,6 +54,9 @@ async function main(){
   const ultimatePage=await fetch(base+'/ultimate');
   assert.equal(ultimatePage.status,200);
   const ultimateHtml=await ultimatePage.text();
+  assert.match(ultimateHtml,/id="review-overview"/);
+  assert.match(ultimateHtml,/id="overview-signal">WAIT/);
+  assert.match(ultimateHtml,/id="overview-paper"/);
   assert.match(ultimateHtml,/id="recorded-review-load"/);
   assert.match(ultimateHtml,/XAUS\.com/);
   assert.match(ultimateHtml,/id="overview-refresh"/);
