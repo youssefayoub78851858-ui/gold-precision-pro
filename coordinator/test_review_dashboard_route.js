@@ -24,6 +24,8 @@ async function main(){
  const original=fs.readFileSync("index.html","utf8");
  assert(html.includes('id="decision"'));
  assert(html.includes('src="/review-dashboard.js"'));
+ assert(html.includes('id="viewer-setup-shortcut"'));
+ assert(html.includes('href="/ultimate#biquote-viewer-guide"'));
  assert(!html.includes('fetch("/api/v3/research"'));
  assert(!html.includes('src="http'));
  assert(html.includes("WAIT"));
@@ -65,6 +67,9 @@ async function main(){
   assert.match(page.headers["content-security-policy"],/script-src 'self'/);
   assert.match(page.headers["content-security-policy"],/connect-src 'self'/);
   assert(page.body.includes('src="/review-dashboard.js"'));
+ // Mobile setup shortcut must navigate to a real existing guide.
+ assert(page.body.includes('id="viewer-setup-shortcut"'));
+ assert(page.body.includes('href="/ultimate#biquote-viewer-guide"'));
   assert(!page.body.includes("/api/v3/research"));
   assert(page.body.includes('id="decision"'));
   assert(page.body.includes("توثيق الحساب وحده لا يكفي"));
@@ -128,6 +133,9 @@ async function main(){
   const old=await request("/ultimate");
   assert.equal(old.status,200);
   assert(old.body.includes("biquote-mobile-ui.js"));
+ assert(old.body.includes('id="biquote-viewer-guide"'));
+ assert(old.body.includes('id="return-new-review-dashboard"'));
+ assert(old.body.includes('href="/review-dashboard.html"'));
   console.log("PASS home redirects to compact mobile dashboard, explicit /ultimate preserved, viewer cookie remains private, no-store CSP, POST 405, no broker orders");
  }finally{child.kill("SIGTERM");}
 }
