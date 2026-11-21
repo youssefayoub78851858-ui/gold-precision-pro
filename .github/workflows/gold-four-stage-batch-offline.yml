@@ -58,6 +58,10 @@ on:
       - 'coordinator/test_offline_paper_outcome_journal.py'
       - 'coordinator/offline_paper_periodic_reports.py'
       - 'coordinator/test_offline_paper_periodic_reports.py'
+      - 'coordinator/offline_paper_report_readonly.py'
+      - 'coordinator/test_offline_paper_report_readonly.py'
+      - 'coordinator/review_paper_report_bridge.js'
+      - 'coordinator/test_review_paper_report_bridge.js'
       - 'coordinator/historical_accuracy_evidence_audit.js'
       - 'coordinator/test_historical_accuracy_evidence_audit.js'
       - 'research/recorded/manifest.json'
@@ -116,6 +120,11 @@ jobs:
       - name: Daily, weekly, five-close and first-100-close synthetic paper reports (offline only)
         working-directory: coordinator
         run: python -m unittest -v test_offline_paper_periodic_reports
+      - name: Read-only existing SQLite paper report and no-real-feed bridge
+        run: |
+          node coordinator/test_review_paper_report_bridge.js
+          cd coordinator
+          python -m unittest -v test_offline_paper_report_readonly
       - name: Synthetic paper outcome SQLite journal, replay, tamper and cost-audit integration (offline)
         working-directory: coordinator
         run: python -m unittest -v test_offline_paper_outcome_journal
