@@ -258,6 +258,14 @@ test("six internal offline modules appear on mobile without accepting forged liv
   {...packet,providerRequestsMade:1},
   {...packet,paymentsMade:1},
   {...packet,entry:4000},
+  {...packet,historicalArchiveAudit:{...packet.historicalArchiveAudit,
+    independentAccuracyPct:99.8}},
+  {...packet,historicalArchiveAudit:{...packet.historicalArchiveAudit,
+    archiveUsedAsIndependentHoldout:true}},
+  {...packet,historicalArchiveAudit:{...packet.historicalArchiveAudit,
+    statisticallyValidated:true}},
+  {...packet,historicalArchiveAudit:{...packet.historicalArchiveAudit,
+    providerRequestsMade:1}},
   {...packet,checks:{...packet.checks,sourceRequirements:"LIVE"}},
   {...packet,stageStatus:{...packet.stageStatus,finalProvider:"CONNECTED"}}
  ]) assert.equal(validateInternalHandoff(fake),null);
@@ -265,12 +273,14 @@ test("six internal offline modules appear on mobile without accepting forged liv
  const html=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.html"),"utf8");
  const js=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.js"),"utf8");
  assert.ok(html.includes('id="internal-handoff"'));
+ assert.ok(html.includes('id="historical-archive-audit"'));
  for(const field of ["src","candles","analysis","macro","paper","provider","note"])
   assert.ok(html.includes('id="internal-gate-'+field+'"'));
  assert.ok(js.includes('"/api/v3/ultimate/internal-handoff"'));
  assert.ok(js.includes('validateInternalHandoff(await r.json())'));
  assert.ok(js.includes('void loadInternalHandoff()'));
  assert.ok(js.includes('"WAIT — ربط داخلي غير متحقق حالياً"'));
+ assert.ok(js.includes("report.historicalArchiveAudit.developmentM15Bars"));
 });
 
 test("session-checked foreground auto refresh preserves stale history but not tradability",()=>{
