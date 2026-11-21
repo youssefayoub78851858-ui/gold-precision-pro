@@ -103,6 +103,27 @@ class PreLicenseOperationalCommissioning(unittest.TestCase):
             self.assertEqual(db.db.execute(
                 "SELECT COUNT(*) FROM events WHERE kind='PAPER_ENTRY'"
             ).fetchone()[0], 0)
+
+            # A later fresh bar and a forged optimistic BUY research
+            # candidate still MUST NOT reset the persisted kill switch.
+            # Only an explicitly separate manual action may do so.
+            later_time = (self.now + dt.timedelta(minutes=15)).isoformat().replace("+00:00", "Z")
+            later_closed = (self.now + dt.timedelta(minutes=30)).isoformat().replace("+00:00", "Z")
+            candidate = {"signal": "WAIT", "executable": False,
+                         "researchCandidate": "BUY", "risk": {"ok": True},
+                         "tradePlan": {"stop": 95, "target": 110}}
+            restored = db.step(
+                {"datetime": later_time, "open": 104, "high": 105,
+                 "low": 103, "close": 104, "dataOrigin": "SYNTHETIC_TEST_ONLY"},
+                {"asOfUTC": later_closed},
+                evaluator=lambda _: candidate)
+            self.assertEqual(restored["account"]["killed"], 1)
+            self.assertEqual(restored["position"], [])
+            self.assertEqual(restored["pending"], [])
+            self.assertEqual(restored["trades"], [])
+            self.assertEqual(db.db.execute(
+                "SELECT COUNT(*) FROM events WHERE kind='PAPER_ENTRY'"
+            ).fetchone()[0], 0)
         finally:
             db.close()
 
