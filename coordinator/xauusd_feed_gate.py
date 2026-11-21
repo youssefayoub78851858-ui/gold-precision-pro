@@ -206,8 +206,12 @@ def check_m15_parent_ohlc_parity(frames: dict) -> dict:
         results[interval] = {"matched": matched,
                              "uncovered": uncovered,
                              "mismatched": mismatched,
-                             "completeHistoryVerified": uncovered == 0 and matched > 0
-                             and mismatched == 0}
+                             "allProvidedParentBarsCovered": uncovered == 0
+                             and matched > 0 and mismatched == 0,
+                             # One observed H4 may compare correctly yet
+                             # be far short of 21+ H4 reference history.
+                             "fullMarketHistoryVerified": False,
+                             "nativeBrokerSessionVerified": False}
     return results
 
 
