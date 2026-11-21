@@ -74,6 +74,7 @@ async function main(){
   assert(page.body.includes('id="decision"'));
   assert(page.body.includes('id="internal-handoff"'));
   assert(page.body.includes('id="internal-gate-note"'));
+  assert(page.body.includes('id="release-audit-summary"'));
   assert(page.body.includes("توثيق الحساب وحده لا يكفي"));
   assert(page.body.includes("موافقة تخزين بيانات Render معلّقة"));
   assert(page.body.includes("WAIT"));
@@ -145,6 +146,13 @@ async function main(){
   assert.equal(handoff.providerConnectionEnabled,false);
   assert.equal(handoff.externalProviderDecisionDeferredToLastStage,true);
   assert.equal(handoff.signalCandidate,null);
+  assert.equal(handoff.releaseAudit.mode,"GOLD_PRELICENSE_RELEASE_AUDIT_V1");
+  assert.equal(handoff.releaseAudit.internalSoftwareContractsChecked,6);
+  assert.equal(handoff.releaseAudit.externalEvidenceVerifiedCount,0);
+  assert.equal(handoff.releaseAudit.readyForBuySell,false);
+  assert.equal(handoff.releaseAudit.readyForPaperExecution,false);
+  assert.equal(handoff.releaseAudit.providerChosenOrConnected,false);
+  assert.equal(handoff.releaseAudit.actualCIPassAttestedByRuntime,false);
   assert.equal((await request("/api/v3/ultimate/internal-handoff","POST")).status,405);
   assert.equal((await request("/api/v3/ultimate/internal-handoff","HEAD")).status,405);
   const nav=await request("/review");
