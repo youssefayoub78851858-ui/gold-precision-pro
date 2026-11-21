@@ -32,12 +32,17 @@ class FakeOpener:
 
 class IntegratedPriceTests(unittest.TestCase):
     def run_gateway(self, opener, sink):
+        def verified_test_sink(page):
+            # Synthetic test only; returned receipt is NOT a claim of
+            # real persistence or authorization to use Capital data.
+            sink(page)
+            return {"committed": True, "storedRows": len(page["prices"])}
         return inspect_private_demo_page(
             request(),cst="C"*32,security_token="S"*32,
             explicit_operator_approval=True,
             transport=lambda m,u,h:demo_https_price_get(
                 m,u,h,opener=opener,explicit_operator_approval=True),
-            deliver_private=sink)
+            deliver_private=verified_test_sink)
 
     def test_private_only_synthetic_flow_without_orders(self):
         opener=FakeOpener({"epic":"TEST.GOLD.EPIC",
