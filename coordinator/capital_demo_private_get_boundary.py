@@ -62,6 +62,9 @@ def inspect_private_demo_page(chunk, *, cst=None, security_token=None,
     private network layer; it must not auto-follow redirects. The response
     is checked in-memory and forwarded solely to the private deliver callback.
     Only bounded counts leave this function, never prices, quotes or tokens.
+    deliver_private(payload) must return EXACTLY
+    {"committed": True, "storedRows": len(payload["prices"])}; a
+    caller assertion is not independent disk or provider verification.
     """
     request_attempted = False
 
@@ -161,10 +164,19 @@ def inspect_private_demo_page(chunk, *, cst=None, security_token=None,
         # Controlled callback only; raw prices are NOT returned in the report.
         # If downstream archival fails, never claim the page was received.
         delivery_result = deliver_private(payload)
-        # A private archive callback may explicitly refuse the page; never
-        # count refused storage as a successfully delivered price snapshot.
+        # A callback returning None (e.g. list.append), True or a guessed
+        # count does NOT prove the private sink accepted the full page.
+        # Require a strict, bounded receipt from the separately reviewed sink.
+        # This receipt is only a callback assertion, NOT independent
+        # persistence, market provenance, or source-rights attestation.
         if delivery_result is False:
             return safe_block("PRIVATE_DEMO_ARCHIVE_REFUSED_PAGE")
+        if (not isinstance(delivery_result, dict)
+                or set(delivery_result) != {"committed", "storedRows"}
+                or delivery_result["committed"] is not True
+                or type(delivery_result["storedRows"]) is not int
+                or delivery_result["storedRows"] != len(prices)):
+            return safe_block("PRIVATE_DEMO_ARCHIVE_ACKNOWLEDGEMENT_REQUIRED")
         report = _result("REQUIRES_INDEPENDENT_DATA_RIGHTS_AND_RECEIPT_AUDIT")
         report.update(
             status="PRIVATE_DEMO_GEOMETRY_ONLY_NOT_ADMITTED",
