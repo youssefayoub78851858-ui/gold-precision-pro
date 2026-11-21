@@ -17,6 +17,7 @@ const {inspect:paperTerminal}=require("./paper-terminal-inspect");
 const {sample:paperFixture}=require("../paper-terminal-core");
 const {reviewFourStages}=require("./ultimate_four_stage_review");
 const {assess:releaseAudit}=require("./prelicense_release_audit");
+const {inspect:archivalAudit}=require("./historical_accuracy_evidence_audit");
 const syntheticFixture=require("./fixtures/ultimate-synthetic.json");
 
 const BASE=Object.freeze({
@@ -133,7 +134,8 @@ function combine(input){
     signalCandidate:null,entry:null,stopLoss:null,targets:null,
     warning:"Offline interface compatibility, not successful CI or trading readiness."
   };
-  return {...report,releaseAudit:releaseAudit(report)};
+  return {...report,releaseAudit:releaseAudit(report),
+    historicalArchiveAudit:archivalAudit()};
 }
 function inspect(){
   try{return combine(collectOfflineReports());}
