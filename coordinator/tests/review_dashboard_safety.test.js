@@ -3,7 +3,7 @@
 // No provider requests, credentials, orders or external dependencies.
 const test=require("node:test");
 const assert=require("node:assert/strict");
-const {validateChart,validateSnapshot,localLatestParity,researchWatch,technicalObservations,continuityReport}=
+const {validateChart,validateSnapshot,localLatestParity,researchWatch,technicalObservations,continuityReport,validateDailyH15}=
  require("../../review-dashboard.js");
 const W={M15:900000,H1:3600000,H4:14400000};
 function chart(at){
@@ -299,4 +299,40 @@ test("UTC continuity fails closed on malformed inputs and UI clears private resu
  assert.ok(script.includes("resetContinuity();"));
  assert.ok(script.includes("renderContinuity(verified);"));
  assert.ok(!script.includes("localStorage"));
+});
+
+test("official DAILY H15 safety requires matching source, recent date and both rate series",()=>{
+ const pkt={
+  mode:"OFFICIAL_RECORDED_DAILY_CONTEXT",signal:"WAIT",executable:false,
+  liveData:false,dataFresh:false,readyForFiveMinuteGate:false,
+  readyForUltimateTrading:false,allowedRole:"MACRO_DAILY_CONTEXT_ONLY",
+  dataStatus:"DAILY_REFERENCE_ONLY",sourceURL:"https://www.federalreserve.gov/releases/h15/",
+  sourceStatus:"OFFICIAL_FED_RSS_REFRESHED",observedDate:"2026-11-19",
+  rates:[{series:"DGS2",maturityYears:2,latestYieldPct:4.67},
+    {series:"DGS10",maturityYears:10,latestYieldPct:5.11}]
+ };
+ const at=Date.parse("2026-11-21T10:00:00Z");
+ assert.equal(validateDailyH15(pkt,at).DGS2,4.67);
+ assert.equal(validateDailyH15(pkt,at).DGS10,5.11);
+ assert.equal(validateDailyH15({...pkt,sourceStatus:"STORED_FALLBACK"},at).historical,true);
+ for(const bad of [
+   {...pkt,signal:"BUY"},{...pkt,executable:true},
+   {...pkt,liveData:true},{...pkt,readyForFiveMinuteGate:true},
+   {...pkt,sourceURL:"https://evil.example"},{...pkt,observedDate:"2026-11-22"},
+   {...pkt,observedDate:"2026-11-09"},
+   {...pkt,rates:[pkt.rates[0],pkt.rates[0]]},
+   {...pkt,rates:[{...pkt.rates[0],latestYieldPct:Infinity},pkt.rates[1]]}
+ ])assert.equal(validateDailyH15(bad,at),null);
+});
+test("mobile H15 display is decoupled from private prices and trading votes",()=>{
+ const fs=require("node:fs"),p=require("node:path");
+ const script=fs.readFileSync(p.resolve(__dirname,"../../review-dashboard.js"),"utf8");
+ const html=fs.readFileSync(p.resolve(__dirname,"../../review-dashboard.html"),"utf8");
+ assert.ok(script.includes('fetch("/api/v3/ultimate/free-context"'));
+ assert.ok(script.includes('credentials:"omit"'));
+ assert.ok(script.includes("nextH15At=Date.now()+3600000"));
+ assert.ok(script.includes("h15Epoch++"));
+ for(const id of ["us02y-daily","us10y-daily","h15-daily-note"])
+  assert.ok(html.includes('id="'+id+'"'));
+ assert.ok(!script.includes("order_send("));
 });

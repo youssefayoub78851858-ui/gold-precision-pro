@@ -303,15 +303,49 @@
   return result;
  }
 
+
+ // H15 is a DAILY official reference, never intraday yield confirmation.
+ function validateDailyH15(data, now){
+  if(!data||data.mode!=="OFFICIAL_RECORDED_DAILY_CONTEXT"||
+     data.signal!=="WAIT"||data.executable!==false||
+     data.liveData!==false||data.dataFresh!==false||
+     data.readyForFiveMinuteGate!==false||data.readyForUltimateTrading!==false||
+     data.allowedRole!=="MACRO_DAILY_CONTEXT_ONLY"||
+     data.dataStatus!=="DAILY_REFERENCE_ONLY"||
+     data.sourceURL!=="https://www.federalreserve.gov/releases/h15/"||
+     !["OFFICIAL_FED_RSS_REFRESHED","STORED_FALLBACK"].includes(data.sourceStatus)||
+     !Array.isArray(data.rates)||data.rates.length!==2||
+     typeof data.observedDate!=="string"||
+     !/^\d{4}-\d{2}-\d{2}$/.test(data.observedDate))return null;
+  const t=Date.parse(data.observedDate+"T00:00:00Z");
+  if(!Number.isFinite(t)||!Number.isFinite(now)||t>now||now-t>6*86400000||
+     new Date(t).toISOString().slice(0,10)!==data.observedDate)return null;
+  const expected={DGS2:2,DGS10:10},rates={};
+  for(const row of data.rates){
+   if(!row||!Object.prototype.hasOwnProperty.call(expected,row.series)||
+      Object.prototype.hasOwnProperty.call(rates,row.series)||
+      row.maturityYears!==expected[row.series]||
+      typeof row.latestYieldPct!=="number"||
+      !Number.isFinite(row.latestYieldPct)||row.latestYieldPct<=0||
+      row.latestYieldPct>=30)return null;
+   rates[row.series]=row.latestYieldPct;
+  }
+  return Object.keys(rates).length===2?{
+   ...rates,asOfDate:data.observedDate,
+   historical: data.sourceStatus!=="OFFICIAL_FED_RSS_REFRESHED"
+  }:null;
+ }
+
  // Pure validators are exposed only to local Node offline tests.
  if(typeof module!=="undefined"&&module.exports)
   module.exports={validateChart,validateSnapshot,localLatestParity,
-    localCoveredParityAudit,researchWatch,vendorH4SessionLabel,technicalObservations,continuityReport};
+    localCoveredParityAudit,researchWatch,vendorH4SessionLabel,technicalObservations,continuityReport,validateDailyH15};
  if(typeof document==="undefined")return;
  const $=id=>document.getElementById(id);
  let frame="M15",state=null,pending=false,expiry=0;
  const AUTO_POLL_MS=10000, SOURCE_ERROR_BACKOFF_MS=30000, MAX_STALE_MS=600000;
  let autoEnabled=false,viewerReady=false,checkingViewer=false,nextPollAt=Infinity;
+ let h15Pending=false,h15Epoch=0,nextH15At=0;
  // Every user-initiated fetch has a generation. Android can hide or
  // navigate away while a request or JSON body is in flight; response
  // completion must not resurrect private prices after that transition.
@@ -347,6 +381,39 @@
   blank("WAIT — لا توجد شموع خاصة موثقة");
  }
  
+
+
+ function noH15(){
+  $("us02y-daily").textContent="غير متاح";
+  $("us10y-daily").textContent="غير متاح";
+  $("h15-daily-note").textContent="عوائد H.15 اليومية: لا يوجد مرجع حديث متحقق. ليست أسعاراً لحظية.";
+ }
+ async function loadH15(){
+  if(!autoEnabled||h15Pending||Date.now()<nextH15At||
+     document.visibilityState==="hidden")return;
+  h15Pending=true;nextH15At=Date.now()+3600000;
+  const epoch=++h15Epoch;
+  try{
+   const res=await fetch("/api/v3/ultimate/free-context",{
+    method:"GET",credentials:"omit",cache:"no-store",
+    redirect:"error",headers:{Accept:"application/json"},
+    signal:AbortSignal.timeout(10000)
+   });
+   if(res.status!==200||
+      !/^application\/json(?:\s*;|\s*$)/i.test(res.headers?.get?.("content-type")||""))
+    throw Error("H15_DAILY_OFFLINE");
+   const d=validateDailyH15(await res.json(),Date.now());
+   if(epoch!==h15Epoch||document.visibilityState==="hidden")return;
+   if(!d)throw Error("H15_NOT_VALID_OR_RECENT");
+   $("us02y-daily").textContent=d.DGS2.toFixed(2)+"%";
+   $("us10y-daily").textContent=d.DGS10.toFixed(2)+"%";
+   $("h15-daily-note").textContent=
+    "H.15 يومي "+d.asOfDate+" · "+(d.historical?"مرجع أرشيفي":"تحديث من المصدر الرسمي")+
+    " · ليس اقتباساً لحظياً ولا تأكيداً لصفقات M15.";
+  }catch(_error){
+   if(epoch===h15Epoch&&document.visibilityState!=="hidden")noH15();
+  }finally{h15Pending=false;}
+ }
 
  function resetContinuity(){
   for(const tf of TF)
@@ -635,25 +702,26 @@
  }
  if(typeof document.addEventListener==="function"){
   document.addEventListener("DOMContentLoaded",()=>{
-   autoEnabled=true;void startAuto();
+   autoEnabled=true;void startAuto();void loadH15();
   });
   document.addEventListener("visibilitychange",()=>{
    if(document.visibilityState==="hidden"){
-    requestEpoch++;viewerReady=false;nextPollAt=Infinity;
+    requestEpoch++;h15Epoch++;viewerReady=false;nextPollAt=Infinity;
     reset("WAIT — الشاشة بالخلفية؛ تم مسح بيانات المشاهدة الخاصة.");
-   }else if(autoEnabled)void startAuto();
+   }else if(autoEnabled){void startAuto();void loadH15();}
   });
  }
  if(typeof window!=="undefined"&&typeof window.addEventListener==="function"){
   window.addEventListener("pagehide",()=>{
-   requestEpoch++;autoEnabled=false;viewerReady=false;nextPollAt=Infinity;
+   requestEpoch++;h15Epoch++;autoEnabled=false;viewerReady=false;nextPollAt=Infinity;
    reset("WAIT — غادرت الشاشة؛ لم نحتفظ بالأسعار الخاصة.");
   });
   window.addEventListener("pageshow",()=>{
-   if(!autoEnabled){autoEnabled=true;void startAuto();}
+   if(!autoEnabled){autoEnabled=true;void startAuto();void loadH15();}
   });
   window.addEventListener("focus",()=>{
    if(document.visibilityState==="hidden")return;
+   void loadH15();
    if(expiry&&Date.now()>expiry)
     markStale("WAIT — آخر لقطة تاريخية، وليست سعراً مباشراً.");
    if(autoEnabled&&!checkingViewer&&!pending&&Date.now()>=nextPollAt){
