@@ -192,3 +192,52 @@ def read_recovery(database: str | pathlib.Path, now: dt.datetime) -> dict:
                         row["transitions"])
     except (OSError, ValueError, TypeError, IndexError, KeyError, sqlite3.Error):
         return _base("RECOVERY_UNAVAILABLE")
+
+
+# Dry-run audit pacing only. This NEVER schedules market requests or enables
+# the collector; independent permissions and executable gates remain absent.
+AUDIT_RECHECK_SECONDS = {
+    "SOURCE_ABSENT": 60,
+    "SOURCE_REJECTED": 120,
+    "SOURCE_INTERRUPTED": 30,
+    "OBSERVATION_SEEN_UNVERIFIED": 30,
+    "OBSERVATION_REPEATED_UNVERIFIED": 60,
+    "RECOVERY_DISABLED": 120,
+    "RECOVERY_NOT_STARTED": 0,
+    "RECOVERY_UNAVAILABLE": 120,
+    "RECOVERY_STALE": 60,
+}
+
+
+def offline_reconnect_audit_plan(database: str | pathlib.Path,
+                                 now: dt.datetime) -> dict:
+    """Read-only next LOCAL AUDIT interval; not network reconnection or consent.
+
+    Even three repeated observations are UNVERIFIED. Calling this helper
+    never opens a broker session, submits orders, or modifies SQLite.
+    """
+    moment = _time(now)
+    snapshot = read_recovery(database, moment)
+    state = snapshot["state"]
+    # Unknown/corrupted statuses never inherit a ready scheduling state.
+    interval = AUDIT_RECHECK_SECONDS.get(state, 120)
+    elapsed = 0
+    last = snapshot["lastObservedUTC"]
+    if last is not None:
+        elapsed = max(0, int((moment - parse_utc(last)).total_seconds()))
+    delay = max(0, interval - elapsed) if last is not None else interval
+    return {
+        "mode": "OFFLINE_PRIVATE_RECOVERY_AUDIT_PACING_ONLY",
+        "state": state,
+        "nextLocalAuditAfterSeconds": delay,
+        "repeatedUnverifiedObservations": snapshot["consecutiveObservations"],
+        "sourceRightsVerified": False,
+        "brokerSessionVerified": False,
+        "privateMarketRequestsAllowed": False,
+        "reconnectAuthorization": False,
+        "paperOrdersAllowed": False,
+        "liveOrdersAllowed": False,
+        "sourceRequestsMade": 0,
+        "signal": "WAIT",
+        "executable": False,
+    }
