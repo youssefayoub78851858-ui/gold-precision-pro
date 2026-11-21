@@ -37,6 +37,8 @@ on:
       - 'coordinator/test_review_dashboard_route.js'
       - 'coordinator/internal_offline_handoff.js'
       - 'coordinator/test_internal_offline_handoff.js'
+      - 'coordinator/prelicense_release_audit.js'
+      - 'coordinator/test_prelicense_release_audit.js'
       - 'coordinator/test_prelicense_operational_commissioning.py'
       - 'coordinator/tests/review_dashboard_safety.test.js'
       - 'coordinator/biquote_v3_chronological_replay.js'
@@ -106,6 +108,7 @@ jobs:
       - name: Real local review HTTP route serves new mobile UI, no credential, broker or paid feed
         run: |
           node coordinator/test_internal_offline_handoff.js
+          node coordinator/test_prelicense_release_audit.js
           node --test coordinator/tests/review_dashboard_safety.test.js
           node coordinator/test_review_dashboard_route.js
           node coordinator/test_review_dashboard_private_biquote.js
