@@ -79,6 +79,7 @@ async function main(){
   assert(page.body.includes('id="historical-archive-audit"'));
   assert(page.body.includes('id="paper-reports"'));
   assert(page.body.includes('id="paper-report-state"'));
+  assert(page.body.includes('id="paper-persistence-state"'));
   assert(page.body.includes('id="paper-report-hundred"'));
   assert(page.body.includes("توثيق الحساب وحده لا يكفي"));
   assert(page.body.includes("موافقة تخزين بيانات Render معلّقة"));
