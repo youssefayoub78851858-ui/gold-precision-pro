@@ -13,6 +13,8 @@ const {assess:capacity}=require("./biquote_snapshot_capacity_gate");
 const {summarize:milestones}=require("./biquote_pre_signal_milestones");
 const {inspect:contextTiming}=require("./independent_context_timing_preflight");
 const {evaluate:paperAudit}=require("./prospective_paper_holdout_audit");
+const {inspect:paperTerminal}=require("./paper-terminal-inspect");
+const {sample:paperFixture}=require("../paper-terminal-core");
 const {reviewFourStages}=require("./ultimate_four_stage_review");
 const syntheticFixture=require("./fixtures/ultimate-synthetic.json");
 
@@ -50,6 +52,9 @@ function collectOfflineReports(){
     chronology:milestones({}),
     context:contextTiming({}),
     paper:paperAudit({}),
+    // Exercise the actual synthetic 512-bar / three-timeframe terminal
+    // into frozen V3. It can never create paper/live orders on the server.
+    paperTerminal:paperTerminal(paperFixture()),
     signalEngine:reviewFourStages({
       dataOrigin:"SYNTHETIC_TEST_ONLY",snapshot:syntheticFixture
     })
@@ -85,7 +90,21 @@ function combine(input){
       x.paper.status==="BLOCKED"&&
       x.paper.statistics===null&&
       x.paper.independentHoldoutValidated===false&&
-      x.paper.profitabilityProven===false,
+      x.paper.profitabilityProven===false&&
+      x.paperTerminal?.mode==="OFFLINE_SYNTHETIC_REPLAY"&&
+      x.paperTerminal?.dataOrigin==="SYNTHETIC_TEST_ONLY"&&
+      x.paperTerminal?.signal==="WAIT"&&
+      x.paperTerminal?.executable===false&&
+      x.paperTerminal?.researchEligible===false&&
+      x.paperTerminal?.connectedRealMarketData===false&&
+      x.paperTerminal?.paperExecutionOnServer===false&&
+      x.paperTerminal?.brokerExecution===false&&
+      x.paperTerminal?.tradePlanExecutable===false&&
+      x.paperTerminal?.providerRequests===0&&
+      x.paperTerminal?.ordersSent===0&&
+      x.paperTerminal?.credentialsRead===0&&
+      x.paperTerminal?.frameCounts?.M15===512&&
+      x.paperTerminal?.frameCounts?.H4===32,
     frozenResearchAndShadow:contract(x.signalEngine)&&
       x.signalEngine.mode==="FOUR_STAGE_PRIVATE_OFFLINE_RESEARCH_REVIEW"&&
       x.signalEngine.stages?.analysis?.status==="FROZEN_ENGINE_EVALUATED"&&
