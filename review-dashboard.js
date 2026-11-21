@@ -598,10 +598,14 @@ async function loadPaperReport(){
    if(epoch!==paperReportEpoch||document.visibilityState==="hidden")return;
    if(!clean.connected){
     resetPaperNumbers();
+    if($("paper-persistence-state"))$("paper-persistence-state").textContent=
+      "التخزين الدائم: لا يوجد سجل SQLite دائم مرفق بالخادم.";
     $("paper-report-state").textContent=
       "لا يوجد سجل ورقي دائم متصل على Render؛ ما في نتائج لنحسبها.";
     return;
    }
+   if($("paper-persistence-state"))$("paper-persistence-state").textContent=
+     "التخزين: اجتاز فحص وجود قرص مرفق وقراءة سجل SQLite، بلا ضمان نسخ احتياطية.";
    $("paper-report-state").textContent=
      "سجل محاكاة اصطناعية خاص فقط · غير مرتبط بسوق الذهب الحقيقي";
    $("paper-report-total").textContent="الصفقات الاصطناعية المغلقة: "+clean.closedTrades;
@@ -630,6 +634,8 @@ async function loadPaperReport(){
   }catch(_error){
    if(epoch!==paperReportEpoch||document.visibilityState==="hidden")return;
    resetPaperNumbers();
+   if($("paper-persistence-state"))$("paper-persistence-state").textContent=
+     "التخزين الدائم: لم يتم التحقق من قرص آمن أو سجل قابل للقراءة.";
    $("paper-report-state").textContent=
      "WAIT — تعذّر التحقق من سجل النتائج الورقية، ولا توجد نتائج مؤكدة للعرض.";
   }finally{paperReportPending=false;}
