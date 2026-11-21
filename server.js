@@ -468,10 +468,24 @@ const server = http.createServer(async (req, res) => {
     return res.end(fs.readFileSync(path.join(__dirname,"review-dashboard.html")));
   }
 
-  if (url.pathname === "/review" || url.pathname === "/review-ui.js" ||
-      (DEMO_MODE && url.pathname === "/")) {
+  // The review service's home link must open the compact NEW mobile
+  // dashboard, not the legacy all-in-one /ultimate screen. Keep /ultimate
+  // available for private viewer-session setup and paper lab explicitly.
+  // Strip arbitrary root query strings during the redirect; never carry a
+  // token or user input into a new URL or reflect it into the response.
+  if (DEMO_MODE && url.pathname === "/") {
+    res.writeHead(302, {
+      "Location": "/review-dashboard.html",
+      "Cache-Control": "no-store",
+      "Referrer-Policy": "no-referrer",
+      "X-Content-Type-Options": "nosniff"
+    });
+    return res.end();
+  }
+
+  if (url.pathname === "/review" || url.pathname === "/review-ui.js") {
     const isScript = url.pathname === "/review-ui.js";
-    const file = isScript ? "review-ui.js" : DEMO_MODE && url.pathname === "/" ? "ultimate.html" : "index.html";
+    const file = isScript ? "review-ui.js" : "index.html";
     res.writeHead(200, {"Content-Type": isScript ? "application/javascript; charset=utf-8" : "text/html; charset=utf-8", "Cache-Control": "no-store"});
     return res.end(fs.readFileSync(path.join(__dirname, file)));
   }
