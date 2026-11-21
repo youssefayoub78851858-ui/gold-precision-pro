@@ -569,7 +569,19 @@
 
 
 
- async function loadPaperReport(){
+  function resetPaperNumbers(){
+  for(const [id,label] of [
+   ["paper-report-total","الصفقات المغلقة: —"],
+   ["paper-report-net","الصافي بعد التكاليف: —"],
+   ["paper-report-win","نسبة الربح: — · التراجع: —"],
+   ["paper-report-stress","ضغط مضاعفة التكاليف: —"],
+   ["paper-report-five","دفعات كل 5 صفقات: —"],
+   ["paper-report-week","آخر أسبوع UTC: —"],
+   ["paper-report-hundred","تقرير أول 100 صفقة: غير متوفر"]]){
+    const el=$(id);if(el)el.textContent=label;
+  }
+ }
+async function loadPaperReport(){
   if(!$("paper-reports")||!autoEnabled||paperReportPending||
      document.visibilityState==="hidden"||Date.now()<nextPaperReportAt)return;
   paperReportPending=true;const epoch=++paperReportEpoch;
@@ -578,13 +590,14 @@
    const r=await fetch("/api/v3/ultimate/paper-reports",{
     method:"GET",credentials:"same-origin",cache:"no-store",redirect:"error",
     headers:{Accept:"application/json"},signal:AbortSignal.timeout(18000)});
-   if(r.status!==200||!/^application\\/json(?:\\s*;|\\s*$)/i.test(
+   if(r.status!==200||!/^application\/json(?:\s*;|\s*$)/i.test(
        r.headers?.get?.("content-type")||""))
      throw Error("PAPER_REPORT_VIEW_UNAVAILABLE");
    const clean=validatePaperReport(await r.json());
    if(!clean)throw Error("PAPER_REPORT_UNVERIFIED");
    if(epoch!==paperReportEpoch||document.visibilityState==="hidden")return;
    if(!clean.connected){
+    resetPaperNumbers();
     $("paper-report-state").textContent=
       "لا يوجد سجل ورقي دائم متصل على Render؛ ما في نتائج لنحسبها.";
     return;
@@ -616,6 +629,7 @@
       "تقرير أول 100 صفقة: غير متوفر";
   }catch(_error){
    if(epoch!==paperReportEpoch||document.visibilityState==="hidden")return;
+   resetPaperNumbers();
    $("paper-report-state").textContent=
      "WAIT — تعذّر التحقق من سجل النتائج الورقية، ولا توجد نتائج مؤكدة للعرض.";
   }finally{paperReportPending=false;}
