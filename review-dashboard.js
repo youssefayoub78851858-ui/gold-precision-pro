@@ -405,7 +405,28 @@
      !Array.isArray(d.finalExternalEvidenceRequired)||
      d.finalExternalEvidenceRequired.length!==4||
      d.signalCandidate!==null||d.entry!==null||d.stopLoss!==null||
-     d.targets!==null)return null;
+     d.targets!==null||
+     d.releaseAudit?.mode!=="GOLD_PRELICENSE_RELEASE_AUDIT_V1"||
+     d.releaseAudit.status!=="LOCAL_INTEGRATION_CONTRACTS_VALIDATED_ONLY"||
+     d.releaseAudit.internalSoftwareContractsChecked!==6||
+     d.releaseAudit.internalSoftwareContractsExpected!==6||
+     d.releaseAudit.actualCIPassAttestedByRuntime!==false||
+     d.releaseAudit.prelicenseOperationalDrillAttestedByRuntime!==false||
+     d.releaseAudit.externalEvidenceVerifiedCount!==0||
+     d.releaseAudit.externalEvidenceRequiredCount!==4||
+     d.releaseAudit.externalEvidenceRequired?.length!==4||
+     d.releaseAudit.externalEvidenceRequired.some(x=>
+       x?.status!=="EXTERNAL_EVIDENCE_NOT_AVAILABLE_HERE")||
+     d.releaseAudit.providerChoiceDeferredUntilFinalStage!==true||
+     d.releaseAudit.providerChosenOrConnected!==false||
+     d.releaseAudit.paperForwardResultsVerified!==false||
+     d.releaseAudit.allTradePrerequisitesSatisfied!==false||
+     d.releaseAudit.readyForBuySell!==false||
+     d.releaseAudit.marketDataMayBeActivated!==false||
+     d.releaseAudit.readyForPaperExecution!==false||
+     d.releaseAudit.readyForLiveExecution!==false||
+     d.releaseAudit.signal!=="WAIT"||
+     d.releaseAudit.executable!==false)return null;
   return {internalOfflineContractsChecked:true,signal:"WAIT",tradeReady:false};
  }
  function validatePreapproval(d){
@@ -497,12 +518,17 @@
    $("internal-gate-macro").textContent="DXY / GC / الأخبار: فحوص التوقيت موصولة؛ البث المرخّص غير متصل";
    $("internal-gate-paper").textContent="الورقي: محرك التكاليف والتحقق موصول؛ لا نتائج أمامية مستقلة";
    $("internal-gate-provider").textContent="المزوّد النهائي: الاتصال والترخيص مؤجّلان لآخر مرحلة";
-   note.textContent="٦ واجهات برمجية متوافقة بالفحص المحلي فقط؛ ليست اختبارات ربحية أو ترخيص بيانات. القرار WAIT.";
+   const gate= $("release-audit-summary");
+   if(gate)gate.textContent=
+    "الفحص الداخلي: ٦/٦ عقود برمجية متوافقة؛ الإثبات الخارجي: ٠/٤. لا بيانات مؤهّلة أو إشارات.";
+   note.textContent="بوابة ما قبل الترخيص: الاختبارات المحلية ليست إثبات نجاح GitHub أو ربحية أو ترخيص. القرار WAIT.";
   }catch(_error){
    if(own!==internalHandoffEpoch||document.visibilityState==="hidden")return;
    for(const id of ["internal-gate-src","internal-gate-candles","internal-gate-analysis",
      "internal-gate-macro","internal-gate-paper"])
     $(id).textContent="WAIT — ربط داخلي غير متحقق حالياً";
+   const gate=$("release-audit-summary");
+   if(gate)gate.textContent="WAIT — لا يوجد فحص جاهزية نهائية موثوق حالياً.";
    note.textContent="لا يمكن تأكيد ربط النظام الداخلي حالياً؛ ممنوع تفعيل الإشارات أو الصفقات.";
   }finally{internalHandoffPending=false;}
  }
