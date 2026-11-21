@@ -1,4 +1,4 @@
-name: Review H15 daily reference and mobile auto-refresh deployment evidence
+name: Review four preapproval tracks and public macro live smoke
 on:
   push:
     branches: [review/v2-portable-tests-20261109]
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
-      - name: Fetch only public review HTML and check exact new technical panel marker
+      - name: Verify live read-only macro, four tracks, session gate and 10-second mobile refresh
         shell: bash
         run: |
           python - <<'PY'
@@ -35,7 +35,11 @@ jobs:
           assert 'id="us02y-daily"' in body
           assert 'id="us10y-daily"' in body
           assert 'id="h15-daily-note"' in body
-          print('PUBLIC_H15_DAILY_CARDS_VISIBLE',True)
+          assert 'id="news-fed-status"' in body
+          assert 'id="news-bls-status"' in body
+          assert 'id="preapproval"' in body
+          assert 'id="stage-capital"' in body
+          print('PUBLIC_H15_DAILY_AND_FOUR_TRACK_CARDS_VISIBLE',True)
           assert present, 'Review technical panel missing from live Render'
           base='https://gold-precision-v3-review-demo.onrender.com'
           jsreq=urllib.request.Request(base+'/review-dashboard.js',headers={'Accept':'application/javascript','User-Agent':'GPP-review-auto-refresh-check/1'},method='GET')
@@ -47,6 +51,8 @@ jobs:
               'explicit_stale_status': 'لقطة قديمة' in source,
               'cookie_gate_before_market': 'biquote-viewer-status' in source,
               'official_daily_h15_readonly': 'validateDailyH15' in source and '"/api/v3/ultimate/free-context"' in source,
+              'fed_bls_metadata_guard': 'validateOfficialMacro' in source and '"/api/v3/ultimate/official-macro"' in source,
+              'four_stage_client_guard': 'validatePreapproval' in source and '"/api/v3/ultimate/preapproval-status"' in source,
               'visibility_pauses_market': 'document.visibilityState==="hidden"' in source,
               'no_executable_trade': 'executable:true' not in source,
             }
@@ -80,4 +86,35 @@ jobs:
             print('PUBLIC_H15_DAILY_REVIEW_ONLY',True)
             print('OFFICIAL_H15_PROVIDER_STATUS',report.get('sourceStatus'))
             print('OFFICIAL_H15_OBSERVATION_DATE',report.get('observedDate'))
+          # Four-stage status must never be a live/paid/broker entitlement.
+          statusreq=urllib.request.Request(base+'/api/v3/ultimate/preapproval-status',
+                 headers={'Accept':'application/json'},method='GET')
+          with urllib.request.urlopen(statusreq,timeout=32) as response:
+            stage=__import__('json').loads(response.read(20000))
+            assert response.status==200
+            assert stage.get('mode')=='GOLD_PREAPPROVAL_FOUR_TRACKS_V1'
+            assert stage.get('signal')=='WAIT' and stage.get('executable') is False
+            assert stage.get('providerRequestsMade')==0
+            assert stage.get('brokerOrdersSent')==0
+            assert stage.get('verifiedLiveLayerCount')==0
+            tracks=stage.get('steps') or {}
+            assert set(tracks)=={'officialNewsCalendar','dxyGcOrderFlow','paperRisk','capitalDemo'}
+            assert all(t.get('liveTradeReady') is False for t in tracks.values())
+            assert tracks['capitalDemo']['connected'] is False
+            assert tracks['paperRisk']['paperOrdersActivated'] is False
+            print('PUBLIC_FOUR_TRACKS_ALWAYS_WAIT',True)
+          # BLS/Fed government metadata may be unavailable, but is never
+          # a live gold quote or a BUY/SELL vote.
+          macroreq=urllib.request.Request(base+'/api/v3/ultimate/official-macro',
+               headers={'Accept':'application/json'},method='GET')
+          with urllib.request.urlopen(macroreq,timeout=40) as response:
+            macro=__import__('json').loads(response.read(55000))
+            assert response.status==200
+            assert macro.get('mode')=='OFFICIAL_MACRO_REVIEW'
+            assert macro.get('signal')=='WAIT'
+            assert macro.get('executable') is False
+            assert macro.get('liveData') is False
+            assert macro.get('firstAvailabilityVerified') is False
+            print('PUBLIC_FED_BLS_METADATA_NONTRADING',True)
+            print('PUBLIC_OFFICIAL_MACRO_FEEDS',macro.get('feeds'))
           PY
