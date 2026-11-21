@@ -149,8 +149,17 @@ def inspect_private_demo_page(chunk, *, cst=None, security_token=None,
         # If downstream archival fails, never claim the page was received.
         deliver_private(payload)
         report = _result("REQUIRES_INDEPENDENT_DATA_RIGHTS_AND_RECEIPT_AUDIT")
-        report.update(status="PRIVATE_DEMO_GEOMETRY_ONLY_NOT_ADMITTED",
-                      providerRequestsMade=1, pageRowsChecked=len(prices))
+        report.update(
+            status="PRIVATE_DEMO_GEOMETRY_ONLY_NOT_ADMITTED",
+            providerRequestsMade=1, pageRowsChecked=len(prices),
+            unclassifiedMissingClosedSlots=(
+                chunk["expectedClosedSlots"] - len(prices)
+            ),
+            completeUTCGridWindowObserved=(
+                len(prices) == chunk["expectedClosedSlots"]
+            ),
+            originalBrokerSessionVerified=False,
+        )
         return report
     except (KeyError, ValueError, TypeError, OverflowError, AttributeError,
             OSError, StopIteration):
