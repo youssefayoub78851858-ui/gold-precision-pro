@@ -385,6 +385,29 @@
  }
 
 
+ function validateInternalHandoff(d){
+  const keys=["sourceRequirements","closedFrameCapacity","candleChronology",
+    "externalContextClocks","paperCostHoldout","frozenResearchAndShadow"];
+  if(!d||d.mode!=="GOLD_INTERNAL_OFFLINE_HANDOFF_V1"||
+     d.status!=="OFFLINE_INTERFACES_CHECKED_EXTERNAL_EVIDENCE_PENDING"||
+     d.signal!=="WAIT"||d.executable!==false||
+     d.paperOrdersAllowed!==false||d.liveOrdersAllowed!==false||
+     d.researchEligible!==false||d.providerConnectionEnabled!==false||
+     d.independentSourceRightsVerified!==false||
+     d.independentHoldoutValidated!==false||d.realMarketPriceAvailable!==false||
+     d.externalProviderDecisionDeferredToLastStage!==true||
+     d.providerRequestsMade!==0||d.brokerOrdersSent!==0||
+     d.paperOrdersSent!==0||d.credentialsRead!==0||d.paymentsMade!==0||
+     d.internalOfflineContractsChecked!==true||d.internalCheckCount!==6||
+     !d.checks||Object.keys(d.checks).sort().join(",")!==keys.sort().join(",")||
+     keys.some(k=>d.checks[k]!=="OFFLINE_CONTRACT_COMPATIBLE")||
+     d.stageStatus?.finalProvider!=="DEFERRED_NOT_CONNECTED"||
+     !Array.isArray(d.finalExternalEvidenceRequired)||
+     d.finalExternalEvidenceRequired.length!==4||
+     d.signalCandidate!==null||d.entry!==null||d.stopLoss!==null||
+     d.targets!==null)return null;
+  return {internalOfflineContractsChecked:true,signal:"WAIT",tradeReady:false};
+ }
  function validatePreapproval(d){
   const keys=["officialNewsCalendar","dxyGcOrderFlow","paperRisk","capitalDemo"];
   if(!d||d.mode!=="GOLD_PREAPPROVAL_FOUR_TRACKS_V1"||
@@ -404,7 +427,7 @@
  // Pure validators are exposed only to local Node offline tests.
  if(typeof module!=="undefined"&&module.exports)
   module.exports={validateChart,validateSnapshot,localLatestParity,
-    localCoveredParityAudit,researchWatch,vendorH4SessionLabel,technicalObservations,continuityReport,validateDailyH15,validateOfficialMacro,validatePreapproval};
+    localCoveredParityAudit,researchWatch,vendorH4SessionLabel,technicalObservations,continuityReport,validateDailyH15,validateOfficialMacro,validatePreapproval,validateInternalHandoff};
  if(typeof document==="undefined")return;
  const $=id=>document.getElementById(id);
  let frame="M15",state=null,pending=false,expiry=0;
@@ -413,6 +436,7 @@
  let h15Pending=false,h15Epoch=0,nextH15At=0;
  let macroPending=false,macroEpoch=0,nextMacroAt=0;
  let preapprovalPending=false,preapprovalEpoch=0;
+ let internalHandoffPending=false,internalHandoffEpoch=0;
  // Every user-initiated fetch has a generation. Android can hide or
  // navigate away while a request or JSON body is in flight; response
  // completion must not resurrect private prices after that transition.
@@ -452,6 +476,33 @@
 
 
 
+ async function loadInternalHandoff(){
+  if(!autoEnabled||internalHandoffPending||document.visibilityState==="hidden")return;
+  internalHandoffPending=true;const own=++internalHandoffEpoch;
+  const note=$("internal-gate-note");
+  try{
+   const r=await fetch("/api/v3/ultimate/internal-handoff",{
+    method:"GET",credentials:"omit",cache:"no-store",redirect:"error",
+    headers:{Accept:"application/json"},signal:AbortSignal.timeout(8000)});
+   if(r.status!==200||
+      !/^application\\/json(?:\\s*;|\\s*$)/i.test(r.headers?.get?.("content-type")||"")||
+      !validateInternalHandoff(await r.json()))throw Error("OFFLINE_HANDOFF_UNVERIFIED");
+   if(own!==internalHandoffEpoch||document.visibilityState==="hidden")return;
+   $("internal-gate-src").textContent="المصادر التسعة: وصلة المتطلبات موجودة، الاتصال الحي بعده غير مرخّص";
+   $("internal-gate-candles").textContent="M15 / H1 / H4: فحوص الشموع موصولة؛ التاريخ المؤهّل بعده ناقص";
+   $("internal-gate-analysis").textContent="محرك V3: متصل بالفحوص البحثية فقط · BUY/SELL غير مفعّلة";
+   $("internal-gate-macro").textContent="DXY / GC / الأخبار: فحوص التوقيت موصولة؛ البث المرخّص غير متصل";
+   $("internal-gate-paper").textContent="الورقي: محرك التكاليف والتحقق موصول؛ لا نتائج أمامية مستقلة";
+   $("internal-gate-provider").textContent="المزوّد النهائي: الاتصال والترخيص مؤجّلان لآخر مرحلة";
+   note.textContent="٦ واجهات برمجية متوافقة بالفحص المحلي فقط؛ ليست اختبارات ربحية أو ترخيص بيانات. القرار WAIT.";
+  }catch(_error){
+   if(own!==internalHandoffEpoch||document.visibilityState==="hidden")return;
+   for(const id of ["internal-gate-src","internal-gate-candles","internal-gate-analysis",
+     "internal-gate-macro","internal-gate-paper"])
+    $(id).textContent="WAIT — ربط داخلي غير متحقق حالياً";
+   note.textContent="لا يمكن تأكيد ربط النظام الداخلي حالياً؛ ممنوع تفعيل الإشارات أو الصفقات.";
+  }finally{internalHandoffPending=false;}
+ }
  async function loadPreapproval(){
   if(!autoEnabled||preapprovalPending||document.visibilityState==="hidden")return;
   preapprovalPending=true;const epoch=++preapprovalEpoch;
@@ -828,22 +879,22 @@
  }
  if(typeof document.addEventListener==="function"){
   document.addEventListener("DOMContentLoaded",()=>{
-   autoEnabled=true;void startAuto();void loadH15();void loadOfficialMacro();void loadPreapproval();
+   autoEnabled=true;void startAuto();void loadH15();void loadOfficialMacro();void loadPreapproval();void loadInternalHandoff();
   });
   document.addEventListener("visibilitychange",()=>{
    if(document.visibilityState==="hidden"){
-    requestEpoch++;h15Epoch++;macroEpoch++;preapprovalEpoch++;viewerReady=false;nextPollAt=Infinity;
+    requestEpoch++;h15Epoch++;macroEpoch++;preapprovalEpoch++;internalHandoffEpoch++;viewerReady=false;nextPollAt=Infinity;
     reset("WAIT — الشاشة بالخلفية؛ تم مسح بيانات المشاهدة الخاصة.");
-   }else if(autoEnabled){void startAuto();void loadH15();void loadOfficialMacro();void loadPreapproval();}
+   }else if(autoEnabled){void startAuto();void loadH15();void loadOfficialMacro();void loadPreapproval();void loadInternalHandoff();}
   });
  }
  if(typeof window!=="undefined"&&typeof window.addEventListener==="function"){
   window.addEventListener("pagehide",()=>{
-   requestEpoch++;h15Epoch++;macroEpoch++;preapprovalEpoch++;autoEnabled=false;viewerReady=false;nextPollAt=Infinity;
+   requestEpoch++;h15Epoch++;macroEpoch++;preapprovalEpoch++;internalHandoffEpoch++;autoEnabled=false;viewerReady=false;nextPollAt=Infinity;
    reset("WAIT — غادرت الشاشة؛ لم نحتفظ بالأسعار الخاصة.");
   });
   window.addEventListener("pageshow",()=>{
-   if(!autoEnabled){autoEnabled=true;void startAuto();void loadH15();void loadOfficialMacro();void loadPreapproval();}
+   if(!autoEnabled){autoEnabled=true;void startAuto();void loadH15();void loadOfficialMacro();void loadPreapproval();void loadInternalHandoff();}
   });
   window.addEventListener("focus",()=>{
    if(document.visibilityState==="hidden")return;
