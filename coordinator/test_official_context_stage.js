@@ -81,11 +81,11 @@ function assertSafe(x){
    ["future_observation",{...daily(),observedDate:"2026-11-13"}],
    ["invalid_calendar_day",{...daily(),observedDate:"2026-02-30"}],
    ["stale_observation",{...daily(),observedDate:"2026-10-01"}],
-   ["future_publication",{...knownDaily(),publicationTimestampsUTC:[
+   ["future_publication",{...knownDaily,publicationTimestampsUTC:[
      "2026-11-12T15:00:00.000Z","2026-11-12T18:00:00.000Z"]}],
-   ["unrecorded_claim",{...knownDaily(),publicationTimestampsUTC:[
+   ["unrecorded_claim",{...knownDaily,publicationTimestampsUTC:[
      "2026-11-12T15:00:00.000Z",null]}],
-   ["malformed_publication",{...knownDaily(),publicationTimestampsUTC:[
+   ["malformed_publication",{...knownDaily,publicationTimestampsUTC:[
      "2026-11-12T15:00:00.000Z","2026-02-30T01:00:00.000Z"]}],
    ["future_optional_publication",{...daily(),publicationTimestampRecorded:false,
       publicationTimestampsUTC:[null,"2026-11-12T18:00:00.000Z"]}],
