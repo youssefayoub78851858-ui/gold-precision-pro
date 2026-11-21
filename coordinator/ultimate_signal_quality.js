@@ -11,6 +11,30 @@ const THRESHOLDS=Object.freeze({
 });
 const finite=Number.isFinite;
 function round(n){return finite(n)?Math.round(n*1e6)/1e6:null;}
+// Offline-only BID/MID-frame geometry check; never invent missing candles.
+// A fully covered H1/H4 candle must match exact M15 constituents before a
+// technical regime is used even as descriptive context. This does NOT prove
+// independent vendor identity or broker-session completeness.
+function auditCrossFrameM15(frames){
+  const lower=new Map(frames.M15.map(r=>[Date.parse(r.datetime),r]));
+  const findings={};
+  for(const [tf,segments] of [['H1',4],['H4',16]]){
+    let matched=0,disagreed=0,uncovered=0;
+    for(const whole of frames[tf]){
+      const start=Date.parse(whole.datetime);
+      const parts=Array.from({length:segments},(_,i)=>lower.get(start+i*900000));
+      if(parts.some(x=>!x)){uncovered++;continue;}
+      const expected={open:parts[0].open,high:Math.max(...parts.map(x=>x.high)),
+        low:Math.min(...parts.map(x=>x.low)),close:parts.at(-1).close};
+      const same=['open','high','low','close'].every(k=>
+        Math.abs(whole[k]-expected[k])<=Math.max(0.00001,Math.abs(expected[k])*1e-8));
+      if(same)matched++;else disagreed++;
+    }
+    findings[tf]={matched,disagreed,uncovered,
+      fullHistoryCrossFrameVerified:false};
+  }
+  return findings;
+}
 function diagnostic(frames,asOfUTC,tradePlan={},risk={},layers={}){
   const result={
     mode:'OFFLINE_PROSPECTIVE_QUALITY_DIAGNOSTIC',
@@ -44,6 +68,14 @@ function diagnostic(frames,asOfUTC,tradePlan={},risk={},layers={}){
         break;
       }
     }
+  }
+  const cross=auditCrossFrameM15(frames);
+  result.metrics.crossFrameM15=cross;
+  for(const tf of ['H1','H4']){
+    if(cross[tf].disagreed>0)
+      result.warnings.push(tf+'_M15_CLOSED_OHLC_PARITY_MISMATCH');
+    if(cross[tf].uncovered>0)
+      result.warnings.push(tf+'_M15_PARITY_NOT_FULLY_COVERED');
   }
   const rows=frames.M15;
   if(rows.length<Math.max(THRESHOLDS.efficiencyLookback+1,2*THRESHOLDS.atrPeriod+1)){
