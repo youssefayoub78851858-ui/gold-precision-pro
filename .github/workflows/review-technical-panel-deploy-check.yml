@@ -1,4 +1,4 @@
-name: Review technical panel public HTML deployment evidence
+name: Review H15 daily reference and mobile auto-refresh deployment evidence
 on:
   push:
     branches: [review/v2-portable-tests-20261109]
@@ -32,16 +32,21 @@ jobs:
               print('PUBLIC_REVIEW_HTML_REACHABLE',False)
             if attempt<2:time.sleep(4)
           print('DEPLOY_EVIDENCE', 'PRESENT' if present else 'NOT_YET_CONFIRMED')
+          assert 'id="us02y-daily"' in body
+          assert 'id="us10y-daily"' in body
+          assert 'id="h15-daily-note"' in body
+          print('PUBLIC_H15_DAILY_CARDS_VISIBLE',True)
           assert present, 'Review technical panel missing from live Render'
           base='https://gold-precision-v3-review-demo.onrender.com'
           jsreq=urllib.request.Request(base+'/review-dashboard.js',headers={'Accept':'application/javascript','User-Agent':'GPP-review-auto-refresh-check/1'},method='GET')
           with urllib.request.urlopen(jsreq,timeout=32) as response:
             source=response.read(110000).decode('utf-8','replace')
             checks={
-              'auto_poll_60_seconds': 'AUTO_POLL_MS=60000' in source,
+              'auto_poll_10_seconds': 'AUTO_POLL_MS=10000' in source,
               'bounded_stale_history': 'MAX_STALE_MS=600000' in source,
               'explicit_stale_status': 'لقطة قديمة' in source,
               'cookie_gate_before_market': 'biquote-viewer-status' in source,
+              'official_daily_h15_readonly': 'validateDailyH15' in source and '"/api/v3/ultimate/free-context"' in source,
               'visibility_pauses_market': 'document.visibilityState==="hidden"' in source,
               'no_executable_trade': 'executable:true' not in source,
             }
@@ -59,4 +64,20 @@ jobs:
             assert data.get('marketDataRequested') is False
             assert data.get('ordersSent')==0
             print('ANONYMOUS_MARKET_POLLING_GUARD','PASS')
+          # Public official DAILY reference endpoint, never private XAUUSD prices.
+          daily=urllib.request.Request(base+'/api/v3/ultimate/free-context',
+                    headers={'Accept':'application/json','User-Agent':'GPP-review-public-h15-check/1'},method='GET')
+          with urllib.request.urlopen(daily,timeout=32) as response:
+            report=__import__('json').loads(response.read(25000))
+            assert response.status==200
+            assert report.get('mode')=='OFFICIAL_RECORDED_DAILY_CONTEXT'
+            assert report.get('signal')=='WAIT'
+            assert report.get('executable') is False
+            assert report.get('liveData') is False
+            assert report.get('readyForFiveMinuteGate') is False
+            assert report.get('readyForUltimateTrading') is False
+            assert report.get('sourceStatus') in ('OFFICIAL_FED_RSS_REFRESHED','STORED_FALLBACK')
+            print('PUBLIC_H15_DAILY_REVIEW_ONLY',True)
+            print('OFFICIAL_H15_PROVIDER_STATUS',report.get('sourceStatus'))
+            print('OFFICIAL_H15_OBSERVATION_DATE',report.get('observedDate'))
           PY
