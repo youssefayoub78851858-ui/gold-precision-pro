@@ -38,6 +38,7 @@ def _result(code):
         "orderRouteSupported": False, "liveHostAllowed": False,
         "credentialLoginSupported": False,
         "brokerOrdersSent": 0, "providerRequestsMade": 0,
+        "transportCallsAttempted": 0,
         "pageRowsChecked": 0,
         "sourceRightsIndependentlyAttested": False,
         "brokerSessionCalendarVerified": False,
@@ -62,29 +63,40 @@ def inspect_private_demo_page(chunk, *, cst=None, security_token=None,
     is checked in-memory and forwarded solely to the private deliver callback.
     Only bounded counts leave this function, never prices, quotes or tokens.
     """
-    fail = _result("PRIVATE_DEMO_GET_STANDBY")
+    request_attempted = False
+
+    def safe_block(code):
+        # Count calls to the injected transport even when the HTTP response,
+        # data page or private archive fails. This is an ATTEMPT count,
+        # not evidence that the provider actually received the request.
+        result = _result(code)
+        result["providerRequestsMade"] = int(request_attempted)
+        result["transportCallsAttempted"] = int(request_attempted)
+        return result
+
+    fail = safe_block("PRIVATE_DEMO_GET_STANDBY")
     try:
         if (os.environ.get(ENABLE_ENV) != ENABLE_VALUE or
                 os.environ.get(RIGHTS_ENV) != ENABLE_VALUE or
                 explicit_operator_approval is not True):
             return fail
         if not callable(transport) or not callable(deliver_private):
-            return _result("ISOLATED_PRIVATE_TRANSPORT_NOT_CONFIGURED")
+            return safe_block("ISOLATED_PRIVATE_TRANSPORT_NOT_CONFIGURED")
         if not (_token(cst) and _token(security_token)):
-            return _result("SHORT_LIVED_DEMO_SESSION_TOKENS_REQUIRED")
+            return safe_block("SHORT_LIVED_DEMO_SESSION_TOKENS_REQUIRED")
         if not isinstance(chunk, dict) or set(chunk) != {
                 "request", "firstExpectedOpenUTC", "expectedEndExclusiveUTC",
                 "expectedClosedSlots", "providerToBoundMayBeInclusive",
                 "responseWindowMustBeVerified"}:
-            return _result("INVALID_DISABLED_DEMO_HISTORY_CHUNK")
+            return safe_block("INVALID_DISABLED_DEMO_HISTORY_CHUNK")
         spec = chunk["request"]
         if audit_demo_get_only_request(spec)["requestShapeAcceptable"] is not True:
-            return _result("DEMO_PRICE_GET_ONLY_SPEC_REJECTED")
+            return safe_block("DEMO_PRICE_GET_ONLY_SPEC_REJECTED")
         width = next(
             (s for resolution, s in RESOLUTIONS.values()
              if spec["query"]["resolution"] == resolution), None)
         if width is None:
-            return _result("UNRECOGNIZED_CANDLE_RESOLUTION")
+            return safe_block("UNRECOGNIZED_CANDLE_RESOLUTION")
         first = dt.datetime.fromisoformat(
             chunk["firstExpectedOpenUTC"].replace("Z", "+00:00"))
         end = dt.datetime.fromisoformat(
@@ -98,7 +110,7 @@ def inspect_private_demo_page(chunk, *, cst=None, security_token=None,
                 not 1 <= chunk["expectedClosedSlots"] <= 900 or
                 chunk["providerToBoundMayBeInclusive"] is not True or
                 chunk["responseWindowMustBeVerified"] is not True):
-            return _result("INVALID_EXACT_CLOSED_CANDLE_WINDOW")
+            return safe_block("INVALID_EXACT_CLOSED_CANDLE_WINDOW")
         # Exact timestamped query bounds; never let a caller-controlled host,
         # path, HTTP method or arbitrary query parameter cross this boundary.
         expected_from = first.strftime("%Y-%m-%dT%H:%M:%S")
@@ -106,35 +118,36 @@ def inspect_private_demo_page(chunk, *, cst=None, security_token=None,
             "%Y-%m-%dT%H:%M:%S")
         if (spec["query"]["from"] != expected_from or
                 spec["query"]["to"] != expected_to):
-            return _result("DEMO_WINDOW_DIFFERENT_FROM_APPROVED_PLAN")
+            return safe_block("DEMO_WINDOW_DIFFERENT_FROM_APPROVED_PLAN")
         url = DEMO_BASE_URL + spec["path"] + "?" + urlencode(
             [(k, spec["query"][k]) for k in ("resolution", "from", "to", "max")]
         )
         # CST/session token powers trading at provider level. Never write it
         # to any log, UI response, URL, public DB, fixture or code.
+        request_attempted = True
         reply = transport(
             "GET", url, {"CST": cst, "X-SECURITY-TOKEN": security_token})
         if (not isinstance(reply, dict) or
                 set(reply) != {"httpStatus", "response", "redirected"} or
                 type(reply["httpStatus"]) is not int or
                 reply["httpStatus"] != 200 or reply["redirected"] is not False):
-            return _result("DEMO_GET_HTTP_STATUS_OR_REDIRECT_REJECTED")
+            return safe_block("DEMO_GET_HTTP_STATUS_OR_REDIRECT_REJECTED")
         payload = reply["response"]
         if (not isinstance(payload, dict) or
                 payload.get("epic") != spec["path"].split("/")[-1] or
                 payload.get("resolution") != spec["query"]["resolution"]):
-            return _result("BROKER_PRICE_PAGE_IDENTITY_UNVERIFIED")
+            return safe_block("BROKER_PRICE_PAGE_IDENTITY_UNVERIFIED")
         prices = payload.get("prices")
         if not isinstance(prices, list) or len(prices) > MAX_PAGE_ROWS:
-            return _result("BOUNDED_PRICE_PAGE_REQUIRED")
+            return safe_block("BOUNDED_PRICE_PAGE_REQUIRED")
         # A 200 response containing zero candles is not a successful
         # capture. Nor may one requested window return more DISTINCT slots
         # than its approved closed-candle capacity. Never pad missing bars:
         # real session closures still need separate calendar verification.
         if not prices:
-            return _result("BROKER_PRICE_PAGE_EMPTY_NOT_OBSERVED")
+            return safe_block("BROKER_PRICE_PAGE_EMPTY_NOT_OBSERVED")
         if len(prices) > chunk["expectedClosedSlots"]:
-            return _result("BROKER_PRICE_PAGE_EXCEEDS_APPROVED_WINDOW")
+            return safe_block("BROKER_PRICE_PAGE_EXCEEDS_APPROVED_WINDOW")
         prior = None
         seen = set()
         for row in prices:
@@ -142,7 +155,7 @@ def inspect_private_demo_page(chunk, *, cst=None, security_token=None,
             opened = dt.datetime.fromisoformat(stamp.replace("Z", "+00:00"))
             if (not first <= opened < end or stamp in seen or
                     (prior is not None and stamp <= prior)):
-                return _result("BROKER_HISTORY_OUTSIDE_EXACT_WINDOW_OR_DUPLICATE")
+                return safe_block("BROKER_HISTORY_OUTSIDE_EXACT_WINDOW_OR_DUPLICATE")
             prior = stamp
             seen.add(stamp)
         # Controlled callback only; raw prices are NOT returned in the report.
@@ -151,11 +164,12 @@ def inspect_private_demo_page(chunk, *, cst=None, security_token=None,
         # A private archive callback may explicitly refuse the page; never
         # count refused storage as a successfully delivered price snapshot.
         if delivery_result is False:
-            return _result("PRIVATE_DEMO_ARCHIVE_REFUSED_PAGE")
+            return safe_block("PRIVATE_DEMO_ARCHIVE_REFUSED_PAGE")
         report = _result("REQUIRES_INDEPENDENT_DATA_RIGHTS_AND_RECEIPT_AUDIT")
         report.update(
             status="PRIVATE_DEMO_GEOMETRY_ONLY_NOT_ADMITTED",
-            providerRequestsMade=1, pageRowsChecked=len(prices),
+            providerRequestsMade=1, transportCallsAttempted=1,
+            pageRowsChecked=len(prices),
             unclassifiedMissingClosedSlots=(
                 chunk["expectedClosedSlots"] - len(prices)
             ),
@@ -167,8 +181,8 @@ def inspect_private_demo_page(chunk, *, cst=None, security_token=None,
         return report
     except (KeyError, ValueError, TypeError, OverflowError, AttributeError,
             OSError, StopIteration):
-        return _result("INVALID_OR_UNAVAILABLE_PRIVATE_PRICE_PAGE")
+        return safe_block("INVALID_OR_UNAVAILABLE_PRIVATE_PRICE_PAGE")
     except Exception:
         # Unexpected transport/storage errors may contain credentials in
         # their messages. Only a fixed safe code crosses this boundary.
-        return _result("PRIVATE_DEMO_TRANSPORT_OR_ARCHIVE_ERROR")
+        return safe_block("PRIVATE_DEMO_TRANSPORT_OR_ARCHIVE_ERROR")
