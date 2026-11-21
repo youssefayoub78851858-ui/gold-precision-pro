@@ -8,6 +8,7 @@
 const fs=require("node:fs");
 const path=require("node:path");
 const {spawnSync}=require("node:child_process");
+const {verify:verifyDisk}=require("./paper_persistent_disk_gate");
 const MODE="GOLD_PRIVATE_OFFLINE_PAPER_REPORT_BRIDGE_V1";
 const EMPTY_STATUS="NO_PERSISTENT_PAPER_JOURNAL_CONNECTED";
 const int=(x,min,max)=>Number.isSafeInteger(x)&&x>=min&&x<=max;
@@ -100,7 +101,11 @@ function summarise(d){
   firstHundredClosedTrades:d.firstHundredClosedTradeCheckpoint?
    metric(d.firstHundredClosedTradeCheckpoint):null};
 }
-function inspect({authenticated=false,databasePath=process.env.GOLD_SYNTHETIC_PAPER_JOURNAL||""}={}){
+function inspect({
+ authenticated=false,
+ databasePath=process.env.GOLD_SYNTHETIC_PAPER_JOURNAL||"",
+ mountRoot=process.env.GOLD_SYNTHETIC_PAPER_DISK_MOUNT||""
+}={}){
  if(!databasePath)return {statusCode:200,body:empty()};
  if(!authenticated)return {statusCode:401,body:empty("PRIVATE_VIEWER_SESSION_REQUIRED")};
  try{
@@ -109,6 +114,11 @@ function inspect({authenticated=false,databasePath=process.env.GOLD_SYNTHETIC_PA
   const st=fs.lstatSync(databasePath);
   if(!st.isFile()||st.isSymbolicLink()||st.size>25_000_000)
     throw Error("INVALID_LOCAL_FILE");
+  // An existing file on Render's ephemeral root must NEVER masquerade as
+  // a durable journal. Checking mountinfo is a local preflight only, not
+  // evidence that backups, billing, or provider rights were approved.
+  const disk=verifyDisk({databasePath,mountRoot});
+  if(!disk.safe)throw Error("MOUNTED_PAPER_VOLUME_NOT_VERIFIED");
   const runner=spawnSync("python3",[
    path.join(__dirname,"offline_paper_report_readonly.py"),databasePath
   ],{encoding:"utf8",timeout:15000,maxBuffer:200000,
