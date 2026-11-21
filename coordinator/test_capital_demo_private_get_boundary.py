@@ -66,6 +66,8 @@ class PrivateDemoGetTests(unittest.TestCase):
                           deliver_private=lambda _:self.fail("private delivery forbidden"))
         self.safe(out);self.assertEqual(out["status"],"BLOCKED")
         self.assertEqual(calls, [])
+        self.assertEqual(out["providerRequestsMade"], 0)
+        self.assertEqual(out["transportCallsAttempted"], 0)
 
     def test_one_approved_bounded_demo_get_only_and_private_sink(self):
         calls=[];delivered=[]
@@ -75,6 +77,7 @@ class PrivateDemoGetTests(unittest.TestCase):
         self.safe(out)
         self.assertEqual(out["status"], "PRIVATE_DEMO_GEOMETRY_ONLY_NOT_ADMITTED")
         self.assertEqual(out["providerRequestsMade"], 1)
+        self.assertEqual(out["transportCallsAttempted"], 1)
         self.assertEqual(out["pageRowsChecked"], 1)
         self.assertEqual(
             out["unclassifiedMissingClosedSlots"],
@@ -221,6 +224,29 @@ class PrivateDemoGetTests(unittest.TestCase):
                 self.safe(out);self.assertEqual(out["status"],"BLOCKED")
                 self.assertEqual(delivered,[])
 
+    def test_rejected_response_still_counts_transport_invocation(self):
+        with patch.dict(os.environ, {
+            ENABLE_ENV: ENABLE_VALUE, RIGHTS_ENV: ENABLE_VALUE
+        }):
+            for status_code in (302, 401, 429, 500):
+                calls = []
+                out = self.gate(
+                    transport=fake_transport(calls, status=status_code),
+                    deliver_private=lambda _: self.fail("no archive on HTTP rejection")
+                )
+                self.safe(out)
+                self.assertEqual(out["status"], "BLOCKED")
+                self.assertEqual(out["providerRequestsMade"], 1)
+                self.assertEqual(out["transportCallsAttempted"], 1)
+                self.assertEqual(len(calls), 1)
+            blocked = self.gate(
+                explicit_operator_approval=False,
+                transport=lambda *_: self.fail("no transport permitted"),
+                deliver_private=lambda _: self.fail("no archive permitted"),
+            )
+            self.assertEqual(blocked["providerRequestsMade"], 0)
+            self.assertEqual(blocked["transportCallsAttempted"], 0)
+
     def test_explicit_archive_refusal_and_unexpected_exception_fail_closed(self):
         calls = []
         with patch.dict(os.environ, {
@@ -234,6 +260,8 @@ class PrivateDemoGetTests(unittest.TestCase):
             self.assertEqual(refused["status"], "BLOCKED")
             self.assertEqual(refused["reason"], "PRIVATE_DEMO_ARCHIVE_REFUSED_PAGE")
             self.assertEqual(refused["pageRowsChecked"], 0)
+            self.assertEqual(refused["providerRequestsMade"], 1)
+            self.assertEqual(refused["transportCallsAttempted"], 1)
 
             # Unanticipated provider/sink failures are reduced to fixed,
             # non-sensitive error codes, not leaked into logs or UI.
@@ -259,6 +287,10 @@ class PrivateDemoGetTests(unittest.TestCase):
             )
             self.assertNotIn("SECRET_TRANSPORT_TOKEN", str(transport_failed))
         self.assertEqual(len(calls), 2)
+        self.assertEqual(failed["providerRequestsMade"], 1)
+        self.assertEqual(failed["transportCallsAttempted"], 1)
+        self.assertEqual(transport_failed["providerRequestsMade"], 1)
+        self.assertEqual(transport_failed["transportCallsAttempted"], 1)
 
     def test_transport_failure_does_not_echo_or_approve(self):
         with patch.dict(os.environ, {ENABLE_ENV:ENABLE_VALUE, RIGHTS_ENV:ENABLE_VALUE}):
