@@ -23,6 +23,7 @@ on:
       - 'coordinator/test_private_feed_recovery.py'
       - 'coordinator/test_capital_demo_private_end_to_end.py'
       - 'coordinator/test_capital_demo_https_transport.py'
+      - 'coordinator/capital_demo_private_get_boundary.py'
       - 'coordinator/test_capital_demo_private_get_boundary.py'
       - 'review-dashboard.js'
       - 'review-dashboard.html'
