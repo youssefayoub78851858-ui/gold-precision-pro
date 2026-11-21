@@ -196,6 +196,101 @@ class XauUsdFeedGateTests(unittest.TestCase):
         self.assertFalse(mismatch["researchEligible"])
         self.assertEqual(mismatch["frames"], {})
 
+    def test_real_shape_crossframe_bid_parity_mismatch_blocks_all_intake(self):
+        # Offline, fabricated 4h BID-price ladder with 16 M15 bars. No
+        # external provider and no actual licensing proof in this test.
+        start = NOW.replace(hour=8, minute=0)
+        quarter = []
+        for i in range(16):
+            opened = start + dt.timedelta(minutes=15 * i)
+            o = 4000 + .2 * i
+            quarter.append({"openTime": timestamp(opened),
+                            "open": o, "high": o + 1,
+                            "low": o - 1, "close": o + .5})
+
+        def aggregate(rows):
+            return {"openTime": rows[0]["openTime"],
+                    "open": rows[0]["open"],
+                    "high": max(r["high"] for r in rows),
+                    "low": min(r["low"] for r in rows),
+                    "close": rows[-1]["close"]}
+
+        hourly = [aggregate(quarter[i:i + 4])
+                  for i in range(0, 16, 4)]
+        h4 = [aggregate(quarter)]
+        data = payload()
+        data["mode"] = "recorded"
+        data["priceBasis"] = "BID"
+        data["frames"] = {
+            "15min": {"candles": quarter,
+                      "expectedOpenTimes": [r["openTime"] for r in quarter]},
+            "1h": {"candles": hourly,
+                   "expectedOpenTimes": [r["openTime"] for r in hourly]},
+            "4h": {"candles": h4,
+                   "expectedOpenTimes": [r["openTime"] for r in h4]}
+        }
+        independent = {tf: list(frame["expectedOpenTimes"])
+                       for tf, frame in data["frames"].items()}
+        policy = SourcePolicy(
+            True, True, True, True, "OFFLINE TEST RIGHTS ONLY",
+            "UNIT_TEST_FIXTURE", "OFFLINE INDEPENDENT TEST SCHEDULE",
+            independent, expected_price_basis="BID",
+            price_basis_reference="OFFLINE TEST BID BASIS"
+        )
+        good = intake_payload(data, NOW, policy)
+        self.assertEqual(good["status"], "ADMISSIBLE_FOR_RESEARCH_ONLY")
+        self.assertEqual(good["signal"], "WAIT")
+        self.assertFalse(good["executable"])
+        self.assertEqual(good["crossFrameParity"]["1h"]["matched"], 4)
+        self.assertEqual(good["crossFrameParity"]["4h"]["matched"], 1)
+        self.assertEqual(good["crossFrameParity"]["1h"]["uncovered"], 0)
+        self.assertEqual(good["crossFrameParity"]["4h"]["uncovered"], 0)
+        self.assertTrue(good["crossFrameParity"]["4h"]["completeHistoryVerified"])
+
+        for interval, target, field in (
+            ("1h", 2, "high"), ("4h", 0, "close")
+        ):
+            tampered = json.loads(json.dumps(data))
+            if field == "high":
+                tampered["frames"][interval]["candles"][target][field] += 5
+            else:
+                tampered["frames"][interval]["candles"][target][field] -= .2
+            wrong = intake_payload(tampered, NOW, policy)
+            self.assertEqual(wrong["status"], "BLOCKED")
+            self.assertFalse(wrong["researchEligible"])
+            self.assertEqual(wrong["signal"], "WAIT")
+            self.assertEqual(wrong["frames"], {})
+            self.assertIsNone(wrong["crossFrameParity"])
+            self.assertIn(
+                f"{interval.upper()}_CLOSED_OHLC_PARITY_MISMATCH",
+                wrong["blockingReasons"]
+            )
+
+        unlicensed = intake_payload(data, NOW, SourcePolicy())
+        self.assertEqual(unlicensed["status"], "BLOCKED")
+        self.assertIsNone(unlicensed["crossFrameParity"])
+        self.assertFalse(unlicensed["researchEligible"])
+
+    def test_partial_m15_coverage_never_claims_full_history_parity(self):
+        data = payload()
+        data["mode"] = "recorded"
+        data["priceBasis"] = "BID"
+        independent = {tf: list(f["expectedOpenTimes"])
+                       for tf, f in data["frames"].items()}
+        policy = SourcePolicy(True, True, True, True,
+                              "OFFLINE TEST RIGHTS", "UNIT_TEST_FIXTURE",
+                              "UNIT TEST SCHEDULE", independent,
+                              expected_price_basis="BID",
+                              price_basis_reference="UNIT TEST BID QUOTE")
+        partial = intake_payload(data, NOW, policy)
+        self.assertEqual(partial["signal"], "WAIT")
+        self.assertEqual(partial["crossFrameParity"]["1h"]["matched"], 0)
+        self.assertEqual(partial["crossFrameParity"]["4h"]["matched"], 0)
+        self.assertEqual(partial["crossFrameParity"]["1h"]["uncovered"], 1)
+        self.assertEqual(partial["crossFrameParity"]["4h"]["uncovered"], 1)
+        self.assertFalse(partial["crossFrameParity"]["1h"]["completeHistoryVerified"])
+        self.assertFalse(partial["crossFrameParity"]["4h"]["completeHistoryVerified"])
+
     def test_signed_envelope_timestamp_hmac_and_nonce_replay(self):
         body, headers = signed(payload())
         guard = ReplayGuard()
