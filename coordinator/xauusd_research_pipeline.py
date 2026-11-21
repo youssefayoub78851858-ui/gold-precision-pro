@@ -51,6 +51,33 @@ def _blocked(status, mode, reason, intake=None):
     }
 
 
+def _fully_covered_m15_parity(intake: dict) -> bool:
+    """A verified provider schedule does not prove all parent OHLC.
+
+    Require every supplied closed H1/H4 bar to have its actual four/sixteen
+    M15 constituents; any missing coverage forces WAIT before V3/r2 or paper.
+    Geometry is NOT a license, a broker native-session attestation, or proof
+    of a sufficiently long/forward-tested history.
+    """
+    parity = intake.get("crossFrameParity")
+    if not isinstance(parity, dict) or set(parity) != {"1h", "4h"}:
+        return False
+    for timeframe in ("1h", "4h"):
+        item = parity.get(timeframe)
+        if (not isinstance(item, dict)
+                or type(item.get("matched")) is not int
+                or item["matched"] < 1
+                or type(item.get("uncovered")) is not int
+                or item["uncovered"] != 0
+                or type(item.get("mismatched")) is not int
+                or item["mismatched"] != 0
+                or item.get("allProvidedParentBarsCovered") is not True
+                or item.get("fullMarketHistoryVerified") is not False
+                or item.get("nativeBrokerSessionVerified") is not False):
+            return False
+    return True
+
+
 def run_research_pipeline(payload: dict, as_of: dt.datetime, policy: SourcePolicy,
                           context: dict, *, allow_synthetic_simulation: bool = False) -> dict:
     """Validate closed bars, call V3/r2 and diagnostics, and expose paper input safely.
@@ -74,6 +101,12 @@ def run_research_pipeline(payload: dict, as_of: dt.datetime, policy: SourcePolic
                         "Synthetic simulation requires an explicit test-process environment flag", intake)
     if not synthetic and not intake["researchEligible"]:
         return _blocked("WAIT_SOURCE_NOT_ELIGIBLE", mode, "Source rights or entitlement are not verified", intake)
+    if not synthetic and not _fully_covered_m15_parity(intake):
+        return _blocked(
+            "WAIT_CROSS_FRAME_PARITY_INCOMPLETE", mode,
+            "Closed H1/H4 bars require all exact M15 constituents before research",
+            # Do not forward a partial provider packet to either engine.
+            intake)
     if not isinstance(context, dict):
         return _blocked("WAIT_CONTEXT_MISSING", mode, "Engine evidence context is unavailable", intake)
 
