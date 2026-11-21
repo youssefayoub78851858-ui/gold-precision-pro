@@ -71,6 +71,19 @@ async function main(){
   assert(page.body.includes("موافقة تخزين بيانات Render معلّقة"));
   assert(page.body.includes("WAIT"));
   assert(!page.body.includes("MONITOR_READONLY_TOKEN"));
+  // The exact link shared with mobile users MUST NOT land on /ultimate.
+  // HTTP 302 is deliberate: browser URL then visibly becomes the new page.
+  const home=await request("/");
+  assert.equal(home.status,302);
+  assert.equal(home.headers.location,"/review-dashboard.html");
+  assert.equal(home.headers["cache-control"],"no-store");
+  assert.equal(home.headers["referrer-policy"],"no-referrer");
+  assert(!home.body.includes("biquote-mobile-ui.js"));
+  // Query strings, especially accidental access tokens, are not forwarded.
+  const rootWithQuery=await request("/?token=SECRET_MUST_NOT_LEAK");
+  assert.equal(rootWithQuery.status,302);
+  assert.equal(rootWithQuery.headers.location,"/review-dashboard.html");
+  assert(!JSON.stringify(rootWithQuery).includes("SECRET_MUST_NOT_LEAK"));
   const alias=await request("/review-dashboard");
   assert.equal(alias.status,200);
   assert(alias.body.includes("Gold Precision Pro Ultimate"));
@@ -115,7 +128,7 @@ async function main(){
   const old=await request("/ultimate");
   assert.equal(old.status,200);
   assert(old.body.includes("biquote-mobile-ui.js"));
-  console.log("PASS local review mobile page served by real demo process, no-store CSP, old Ultimate intact, POST 405, no external calls or orders");
+  console.log("PASS home redirects to compact mobile dashboard, explicit /ultimate preserved, viewer cookie remains private, no-store CSP, POST 405, no broker orders");
  }finally{child.kill("SIGTERM");}
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});
