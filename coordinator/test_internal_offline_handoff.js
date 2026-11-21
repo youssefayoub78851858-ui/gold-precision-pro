@@ -25,6 +25,20 @@ a.equal(x.mode,"GOLD_INTERNAL_OFFLINE_HANDOFF_V1");
 a.equal(x.status,"OFFLINE_INTERFACES_CHECKED_EXTERNAL_EVIDENCE_PENDING");
 a.equal(x.internalOfflineContractsChecked,true);
 a.equal(x.internalCheckCount,6);
+a.equal(x.releaseAudit.mode,"GOLD_PRELICENSE_RELEASE_AUDIT_V1");
+a.equal(x.releaseAudit.status,"LOCAL_INTEGRATION_CONTRACTS_VALIDATED_ONLY");
+a.equal(x.releaseAudit.internalSoftwareContractsChecked,6);
+a.equal(x.releaseAudit.actualCIPassAttestedByRuntime,false);
+a.equal(x.releaseAudit.prelicenseOperationalDrillAttestedByRuntime,false);
+a.equal(x.releaseAudit.externalEvidenceVerifiedCount,0);
+a.equal(x.releaseAudit.externalEvidenceRequiredCount,4);
+a.equal(x.releaseAudit.externalEvidenceRequired.length,4);
+a.equal(x.releaseAudit.readyForBuySell,false);
+a.equal(x.releaseAudit.marketDataMayBeActivated,false);
+a.equal(x.releaseAudit.readyForPaperExecution,false);
+a.equal(x.releaseAudit.readyForLiveExecution,false);
+a.equal(x.releaseAudit.signal,"WAIT");
+a.equal(x.releaseAudit.executable,false);
 a.equal(Object.keys(x.checks).length,6);
 a(Object.values(x.checks).every(v=>v==="OFFLINE_CONTRACT_COMPATIBLE"));
 a.equal(x.stageStatus.finalProvider,"DEFERRED_NOT_CONNECTED");
@@ -66,10 +80,16 @@ for(const [name,mutate] of mutations){
  const r=combine(spoof);safe(r);
  a.equal(r.status,"OFFLINE_INTEGRATION_CONTRACT_FAILED",name);
  a.equal(r.internalOfflineContractsChecked,false,name);
+ a.equal(r.releaseAudit.status,"INTERNAL_INTEGRATION_RECHECK_REQUIRED",name);
+ a.equal(r.releaseAudit.internalSoftwareContractsChecked,0,name);
+ a.equal(r.releaseAudit.externalEvidenceVerifiedCount,0,name);
+ a.equal(r.releaseAudit.readyForBuySell,false,name);
  a(Object.values(r.checks).includes("BLOCKED_CONTRACT_UNVERIFIED"),name);
 }
 for(const v of [null,{},[],{signal:"BUY"},true]){
  const y=combine(v);safe(y);
  a.equal(y.internalOfflineContractsChecked,false);
+ a.equal(y.releaseAudit.internalSoftwareContractsChecked,0);
+ a.equal(y.releaseAudit.readyForBuySell,false);
 }
 console.log("PASS unified offline XAUUSD readiness, V3 signal, macro clocks and paper holdout; no provider/payments/trading");
