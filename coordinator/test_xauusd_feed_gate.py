@@ -245,7 +245,9 @@ class XauUsdFeedGateTests(unittest.TestCase):
         self.assertEqual(good["crossFrameParity"]["4h"]["matched"], 1)
         self.assertEqual(good["crossFrameParity"]["1h"]["uncovered"], 0)
         self.assertEqual(good["crossFrameParity"]["4h"]["uncovered"], 0)
-        self.assertTrue(good["crossFrameParity"]["4h"]["completeHistoryVerified"])
+        self.assertTrue(good["crossFrameParity"]["4h"]["allProvidedParentBarsCovered"])
+        self.assertFalse(good["crossFrameParity"]["4h"]["fullMarketHistoryVerified"])
+        self.assertFalse(good["crossFrameParity"]["4h"]["nativeBrokerSessionVerified"])
 
         for interval, target, field in (
             ("1h", 2, "high"), ("4h", 0, "close")
@@ -288,8 +290,8 @@ class XauUsdFeedGateTests(unittest.TestCase):
         self.assertEqual(partial["crossFrameParity"]["4h"]["matched"], 0)
         self.assertEqual(partial["crossFrameParity"]["1h"]["uncovered"], 1)
         self.assertEqual(partial["crossFrameParity"]["4h"]["uncovered"], 1)
-        self.assertFalse(partial["crossFrameParity"]["1h"]["completeHistoryVerified"])
-        self.assertFalse(partial["crossFrameParity"]["4h"]["completeHistoryVerified"])
+        self.assertFalse(partial["crossFrameParity"]["1h"]["allProvidedParentBarsCovered"])
+        self.assertFalse(partial["crossFrameParity"]["4h"]["allProvidedParentBarsCovered"])
 
     def test_signed_envelope_timestamp_hmac_and_nonce_replay(self):
         body, headers = signed(payload())
