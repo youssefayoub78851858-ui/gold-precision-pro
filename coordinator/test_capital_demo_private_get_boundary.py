@@ -221,6 +221,45 @@ class PrivateDemoGetTests(unittest.TestCase):
                 self.safe(out);self.assertEqual(out["status"],"BLOCKED")
                 self.assertEqual(delivered,[])
 
+    def test_explicit_archive_refusal_and_unexpected_exception_fail_closed(self):
+        calls = []
+        with patch.dict(os.environ, {
+            ENABLE_ENV: ENABLE_VALUE, RIGHTS_ENV: ENABLE_VALUE
+        }):
+            refused = self.gate(
+                transport=fake_transport(calls),
+                deliver_private=lambda _: False
+            )
+            self.safe(refused)
+            self.assertEqual(refused["status"], "BLOCKED")
+            self.assertEqual(refused["reason"], "PRIVATE_DEMO_ARCHIVE_REFUSED_PAGE")
+            self.assertEqual(refused["pageRowsChecked"], 0)
+
+            # Unanticipated provider/sink failures are reduced to fixed,
+            # non-sensitive error codes, not leaked into logs or UI.
+            failed = self.gate(
+                transport=fake_transport(calls),
+                deliver_private=lambda _: (_ for _ in ()).throw(
+                    RuntimeError("SECRET_PROVIDER_TOKEN_IN_EXCEPTION"))
+            )
+            self.safe(failed)
+            self.assertEqual(failed["status"], "BLOCKED")
+            self.assertEqual(
+                failed["reason"], "PRIVATE_DEMO_TRANSPORT_OR_ARCHIVE_ERROR"
+            )
+            self.assertNotIn("SECRET_PROVIDER_TOKEN", str(failed))
+            transport_failed = self.gate(
+                transport=lambda *args: (_ for _ in ()).throw(
+                    RuntimeError("SECRET_TRANSPORT_TOKEN_IN_EXCEPTION")),
+                deliver_private=lambda _: self.fail("must not archive")
+            )
+            self.safe(transport_failed)
+            self.assertEqual(
+                transport_failed["reason"], "PRIVATE_DEMO_TRANSPORT_OR_ARCHIVE_ERROR"
+            )
+            self.assertNotIn("SECRET_TRANSPORT_TOKEN", str(transport_failed))
+        self.assertEqual(len(calls), 2)
+
     def test_transport_failure_does_not_echo_or_approve(self):
         with patch.dict(os.environ, {ENABLE_ENV:ENABLE_VALUE, RIGHTS_ENV:ENABLE_VALUE}):
             out=self.gate(
