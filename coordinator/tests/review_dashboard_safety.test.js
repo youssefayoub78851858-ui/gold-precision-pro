@@ -3,7 +3,7 @@
 // No provider requests, credentials, orders or external dependencies.
 const test=require("node:test");
 const assert=require("node:assert/strict");
-const {validateChart,validateSnapshot,localLatestParity,researchWatch,technicalObservations}=
+const {validateChart,validateSnapshot,localLatestParity,researchWatch,technicalObservations,continuityReport}=
  require("../../review-dashboard.js");
 const W={M15:900000,H1:3600000,H4:14400000};
 function chart(at){
@@ -269,4 +269,34 @@ test("automatic mobile display shows a countdown but never implies a live quote"
  assert.ok(js.includes('viewerReady?"فحص السعر":"محاولة اتصال"'));
  assert.ok(!js.includes("localStorage"));
  assert.ok(!js.includes("executable:true"));
+});
+
+test("UTC continuity reports private CLOSED bars without fabricating gaps",()=>{
+ const clean=continuityReport(validateChart(chart(now),now));
+ for(const tf of Object.keys(W)){
+  assert.equal(clean[tf].observed,24);
+  assert.equal(clean[tf].utcTail,24);
+  assert.equal(clean[tf].utcGapPairs,0);
+ }
+ const missing=chart(now);
+ missing.H1.splice(3,1);missing.H4.splice(16,1);
+ const result=continuityReport(validateChart(missing,now));
+ assert.equal(result.H1.utcTail,20);
+ assert.equal(result.H1.meets21Utc,false);
+ assert.equal(result.H1.utcGapPairs,1);
+ assert.equal(result.H1.unobservedUtcSlots,1);
+ assert.equal(result.H4.utcTail,7);
+ assert.equal(result.M15.utcGapPairs,0);
+});
+test("UTC continuity fails closed on malformed inputs and UI clears private results",()=>{
+ const c=validateChart(chart(now),now);c.H1[5].t=c.H1[4].t;
+ assert.equal(continuityReport(c),null);
+ const fs=require("node:fs"),path=require("node:path");
+ const html=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.html"),"utf8");
+ const script=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.js"),"utf8");
+ assert.ok(html.includes('id="continuity-details"'));
+ assert.ok(!html.includes('id="continuity-details" open'));
+ assert.ok(script.includes("resetContinuity();"));
+ assert.ok(script.includes("renderContinuity(verified);"));
+ assert.ok(!script.includes("localStorage"));
 });

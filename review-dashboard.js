@@ -273,10 +273,40 @@
   return out;
  }
 
+
+ // Closed PRIVATE OHLC only. UTC gaps may be weekends/market pauses.
+ // This is display evidence, not verification of a broker session calendar.
+ function continuityReport(chart){
+  if(!chart||typeof chart!=="object"||Array.isArray(chart))return null;
+  const result={};
+  for(const tf of TF){
+   const rows=chart[tf],width=WIDTH[tf];
+   if(!Array.isArray(rows)||rows.length<2||rows.length>MAX)return null;
+   let prev=-Infinity,tail=0,pairs=0,slots=0;
+   for(const x of rows){
+    if(!x||!Number.isFinite(x.t)||x.t%width!==0||x.t<=prev||
+       !["open","high","low","close"].every(k=>finite(x[k]))||
+       x.low>Math.min(x.open,x.close)||x.high<Math.max(x.open,x.close)||
+       x.low>x.high)return null;
+    if(prev===-Infinity)tail=1;
+    else{
+     const delta=(x.t-prev)/width;
+     if(!Number.isSafeInteger(delta)||delta<1)return null;
+     if(delta>1){pairs++;slots+=delta-1;tail=1;}else tail++;
+    }
+    prev=x.t;
+   }
+   if(!Number.isSafeInteger(slots))return null;
+   result[tf]={observed:rows.length,utcTail:tail,utcGapPairs:pairs,
+    unobservedUtcSlots:slots,meets21Utc:tail>=21};
+  }
+  return result;
+ }
+
  // Pure validators are exposed only to local Node offline tests.
  if(typeof module!=="undefined"&&module.exports)
   module.exports={validateChart,validateSnapshot,localLatestParity,
-    localCoveredParityAudit,researchWatch,vendorH4SessionLabel,technicalObservations};
+    localCoveredParityAudit,researchWatch,vendorH4SessionLabel,technicalObservations,continuityReport};
  if(typeof document==="undefined")return;
  const $=id=>document.getElementById(id);
  let frame="M15",state=null,pending=false,expiry=0;
@@ -305,6 +335,7 @@
   $("source").textContent="لا أسعار عامة؛ افتح جلسة المشاهدة الخاصة أولاً";
   $("reason").textContent=message||"WAIT — لا توجد توصية قابلة للتنفيذ";
   $("quality-status").textContent="WAIT — البيانات غير مؤهّلة";
+  resetContinuity();
   $("data-state").textContent="● غير متصل / غير متحقق";
   resetTechnical();
   $("trend-status").textContent="غير متاح";
@@ -316,6 +347,33 @@
   blank("WAIT — لا توجد شموع خاصة موثقة");
  }
  
+
+ function resetContinuity(){
+  for(const tf of TF)
+   $(tf.toLowerCase()+"-continuity").textContent=tf+" · بانتظار شموع مغلقة متحققة";
+  $("continuity-parity").textContent="تطابق محلي: غير متاح";
+  $("continuity-note").textContent=
+   "فجوات توقيت UTC قد تشمل توقف السوق، وليست بالضرورة بيانات مفقودة.";
+ }
+ function renderContinuity(result){
+  const aud=continuityReport(result.chart);
+  const parity=localCoveredParityAudit(result.chart);
+  if(!aud||!parity){resetContinuity();return;}
+  for(const tf of TF){
+   const x=aud[tf];
+   $(tf.toLowerCase()+"-continuity").textContent=
+    tf+" · متتابعة UTC "+Math.min(21,x.utcTail)+"/21"+
+    " · فجوات "+x.utcGapPairs+
+    " · خانات غير مرصودة "+x.unobservedUtcSlots;
+  }
+  $("continuity-parity").textContent=
+   "تطابق محدود: H1 "+parity.H1.fullyCovered+" مجموعات / "+
+   parity.H1.disagreed+" اختلاف · H4 "+parity.H4.fullyCovered+
+   " مجموعات / "+parity.H4.disagreed+" اختلاف";
+  $("continuity-note").textContent=
+   "فحص 48 شمعة مغلقة فقط؛ عطلات السوق قد تسبب الفجوات، وجدول MT5 غير مثبت. WAIT دائماً.";
+ }
+
  function resetTechnical(){
   $("technical-short").textContent="غير متاح";
   $("technical-note").textContent="لا قراءة فنية قبل جلسة خاصة وبيانات مغلقة حديثة.";
@@ -369,6 +427,7 @@
   $("reason").textContent=message||"WAIT — آخر لقطة قديمة؛ فحص تلقائي مستمر";
   $("technical-note").textContent=
     "المؤشرات المعروضة تاريخية فقط من شموع مغلقة؛ ليست توصية تداول.";
+  $("continuity-note").textContent="فحص آخر لقطة تاريخية، وليس تحققاً مباشراً.";
   $("auto-state").textContent="تلقائي · بيانات قديمة";
   updateAutoLabel();
   return true;
@@ -504,6 +563,7 @@
    $("data-state").textContent="● BiQuote · مشاهدة خاصة متحققة مؤقتاً";
    $("auto-state").textContent="تلقائي كل 10 ثوانٍ · الصفحة مفتوحة";
    renderTechnical(verified.chart);
+   renderContinuity(verified);
    $("trend-status").textContent="غير مؤهل لإشارة";
    $("watch-status").textContent="WAIT · مراقبة";
    $("parity-status").textContent=localLatestParity(verified.chart)

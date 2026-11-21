@@ -210,6 +210,7 @@ const nodes=Object.fromEntries(["candles","price","timestamp","source",
  "reason","decision","quality-status","chart-status","refresh",
  "data-state","trend-status","watch-status","parity-status",
  "vendor-h4-session","technical-short","technical-note","auto-state",
+ "m15-continuity","h1-continuity","h4-continuity","continuity-parity","continuity-note",
  ...["m15","h1","h4"].flatMap(tf=>
    ["technical","ema","rsi","atr","technical-quality"].map(s=>tf+"-"+s))
  ].map(k=>[k,new Node()]));
