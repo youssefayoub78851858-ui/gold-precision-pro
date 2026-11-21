@@ -38,7 +38,7 @@ function stageOfficialContext(macro,h15,asOfUTC){
  // not contain observations or publication timestamps from after asOfUTC.
  // A stored or caller-supplied feed payload cannot attest first availability.
  const observationDay=h15.observedDate;
- const observedMs=typeof observationDay==="string"&&/^\\d{4}-\\d{2}-\\d{2}$/.test(observationDay)
+ const observedMs=typeof observationDay==="string"&&/^\d{4}-\\d{2}-\\d{2}$/.test(observationDay)
   ?Date.parse(observationDay+"T00:00:00.000Z"):NaN;
  const validDay=Number.isFinite(observedMs)&&
   new Date(observedMs).toISOString().slice(0,10)===observationDay&&
