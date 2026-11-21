@@ -240,6 +240,39 @@ test("main Render review UI folds indicators and clears private metrics",()=>{
  assert.ok(!js.includes("order_send("));
 });
 
+test("six internal offline modules appear on mobile without accepting forged live approvals",()=>{
+ const {validateInternalHandoff}=require("../../review-dashboard.js");
+ const {inspect}=require("../internal_offline_handoff");
+ const packet=inspect();
+ assert.equal(packet.status,"OFFLINE_INTERFACES_CHECKED_EXTERNAL_EVIDENCE_PENDING");
+ assert.deepEqual(validateInternalHandoff(packet),{
+  internalOfflineContractsChecked:true,signal:"WAIT",tradeReady:false
+ });
+ for(const fake of [
+  {...packet,executable:true},
+  {...packet,signal:"BUY"},
+  {...packet,paperOrdersAllowed:true},
+  {...packet,providerConnectionEnabled:true},
+  {...packet,independentSourceRightsVerified:true},
+  {...packet,externalProviderDecisionDeferredToLastStage:false},
+  {...packet,providerRequestsMade:1},
+  {...packet,paymentsMade:1},
+  {...packet,entry:4000},
+  {...packet,checks:{...packet.checks,sourceRequirements:"LIVE"}},
+  {...packet,stageStatus:{...packet.stageStatus,finalProvider:"CONNECTED"}}
+ ]) assert.equal(validateInternalHandoff(fake),null);
+ const fs=require("node:fs"),path=require("node:path");
+ const html=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.html"),"utf8");
+ const js=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.js"),"utf8");
+ assert.ok(html.includes('id="internal-handoff"'));
+ for(const field of ["src","candles","analysis","macro","paper","provider","note"])
+  assert.ok(html.includes('id="internal-gate-'+field+'"'));
+ assert.ok(js.includes('"/api/v3/ultimate/internal-handoff"'));
+ assert.ok(js.includes('validateInternalHandoff(await r.json())'));
+ assert.ok(js.includes('void loadInternalHandoff()'));
+ assert.ok(js.includes('"WAIT — ربط داخلي غير متحقق حالياً"'));
+});
+
 test("session-checked foreground auto refresh preserves stale history but not tradability",()=>{
  const fs=require("node:fs"),path=require("node:path");
  const js=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.js"),"utf8");
