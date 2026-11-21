@@ -20,6 +20,21 @@ const badFile=inspect({authenticated:true,databasePath:"/not-an-existing-db-2039
 a.equal(badFile.statusCode,503);
 a.equal(badFile.body.status,"PRIVATE_PAPER_JOURNAL_UNVERIFIED");
 a.equal(badFile.body.signal,"WAIT");
+const fs=require("node:fs"),os=require("node:os"),path=require("node:path");
+const tmp=fs.mkdtempSync(path.join(os.tmpdir(),"paper-report-test-"));
+try {
+ const ephemeral=path.join(tmp,"fabricated.sqlite3");
+ fs.writeFileSync(ephemeral,"not-a-journal");
+ const denied=inspect({
+  authenticated:true,databasePath:ephemeral,mountRoot:tmp
+ });
+ a.equal(denied.statusCode,503);
+ a.equal(denied.body.status,"PRIVATE_PAPER_JOURNAL_UNVERIFIED");
+ a.equal(denied.body.privateJournalConnected,false);
+ a.equal(denied.body.netModeledUsd,null);
+ a.equal(denied.body.signal,"WAIT");
+}finally{fs.rmSync(tmp,{recursive:true,force:true});}
+
 const missingStats={
  closedTrades:0,netModeledUsd:null,modeledCostsUsd:null,
  netDoubleCostStressUsd:null,averageNetR:null,winRate:null,
