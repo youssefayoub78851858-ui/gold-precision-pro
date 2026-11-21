@@ -16,6 +16,7 @@ const {evaluate:paperAudit}=require("./prospective_paper_holdout_audit");
 const {inspect:paperTerminal}=require("./paper-terminal-inspect");
 const {sample:paperFixture}=require("../paper-terminal-core");
 const {reviewFourStages}=require("./ultimate_four_stage_review");
+const {assess:releaseAudit}=require("./prelicense_release_audit");
 const syntheticFixture=require("./fixtures/ultimate-synthetic.json");
 
 const BASE=Object.freeze({
@@ -113,7 +114,7 @@ function combine(input){
       x.signalEngine.profitabilityProven===false
   };
   const pass=Object.values(checks).every(Boolean);
-  return {...BASE,
+  const report={...BASE,
     status:pass?"OFFLINE_INTERFACES_CHECKED_EXTERNAL_EVIDENCE_PENDING":
                 "OFFLINE_INTEGRATION_CONTRACT_FAILED",
     internalOfflineContractsChecked:pass,
@@ -132,6 +133,7 @@ function combine(input){
     signalCandidate:null,entry:null,stopLoss:null,targets:null,
     warning:"Offline interface compatibility, not successful CI or trading readiness."
   };
+  return {...report,releaseAudit:releaseAudit(report)};
 }
 function inspect(){
   try{return combine(collectOfflineReports());}
