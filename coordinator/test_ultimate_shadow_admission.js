@@ -26,6 +26,20 @@ a(s.blockers.includes('INDEPENDENT_LICENSE_AND_SOURCE_AVAILABILITY_ATTESTATION_R
 a(s.blockers.includes('GC_TAPE_VS_FUTURES_CONTRACT_NOT_MATCHED'));
 a(s.blockers.some(x=>x.endsWith('_RECORDED_PROVENANCE_UNVERIFIED')));
 a.equal(s.predictedWinRate,null);a.equal(s.providerRequestsMade,0);
+// Cross-timeframe parity is an explicit shadow veto, never a BUY/SELL vote.
+const {audit}=require('./ultimate_shadow_admission');
+for(const reason of ['H1_M15_CLOSED_OHLC_PARITY_MISMATCH',
+ 'H4_M15_CLOSED_OHLC_PARITY_MISMATCH',
+ 'H1_M15_PARITY_NOT_FULLY_COVERED',
+ 'H4_M15_PARITY_NOT_FULLY_COVERED']){
+ const injected={...result.qualityDiagnostics,
+  warnings:[...(result.qualityDiagnostics.warnings||[]),reason]};
+ const diagnosticOnly=audit(base,core,injected);
+ a(diagnosticOnly.blockers.includes(reason),reason);
+ a.equal(diagnosticOnly.signal,'WAIT');
+ a.equal(diagnosticOnly.paperOrdersAllowed,false);
+ a.equal(diagnosticOnly.liveAdmissible,false);
+}
 const fakeBinance=structuredClone(base);
 fakeBinance.binanceXauusdtResearch={
  signal:'BUY',licensed:true,delta:1e100,price:1e100,source:'Binance',
