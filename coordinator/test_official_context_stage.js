@@ -70,6 +70,36 @@ function assertSafe(x){
  assert.equal(impossible.calendar.length,2);
  // Date.parse can normalize invalid calendar dates; our UTC parser must not.
  assert.throws(()=>stageOfficialContext(macro(),daily(),"2026-02-30T17:00:00.000Z"),/Explicit UTC/);
+ // H.15 is daily context only, but future, invalid, stale or unknown-to-us
+ // observations must never be shown as data known at decision time.
+ const knownDaily={...daily(),publicationTimestampRecorded:true,
+   publicationTimestampsUTC:["2026-11-12T15:00:00.000Z","2026-11-12T15:00:00.000Z"]};
+ const acceptedDaily=stageOfficialContext(macro(),knownDaily,now);
+ assertSafe(acceptedDaily);
+ assert.equal(acceptedDaily.rates.length,2);
+ const invalidDaily=[
+   ["future_observation",{...daily(),observedDate:"2026-11-13"}],
+   ["invalid_calendar_day",{...daily(),observedDate:"2026-02-30"}],
+   ["stale_observation",{...daily(),observedDate:"2026-10-01"}],
+   ["future_publication",{...knownDaily(),publicationTimestampsUTC:[
+     "2026-11-12T15:00:00.000Z","2026-11-12T18:00:00.000Z"]}],
+   ["unrecorded_claim",{...knownDaily(),publicationTimestampsUTC:[
+     "2026-11-12T15:00:00.000Z",null]}],
+   ["malformed_publication",{...knownDaily(),publicationTimestampsUTC:[
+     "2026-11-12T15:00:00.000Z","2026-02-30T01:00:00.000Z"]}],
+   ["future_optional_publication",{...daily(),publicationTimestampRecorded:false,
+      publicationTimestampsUTC:[null,"2026-11-12T18:00:00.000Z"]}],
+   ["missing_rate",{...daily(),rates:[daily().rates[0]]}],
+   ["duplicate_rate",{...daily(),rates:[daily().rates[0],daily().rates[0]]}],
+   ["bad_rate",{...daily(),rates:[{series:"DGS2",latestYieldPct:31},daily().rates[1]]}],
+ ];
+ for(const [name,snapshot] of invalidDaily){
+   const blocked=stageOfficialContext(macro(),snapshot,now);
+   assertSafe(blocked);
+   assert.equal(blocked.rates.length,0,name);
+   assert.equal(blocked.sourceStatus.h15,"UNAVAILABLE",name);
+   assert.ok(blocked.blockingReasons.includes("H15_DAILY_CONTEXT_UNAVAILABLE_OR_FALLBACK"),name);
+ }
  const unavailable=stageOfficialContext(macro(),{...daily(),sourceStatus:"STORED_FALLBACK"},now);
  assertSafe(unavailable);
  assert.equal(unavailable.rates.length,0);
