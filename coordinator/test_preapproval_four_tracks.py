@@ -33,7 +33,7 @@ class PreapprovalFourTracksTests(unittest.TestCase):
         for k in ("DXY","GC_TRADES","GC_DEPTH","XAUUSD_BBO"):
             self.assertFalse(v["layers"][k]["liveReady"])
             self.assertFalse(v["layers"][k]["researchAdmitted"])
-        self.assertEqual(v["providerRequestsMade"], 0)
+        self.assertEqual(v["sourceRequestsMade"], 0)
         self.assertEqual(v["payments"], 0)
 
     def test_paper_cost_stress_rises_and_still_never_enables_orders(self):
