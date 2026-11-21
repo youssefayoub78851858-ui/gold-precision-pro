@@ -54,6 +54,14 @@ on:
       - 'coordinator/test_independent_context_timing_preflight.js'
       - 'coordinator/prospective_paper_holdout_audit.js'
       - 'coordinator/test_prospective_paper_holdout_audit.js'
+      - 'coordinator/historical_accuracy_evidence_audit.js'
+      - 'coordinator/test_historical_accuracy_evidence_audit.js'
+      - 'research/recorded/manifest.json'
+      - 'research/recorded/2026-09-bid.json'
+      - 'research/recorded/2026-10-bid.json'
+      - 'research/results/ultimate-walkforward.json'
+      - 'research/results/ultimate-v2-archive-comparison.json'
+      - 'research/ultimate-prospective-plan.json'
       - 'coordinator/biquote_pre_signal_milestones.js'
       - 'coordinator/test_biquote_pre_signal_milestones.js'
       - 'coordinator/biquote_session_h4_continuity_audit.js'
@@ -97,6 +105,8 @@ jobs:
           node coordinator/test_biquote_render_log_export_readonly.js
       - name: External DXY GC yields calendar and news point-in-time clocks (offline only)
         run: node coordinator/test_independent_context_timing_preflight.js
+      - name: Existing historical BID archive integrity and no fabricated independent accuracy
+        run: node coordinator/test_historical_accuracy_evidence_audit.js
       - name: Prospective paper outcome arithmetic, modeled costs, no-trade approval (offline only)
         run: node coordinator/test_prospective_paper_holdout_audit.js
       - name: Single-snapshot capacity, authenticated VIEWER WATCH and weekend-only H4 diagnostics (all fail-closed)
