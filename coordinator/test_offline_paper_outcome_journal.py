@@ -152,7 +152,7 @@ class OfflinePaperJournalTests(unittest.TestCase):
             self.j.db.execute("DELETE FROM journal")
         with self.assertRaises(sqlite3.IntegrityError):
             self.j.db.execute("UPDATE settings SET freeze_utc=?", (stamp(2),))
-        self.j.db.execute("DROP TRIGGER prevent_journal_update")
+        self.j.db.execute("DROP TRIGGER no_journal_update")
         self.j.db.execute("UPDATE journal SET kind='PAPER_CLOSED'")
         with self.assertRaises(ValueError):
             self.j.verify()
