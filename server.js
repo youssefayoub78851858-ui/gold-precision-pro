@@ -103,6 +103,32 @@ const server = http.createServer(async (req, res) => {
       return send(res,503,{signal:"WAIT",executable:false});
     return send(res,200,out);
   }
+  // DEMO-ONLY integrated offline readiness, uses current code modules but
+  // never polls markets, checks account secrets, trades, or grants data rights.
+  // The actual provider handoff remains an explicitly deferred final stage.
+  if(paperPath==="/api/v3/ultimate/internal-handoff"){
+    if(!DEMO_MODE)return send(res,404,{signal:"WAIT",executable:false});
+    if(req.method!=="GET")return send(res,405,{signal:"WAIT",executable:false});
+    const fallback={signal:"WAIT",executable:false,
+      paperOrdersAllowed:false,liveOrdersAllowed:false,
+      providerRequestsMade:0,brokerOrdersSent:0};
+    try{
+      const out=require("./coordinator/internal_offline_handoff").inspect();
+      if(out.signal!=="WAIT"||out.executable!==false||
+         out.paperOrdersAllowed!==false||out.liveOrdersAllowed!==false||
+         out.providerRequestsMade!==0||out.brokerOrdersSent!==0||
+         out.providerConnectionEnabled!==false)
+        throw Error("UNSAFE_OFFLINE_HANDOFF");
+      res.writeHead(200,{"Content-Type":"application/json; charset=utf-8",
+        "Cache-Control":"no-store","X-Content-Type-Options":"nosniff",
+        "Referrer-Policy":"no-referrer"});
+      return res.end(JSON.stringify(out));
+    }catch(_error){
+      res.writeHead(503,{"Content-Type":"application/json; charset=utf-8",
+        "Cache-Control":"no-store","X-Content-Type-Options":"nosniff"});
+      return res.end(JSON.stringify({...fallback,status:"OFFLINE_HANDOFF_UNAVAILABLE"}));
+    }
+  }
   if(paperPath==="/api/v3/ultimate/biquote-viewer-status"){
     if(!DEMO_MODE)return send(res,404,{signal:"WAIT",executable:false});
     if(req.method!=="GET")return send(res,405,{signal:"WAIT",executable:false});
