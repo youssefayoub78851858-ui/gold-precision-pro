@@ -3,7 +3,7 @@
 // No provider requests, credentials, orders or external dependencies.
 const test=require("node:test");
 const assert=require("node:assert/strict");
-const {validateChart,validateSnapshot,localLatestParity,researchWatch,technicalObservations,continuityReport,validateDailyH15}=
+const {validateChart,validateSnapshot,localLatestParity,researchWatch,technicalObservations,continuityReport,validateDailyH15,validateOfficialMacro}=
  require("../../review-dashboard.js");
 const W={M15:900000,H1:3600000,H4:14400000};
 function chart(at){
@@ -335,4 +335,35 @@ test("mobile H15 display is decoupled from private prices and trading votes",()=
  for(const id of ["us02y-daily","us10y-daily","h15-daily-note"])
   assert.ok(html.includes('id="'+id+'"'));
  assert.ok(!script.includes("order_send("));
+});
+
+test("official Fed and BLS metadata are bounded, authentic and cannot enable signals",()=>{
+ const at=Date.parse("2026-11-21T08:30:00Z");
+ const a={mode:"OFFICIAL_MACRO_REVIEW",signal:"WAIT",executable:false,
+  liveData:false,trading:"disabled",automaticTrading:false,
+  firstAvailabilityVerified:false,marketDataRequests:0,
+  fedSource:"https://www.federalreserve.gov/feeds/press_monetary.xml",
+  blsSource:"https://www.bls.gov/schedule/news_release/bls.ics",
+  checkedUTC:"2026-11-21T08:29:00.000Z",
+  feeds:{fed:"OFFICIAL_REFRESHED",bls:"OFFICIAL_REFRESHED"},
+  headlines:[{title:"Fed statement",source:"Federal Reserve",
+   eventType:"RELEASED_POLICY_HEADLINE",publishedUTC:"2026-11-20T18:00:00.000Z",
+   url:"https://www.federalreserve.gov/newsevents/pressreleases/monetary20261120a.htm"}],
+  calendar:[{kind:"CPI",scheduledUTC:"2026-11-25T13:30:00.000Z",
+   localTimezone:"America/New_York",source:"U.S. Bureau of Labor Statistics",
+   eventType:"SCHEDULED_NOT_RELEASED"}]};
+ const v=validateOfficialMacro(a,at);
+ assert.equal(v.signal,"WAIT");assert.equal(v.executable,false);
+ assert.equal(v.latestFed.title,"Fed statement");assert.equal(v.nextBls.kind,"CPI");
+ for(const bad of [
+  {...a,signal:"BUY"},{...a,executable:true},{...a,automaticTrading:true},
+  {...a,checkedUTC:"2026-11-21T09:00:00.000Z"},
+  {...a,checkedUTC:"2026-11-20T00:00:00.000Z"},
+  {...a,headlines:[{...a.headlines[0],url:"https://evil.example/x"}]},
+  {...a,calendar:[{...a.calendar[0],scheduledUTC:"2026-11-20T13:30:00.000Z"}]},
+  {...a,headlines:[{...a.headlines[0],publishedUTC:"2026-11-21T09:00:00.000Z"}]}
+ ])assert.equal(validateOfficialMacro(bad,at),null);
+ const partial=validateOfficialMacro({...a,feeds:{fed:"UNAVAILABLE",bls:"UNAVAILABLE"},
+  headlines:[],calendar:[]},at);
+ assert.equal(partial.latestFed,null);assert.equal(partial.nextBls,null);
 });

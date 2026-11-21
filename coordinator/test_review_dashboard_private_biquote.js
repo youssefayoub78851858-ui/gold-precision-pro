@@ -212,6 +212,7 @@ const nodes=Object.fromEntries(["candles","price","timestamp","source",
  "vendor-h4-session","technical-short","technical-note","auto-state",
  "m15-continuity","h1-continuity","h4-continuity","continuity-parity","continuity-note",
  "us02y-daily","us10y-daily","h15-daily-note",
+ "news-fed-status","news-bls-status","news-sources-note",
  ...["m15","h1","h4"].flatMap(tf=>
    ["technical","ema","rsi","atr","technical-quality"].map(s=>tf+"-"+s))
  ].map(k=>[k,new Node()]));
@@ -367,6 +368,24 @@ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير م�
  const autoCalls=[];
  context.fetch=async(url,options)=>{
   autoCalls.push({url,options});
+  if(url==="/api/v3/ultimate/official-macro")
+   return {status:200,headers:{get:k=>k==="content-type"?
+      "application/json; charset=utf-8":null},json:async()=>({
+       mode:"OFFICIAL_MACRO_REVIEW",signal:"WAIT",executable:false,
+       trading:"disabled",liveData:false,automaticTrading:false,
+       firstAvailabilityVerified:false,marketDataRequests:0,
+       fedSource:"https://www.federalreserve.gov/feeds/press_monetary.xml",
+       blsSource:"https://www.bls.gov/schedule/news_release/bls.ics",
+       checkedUTC:new Date(timeNow).toISOString(),
+       feeds:{fed:"OFFICIAL_REFRESHED",bls:"OFFICIAL_REFRESHED"},
+       headlines:[{title:"Fed synthetic headline",source:"Federal Reserve",
+         eventType:"RELEASED_POLICY_HEADLINE",
+         url:"https://www.federalreserve.gov/newsevents/pressreleases/monetary20261119a.htm",
+         publishedUTC:new Date(timeNow-600000).toISOString()}],
+       calendar:[{kind:"CPI",source:"U.S. Bureau of Labor Statistics",
+         localTimezone:"America/New_York",eventType:"SCHEDULED_NOT_RELEASED",
+         scheduledUTC:new Date(timeNow+86400000).toISOString()}]
+     })};
   if(url==="/api/v3/ultimate/free-context")
    return {status:200,headers:{get:k=>k==="content-type"?
       "application/json; charset=utf-8":null},json:async()=>({
@@ -398,6 +417,9 @@ a.match(nodes["vendor-h4-session"].textContent,/جدول وسيط MT5 غير م�
  a.equal(nodes["us02y-daily"].textContent,"4.67%");
  a.equal(nodes["us10y-daily"].textContent,"5.11%");
  a.match(nodes["h15-daily-note"].textContent,/H.15 يومي/);
+ a.equal(autoCalls.filter(x=>x.url==="/api/v3/ultimate/official-macro").length,1);
+ a.match(nodes["news-fed-status"].textContent,/Fed synthetic headline/);
+ a.match(nodes["news-bls-status"].textContent,/CPI/);
  timeNow=NOW+11000;
  intervalCallback();
  for(let i=0;i<25;i++)await Promise.resolve();

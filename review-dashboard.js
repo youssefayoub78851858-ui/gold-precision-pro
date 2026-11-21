@@ -336,16 +336,65 @@
   }:null;
  }
 
+
+ // Official Fed/BLS release metadata, never geopolitical coverage or trade input.
+ function validateOfficialMacro(d,now){
+  if(!d||d.mode!=="OFFICIAL_MACRO_REVIEW"||d.signal!=="WAIT"||
+     d.executable!==false||d.liveData!==false||d.trading!=="disabled"||
+     d.automaticTrading!==false||d.firstAvailabilityVerified!==false||
+     d.marketDataRequests!==0||
+     d.fedSource!=="https://www.federalreserve.gov/feeds/press_monetary.xml"||
+     d.blsSource!=="https://www.bls.gov/schedule/news_release/bls.ics"||
+     !["OFFICIAL_REFRESHED","UNAVAILABLE"].includes(d.feeds?.fed)||
+     !["OFFICIAL_REFRESHED","UNAVAILABLE"].includes(d.feeds?.bls)||
+     !Array.isArray(d.headlines)||d.headlines.length>6||
+     !Array.isArray(d.calendar)||d.calendar.length>12||
+     typeof d.checkedUTC!=="string")return null;
+  const checked=Date.parse(d.checkedUTC);
+  if(!Number.isFinite(checked)||!Number.isFinite(now)||checked>now+1000||
+     now-checked>40*60000)return null;
+  const when=x=>typeof x==="string"&&Number.isFinite(Date.parse(x))&&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(x);
+  let fed=null,bls=null;
+  if(d.feeds.fed==="OFFICIAL_REFRESHED"){
+   for(const h of d.headlines){
+    if(!h||h.source!=="Federal Reserve"||
+       h.eventType!=="RELEASED_POLICY_HEADLINE"||
+       typeof h.title!=="string"||!h.title.trim()||h.title.length>190||
+       !/^https:\/\/www\.federalreserve\.gov\/newsevents\/pressreleases\/[a-zA-Z0-9._-]+$/.test(h.url)||
+       !when(h.publishedUTC)||Date.parse(h.publishedUTC)>checked)return null;
+    if(!fed||h.publishedUTC>fed.publishedUTC)
+     fed={title:h.title,publishedUTC:h.publishedUTC};
+   }
+  }
+  if(d.feeds.bls==="OFFICIAL_REFRESHED"){
+   for(const e of d.calendar){
+    if(!e||e.source!=="U.S. Bureau of Labor Statistics"||
+       e.eventType!=="SCHEDULED_NOT_RELEASED"||
+       e.localTimezone!=="America/New_York"||
+       !["CPI","PPI","JOBS","JOLTS","ECI","IMPORT_EXPORT","PRODUCTIVITY","REAL_EARNINGS"].includes(e.kind)||
+       !when(e.scheduledUTC)||Date.parse(e.scheduledUTC)<checked||
+       Date.parse(e.scheduledUTC)>checked+30*86400000)return null;
+    if(!bls||e.scheduledUTC<bls.scheduledUTC)
+     bls={kind:e.kind,scheduledUTC:e.scheduledUTC};
+   }
+  }
+  return {fedStatus:d.feeds.fed,blsStatus:d.feeds.bls,
+          latestFed:fed,nextBls:bls,checkedUTC:d.checkedUTC,
+          signal:"WAIT",executable:false};
+ }
+
  // Pure validators are exposed only to local Node offline tests.
  if(typeof module!=="undefined"&&module.exports)
   module.exports={validateChart,validateSnapshot,localLatestParity,
-    localCoveredParityAudit,researchWatch,vendorH4SessionLabel,technicalObservations,continuityReport,validateDailyH15};
+    localCoveredParityAudit,researchWatch,vendorH4SessionLabel,technicalObservations,continuityReport,validateDailyH15,validateOfficialMacro};
  if(typeof document==="undefined")return;
  const $=id=>document.getElementById(id);
  let frame="M15",state=null,pending=false,expiry=0;
  const AUTO_POLL_MS=10000, SOURCE_ERROR_BACKOFF_MS=30000, MAX_STALE_MS=600000;
  let autoEnabled=false,viewerReady=false,checkingViewer=false,nextPollAt=Infinity;
  let h15Pending=false,h15Epoch=0,nextH15At=0;
+ let macroPending=false,macroEpoch=0,nextMacroAt=0;
  // Every user-initiated fetch has a generation. Android can hide or
  // navigate away while a request or JSON body is in flight; response
  // completion must not resurrect private prices after that transition.
@@ -382,6 +431,42 @@
  }
  
 
+
+
+ function unavailableMacro(){
+  $("news-fed-status").textContent="Fed: لم يتأكد خبر جديد";
+  $("news-bls-status").textContent="BLS: التقويم غير متاح";
+  $("news-sources-note").textContent="أخبار أميركية رسمية جزئية فقط، ليست مؤشراً للتداول.";
+ }
+ async function loadOfficialMacro(){
+  if(!autoEnabled||macroPending||document.visibilityState==="hidden"||
+     Date.now()<nextMacroAt)return;
+  macroPending=true;nextMacroAt=Date.now()+300000;const epoch=++macroEpoch;
+  try{
+   const r=await fetch("/api/v3/ultimate/official-macro",{
+    method:"GET",credentials:"omit",cache:"no-store",redirect:"error",
+    headers:{Accept:"application/json"},signal:AbortSignal.timeout(12000)});
+   if(r.status!==200||
+     !/^application\/json(?:\s*;|\s*$)/i.test(r.headers?.get?.("content-type")||""))
+    throw Error("OFFICIAL_MACRO_HTTP_INVALID");
+   const v=validateOfficialMacro(await r.json(),Date.now());
+   if(epoch!==macroEpoch||document.visibilityState==="hidden")return;
+   if(!v)throw Error("OFFICIAL_MACRO_CONTRACT_INVALID");
+   const date=x=>new Date(x).toLocaleString("ar-LB",{
+    timeZone:"Asia/Beirut",month:"2-digit",day:"2-digit",
+    hour:"2-digit",minute:"2-digit"});
+   $("news-fed-status").textContent=v.fedStatus==="OFFICIAL_REFRESHED"?
+     (v.latestFed?"آخر بيان Fed: "+v.latestFed.title+" · "+date(v.latestFed.publishedUTC):
+       "Fed: لا بيان معروض"):"Fed: المصدر غير متاح";
+   $("news-bls-status").textContent=v.blsStatus==="OFFICIAL_REFRESHED"?
+     (v.nextBls?"BLS "+v.nextBls.kind+" · "+date(v.nextBls.scheduledUTC):
+       "BLS: لا موعد متاح خلال 30 يوماً"):"BLS: المصدر غير متاح";
+   $("news-sources-note").textContent="آخر فحص رسمي "+date(v.checkedUTC)+
+      " · أخبار وتقويم أميركيان جزئيان، بلا توقع لرد الذهب. WAIT.";
+  }catch(_error){
+   if(epoch===macroEpoch&&document.visibilityState!=="hidden")unavailableMacro();
+  }finally{macroPending=false;}
+ }
 
  function noH15(){
   $("us02y-daily").textContent="غير متاح";
@@ -702,26 +787,26 @@
  }
  if(typeof document.addEventListener==="function"){
   document.addEventListener("DOMContentLoaded",()=>{
-   autoEnabled=true;void startAuto();void loadH15();
+   autoEnabled=true;void startAuto();void loadH15();void loadOfficialMacro();
   });
   document.addEventListener("visibilitychange",()=>{
    if(document.visibilityState==="hidden"){
-    requestEpoch++;h15Epoch++;viewerReady=false;nextPollAt=Infinity;
+    requestEpoch++;h15Epoch++;macroEpoch++;viewerReady=false;nextPollAt=Infinity;
     reset("WAIT — الشاشة بالخلفية؛ تم مسح بيانات المشاهدة الخاصة.");
-   }else if(autoEnabled){void startAuto();void loadH15();}
+   }else if(autoEnabled){void startAuto();void loadH15();void loadOfficialMacro();}
   });
  }
  if(typeof window!=="undefined"&&typeof window.addEventListener==="function"){
   window.addEventListener("pagehide",()=>{
-   requestEpoch++;h15Epoch++;autoEnabled=false;viewerReady=false;nextPollAt=Infinity;
+   requestEpoch++;h15Epoch++;macroEpoch++;autoEnabled=false;viewerReady=false;nextPollAt=Infinity;
    reset("WAIT — غادرت الشاشة؛ لم نحتفظ بالأسعار الخاصة.");
   });
   window.addEventListener("pageshow",()=>{
-   if(!autoEnabled){autoEnabled=true;void startAuto();void loadH15();}
+   if(!autoEnabled){autoEnabled=true;void startAuto();void loadH15();void loadOfficialMacro();}
   });
   window.addEventListener("focus",()=>{
    if(document.visibilityState==="hidden")return;
-   void loadH15();
+   void loadH15();void loadOfficialMacro();
    if(expiry&&Date.now()>expiry)
     markStale("WAIT — آخر لقطة تاريخية، وليست سعراً مباشراً.");
    if(autoEnabled&&!checkingViewer&&!pending&&Date.now()>=nextPollAt){
@@ -743,6 +828,7 @@
    else void startAuto();
   }
   updateAutoLabel();
+  if(Date.now()>=nextMacroAt)void loadOfficialMacro();
  },1000);
  reset("WAIT — فحص تلقائي عند فتح الشاشة بجلسة مشاهدة خاصة صالحة.");
 })();
