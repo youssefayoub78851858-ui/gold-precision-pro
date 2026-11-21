@@ -75,6 +75,7 @@ async function main(){
   assert(page.body.includes('id="internal-handoff"'));
   assert(page.body.includes('id="internal-gate-note"'));
   assert(page.body.includes('id="release-audit-summary"'));
+  assert(page.body.includes('id="historical-archive-audit"'));
   assert(page.body.includes("توثيق الحساب وحده لا يكفي"));
   assert(page.body.includes("موافقة تخزين بيانات Render معلّقة"));
   assert(page.body.includes("WAIT"));
@@ -153,6 +154,14 @@ async function main(){
   assert.equal(handoff.releaseAudit.readyForPaperExecution,false);
   assert.equal(handoff.releaseAudit.providerChosenOrConnected,false);
   assert.equal(handoff.releaseAudit.actualCIPassAttestedByRuntime,false);
+  assert.equal(handoff.historicalArchiveAudit.mode,"GOLD_HISTORICAL_ACCURACY_EVIDENCE_AUDIT_V1");
+  assert.equal(handoff.historicalArchiveAudit.status,"HASH_CHECKED_DEVELOPMENT_ARCHIVE_NOT_ACCURACY_PROOF");
+  assert.equal(handoff.historicalArchiveAudit.archiveHashChecksPassed,2);
+  assert.equal(handoff.historicalArchiveAudit.developmentM15Bars,4884);
+  assert.equal(handoff.historicalArchiveAudit.independentHoldoutSamples,0);
+  assert.equal(handoff.historicalArchiveAudit.independentAccuracyPct,null);
+  assert.equal(handoff.historicalArchiveAudit.statisticallyValidated,false);
+  assert.equal(handoff.historicalArchiveAudit.historicalRawPricesReturned,false);
   assert.equal((await request("/api/v3/ultimate/internal-handoff","POST")).status,405);
   assert.equal((await request("/api/v3/ultimate/internal-handoff","HEAD")).status,405);
   const nav=await request("/review");
