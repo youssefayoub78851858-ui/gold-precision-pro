@@ -28,6 +28,13 @@ def quote(open_utc):
             "closePrice": {"bid": 4000.1, "ask": 4000.5}}
 
 
+def acknowledged_sink(items):
+    def save(page):
+        items.append(page)
+        return {"committed": True, "storedRows": len(page["prices"])}
+    return save
+
+
 def fake_transport(call_list, payload=None, status=200, redirected=False):
     def fake(method, url, headers):
         call_list.append((method, url, headers))
@@ -73,7 +80,7 @@ class PrivateDemoGetTests(unittest.TestCase):
         calls=[];delivered=[]
         with patch.dict(os.environ, {ENABLE_ENV:ENABLE_VALUE, RIGHTS_ENV:ENABLE_VALUE}):
             out=self.gate(transport=fake_transport(calls),
-                          deliver_private=delivered.append)
+                          deliver_private=acknowledged_sink(delivered))
         self.safe(out)
         self.assertEqual(out["status"], "PRIVATE_DEMO_GEOMETRY_ONLY_NOT_ADMITTED")
         self.assertEqual(out["providerRequestsMade"], 1)
@@ -157,7 +164,7 @@ class PrivateDemoGetTests(unittest.TestCase):
         }):
             out = self.gate(
                 transport=fake_transport(calls, payload=payload),
-                deliver_private=delivered.append,
+                deliver_private=acknowledged_sink(delivered),
             )
         self.safe(out)
         self.assertEqual(out["status"], "PRIVATE_DEMO_GEOMETRY_ONLY_NOT_ADMITTED")
@@ -189,7 +196,7 @@ class PrivateDemoGetTests(unittest.TestCase):
                 }):
                     out = self.gate(
                         transport=fake_transport(calls, payload=payload),
-                        deliver_private=delivered.append,
+                        deliver_private=acknowledged_sink(delivered),
                     )
                 self.safe(out)
                 self.assertEqual(out["status"], "BLOCKED")
@@ -220,7 +227,7 @@ class PrivateDemoGetTests(unittest.TestCase):
                 calls=[];delivered=[]
                 out=self.gate(
                     transport=fake_transport(calls,**case),
-                    deliver_private=delivered.append)
+                    deliver_private=acknowledged_sink(delivered))
                 self.safe(out);self.assertEqual(out["status"],"BLOCKED")
                 self.assertEqual(delivered,[])
 
@@ -246,6 +253,38 @@ class PrivateDemoGetTests(unittest.TestCase):
             )
             self.assertEqual(blocked["providerRequestsMade"], 0)
             self.assertEqual(blocked["transportCallsAttempted"], 0)
+
+    def test_missing_or_ambiguous_archive_acknowledgement_fails_closed(self):
+        with patch.dict(os.environ, {
+            ENABLE_ENV: ENABLE_VALUE, RIGHTS_ENV: ENABLE_VALUE
+        }):
+            rejected = (None, True, 1, "yes", {},
+                        {"committed": False, "storedRows": 1},
+                        {"committed": True, "storedRows": 0},
+                        {"committed": True, "storedRows": True},
+                        {"committed": True, "storedRows": "1"},
+                        {"committed": True, "storedRows": 1, "token": "SECRET"})
+            for acknowledgement in rejected:
+                with self.subTest(acknowledgement=str(acknowledgement)):
+                    seen = []
+                    def sink(page):
+                        seen.append(page)
+                        return acknowledgement
+                    calls = []
+                    out = self.gate(
+                        transport=fake_transport(calls),
+                        deliver_private=sink,
+                    )
+                    self.safe(out)
+                    self.assertEqual(
+                        out["reason"],
+                        "PRIVATE_DEMO_ARCHIVE_ACKNOWLEDGEMENT_REQUIRED")
+                    self.assertEqual(out["status"], "BLOCKED")
+                    self.assertEqual(out["providerRequestsMade"], 1)
+                    self.assertEqual(out["transportCallsAttempted"], 1)
+                    self.assertEqual(out["pageRowsChecked"], 0)
+                    self.assertEqual(len(seen), 1)
+                    self.assertNotIn("SECRET", str(out))
 
     def test_explicit_archive_refusal_and_unexpected_exception_fail_closed(self):
         calls = []
