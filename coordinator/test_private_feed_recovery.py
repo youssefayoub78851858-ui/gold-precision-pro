@@ -9,7 +9,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from private_feed_recovery import observe_recovery, read_recovery
+from private_feed_recovery import (observe_recovery, read_recovery,
+                                   offline_reconnect_audit_plan)
 from private_review_watchdog import audit_once, read_audit_state, FOLDER
 from test_eodhd_research_bridge import NOW, sample
 
@@ -41,6 +42,39 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(r["state"], "RECOVERY_NOT_STARTED")
         self.safe(r)
         self.assertFalse(self.db.exists())
+
+    def test_readonly_audit_pacing_never_authorizes_real_reconnection(self):
+        with patch.object(socket, "socket", side_effect=AssertionError("network forbidden")):
+            pending = offline_reconnect_audit_plan(self.db, NOW)
+            self.assertEqual(pending["state"], "RECOVERY_NOT_STARTED")
+            self.assertEqual(pending["nextLocalAuditAfterSeconds"], 0)
+            self.assertFalse(self.db.exists())
+            observe_recovery(self.db, fake("WAIT_STALE"), NOW)
+            after_loss = offline_reconnect_audit_plan(self.db, NOW)
+            self.assertEqual(after_loss["state"], "SOURCE_INTERRUPTED")
+            self.assertEqual(after_loss["nextLocalAuditAfterSeconds"], 30)
+            due = offline_reconnect_audit_plan(
+                self.db, NOW + dt.timedelta(seconds=31))
+            self.assertEqual(due["nextLocalAuditAfterSeconds"], 0)
+            for i in range(1, 4):
+                observe_recovery(self.db, fake(), NOW + dt.timedelta(seconds=i*60))
+            repeated = offline_reconnect_audit_plan(
+                self.db, NOW + dt.timedelta(seconds=181))
+        self.safe(repeated)
+        self.assertEqual(repeated["state"], "OBSERVATION_REPEATED_UNVERIFIED")
+        self.assertEqual(repeated["repeatedUnverifiedObservations"], 3)
+        self.assertEqual(repeated["nextLocalAuditAfterSeconds"], 59)
+        self.assertFalse(repeated["privateMarketRequestsAllowed"])
+        self.assertFalse(repeated["reconnectAuthorization"])
+        self.assertFalse(repeated["sourceRightsVerified"])
+        self.assertFalse(repeated["brokerSessionVerified"])
+        self.assertEqual(repeated["sourceRequestsMade"], 0)
+        stale = offline_reconnect_audit_plan(
+            self.db, NOW + dt.timedelta(seconds=500))
+        self.safe(stale)
+        self.assertEqual(stale["state"], "RECOVERY_STALE")
+        self.assertFalse(stale["reconnectAuthorization"])
+        self.assertEqual(stale["nextLocalAuditAfterSeconds"], 60)
 
     def test_loss_then_three_separate_observations_then_interrupt(self):
         with patch.object(socket, "socket", side_effect=AssertionError("network forbidden")):
