@@ -35,6 +35,9 @@ on:
       - 'index.html'
       - 'server.js'
       - 'coordinator/test_review_dashboard_route.js'
+      - 'coordinator/internal_offline_handoff.js'
+      - 'coordinator/test_internal_offline_handoff.js'
+      - 'coordinator/tests/review_dashboard_safety.test.js'
       - 'coordinator/biquote_v3_chronological_replay.js'
       - 'coordinator/test_biquote_v3_chronological_replay.js'
       - 'coordinator/biquote_v3_chronological_private.py'
@@ -101,6 +104,8 @@ jobs:
         run: node coordinator/test_biquote_v3_chronological_replay.js
       - name: Real local review HTTP route serves new mobile UI, no credential, broker or paid feed
         run: |
+          node coordinator/test_internal_offline_handoff.js
+          node --test coordinator/tests/review_dashboard_safety.test.js
           node coordinator/test_review_dashboard_route.js
           node coordinator/test_review_dashboard_private_biquote.js
           node --check review-dashboard.js
