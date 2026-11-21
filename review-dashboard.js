@@ -408,7 +408,7 @@
  if(typeof document==="undefined")return;
  const $=id=>document.getElementById(id);
  let frame="M15",state=null,pending=false,expiry=0;
- const AUTO_POLL_MS=10000, SOURCE_ERROR_BACKOFF_MS=30000, MAX_STALE_MS=600000;
+ const AUTO_POLL_MS=10000, SOURCE_ERROR_BACKOFF_MS=10000, MAX_STALE_MS=600000;
  let autoEnabled=false,viewerReady=false,checkingViewer=false,nextPollAt=Infinity;
  let h15Pending=false,h15Epoch=0,nextH15At=0;
  let macroPending=false,macroEpoch=0,nextMacroAt=0;
@@ -792,7 +792,7 @@
     if(!markStale(message))reset(message);
     nextPollAt=Date.now()+(error.message==="RATE_LIMITED"?180000:SOURCE_ERROR_BACKOFF_MS);
     $("auto-state").textContent=error.message==="RATE_LIMITED"?
-     "تلقائي · إعادة بعد 3 دقائق":"تلقائي · محاولة خلال 30 ثانية";
+     "تلقائي · حد الطلبات: إعادة بعد 3 دقائق":"تلقائي · إعادة فحص خلال 10 ثوانٍ";
    }
   }finally{pending=false;refresh.disabled=false;updateAutoLabel();}
  }
