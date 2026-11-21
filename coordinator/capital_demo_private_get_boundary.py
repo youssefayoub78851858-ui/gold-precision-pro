@@ -127,6 +127,14 @@ def inspect_private_demo_page(chunk, *, cst=None, security_token=None,
         prices = payload.get("prices")
         if not isinstance(prices, list) or len(prices) > MAX_PAGE_ROWS:
             return _result("BOUNDED_PRICE_PAGE_REQUIRED")
+        # A 200 response containing zero candles is not a successful
+        # capture. Nor may one requested window return more DISTINCT slots
+        # than its approved closed-candle capacity. Never pad missing bars:
+        # real session closures still need separate calendar verification.
+        if not prices:
+            return _result("BROKER_PRICE_PAGE_EMPTY_NOT_OBSERVED")
+        if len(prices) > chunk["expectedClosedSlots"]:
+            return _result("BROKER_PRICE_PAGE_EXCEEDS_APPROVED_WINDOW")
         prior = None
         seen = set()
         for row in prices:
