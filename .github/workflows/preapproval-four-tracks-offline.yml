@@ -3,6 +3,8 @@ on:
   push:
     branches: [review/v2-portable-tests-20261109]
     paths:
+      - 'coordinator/official_context_stage.js'
+      - 'coordinator/test_official_context_stage.js'
       - 'coordinator/preapproval_four_tracks_status.js'
       - 'coordinator/test_preapproval_four_tracks_status.js'
       - 'coordinator/test_preapproval_four_tracks.py'
