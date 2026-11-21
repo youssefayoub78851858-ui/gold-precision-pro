@@ -477,6 +477,9 @@
 
 
  async function loadInternalHandoff(){
+  // Older cached markup and isolated VM tests may not contain this NEW
+  // optional panel. Never throw or disrupt chart/auth refresh in that case.
+  if(!$("internal-handoff")||!$("internal-gate-note"))return;
   if(!autoEnabled||internalHandoffPending||document.visibilityState==="hidden")return;
   internalHandoffPending=true;const own=++internalHandoffEpoch;
   const note=$("internal-gate-note");
