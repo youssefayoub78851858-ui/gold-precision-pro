@@ -104,7 +104,7 @@ function diagnostic(frames,asOfUTC,tradePlan={},risk={},layers={}){
   const regime=efficiency<=THRESHOLDS.choppyEfficiency?'CHOPPY':
     efficiency>=THRESHOLDS.trendingEfficiency?'DIRECTIONAL':'MIXED';
   result.regime=regime;
-  result.metrics={efficiencyRatio:round(efficiency),atr14PriorClosed:round(atr),
+  result.metrics={...result.metrics,efficiencyRatio:round(efficiency),atr14PriorClosed:round(atr),
     lastTrueRangeToPriorATR:round(shockRatio),directionOver20Bars:
       closes.at(-1)>closes[0]?'UP':closes.at(-1)<closes[0]?'DOWN':'FLAT'};
   if(regime==='CHOPPY')result.warnings.push('CHOPPY_PRICE_PATH');
