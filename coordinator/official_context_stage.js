@@ -34,9 +34,34 @@ function stageOfficialContext(macro,h15,asOfUTC){
  const fresh=Number.isFinite(checkedMs)&&checkedMs<=now&&now-checkedMs<=30*60000;
  const fed=fresh&&macro.feeds?.fed==="OFFICIAL_REFRESHED";
  const bls=fresh&&macro.feeds?.bls==="OFFICIAL_REFRESHED";
+ // The H.15 feed is only a DAILY reference, but even reference data must
+ // not contain observations or publication timestamps from after asOfUTC.
+ // A stored or caller-supplied feed payload cannot attest first availability.
+ const observationDay=h15.observedDate;
+ const observedMs=typeof observationDay==="string"&&/^\\d{4}-\\d{2}-\\d{2}$/.test(observationDay)
+  ?Date.parse(observationDay+"T00:00:00.000Z"):NaN;
+ const validDay=Number.isFinite(observedMs)&&
+  new Date(observedMs).toISOString().slice(0,10)===observationDay&&
+  observedMs<=now&&now-observedMs<=10*86400000;
+ const publicationTimes=h15.publicationTimestampsUTC;
+ const validPublicationEvidence=(
+  publicationTimes===undefined||(
+   Array.isArray(publicationTimes)&&publicationTimes.length===2&&
+   publicationTimes.every(t=>t===null||(iso(t)&&Date.parse(t)<=now))
+  )
+ )&&(
+  h15.publicationTimestampRecorded!==true||(
+   Array.isArray(publicationTimes)&&publicationTimes.length===2&&
+   publicationTimes.every(t=>iso(t)&&Date.parse(t)<=now)
+  )
+ );
+ const validRatePair=Array.isArray(h15.rates)&&h15.rates.length===2&&
+  ["DGS2","DGS10"].every(series=>h15.rates.some(r=>r&&r.series===series&&
+   Number.isFinite(r.latestYieldPct)&&r.latestYieldPct>=0&&r.latestYieldPct<=30));
  const verifiedH15=h15.mode==="OFFICIAL_RECORDED_DAILY_CONTEXT"&&
                      h15.sourceStatus==="OFFICIAL_FED_RSS_REFRESHED"&&
-                     h15.allowedRole==="MACRO_DAILY_CONTEXT_ONLY";
+                     h15.allowedRole==="MACRO_DAILY_CONTEXT_ONLY"&&
+                     validDay&&validPublicationEvidence&&validRatePair;
  const reasons=[];
  if(!fed)reasons.push("FED_MONETARY_RSS_UNAVAILABLE_OR_STALE");
  if(!bls)reasons.push("BLS_CALENDAR_UNAVAILABLE_OR_STALE");
