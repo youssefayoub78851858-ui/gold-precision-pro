@@ -35,6 +35,12 @@ a.equal(genuine.sources.providerRequestsMade,0);
 a.equal(genuine.signalEngine.signal,"WAIT");
 a.equal(genuine.signalEngine.executable,false);
 a.equal(genuine.signalEngine.paperOrdersAllowed,false);
+a.equal(genuine.paperTerminal.mode,"OFFLINE_SYNTHETIC_REPLAY");
+a.equal(genuine.paperTerminal.frameCounts.M15,512);
+a.equal(genuine.paperTerminal.frameCounts.H4,32);
+a.equal(genuine.paperTerminal.signal,"WAIT");
+a.equal(genuine.paperTerminal.paperExecutionOnServer,false);
+a.equal(genuine.paperTerminal.ordersSent,0);
 // Mutating any one internal integration contract NEVER upgrades the output
 // and cannot make the UI claim a live quote or permission to order.
 const mutations=[
@@ -47,6 +53,10 @@ const mutations=[
  ["context",r=>r.allLayersQualified=true],
  ["paper",r=>r.executable=true],
  ["paper",r=>r.profitabilityProven=true],
+ ["paperTerminal",r=>r.executable=true],
+ ["paperTerminal",r=>r.paperExecutionOnServer=true],
+ ["paperTerminal",r=>r.providerRequests=1],
+ ["paperTerminal",r=>r.frameCounts.H4=1],
  ["signalEngine",r=>r.paperOrdersAllowed=true],
  ["signalEngine",r=>r.stages.validation.deploymentAdmissible=true],
  ["signalEngine",r=>r.stages.analysis.status="NOT_INVOKED"]
