@@ -245,7 +245,7 @@ test("session-checked foreground auto refresh preserves stale history but not tr
  const js=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.js"),"utf8");
  const ui=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.html"),"utf8");
  const server=fs.readFileSync(path.resolve(__dirname,"../../server.js"),"utf8");
- assert.ok(js.includes("const AUTO_POLL_MS=10000, SOURCE_ERROR_BACKOFF_MS=30000, MAX_STALE_MS=600000"));
+ assert.ok(js.includes("const AUTO_POLL_MS=10000, SOURCE_ERROR_BACKOFF_MS=10000, MAX_STALE_MS=600000"));
  assert.ok(js.includes('document.addEventListener("DOMContentLoaded"'));
  assert.ok(js.includes('"/api/v3/ultimate/biquote-viewer-status"'));
  assert.ok(js.includes('packet?.viewerSessionReady!==true'));
@@ -267,6 +267,14 @@ test("automatic mobile display shows a countdown but never implies a live quote"
  assert.match(js,/const old=state&&Date\.now\(\)>expiry\?"بيانات قديمة · ":""/);
  assert.match(js,/updateAutoLabel\(\)/);
  assert.ok(js.includes('viewerReady?"فحص السعر":"محاولة اتصال"'));
+ // A temporary 503/data failure must NOT silently switch the 10s UI
+ // cadence to 30s. HTTP 429 is an explicit 3-minute exception to avoid
+ // provider quota abuse; 30s quote freshness stays an independent gate.
+ assert.ok(js.includes('nextPollAt=Date.now()+(error.message==="RATE_LIMITED"?180000:SOURCE_ERROR_BACKOFF_MS)'));
+ assert.ok(js.includes('"تلقائي · إعادة فحص خلال 10 ثوانٍ"'));
+ assert.ok(js.includes('"تلقائي · حد الطلبات: إعادة بعد 3 دقائق"'));
+ assert.ok(js.includes('d.quoteAgeSeconds>30'));
+ assert.ok(js.includes('$("decision").textContent="WAIT"'));
  assert.ok(!js.includes("localStorage"));
  assert.ok(!js.includes("executable:true"));
 });
