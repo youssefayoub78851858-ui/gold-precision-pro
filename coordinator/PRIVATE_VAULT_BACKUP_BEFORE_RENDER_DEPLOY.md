@@ -11,6 +11,63 @@ verified Render *application logs* establish only time-stamped, sanitized
 monitoring activity; they do **not** contain a recoverable copy of the
 signed archive of XAUUSD quotes or closed candles.
 
+## Verified hosting facts (Render account inspected 2026-11-22)
+
+- The private service `gold-precision-coordinator` has a **2 GB persistent
+  disk mounted at `/var/data`**; this does not prove the sealed vault file
+  exists on that disk, or that an offsite backup exists. The configured
+  vault directory comes from `GPP_BIQUOTE_FORWARD_VAULT_DIR`, **not**
+  necessarily from the `DATA_DIR` default.
+- The review web service `gold-precision-v3-review-demo` is **Free** and
+  has **no attached persistent disk**. Neither service is auto-deployed
+  from review-branch commits (`autoDeploy: no`).
+- The coordinator's last observed live deploy was `b01574f` on Nov 18.
+  Its existing Dockerfile DOES NOT COPY the new backup/copy/restore scripts
+  into the running container. **Do not redeploy just to install them**;
+  code in GitHub is not equivalent to a command available on the service.
+- Render supports an interactive **Shell** on the running private service
+  under its Dashboard. The connected Render API tools cannot execute a
+  shell or read private files. A signed-in owner can open the service's
+  Shell page without changing the deployed build. Render documentation:
+  https://render.com/docs/ssh
+
+### Safe read-only owner inventory (no prices, paths, tokens or file contents)
+
+Inside the **existing running coordinator** via Dashboard → Shell, an
+owner may paste this check. It only says whether the configured vault is
+on the persistent disk, exists, and has owner-only permissions. It DOES
+NOT export, copy, restart, or verify restore. It does not echo the private
+vault directory or environment values:
+
+```sh
+python3 - <<'PY'
+import os, pathlib, stat
+v=os.environ.get("GPP_BIQUOTE_FORWARD_VAULT_DIR","")
+configured=v.startswith("/var/data/") and ".." not in pathlib.Path(v).parts
+file=pathlib.Path(v)/"biquote-forward-private-v1.json" if configured else None
+exists=False; owner_only=False
+if file is not None:
+    try:
+        s=file.lstat()
+        exists=stat.S_ISREG(s.st_mode) and not stat.S_ISLNK(s.st_mode)
+        owner_only=exists and s.st_uid==os.getuid() and s.st_mode & 0o077==0
+    except OSError:
+        pass
+print("persistentVaultPathConfigured=",configured)
+print("privateVaultFilePresent=",exists)
+print("vaultFileOwnerOnly=",owner_only)
+print("offsiteBackupVerified=",False)
+print("reviewDeployApproved=",False)
+PY
+```
+
+**Do not** share raw file contents, exported archives, env values, or
+credentials in support chats or GitHub. A successful inventory is only the
+first step. Owner-authorized, permitted private export and independent
+recovery are still required. The current copy script now requires a
+successful destination-directory `fsync` before it can report a verified
+local copy, including on separate devices.
+
 ## Existing read-only verification tools
 
 - `biquote_private_forward_vault.py`: the private signed owner-only
