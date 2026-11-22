@@ -12,6 +12,8 @@ on:
       - research/recorded/manifest.json
       - research/recorded/2026-09-bid.json
       - research/recorded/2026-10-bid.json
+      - coordinator/ultimate_entry_v2_shadow_compare.js
+      - coordinator/test_ultimate_entry_v2_shadow_compare.js
       - coordinator/ultimate_entry_recorded_coverage.js
       - coordinator/test_ultimate_entry_recorded_coverage.js
       - coordinator/ultimate_entry_robustness.js
@@ -48,6 +50,10 @@ jobs:
         run: |
           node coordinator/test_ultimate_entry_recorded_coverage.js
           node coordinator/ultimate_entry_recorded_coverage.js
+      - name: Frozen V2 BID-only paired-shadow research with modeled costs, never trade
+        run: |
+          node coordinator/test_ultimate_entry_v2_shadow_compare.js
+          node coordinator/ultimate_entry_v2_shadow_compare.js
       - name: Integrated four stages - research candidates, context, data and paper readiness
         run: node coordinator/test_ultimate_four_stage_review.js
       - name: Offline paper admission stays locked for synthetic preview
