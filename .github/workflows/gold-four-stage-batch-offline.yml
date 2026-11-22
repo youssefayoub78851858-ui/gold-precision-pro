@@ -148,7 +148,7 @@ jobs:
           node coordinator/test_paper_volume_bootstrap.js
           cd coordinator
           python -m unittest -v test_offline_paper_report_readonly test_paper_fresh_volume_init test_paper_volume_end_to_end_dress_rehearsal
-      - name: Private BiQuote archive predeploy: signed backup compare, separate device and recovery (offline)
+      - name: "Private BiQuote archive predeploy: signed backup compare, separate device and recovery (offline)"
         working-directory: coordinator
         run: python -m unittest -v test_biquote_private_archive_predeploy_guard
       - name: Synthetic paper WAL backup restore reboot integrity (offline, temp paths only)
