@@ -75,6 +75,54 @@ To reproduce in GitHub CI (offline, no private prices):
 `node coordinator/test_ultimate_entry_recorded_coverage.js` and
 `node coordinator/ultimate_entry_recorded_coverage.js`.
 
+## Frozen V2 recorded shadow comparison (November 22, 2026)
+
+The new `ultimate_entry_v2_shadow_compare.js` generated **frozen V2**
+research candidates using the archived BID M15/H1/H4 observations
+from September and October 2026. The exact V2 candidate list is kept
+unchanged; the independent entry-robustness diagnostic only selects
+an offline shadow subset. It then runs the same existing V2 backtester
+twice to illustrate what happens with overlapping trades. This is **not
+a V3 Ultimate comparison**, not an independent holdout, and not actual
+broker execution. No trading or provider contact took place.
+
+For illustration only: spread=0.40 XAUUSD price units, slippage=0.10
+price units, commission=7 per lot / value-per-point=100, all
+assumed, not observed. Results use modeled full-TP/full-SL outcomes,
+stop-first ambiguous candle resolution and a portfolio path that can
+change when earlier signals are excluded.
+
+| Development month | V2 candidates | Shadow kept | Baseline modeled win rate | Filtered-path modeled win rate | Baseline modeled net R | Filtered-path modeled net R |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| September | 257 | 101 | 26.67% (8/30) | 31.03% (9/29) | −7.40R | −3.47R |
+| October | 273 | 137 | 32.14% (9/28) | 25.00% (6/24) | −2.75R | −7.38R |
+
+Doubling the **assumed** spread and slippage produced:
+September −8.75R baseline versus −4.78R filtered path;
+October −4.25R baseline versus −8.57R filtered path.
+
+A separate `sameBaselineClosedTradeSubset` keeps identical
+baseline-filled outcomes for accepted original candidates, while
+`shadowFilterPath` is a distinct overlap-affected simulation. Neither
+establishes the causal benefit of the new filter. These recorded
+months have already been used during development.
+
+**Decision: DO NOT PROMOTE THIS FILTER TO TRADE ADMISSION.** The
+modeled difference reversed by month; both filtered months have
+negative modeled net R. The comparison now emits an explicit
+`comparisonPromotionGate` with
+`shadowFilterAdoptionApproved:false` and reason codes. Its value
+does not change the frozen V2 engine or V3; `WAIT` remains.
+
+Only a preregistered independent prospective test using permitted
+full BID/ASK prices, time-aligned broker sessions and actual costs
+can demonstrate that a filter improves profitability. Even a better
+historical win rate does not guarantee future returns.
+
+The offline comparison is run in the signal-quality GitHub workflow:
+`node coordinator/test_ultimate_entry_v2_shadow_compare.js`
+and `node coordinator/ultimate_entry_v2_shadow_compare.js`.
+
 ## Validation before any signal-quality claim
 
 Compare the frozen baseline and the unchanged candidate set with/without
