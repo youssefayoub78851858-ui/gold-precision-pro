@@ -152,13 +152,13 @@ class SafeSyntheticAutoRecorder(unittest.TestCase):
         self.assertEqual(self.j.summary()["rows"], 1)
 
     def test_declared_outage_blocks_until_recovery_observed(self):
-        record(self.j, gate(), packet("one", 1))
-        record(self.j, gate(), packet("two", 2))
-        outage = record(self.j, gate(), packet("offline", 3, "SOURCE_DOWN"))
+        record(self.j, gate(), packet("one", 89))
+        record(self.j, gate(), packet("two", 90))
+        outage = record(self.j, gate(), packet("offline", 91, "SOURCE_DOWN"))
         self.assertEqual(outage["eventKind"], "SOURCE_BLOCKED")
-        first = record(self.j, gate(), packet("first_return", 4))
+        first = record(self.j, gate(), packet("first_return", 92))
         self.assertEqual(first["eventKind"], "WAIT")
-        pending = record(self.j, gate(), packet("candidate", 5,
+        pending = record(self.j, gate(), packet("candidate", 93,
                                                "PAPER_CLOSE", close(1, 2)))
         self.assertEqual(pending["eventKind"], "SOURCE_BLOCKED")
         self.assertEqual(self.j.summary()["closedPaperTrades"], 0)
@@ -173,29 +173,28 @@ class SafeSyntheticAutoRecorder(unittest.TestCase):
             "SELECT COUNT(*) FROM journal").fetchone()[0], 1)
 
     def test_write_lock_rechecks_new_outage_from_another_writer(self):
-        record(self.j, gate(), packet("one", 1))
-        record(self.j, gate(), packet("two", 2))
-        # Close candidate is eligible at observed minute 3. Simulate a
-        # parallel writer inserting a source block between planning and
-        # taking BEGIN IMMEDIATE: the atomic guard MUST refuse the close.
-        second = OfflineJournal(self.file)
+        record(self.j, gate(), packet("first", 89))
+        record(self.j, gate(), packet("second", 90))
+        # An eligible synthetic close at 93 would be recorded if the
+        # observed journal still ended with those two WAIT rows.
+        other = OfflineJournal(self.file)
         original_append = self.j.append
-        def concurrent(event_to_write, prior_guard=None):
-            second.append(event("parallel_outage", 2.5, "SOURCE_BLOCKED"))
-            return original_append(event_to_write, prior_guard=prior_guard)
+        def concurrent(proposed, prior_guard=None):
+            # Race: source falls over at 92 before first connection
+            # acquires BEGIN IMMEDIATE. Must not record PAPER_CLOSED.
+            other.append(event("parallel_outage", 92, "SOURCE_BLOCKED"))
+            return original_append(proposed, prior_guard=prior_guard)
         self.j.append = concurrent
         try:
-            trade = copy.deepcopy(close(1, 2))
-            # This packet's trade is already closed as of minute 91, so use
-            # observed minute 94 after establishing consecutive WAITs.
-            # Set up a separate later journal for this specific race below.
             with self.assertRaises(ValueError):
-                record(self.j, gate(), packet("third", 3))
+                record(self.j, gate(), packet("close", 93,
+                                              "PAPER_CLOSE", close(1, 2)))
         finally:
             self.j.append = original_append
-            second.close()
+            other.close()
         self.assertEqual(self.j.summary()["rows"], 3)
         self.assertEqual(self.j.summary()["closedPaperTrades"], 0)
+        self.assertEqual(self.j.summary()["blockedSourceEvents"], 1)
 
 
 if __name__ == "__main__":
