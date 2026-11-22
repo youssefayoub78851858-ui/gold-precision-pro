@@ -81,6 +81,21 @@ def _file_unchanged(first, second):
     )
 
 
+def _sync_directory(directory):
+    """Persist the published backup name, not just its file contents.
+
+    A successful file fsync alone cannot guarantee that the new directory
+    entry survives a filesystem crash. Render runs Linux; never silently
+    treat an unsupported directory fsync as verified backup durability.
+    """
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(directory, flags)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
 def _checked_paths(source_dir, destination_dir):
     src = _directory(source_dir)
     dst = _directory(destination_dir)
@@ -191,6 +206,15 @@ def copy_once(source_dir, destination_dir, *, operator_approved=False,
             actual = hashlib.file_digest(handle, "sha256").hexdigest()
         if actual != digest.hexdigest():
             raise ValueError("PRIVATE_COPY_CHECKSUM_MISMATCH")
+        # A published hard link and fsynced file are insufficient until
+        # the destination directory entry is also durably committed.
+        # Remove the staging name first so successful results leave only
+        # one verified private backup file.
+        temp_path.unlink()
+        temp_path = None
+        _sync_directory(dst)
+        if not _file_unchanged(source_stat, origin.lstat()):
+            raise ValueError("SOURCE_CHANGED_BEFORE_DURABLE_COMMIT")
         return {
             **_wait("PRIVATE_LOCAL_COPY_NOT_OFFSITE_ATTESTED"),
             "status": "LOCAL_OWNER_ONLY_SEALED_COPY_VERIFIED",
@@ -212,7 +236,12 @@ def copy_once(source_dir, destination_dir, *, operator_approved=False,
         return _wait("PRIVATE_COPY_OR_RECOVERY_VERIFICATION_FAILED")
     finally:
         if temp_path is not None:
-            temp_path.unlink(missing_ok=True)
+            # A cleanup failure must not conceal the original BLOCKED
+            # result. Successful copies already removed this staging file.
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 if __name__ == "__main__":
