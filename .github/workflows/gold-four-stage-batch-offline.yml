@@ -37,6 +37,8 @@ on:
       - 'coordinator/test_review_dashboard_route.js'
       - 'coordinator/internal_offline_handoff.js'
       - 'coordinator/test_internal_offline_handoff.js'
+      - 'coordinator/paper_final_blockers.js'
+      - 'coordinator/test_paper_final_blockers.js'
       - 'coordinator/prelicense_release_audit.js'
       - 'coordinator/test_prelicense_release_audit.js'
       - 'coordinator/test_prelicense_operational_commissioning.py'
@@ -128,6 +130,8 @@ jobs:
           node coordinator/test_biquote_render_log_export_readonly.js
       - name: External DXY GC yields calendar and news point-in-time clocks (offline only)
         run: node coordinator/test_independent_context_timing_preflight.js
+      - name: Five paper activation blockers and absent external entitlements (offline)
+        run: node coordinator/test_paper_final_blockers.js
       - name: Existing historical BID archive integrity and no fabricated independent accuracy
         run: node coordinator/test_historical_accuracy_evidence_audit.js
       - name: Prospective paper outcome arithmetic, modeled costs, no-trade approval (offline only)
