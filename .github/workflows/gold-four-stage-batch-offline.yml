@@ -76,6 +76,7 @@ on:
       - 'coordinator/test_paper_volume_bootstrap.js'
       - 'coordinator/paper_fresh_volume_init.py'
       - 'coordinator/test_paper_fresh_volume_init.py'
+      - 'coordinator/test_paper_volume_end_to_end_dress_rehearsal.py'
       - 'coordinator/historical_accuracy_evidence_audit.js'
       - 'coordinator/test_historical_accuracy_evidence_audit.js'
       - 'research/recorded/manifest.json'
@@ -140,7 +141,7 @@ jobs:
           node coordinator/test_paper_persistent_disk_gate.js
           node coordinator/test_paper_volume_bootstrap.js
           cd coordinator
-          python -m unittest -v test_offline_paper_report_readonly test_paper_fresh_volume_init
+          python -m unittest -v test_offline_paper_report_readonly test_paper_fresh_volume_init test_paper_volume_end_to_end_dress_rehearsal
       - name: Synthetic paper WAL backup restore reboot integrity (offline, temp paths only)
         working-directory: coordinator
         run: python -m unittest -v test_offline_paper_snapshot_recovery
