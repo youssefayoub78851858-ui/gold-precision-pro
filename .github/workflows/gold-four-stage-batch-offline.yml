@@ -97,6 +97,8 @@ on:
       - 'coordinator/test_biquote_h4_evidence_quality_gate.js'
       - 'coordinator/biquote_render_log_export_readonly.js'
       - 'coordinator/test_biquote_render_log_export_readonly.js'
+      - 'coordinator/biquote_private_archive_predeploy_guard.py'
+      - 'coordinator/test_biquote_private_archive_predeploy_guard.py'
       - 'private-monitor.html'
       - 'coordinator/test_private_monitor_signal_readiness.js'
       - '.github/workflows/gold-four-stage-batch-offline.yml'
@@ -146,6 +148,9 @@ jobs:
           node coordinator/test_paper_volume_bootstrap.js
           cd coordinator
           python -m unittest -v test_offline_paper_report_readonly test_paper_fresh_volume_init test_paper_volume_end_to_end_dress_rehearsal
+      - name: Private BiQuote archive predeploy: signed backup compare, separate device and recovery (offline)
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_private_archive_predeploy_guard
       - name: Synthetic paper WAL backup restore reboot integrity (offline, temp paths only)
         working-directory: coordinator
         run: python -m unittest -v test_offline_paper_snapshot_recovery
