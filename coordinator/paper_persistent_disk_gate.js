@@ -24,6 +24,28 @@ function mounts(text){
   return {mountPoint:decodeMount(a[4]),type:b[0],source:b[1]};
  }).filter(Boolean);
 }
+function verifyMountRoot({mountRoot="",mountInfo,fsAPI=fs}={}){
+ const fail=status=>({safe:false,status});
+ if(typeof mountRoot!=="string"||!mountRoot||
+    !path.isAbsolute(mountRoot)||path.normalize(mountRoot)!==mountRoot||
+    mountRoot.includes("\\0")||mountRoot==="/"||
+    BAD_ROOTS.some(x=>mountRoot===x||mountRoot.startsWith(x+"/")))
+  return fail("PERSISTENT_DISK_LOCATION_INVALID");
+ try{
+  const root=fsAPI.lstatSync(mountRoot);
+  if(!root.isDirectory()||root.isSymbolicLink()||
+     fsAPI.realpathSync(mountRoot)!==mountRoot)
+   return fail("PERSISTENT_MOUNT_ROOT_UNVERIFIED");
+  const raw=mountInfo??fsAPI.readFileSync("/proc/self/mountinfo","utf8");
+  const found=mounts(raw).filter(x=>x.mountPoint===mountRoot);
+  if(found.length!==1||!MOUNT_TYPES.has(found[0].type)||
+     found[0].source==="overlay"||found[0].source==="tmpfs")
+   return fail("PERSISTENT_VOLUME_MOUNT_NOT_VERIFIED");
+  return {safe:true,status:"EXPLICIT_ATTACHED_MOUNT_ROOT_CHECKED"};
+ }catch(_e){
+  return fail("PERSISTENT_VOLUME_OR_JOURNAL_UNAVAILABLE");
+ }
+}
 function verify({databasePath="",mountRoot="",mountInfo,fsAPI=fs}={}){
  const fail=code=>({safe:false,status:code});
  if(!databasePath||!mountRoot)return fail("PERSISTENT_DISK_NOT_CONFIGURED");
@@ -55,4 +77,4 @@ function verify({databasePath="",mountRoot="",mountInfo,fsAPI=fs}={}){
   return fail("PERSISTENT_VOLUME_OR_JOURNAL_UNAVAILABLE");
  }
 }
-module.exports={verify,mounts};
+module.exports={verify,verifyMountRoot,mounts};
