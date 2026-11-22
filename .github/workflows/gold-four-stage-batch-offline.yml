@@ -58,6 +58,10 @@ on:
       - 'coordinator/test_offline_paper_outcome_journal.py'
       - 'coordinator/offline_paper_snapshot_recovery.py'
       - 'coordinator/test_offline_paper_snapshot_recovery.py'
+      - 'coordinator/paper_startup_recovery_check.py'
+      - 'coordinator/test_paper_startup_recovery_check.py'
+      - 'coordinator/paper_startup_recovery_gate.js'
+      - 'coordinator/test_paper_startup_recovery_gate.js'
       - 'coordinator/offline_paper_periodic_reports.py'
       - 'coordinator/test_offline_paper_periodic_reports.py'
       - 'coordinator/offline_paper_report_readonly.py'
@@ -133,6 +137,11 @@ jobs:
       - name: Synthetic paper WAL backup restore reboot integrity (offline, temp paths only)
         working-directory: coordinator
         run: python -m unittest -v test_offline_paper_snapshot_recovery
+      - name: Boot-time SQLite paper checkpoint ancestry and missing-storage WAIT protection
+        run: |
+          node coordinator/test_paper_startup_recovery_gate.js
+          cd coordinator
+          python -m unittest -v test_paper_startup_recovery_check
       - name: Synthetic paper outcome SQLite journal, replay, tamper and cost-audit integration (offline)
         working-directory: coordinator
         run: python -m unittest -v test_offline_paper_outcome_journal
