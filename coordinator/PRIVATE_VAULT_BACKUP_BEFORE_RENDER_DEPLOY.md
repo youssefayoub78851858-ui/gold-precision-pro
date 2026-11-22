@@ -27,6 +27,33 @@ signed archive of XAUUSD quotes or closed candles.
   independent backups, and never promotes the result to permission
   to deploy or generate orders.
 
+## New one-time owner-only private copy utility (not yet run on Render)
+
+`biquote_owner_private_copy_once.py` prepares an **opt-in**, no-network
+local file copy of the existing sealed vault. It does not mount disks,
+encrypt, upload, subscribe, restart services or authorize trading.
+
+- The operator first verifies that the private source and private
+  destination already exist, are both owner-only (0700), and that the
+  destination has no previous vault file.
+- Read-only preflight (no copy):
+  `python coordinator/biquote_owner_private_copy_once.py SOURCE_PRIVATE_DIR DEST_PRIVATE_DIR`
+- Only AFTER independently confirming source storage/export rights,
+  an approved private storage destination and authorization:
+  `python coordinator/biquote_owner_private_copy_once.py SOURCE_PRIVATE_DIR DEST_PRIVATE_DIR --copy --operator-approved-private-copy`
+- The copy is 0600, atomic, never overwrites, compares the source and
+  destination byte-for-byte, and runs an isolated restore test. The
+  source remains unchanged. The tool returns counts/booleans only,
+  never raw prices, tokens, or actual directories.
+- **Same-device copy is NOT backup continuity across Render deletion**.
+  A different device is still not proof of an offsite recoverable copy.
+  Both cases explicitly retain `reviewDeployApproved:false` and
+  `externallyDurableBackupVerified:false`.
+
+**No command has been run against the current coordinator.** The connected
+Render tools do not expose owner-only filesystem access; do not use
+Render application logs or GitHub fixtures as substitutes.
+
 ## Required owner-authorized export and recovery evidence
 
 1. Through an approved private Render filesystem access method, locate
