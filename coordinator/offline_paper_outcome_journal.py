@@ -190,7 +190,13 @@ class OfflineJournal:
         elif "trade" in event:
             raise ValueError("WAIT/outage cannot carry trade data")
 
-    def append(self, event):
+    def append(self, event, prior_guard=None):
+        """Append atomically. Optional safety guard runs INSIDE the write lock.
+
+        The guard receives the already-verified journal and proposed event,
+        so a parallel writer cannot change recovery state between the safety
+        decision and the new row. No guard = legacy manual offline behavior.
+        """
         self.validate_event(event)
         if utc(event["observedUTC"]) <= utc(self.freeze_utc):
             raise ValueError("Observation not after frozen start")
@@ -209,6 +215,8 @@ class OfflineJournal:
                 return {"duplicate": True, "recorded": False}
             if events and utc(event["observedUTC"]) <= utc(events[-1]["observedUTC"]):
                 raise ValueError("Out-of-order event")
+            if prior_guard is not None:
+                prior_guard(events, event)
             candidates = [entry["trade"] for entry in events
                           if entry["kind"] == "PAPER_CLOSED"]
             if event["kind"] == "PAPER_CLOSED":
