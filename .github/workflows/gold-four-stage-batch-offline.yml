@@ -56,6 +56,8 @@ on:
       - 'coordinator/test_prospective_paper_holdout_audit.js'
       - 'coordinator/offline_paper_outcome_journal.py'
       - 'coordinator/test_offline_paper_outcome_journal.py'
+      - 'coordinator/offline_paper_snapshot_recovery.py'
+      - 'coordinator/test_offline_paper_snapshot_recovery.py'
       - 'coordinator/offline_paper_periodic_reports.py'
       - 'coordinator/test_offline_paper_periodic_reports.py'
       - 'coordinator/offline_paper_report_readonly.py'
@@ -128,6 +130,9 @@ jobs:
           node coordinator/test_paper_persistent_disk_gate.js
           cd coordinator
           python -m unittest -v test_offline_paper_report_readonly
+      - name: Synthetic paper WAL backup restore reboot integrity (offline, temp paths only)
+        working-directory: coordinator
+        run: python -m unittest -v test_offline_paper_snapshot_recovery
       - name: Synthetic paper outcome SQLite journal, replay, tamper and cost-audit integration (offline)
         working-directory: coordinator
         run: python -m unittest -v test_offline_paper_outcome_journal
