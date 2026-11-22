@@ -22,7 +22,8 @@ a.equal(full.mode,'BID_ONLY_RECORDED_ENTRY_FEATURE_COVERAGE_V1');
 a.equal(full.totalM15,80);
 a.equal(full.totalStrictM15PriorATRWindows,50);
 a.equal(full.totalStrictM15WithNonflatLastBar,50);
-a.equal(full.totalStrictM15WithRecentH1H4,18);
+a.equal(full.totalStrictM15WithRecentH1H4Timing,18);
+a.equal(full.totalStrictM15WithLocallyMatchedBIDOHLC,18);
 for(const field of ['brokerCostsIndependentlyVerified',
  'independentProviderRightsVerified','underlyingBrokerSessionVerified',
  'candidateUniverseAvailable','afterCostPairedComparisonPossible',
@@ -50,6 +51,12 @@ const flatOut=describeDataset(flat.data,flat.meta);
 a.equal(flatOut.m15PriorATRContiguousWindows,25);
 a.equal(flatOut.m15NonflatPriorATRWindows,24);
 a.equal(flatOut.zeroRangeCounts.M15,1);
+// Local higher-timeframe parity is evidence of internal consistency only.
+const mismatch=structuredClone(first);
+mismatch.data.frames['1h'][7].high=104;
+const mismatched=describeDataset(mismatch.data,mismatch.meta);
+a(mismatched.m15WindowsWithLocallyMatchedH1AndH4BIDOHLC<
+  mismatched.m15WindowsWithRecentClosedH1AndH4Timing);
 const invalid=structuredClone(first);
 invalid.data.frames['15min'][4].low=105;
 a.throws(()=>describeDataset(invalid.data,invalid.meta),/OHLC_GEOMETRY_INVALID/);
@@ -71,7 +78,8 @@ a.equal(archived.months.length,2);
 a.equal(archived.months[0].rows.M15,2448);
 a.equal(archived.months[1].rows.M15,2436);
 a.equal(archived.totalM15,4884);
-a(archived.totalStrictM15WithRecentH1H4<=archived.totalStrictM15PriorATRWindows);
+a(archived.totalStrictM15WithRecentH1H4Timing<=archived.totalStrictM15PriorATRWindows);
+a(archived.totalStrictM15WithLocallyMatchedBIDOHLC<=archived.totalStrictM15WithRecentH1H4Timing);
 a.equal(archived.afterCostPairedComparisonPossible,false);
 a.equal(archived.netPerformanceImprovementProven,false);
 a.equal(archived.signal,'WAIT');
