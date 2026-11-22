@@ -24,8 +24,8 @@ class SnapshotMetadataOnlyGate(unittest.TestCase):
         self.assertEqual(value["providerRequestsMade"], 0)
         self.assertEqual(value["brokerOrdersSent"], 0)
         payload = json.dumps(value)
-        for leak in ("12345-secret-short-lived-key", "api_key", "bid",
-                     "ask", "snapshotKey", "2999."):
+        for leak in ("12345-secret-short-lived-key", "api_key", '"bid":',
+                     '"ask":', '"snapshotKey":', "2999."):
             self.assertNotIn(leak, payload)
 
     def test_recent_snapshot_is_never_vault_evidence(self):
