@@ -122,10 +122,33 @@ function replay(doc,month){
 function run(){
  const records=loadLocked();
  const months=records.map(x=>replay(x.doc,x.month));
+ const outperformedEveryMonth=months.every(x=>
+   x.scenarios.every(sc=>sc.shadowFilterPath.modeledNetR>
+                      sc.baselinePath.modeledNetR));
+ const allShadowPathsPositive=months.every(x=>
+   x.scenarios.every(sc=>sc.shadowFilterPath.modeledNetR>0));
+ const promotionBlockers=[
+   'NO_INDEPENDENT_POST_FREEZE_HOLDOUT',
+   'NO_BROKER_VERIFIED_BID_ASK_SPREAD_OR_REAL_FILL_COSTS',
+   'NO_FULL_V3_MACRO_NEWS_ORDERFLOW_EVIDENCE',
+   'CHANGED_OVERLAPPING_TRADE_PATH_NOT_CAUSAL_PAIRED_EDGE'
+ ];
+ if(!outperformedEveryMonth)
+   promotionBlockers.push('SHADOW_FILTER_DID_NOT_OUTPERFORM_IN_EACH_RECORDED_MONTH');
+ if(!allShadowPathsPositive)
+   promotionBlockers.push('SHADOW_FILTER_HAS_NONPOSITIVE_MODELED_NET_R');
  return {
   mode:'FROZEN_V2_BID_RECORDED_ENTRY_SHADOW_COMPARISON_V1',
   status:'DESCRIPTIVE_NONINDEPENDENT_AFTER_COST_MODEL_ONLY',
   months,
+  comparisonPromotionGate:{
+   status:'BLOCKED_EXPLORATORY_RESEARCH_ONLY',
+   shadowFilterOutperformedBothOldMonthsInBothCostScenarios:outperformedEveryMonth,
+   allShadowMonthlyModeledNetRPositive:allShadowPathsPositive,
+   shadowFilterAdoptionApproved:false,
+   independentPerformanceImprovementProven:false,
+   blockingReasons:promotionBlockers
+  },
   costAssumptions:COSTS,
   v3UltimateComparisonPerformed:false,
   realBrokerBidAskExecutionVerified:false,
