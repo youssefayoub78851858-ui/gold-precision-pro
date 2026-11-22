@@ -106,7 +106,10 @@ def plan_demo_closed_history(epic, start_utc, end_utc, as_of_utc, *, bars_per_ca
             "endExclusiveUTC": _stamp(end),
             "requestCount": total, "barsPerCall": bars_per_call,
             "requests": plans, "expectedClosedBarCounts": counts,
-            "lastUserAction": "DEFER_KYC_UNTIL_APPROVED_FINAL_CONNECTION",
+            "nextExternalGate": "WRITTEN_PRIVATE_CLOUD_STORAGE_AND_RESEARCH_RIGHTS",
+            "nextOperatorAction": "NO_TRADING_CAPABLE_API_KEY_UNTIL_RIGHTS_AND_EGRESS_ISOLATION_APPROVED",
+            "accountKycStatusAttestedByThisCode": False,
+            "operatorAccountIdentityStored": False,
             "liveAccountHostAllowed": False,
             "orderRouteAllowed": False,
             "autoExecute": False
