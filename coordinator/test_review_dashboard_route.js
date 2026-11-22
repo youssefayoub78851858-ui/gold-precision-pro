@@ -77,6 +77,10 @@ async function main(){
   assert(page.body.includes('id="internal-gate-note"'));
   assert(page.body.includes('id="release-audit-summary"'));
   assert(page.body.includes('id="historical-archive-audit"'));
+  assert(page.body.includes('id="paper-readiness-details"'));
+  assert(page.body.includes('id="paper-readiness-storage"'));
+  assert(page.body.includes('id="paper-readiness-rights"'));
+  assert(page.body.includes('id="paper-readiness-holdout"'));
   assert(page.body.includes('id="paper-reports"'));
   assert(page.body.includes('id="paper-report-state"'));
   assert(page.body.includes('id="paper-persistence-state"'));
@@ -184,6 +188,22 @@ async function main(){
   assert.equal(handoff.historicalArchiveAudit.independentHoldoutSamples,0);
   assert.equal(handoff.historicalArchiveAudit.independentAccuracyPct,null);
   assert.equal(handoff.historicalArchiveAudit.statisticallyValidated,false);
+  const blockers=handoff.paperReadinessBlockers;
+  assert.equal(blockers.mode,"GOLD_PAPER_READINESS_BLOCKERS_V1");
+  assert.equal(blockers.requiredCount,5);
+  assert.equal(blockers.externallyVerifiedCount,0);
+  assert.equal(blockers.locallyCheckedCount,0);
+  assert.equal(blockers.requirements.length,5);
+  assert.equal(blockers.requirements[0].id,"DURABLE_PAPER_STORAGE");
+  assert.equal(blockers.requirements[0].status,
+    "DURABLE_STORAGE_AND_CHECKPOINT_NOT_VERIFIED");
+  assert.equal(blockers.requirements[4].id,
+    "INDEPENDENT_FORWARD_PAPER_EVIDENCE");
+  assert.equal(blockers.nextM15ForecastAccuracyPct,null);
+  assert.equal(blockers.readyForPaperExecution,false);
+  assert.equal(blockers.readyForBuySell,false);
+  assert.equal(blockers.brokerOrdersSent,0);
+  assert.equal(blockers.signal,"WAIT");
   assert.equal(handoff.historicalArchiveAudit.historicalRawPricesReturned,false);
   assert.equal((await request("/api/v3/ultimate/internal-handoff","POST")).status,405);
   assert.equal((await request("/api/v3/ultimate/internal-handoff","HEAD")).status,405);
