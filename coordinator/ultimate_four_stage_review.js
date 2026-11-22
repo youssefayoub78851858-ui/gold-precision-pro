@@ -138,7 +138,17 @@ function reviewFourStages(input){
         reasons:[...new Set(signalReasons)],
         riskModelReady:core?.risk?.ok===true,
         independentQualityReviewAvailable:independent?.qualityDiagnostics?.status==='RESEARCH_DIAGNOSTIC_ONLY',
-        qualityWarnings:independent?.qualityDiagnostics?.warnings||[]},
+        qualityWarnings:independent?.qualityDiagnostics?.warnings||[],
+        entryRobustness:independent?.entryRobustness ? {
+          status:independent.entryRobustness.status,
+          postCostRiskQuality:independent.entryRobustness.postCostRiskQuality,
+          exploratoryWarnings:independent.entryRobustness.exploratoryWarnings,
+          scenarios:independent.entryRobustness.scenarios,
+          empiricalWinProbability:null,
+          strategyChanged:false,
+          paperOrdersAllowed:false,
+          executable:false
+        } : null},
       confirmation:{status:'INDEPENDENT_CONTEXT_NOT_VERIFIED',
         feeds:statuses,blockedLayers:contextBlockers,
         // Descriptive offline evidence only: no independent source,
