@@ -53,6 +53,40 @@ nonredistributed personal research, historical backtesting, and prospective
 simulated paper use. If denied, select another properly authorized source;
 do not bypass the vendor by retrying the same credentials.
 
+## Offline private archive rehearsal — validated with synthetic data
+
+The review branch now contains `capital_demo_private_page_store.py` and
+`test_capital_demo_private_page_store.py`. The CI test uses **fictional**
+`TEST.GOLD.EPIC` prices only and exercises the existing mock Demo HTTPS
+GET boundary all the way to a real file on the temporary GitHub runner.
+The future live coordinator and its existing sealed BiQuote vault are not
+touched or deployed.
+
+- Explicit `explicit_synthetic_rehearsal=True` is required; normal calls
+  are disabled. Real Capital instrument epics are explicitly rejected.
+- A pre-existing owner-owned, owner-only (0700) directory is required.
+  Prices are normalized and bounded as three closed UTC-frame types.
+  Each synthetic page is sealed with a local SHA-256 integrity checksum,
+  written as a 0600 file via fsync and no-overwrite atomic publication.
+- A repeated identical page is idempotent and **retains the first local
+  rehearsal receipt time**; conflicting data, crossed BID/ASK, stale/open
+  candle geometry, symlinks, unsafe permissions, hash tampering, and unknown
+  response fields are rejected.
+- Restart inspection re-checks both the checksum and full candle shape,
+  and returns only sanitized counts, no market prices or credentials.
+- Local checksum and file fsync do NOT prove provider origin, remote backup,
+  approved market-data usage, genuine point-in-time first-seen quotes,
+  broker sessions, or future profitability.
+- No real data archive can be created by this rehearsal writer. Following
+  written permission, a separately reviewed, isolated *production*
+  collector and durable rights-compliant archive would have to be built
+  using this tested pattern. Full-trading API credentials need an external
+  network isolation policy before any provider request.
+
+The offline test is run by
+`.github/workflows/capital-demo-preconnection-offline.yml` and
+does **not** connect to Capital.com or request an API key.
+
 ## Operational handoff in order
 
 1. Confirm **in writing** broker eligibility for Lebanon, private Render
