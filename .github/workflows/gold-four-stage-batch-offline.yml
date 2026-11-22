@@ -72,6 +72,10 @@ on:
       - 'coordinator/test_review_paper_report_bridge.js'
       - 'coordinator/paper_persistent_disk_gate.js'
       - 'coordinator/test_paper_persistent_disk_gate.js'
+      - 'coordinator/paper_volume_bootstrap.js'
+      - 'coordinator/test_paper_volume_bootstrap.js'
+      - 'coordinator/paper_fresh_volume_init.py'
+      - 'coordinator/test_paper_fresh_volume_init.py'
       - 'coordinator/historical_accuracy_evidence_audit.js'
       - 'coordinator/test_historical_accuracy_evidence_audit.js'
       - 'research/recorded/manifest.json'
@@ -134,8 +138,9 @@ jobs:
         run: |
           node coordinator/test_review_paper_report_bridge.js
           node coordinator/test_paper_persistent_disk_gate.js
+          node coordinator/test_paper_volume_bootstrap.js
           cd coordinator
-          python -m unittest -v test_offline_paper_report_readonly
+          python -m unittest -v test_offline_paper_report_readonly test_paper_fresh_volume_init
       - name: Synthetic paper WAL backup restore reboot integrity (offline, temp paths only)
         working-directory: coordinator
         run: python -m unittest -v test_offline_paper_snapshot_recovery
