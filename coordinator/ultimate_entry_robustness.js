@@ -53,8 +53,19 @@ function inspect(snapshot,candidate,tradePlan,risk){
  for(const [tf,width] of [['M15',15],['H1',60],['H4',240]]){
   const check=checkFrame(frames?.[tf],width,now);
   if(!check.ok)return {...out,reason:tf+'_INVALID_OR_STALE_CLOSED_CANDLES'};
+  // A stale/closed-only frame is insufficient when the ATR or recent
+  // cross-frame context silently bridges missing market sessions.
+  // No arbitrary weekend or broker-maintenance calendar is inferred.
+  const count=tf==='M15'?THRESHOLDS.atrLookback+2:2;
+  const tail=frames[tf].slice(-count);
+  const interval=width*60000;
+  if(tail.length<count||tail.some((bar,i)=>i>0&&
+     Date.parse(bar.datetime??bar.timestamp)!==
+     Date.parse(tail[i-1].datetime??tail[i-1].timestamp)+interval))
+   return {...out,reason:tf+'_RECENT_SESSION_GAP_NOT_VERIFIED'};
  }
  const candles=frames.M15, last=candles.at(-1);
+ if(last.high===last.low)return {...out,reason:'LAST_M15_ZERO_RANGE_NO_PRICE_DISCOVERY'};
  if(candles.length<THRESHOLDS.atrLookback+2)
   return {...out,reason:'PRIOR_ATR_WARMUP_MISSING'};
  const prior=candles.slice(-THRESHOLDS.atrLookback-1,-1);
