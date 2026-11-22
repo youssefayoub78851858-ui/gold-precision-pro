@@ -62,6 +62,14 @@ for(const id of ['multi-source-readiness','multi-source-check','multi-source-sta
  a(doc.includes('id="'+id+'"'),'Missing source inventory panel: '+id);
 a(doc.includes('/api/v3/ultimate/multi-source-readiness'));
 a(doc.includes('WAIT'));
+// The static mobile panel must accept the same rights-first contract as
+// the backend, without treating private KYC status as known or pending.
+a(doc.includes("c.mode!=='CAPITAL_DEMO_PRIVATE_CLOUD_RIGHTS_PENDING_PRECONNECTION_HANDOFF'"));
+a(doc.includes("c.accountVerificationStatusAttestedByThisPublicModule!==false"));
+a(doc.includes("c.nextExternalDependency!=='WRITTEN_PRIVATE_RENDER_DATA_RIGHTS_AND_RETENTION_REPLY'"));
+a(doc.includes('حالة توثيق حسابك لا تُفحص من هذه الشاشة'));
+a(!doc.includes('CAPITAL_DEMO_DEFER_USER_KYC_UNTIL_FINAL_CONNECTION_HANDOFF'));
+a(!doc.includes('توثيق الهوية مؤجّل'),'Mobile cannot tell verified user to redo KYC');
 for(const id of ['biquote-mobile-observation','biquote-private-quote','biquote-private-spread',
                   'biquote-status','biquote-observed','biquote-m15','biquote-h1','biquote-h4',
                   'biquote-structure-summary','biquote-mtf-readiness','biquote-observed-ema','biquote-vendor-session',
