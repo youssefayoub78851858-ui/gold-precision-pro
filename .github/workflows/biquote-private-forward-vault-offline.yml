@@ -16,6 +16,12 @@ on:
       - 'coordinator/test_biquote_stage3_log_reconciliation.js'
       - 'coordinator/test_biquote_private_forward_vault.py'
       - 'coordinator/test_biquote_first_seen_collector_cutover.py'
+      - 'coordinator/biquote_owner_private_copy_once.py'
+      - 'coordinator/test_biquote_owner_private_copy_once.py'
+      - 'coordinator/biquote_owner_vault_inventory.py'
+      - 'coordinator/test_biquote_owner_vault_inventory.py'
+      - 'coordinator/biquote_private_archive_predeploy_guard.py'
+      - 'coordinator/test_biquote_private_archive_predeploy_guard.py'
       - 'coordinator/biquote_collector_backup_preflight.py'
       - 'coordinator/test_biquote_collector_backup_preflight.py'
       - 'coordinator/biquote_collector_restore_rehearsal.py'
@@ -68,6 +74,9 @@ jobs:
       - name: Verify no network, private disk, closed-only time seal and archive integrity
         working-directory: coordinator
         run: python -m unittest -v test_biquote_private_forward_vault test_biquote_first_seen_collector_cutover test_biquote_collector_backup_preflight test_biquote_collector_restore_rehearsal test_biquote_render_snapshot_preflight test_biquote_forward_integration test_biquote_24h_observer test_biquote_public_one_shot test_biquote_render_standby test_biquote_seven_day_review test_biquote_session_gap_audit test_biquote_sampled_spread_buckets test_biquote_quote_cadence
+      - name: Owner-only sealed backup, no overwrite, isolated recovery and read-only inventory (synthetic)
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_owner_private_copy_once test_biquote_owner_vault_inventory test_biquote_private_archive_predeploy_guard
       - name: Source audit and overlap compatibility unchanged (synthetic only)
         working-directory: coordinator
         run: python -m unittest -v test_biquote_offline_source_audit test_biquote_overlap_evidence
