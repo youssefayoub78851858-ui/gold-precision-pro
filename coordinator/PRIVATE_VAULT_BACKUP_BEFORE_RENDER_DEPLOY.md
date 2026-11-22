@@ -109,6 +109,48 @@ recovery are still required. The current copy script now requires a
 successful destination-directory `fsync` before it can report a verified
 local copy, including on separate devices.
 
+## Render's built-in disk snapshots: useful recovery layer, not the private vault copy
+
+Render documents that **persistent disks** are snapshotted automatically
+roughly every 24 hours, kept for **seven days**, and encrypted at rest.
+This is a point-in-time **whole-disk** recovery mechanism; it is not a
+verified, independently restorable, owner-controlled archive export.
+Render cannot restore just the BiQuote vault from a disk snapshot, and
+restoring the whole snapshot destroys any newer disk changes. **Do NOT
+press Restore** on the running coordinator merely to inspect a backup.
+Official documentation: https://render.com/docs/disks#disk-snapshots
+
+The connected Render tools confirm the coordinator has a 2 GB persistent
+disk mounted at `/var/data`, but do NOT list that disk's actual snapshots.
+Their existence, ages, and inclusion of the sealed market archive are
+therefore **not yet confirmed**. The listing endpoint is documented at
+https://api-docs.render.com/reference/list-snapshots but is not exposed by
+the current connected Render tooling. Never embed API tokens or short-lived
+snapshot keys into source code, chat, or logs.
+
+### Phone-friendly read-only owner check
+
+1. Open the existing private coordinator:
+   https://dashboard.render.com/pserv/srv-dbosre95efls73ete99g
+2. Tap **Disk** and locate **Snapshots** (or the snapshot restore section).
+   Inspect the timestamps/availability only; **do not select Restore**.
+3. Open **Shell**, if available to your account, and run the already
+   documented read-only sealed-vault integrity check above. Do NOT print
+   provider quotes, the vault file, environment variables, or keys.
+4. Only after confirming both (a) the vault file is on the persistent disk
+   and (b) an actual recent snapshot exists, label this as a **possible
+   seven-day disk recovery point**, not a verified offsite vault backup.
+
+For automation-safe **offline research** on *redacted* snapshot metadata,
+`biquote_render_snapshot_metadata_gate.py` accepts a JSON array of
+`createdAt` UTC timestamps (in the format returned by Render) via stdin.
+It never calls Render or restores a disk; it ignores and never outputs
+`snapshotKey` values. Even `RECENT_SNAPSHOT_LISTED_NOT_ARCHIVE_PROOF`
+means only that a caller-supplied timestamp is within 36 hours. It does
+**not** verify a real Render snapshot, the inclusion of the vault, data
+rights, or external recovery. Its output permanently keeps
+`reviewDeployApproved:false` and `signal:WAIT`.
+
 ## Existing read-only verification tools
 
 - `biquote_private_forward_vault.py`: the private signed owner-only
