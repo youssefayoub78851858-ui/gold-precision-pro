@@ -116,7 +116,15 @@ const server = http.createServer(async (req, res) => {
       paperOrdersAllowed:false,liveOrdersAllowed:false,
       providerRequestsMade:0,brokerOrdersSent:0};
     try{
-      const out=require("./coordinator/internal_offline_handoff").inspect();
+      const internal=require("./coordinator/internal_offline_handoff").inspect();
+      const readiness=require("./coordinator/paper_final_blockers")
+        .inspect(internal,PAPER_STARTUP_RECOVERY);
+      const out={...internal,paperReadinessBlockers:readiness};
+      if(readiness.signal!=="WAIT"||readiness.executable!==false||
+         readiness.readyForPaperExecution!==false||
+         readiness.readyForBuySell!==false||
+         readiness.providerRequestsMade!==0||readiness.brokerOrdersSent!==0)
+        throw Error("UNSAFE_RUNTIME_READINESS");
       if(out.signal!=="WAIT"||out.executable!==false||
          out.paperOrdersAllowed!==false||out.liveOrdersAllowed!==false||
          out.providerRequestsMade!==0||out.brokerOrdersSent!==0||
