@@ -112,6 +112,20 @@ class OwnerOnlyArchiveCopy(unittest.TestCase):
         self.safe(out)
         self.assertFalse((self.backup / FILE).exists())
 
+    def test_directory_fsync_failure_blocks_and_cleans_unverified_backup(self):
+        original = (self.src / FILE).read_bytes()
+        # No "successful copy" may be claimed when the backup filename
+        # has not been made crash-durable, even if bytes matched earlier.
+        with patch("biquote_owner_private_copy_once._sync_directory",
+                   side_effect=OSError("synthetic directory fsync failure")):
+            result = copy_once(self.src, self.backup,
+                               operator_approved=True, now_utc=NOW)
+        self.safe(result)
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertFalse(result["privateCopyVerified"])
+        self.assertEqual((self.src / FILE).read_bytes(), original)
+        self.assertEqual(list(self.backup.iterdir()), [])
+
     def test_recovery_failure_removes_only_this_attempt_copy(self):
         original = (self.src / FILE).read_bytes()
         with patch("biquote_owner_private_copy_once.rehearse_restore",
