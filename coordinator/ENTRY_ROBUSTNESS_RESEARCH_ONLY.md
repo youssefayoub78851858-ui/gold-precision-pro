@@ -40,6 +40,41 @@ Even a synthetic passing scenario does not enable any trades. The four-stage
 viewer exposes only diagnostic ratios and warning labels, not extra voting
 rights. There are no network calls, orders or subscriptions.
 
+## Actual repository BID-only September–October coverage (2026-11-22)
+
+A separate, deterministic offline inspector
+`ultimate_entry_recorded_coverage.js` verifies the SHA-256 hashes from
+`research/recorded/manifest.json` and checks M15/H1/H4 OHLC chronology.
+It uses only these two previously researched **Dukascopy-derived BID**
+files; it does not download anything or access the private vault.
+
+| Descriptive quantity | September | October | Total |
+| --- | ---: | ---: | ---: |
+| Closed M15 bars in file | 2,448 | 2,436 | 4,884 |
+| M15 windows with 16 contiguous candles and positive prior ATR | 2,076 | 2,065 | 4,141 |
+| Above with non-flat latest M15 | 1,994 | 1,997 | 3,991 |
+| Above with recent closed H1/H4 and locally matching M15 BID OHLC | 1,978 | 1,981 | 3,959 |
+| Zero-range M15 bars in full file | 434 | 420 | 854 |
+
+These are **overlapping historical observation windows, not trades or
+predictions**. Local higher-timeframe parity is unsurprising when H1/H4
+were built from the same M15 BID history; it is not independent broker
+verification. Neither period is untouched prospective holdout data.
+No original V3 candidate/fill universe, independent ASK side, broker session
+calendar, actual execution costs, or authorized quote licence was proven.
+**Baseline and filtered win rates, net R, and performance improvement remain
+unknown (null), and all trade eligibility remains WAIT.**
+
+The stricter entry-robustness module now fails closed if its last 16 M15
+candles, or latest two H1/H4 candles, bridge an unverified timestamp gap,
+or if the decision M15 candle has zero range. Those checks deliberately
+exclude unverifiable segments; passing them does not guarantee a real
+market tick, prove data provenance, or improve trade success probability.
+
+To reproduce in GitHub CI (offline, no private prices):
+`node coordinator/test_ultimate_entry_recorded_coverage.js` and
+`node coordinator/ultimate_entry_recorded_coverage.js`.
+
 ## Validation before any signal-quality claim
 
 Compare the frozen baseline and the unchanged candidate set with/without
