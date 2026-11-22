@@ -45,7 +45,9 @@ jobs:
       - name: Independent research-only entry quality, adverse wick and 2x cost stress
         run: node coordinator/test_ultimate_entry_robustness.js
       - name: Hash-locked September October BID-only entry-feature coverage, no win-rate claims
-        run: node coordinator/test_ultimate_entry_recorded_coverage.js
+        run: |
+          node coordinator/test_ultimate_entry_recorded_coverage.js
+          node coordinator/ultimate_entry_recorded_coverage.js
       - name: Integrated four stages - research candidates, context, data and paper readiness
         run: node coordinator/test_ultimate_four_stage_review.js
       - name: Offline paper admission stays locked for synthetic preview
