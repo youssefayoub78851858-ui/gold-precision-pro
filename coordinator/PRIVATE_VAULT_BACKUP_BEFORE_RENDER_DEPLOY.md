@@ -63,6 +63,45 @@ print("reviewDeployApproved=",False)
 PY
 ```
 
+### Check signed vault integrity on the ALREADY running coordinator (no deploy)
+
+This short optional command works with the `biquote_private_forward_vault.py`
+module already included in the Nov 18 running image. It reads the **real**
+private vault, if configured, and prints ONLY sanitized counts. It does not
+request data, copy, upload, overwrite, restart, subscribe, or trade:
+
+```sh
+cd /app && python3 - <<'PY'
+import json, os, pathlib
+from biquote_private_forward_vault import FILE, FRAMES_ORDER, load_vault
+p = os.environ.get("GPP_BIQUOTE_FORWARD_VAULT_DIR", "")
+result = {"status":"BLOCKED", "sealedVaultValidated":False,
+          "closedCounts":None,"quoteObservations":None,
+          "offsiteBackupVerified":False,"reviewDeployApproved":False,
+          "signal":"WAIT","executable":False}
+try:
+    directory=pathlib.Path(p)
+    if (p.startswith("/var/data/") and ".." not in directory.parts
+            and (directory / FILE).is_file()):
+        vault=load_vault(directory)
+        counts={tf:len(vault["closed"][tf]) for tf in FRAMES_ORDER}
+        quotes=len(vault["quoteObservations"])
+        if quotes and any(counts.values()):
+            result.update(status="SEALED_SOURCE_LOCAL_VALID_ONLY",
+                          sealedVaultValidated=True,
+                          closedCounts=counts,quoteObservations=quotes)
+except (OSError,ValueError,KeyError,TypeError):
+    pass
+print(json.dumps(result,sort_keys=True))
+PY
+```
+
+**This local integrity test is not an offsite backup, and the running
+container does not have the new standalone owner-inventory command.** A
+future image contains `/app/biquote_owner_vault_inventory.py` with more
+strict file and path checks; no future-image build/deploy is authorized by
+this document. Synthetic CI tests must pass before relying on that code.
+
 **Do not** share raw file contents, exported archives, env values, or
 credentials in support chats or GitHub. A successful inventory is only the
 first step. Owner-authorized, permitted private export and independent
