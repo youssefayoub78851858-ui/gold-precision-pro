@@ -14,9 +14,16 @@ from urllib.parse import quote
 
 from offline_paper_outcome_journal import MODE as JOURNAL_MODE, OfflineJournal, utc
 from offline_paper_periodic_reports import make_report
+from paper_startup_recovery_check import attest
 
 
-def inspect(file):
+def inspect(file, checkpoint=None, manifest=None):
+    if (checkpoint is None) != (manifest is None):
+        raise ValueError("Both snapshot and manifest are required")
+    if checkpoint is not None:
+        # Verify the journal's latest state against the frozen checkpoint,
+        # not just against the process's cached boot-time check.
+        attest(file, checkpoint, manifest)
     p = pathlib.Path(file)
     if not p.is_absolute() or p.suffix != ".sqlite3" or not p.is_file() or p.is_symlink():
         raise ValueError("Missing existing explicit synthetic journal")
@@ -53,6 +60,10 @@ def inspect(file):
                 or report.get("journalRows") != count
                 or report["cumulative"]["closedTrades"] != closed):
             raise ValueError("Unsafe synthetic report")
+        if checkpoint is not None:
+            # Detect a rollback or checkpoint replacement while assembling
+            # the report. Never return a result from a rejected ancestry.
+            attest(file, checkpoint, manifest)
         return report
     finally:
         con.close()
@@ -61,10 +72,15 @@ def inspect(file):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("existing_synthetic_sqlite_file")
+    parser.add_argument("existing_checkpoint", nargs="?")
+    parser.add_argument("existing_manifest", nargs="?")
     args = parser.parse_args()
     try:
-        sys.stdout.write(json.dumps(inspect(args.existing_synthetic_sqlite_file),
-                                   allow_nan=False, separators=(",", ":")) + "\n")
+        sys.stdout.write(json.dumps(inspect(
+            args.existing_synthetic_sqlite_file,
+            args.existing_checkpoint,
+            args.existing_manifest
+        ), allow_nan=False, separators=(",", ":")) + "\n")
     except Exception:
         sys.stderr.write("SYNTHETIC_PAPER_JOURNAL_UNVERIFIED\n")
         sys.exit(2)
