@@ -106,6 +106,8 @@ function inspect({
  authenticated=false,
  databasePath=process.env.GOLD_SYNTHETIC_PAPER_JOURNAL||"",
  mountRoot=process.env.GOLD_SYNTHETIC_PAPER_DISK_MOUNT||"",
+ checkpointPath=process.env.GOLD_SYNTHETIC_PAPER_CHECKPOINT||"",
+ manifestPath=process.env.GOLD_SYNTHETIC_PAPER_CHECKPOINT_MANIFEST||"",
  startupState
 }={}){
  if(!databasePath)return {statusCode:200,body:empty()};
@@ -126,6 +128,7 @@ function inspect({
   const startup=startupState===undefined?inspectStartup({
     databasePath,mountRoot
   }):startupState;
+  if(!checkpointPath||!manifestPath)throw Error("CHECKPOINT_PATHS_MISSING");
   if(!startup||startup.mode!=="GOLD_PAPER_STARTUP_RECOVERY_GATE_V1"||
      startup.status!=="STARTUP_LOCAL_CHECKPOINT_READ_ONLY_VERIFIED"||
      startup.checkpointSafe!==true||
@@ -137,7 +140,8 @@ function inspect({
      startup.signal!=="WAIT"||startup.executable!==false)
     throw Error("PAPER_STARTUP_RECOVERY_NOT_VERIFIED");
   const runner=spawnSync("python3",[
-   path.join(__dirname,"offline_paper_report_readonly.py"),databasePath
+   path.join(__dirname,"offline_paper_report_readonly.py"),
+   databasePath,checkpointPath,manifestPath
   ],{encoding:"utf8",timeout:15000,maxBuffer:200000,
    env:{PATH:process.env.PATH||"/usr/bin:/bin",PYTHONIOENCODING:"utf-8"}});
   if(runner.status!==0||runner.error)throw Error("OFFLINE_REPORT_FAILED");
