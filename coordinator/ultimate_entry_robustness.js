@@ -51,8 +51,6 @@ function inspect(snapshot,candidate,tradePlan,risk){
   return {...out,reason:'EXPLICIT_UTC_DECISION_TIME_REQUIRED'};
  const frames=snapshot.frames;
  for(const [tf,width] of [['M15',15],['H1',60],['H4',240]]){
-  if(!checkFrame(frames?.[tf],width,now))
-   return {...out,reason:'CLOSED_CANDLE_CHECK_FAILED'};
   const check=checkFrame(frames?.[tf],width,now);
   if(!check.ok)return {...out,reason:tf+'_INVALID_OR_STALE_CLOSED_CANDLES'};
  }
