@@ -28,8 +28,8 @@ const document={
  createTextNode:text=>({textContent:text})
 };
 const window={addEventListener:(k,f)=>{events[k]=f}};
-// Use the actual offline registry contract so the real pre-KYC field is
-// tested without forging or weakening decision-board safety checks.
+// Use the actual offline registry contract; the legacy JSON key is kept
+// only for compatibility, never a claim about a private user's KYC.
 const normal=require("./coordinator/multi_source_public_readiness").snapshot();
 assert.equal(normal.capitalDemoPreKyc.kycRequestedNow,false);
 assert.equal(normal.capitalDemoPreKyc.connected,false);
@@ -56,7 +56,9 @@ const status=nodes.get("multi-source-state");
  assert.match(proof.textContent,/الثابت فقط/);
  assert.match(status.textContent,/0 من 9 مصادر حقيقية/);
  assert.equal(nodes.get("multi-source-grid").children.length,9);
- assert.match(nodes.get("capital-kyc-handoff").textContent,/توثيق الهوية مؤجّل/);
+ assert.match(nodes.get("capital-kyc-handoff").textContent,/بانتظار موافقة مكتوبة/);
+ assert.match(nodes.get("capital-kyc-handoff").textContent,/حالة توثيق الحساب لا تفحصها هذه الشاشة/);
+ assert.doesNotMatch(nodes.get("capital-kyc-handoff").textContent,/توثيق الهوية مؤجّل/);
  assert.match(nodes.get("capital-kyc-handoff").textContent,/WAIT/);
  state="forged";
  await button.onclick();
