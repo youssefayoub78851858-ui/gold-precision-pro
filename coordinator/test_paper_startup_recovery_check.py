@@ -105,14 +105,14 @@ class PaperStartupRecovery(unittest.TestCase):
         self.add_one()
         snapshot(self.live, self.backup, self.manifest)
         alternative = self.live.parent / "new-epoch.sqlite3"
-        new = OfflineJournal(alternative, freeze_utc=stamp(0))
+        new = OfflineJournal(alternative, freeze_utc="2026-11-18T00:00:30Z")
         try:
             new.append(event("wait", 1, "WAIT"))
             new.append(event("trade", 92, "PAPER_CLOSED", close(1, 2)))
         finally:
             new.close()
-        # Same freeze is allowed; see above for prefix-ancestry test.
-        self.assertEqual(attest(alternative, self.backup, self.manifest)["journalRows"], 2)
+        with self.assertRaises(ValueError):
+            attest(alternative, self.backup, self.manifest)
 
 
 if __name__ == "__main__":
