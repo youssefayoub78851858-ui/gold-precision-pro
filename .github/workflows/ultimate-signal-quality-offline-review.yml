@@ -12,6 +12,8 @@ on:
       - research/recorded/manifest.json
       - research/recorded/2026-09-bid.json
       - research/recorded/2026-10-bid.json
+      - coordinator/ultimate_entry_robustness.js
+      - coordinator/test_ultimate_entry_robustness.js
       - coordinator/ultimate_signal_quality.js
       - coordinator/ultimate_signal_quality_report.js
       - coordinator/ultimate_shadow_admission.js
@@ -38,6 +40,8 @@ jobs:
           node-version: '20'
       - name: Offline no-lookahead signal quality and risk gate diagnostics
         run: node coordinator/test_ultimate_signal_quality.js
+      - name: Independent research-only entry quality, adverse wick and 2x cost stress
+        run: node coordinator/test_ultimate_entry_robustness.js
       - name: Integrated four stages - research candidates, context, data and paper readiness
         run: node coordinator/test_ultimate_four_stage_review.js
       - name: Offline paper admission stays locked for synthetic preview
