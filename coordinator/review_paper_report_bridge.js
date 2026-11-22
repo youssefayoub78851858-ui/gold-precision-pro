@@ -9,6 +9,7 @@ const fs=require("node:fs");
 const path=require("node:path");
 const {spawnSync}=require("node:child_process");
 const {verify:verifyDisk}=require("./paper_persistent_disk_gate");
+const {inspect:inspectStartup}=require("./paper_startup_recovery_gate");
 const MODE="GOLD_PRIVATE_OFFLINE_PAPER_REPORT_BRIDGE_V1";
 const EMPTY_STATUS="NO_PERSISTENT_PAPER_JOURNAL_CONNECTED";
 const int=(x,min,max)=>Number.isSafeInteger(x)&&x>=min&&x<=max;
@@ -104,7 +105,8 @@ function summarise(d){
 function inspect({
  authenticated=false,
  databasePath=process.env.GOLD_SYNTHETIC_PAPER_JOURNAL||"",
- mountRoot=process.env.GOLD_SYNTHETIC_PAPER_DISK_MOUNT||""
+ mountRoot=process.env.GOLD_SYNTHETIC_PAPER_DISK_MOUNT||"",
+ startupState
 }={}){
  if(!databasePath)return {statusCode:200,body:empty()};
  if(!authenticated)return {statusCode:401,body:empty("PRIVATE_VIEWER_SESSION_REQUIRED")};
@@ -119,6 +121,21 @@ function inspect({
   // evidence that backups, billing, or provider rights were approved.
   const disk=verifyDisk({databasePath,mountRoot});
   if(!disk.safe)throw Error("MOUNTED_PAPER_VOLUME_NOT_VERIFIED");
+  // The process starts with a single immutable checkpoint gate. A corrupt,
+  // rolled-back or absent backup never authorizes paper report viewing.
+  const startup=startupState===undefined?inspectStartup({
+    databasePath,mountRoot
+  }):startupState;
+  if(!startup||startup.mode!=="GOLD_PAPER_STARTUP_RECOVERY_GATE_V1"||
+     startup.status!=="STARTUP_LOCAL_CHECKPOINT_READ_ONLY_VERIFIED"||
+     startup.checkpointSafe!==true||
+     startup.paperResultsDisplayAllowed!==true||
+     startup.backupOffsiteVerified!==false||
+     startup.independentHoldoutValidated!==false||
+     startup.paperOrdersAllowed!==false||
+     startup.liveOrdersAllowed!==false||
+     startup.signal!=="WAIT"||startup.executable!==false)
+    throw Error("PAPER_STARTUP_RECOVERY_NOT_VERIFIED");
   const runner=spawnSync("python3",[
    path.join(__dirname,"offline_paper_report_readonly.py"),databasePath
   ],{encoding:"utf8",timeout:15000,maxBuffer:200000,
