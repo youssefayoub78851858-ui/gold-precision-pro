@@ -46,7 +46,7 @@ class IsolatedPaperDeploymentDressRehearsal(unittest.TestCase):
         self.assertFalse(result["paperAutoRecordingEnabled"])
         self.assertFalse(result["dataSourceLicensed"])
         self.assertEqual(attest(self.db, self.initial, self.initial_meta)["journalRows"], 0)
-        self.assertEqual(inspect(str(self.db))["journalRows"], 0)
+        self.assertEqual(inspect(str(self.db),self.initial,self.initial_meta)["journalRows"], 0)
 
         with OfflineJournalContext(self.db) as journal:
             # Simulate a prohibited activation when no storage checkpoint
@@ -96,7 +96,7 @@ class IsolatedPaperDeploymentDressRehearsal(unittest.TestCase):
             self.assertEqual(rebooted.summary(), before)
             # Private report reads committed totals; it cannot turn these
             # synthetic records into a next-M15 prediction hit rate.
-            report = inspect(str(self.db))
+            report = inspect(str(self.db),self.initial,self.initial_meta)
             self.assertEqual(report["cumulative"]["closedTrades"], 2)
             self.assertAlmostEqual(report["cumulative"]["netModeledUsd"], -2.2)
             self.assertIsNone(report["unverifiedNextM15ForecastAccuracy"])
@@ -121,13 +121,15 @@ class IsolatedPaperDeploymentDressRehearsal(unittest.TestCase):
         self.assertEqual(restored["rows"], before["rows"])
         with OfflineJournalContext(self.recovered) as reopened:
             self.assertEqual(reopened.summary(), before)
-        self.assertEqual(inspect(str(self.recovered))["cumulative"]["closedTrades"], 2)
+        self.assertEqual(inspect(str(self.recovered),self.snapshot,self.snapshot_meta)["cumulative"]["closedTrades"], 2)
 
         # Rolling the live DB all the way back to its original empty
         # checkpoint must NOT pass the latest post-trade checkpoint.
         restore(self.initial, self.initial_meta, self.rolled_back)
         with self.assertRaises(ValueError):
             attest(self.rolled_back, self.snapshot, self.snapshot_meta)
+        with self.assertRaises(ValueError):
+            inspect(str(self.rolled_back),self.snapshot,self.snapshot_meta)
         with self.assertRaises(ValueError):
             restore(self.snapshot, self.snapshot_meta, self.recovered)
 
@@ -138,6 +140,10 @@ class IsolatedPaperDeploymentDressRehearsal(unittest.TestCase):
         self.snapshot_meta.write_text(json.dumps(meta))
         with self.assertRaises(ValueError):
             attest(self.db, self.snapshot, self.snapshot_meta)
+        with self.assertRaises(ValueError):
+            inspect(str(self.db),self.snapshot,self.snapshot_meta)
+        # The legacy local diagnostic reader still checks journal integrity;
+        # the private HTTP path MUST use the checkpoint-bound form above.
         self.assertEqual(inspect(str(self.db))["cumulative"]["closedTrades"], 2)
 
     def test_no_runtime_files_without_express_storage_bootstrap(self):
