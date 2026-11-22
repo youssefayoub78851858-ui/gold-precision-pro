@@ -34,6 +34,16 @@ a.equal(result.signal,'WAIT');
 a.equal(result.providerRequestsMade,0);
 a.equal(result.brokerOrdersSent,0);
 a.equal(result.baselineAndShadowNotIdenticalTradePaths,true);
+a.equal(result.comparisonPromotionGate.status,
+ 'BLOCKED_EXPLORATORY_RESEARCH_ONLY');
+a.equal(result.comparisonPromotionGate.shadowFilterAdoptionApproved,false);
+a.equal(result.comparisonPromotionGate.independentPerformanceImprovementProven,false);
+a.equal(result.comparisonPromotionGate.shadowFilterOutperformedBothOldMonthsInBothCostScenarios,false);
+a.equal(result.comparisonPromotionGate.allShadowMonthlyModeledNetRPositive,false);
+a(result.comparisonPromotionGate.blockingReasons.includes(
+ 'SHADOW_FILTER_DID_NOT_OUTPERFORM_IN_EACH_RECORDED_MONTH'));
+a(result.comparisonPromotionGate.blockingReasons.includes(
+ 'SHADOW_FILTER_HAS_NONPOSITIVE_MODELED_NET_R'));
 for(const row of result.months){
  a(['2026-09','2026-10'].includes(row.month));
  a.equal(row.frozenV2OriginalCandidatesUnchanged,true);
