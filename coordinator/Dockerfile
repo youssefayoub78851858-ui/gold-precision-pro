@@ -12,7 +12,7 @@ COPY biquote_offline_source_audit.py biquote_overlap_evidence.py biquote_session
 COPY biquote_collector_backup_preflight.py biquote_collector_restore_rehearsal.py biquote_private_archive_predeploy_guard.py biquote_owner_private_copy_once.py biquote_owner_vault_inventory.py /app/
 # Frozen research modules: Node runs offline against owner-only forward vault.
 # They are not connected to MT5, order endpoints or the public demo.
-COPY v3_ultimate.js ultimate_four_stage_review.js independent_context_timing_preflight.js biquote_session_h4_continuity_audit.js biquote_vendor_declared_session.js ultimate_signal_quality.js ultimate_signal_quality_report.js ultimate_shadow_admission.js /app/
+COPY v3_ultimate.js ultimate_four_stage_review.js independent_context_timing_preflight.js biquote_session_h4_continuity_audit.js biquote_vendor_declared_session.js ultimate_signal_quality.js ultimate_signal_quality_report.js ultimate_entry_robustness.js ultimate_shadow_admission.js /app/
 ENV DATA_DIR=/var/data/gold-live PYTHONUNBUFFERED=1
 STOPSIGNAL SIGTERM
 CMD ["python3", "/app/entrypoint.py"]
