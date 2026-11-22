@@ -19,7 +19,7 @@ import hashlib
 import re
 
 from offline_paper_outcome_journal import (
-    OfflineJournal, ORIGIN, canonical, utc
+    OfflineJournal, ORIGIN, canon, utc
 )
 
 MODE = "GOLD_OFFLINE_SYNTHETIC_PAPER_AUTO_RECORDER_V1"
@@ -102,7 +102,7 @@ def _kind_for(events, packet):
 def _event(packet, kind):
     # Hash the COMPLETE packet. A modified replay cannot reuse the same
     # eventId even if it reuses the source observationId and UTC instant.
-    identifier = hashlib.sha256(canonical(packet).encode()).hexdigest()[:32]
+    identifier = hashlib.sha256(canon(packet).encode()).hexdigest()[:32]
     value = {
         "eventId": "auto_" + identifier,
         "observedUTC": packet["observedUTC"],
