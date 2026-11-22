@@ -5,10 +5,13 @@
 const {evaluate}=require('./v3_ultimate');
 const {diagnostic}=require('./ultimate_signal_quality');
 const {audit}=require('./ultimate_shadow_admission');
+const {inspect:inspectEntryRobustness}=require('./ultimate_entry_robustness');
 function review(input){
   const base=evaluate(input);
   const qualityDiagnostics=diagnostic(input.frames,input.asOfUTC,base.tradePlan,input.risk,base.layers);
   const shadowVeto=audit(input,base,qualityDiagnostics);
+  const entryRobustness=inspectEntryRobustness(input,
+    base.researchCandidate,base.tradePlan,input.risk);
   return {
     mode:'OFFLINE_INDEPENDENT_RESEARCH_REVIEW',
     asOfUTC:base.asOfUTC,
@@ -18,6 +21,7 @@ function review(input){
     technicalCandidate:base.technical?.candidate||'NONE',
     qualityDiagnostics,
     shadowVeto,
+    entryRobustness,
     sourceBlockers:[...base.monitoring.blocked],
     signal:'WAIT',executable:false,paperOrdersAllowed:false,
     strategyChanged:false,providerRequestsMade:0,
