@@ -284,6 +284,44 @@ test("six internal offline modules appear on mobile without accepting forged liv
  assert.ok(js.includes("report.historicalArchiveAudit.developmentM15Bars"));
 });
 
+test("five runtime paper blockers cannot be forged into an executable signal",()=>{
+ const {validatePaperReadiness}=require("../../review-dashboard.js");
+ const {inspect:handoff}=require("../internal_offline_handoff");
+ const {inspect:assess}=require("../paper_final_blockers");
+ const {wait}=require("../paper_startup_recovery_gate");
+ const payload=assess(handoff(),wait("NO_PERSISTENT_PAPER_JOURNAL_CONFIGURED"));
+ assert.deepEqual(validatePaperReadiness(payload),{
+   storageLocallyChecked:false,paperTradeReady:false,signal:"WAIT"
+ });
+ const gate={...wait("STARTUP_LOCAL_CHECKPOINT_READ_ONLY_VERIFIED"),
+   checkpointSafe:true,paperResultsDisplayAllowed:true};
+ const checked=assess(handoff(),gate);
+ assert.deepEqual(validatePaperReadiness(checked),{
+   storageLocallyChecked:true,paperTradeReady:false,signal:"WAIT"
+ });
+ for(const spoof of [
+   {...payload,signal:"BUY"},
+   {...payload,executable:true},
+   {...payload,readyForBuySell:true},
+   {...payload,readyForPaperExecution:true},
+   {...payload,licensedXauusdFeedReady:true},
+   {...payload,externallyVerifiedCount:5},
+   {...payload,nextM15ForecastAccuracyPct:100},
+   {...payload,brokerOrdersSent:1},
+   {...payload,locallyCheckedCount:1},
+   {...payload,requirements:payload.requirements.slice(1)},
+   {...payload,requirements:payload.requirements.map((v,i)=>i===0?
+     {...v,status:"LOCAL_CHECKPOINT_ONLY_OFFSITE_NOT_PROVEN"}:v)}
+ ])assert.equal(validatePaperReadiness(spoof),null);
+ const fs=require("node:fs"),path=require("node:path");
+ const html=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.html"),"utf8");
+ const js=fs.readFileSync(path.resolve(__dirname,"../../review-dashboard.js"),"utf8");
+ assert(html.includes('id="paper-readiness-details"'));
+ assert(!html.includes('id="paper-readiness-details" open'));
+ assert(js.includes("validatePaperReadiness(report.paperReadinessBlockers)"));
+ assert(js.includes("report.paperReadinessBlockers.locallyCheckedCount===1"));
+});
+
 test("mobile paper report remains unavailable without a verified local ledger",()=>{
  const {validatePaperReport}=require("../../review-dashboard.js");
  const {empty}=require("../review_paper_report_bridge");
