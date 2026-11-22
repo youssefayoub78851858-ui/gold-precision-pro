@@ -191,6 +191,10 @@ def commit_fixture_page(chunk, page, dirname, observed_utc, *, explicit_syntheti
             z = {k: v for k, v in old.items() if k != "firstLocalTestReceiptUTC"}
             if a != z:
                 raise ValueError("ARCHIVE_SLOT_CONFLICT_NEVER_OVERWRITE")
+        # Drop the temporary hard-link before verifying single-link safety.
+        # Otherwise the published inode temporarily has link count two.
+        os.unlink(name)
+        name = None
         dirfd = os.open(d, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) |
                         getattr(os, "O_NOFOLLOW", 0))
         try:
