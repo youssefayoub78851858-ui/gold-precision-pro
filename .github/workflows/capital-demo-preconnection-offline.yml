@@ -1,0 +1,39 @@
+name: Capital Demo rights-first preconnection safety (offline)
+
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - 'coordinator/capital_demo_historical_batch_plan.py'
+      - 'coordinator/test_capital_demo_historical_batch_plan.py'
+      - 'coordinator/capital_demo_private_get_boundary.py'
+      - 'coordinator/capital_demo_https_transport.py'
+      - 'coordinator/test_capital_demo_https_transport.py'
+      - 'coordinator/test_capital_demo_private_get_boundary.py'
+      - 'coordinator/test_capital_demo_private_end_to_end.py'
+      - 'coordinator/multi_source_public_readiness.js'
+      - 'coordinator/test_multi_source_public_readiness.js'
+      - '.github/workflows/capital-demo-preconnection-offline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preconnection-no-keys-no-orders:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Rights-first plan, demo GET boundary, HTTPS and zero-order mock transport
+        working-directory: coordinator
+        run: |
+          python -m unittest -v test_capital_demo_historical_batch_plan test_capital_demo_private_get_boundary test_capital_demo_https_transport test_capital_demo_private_end_to_end
+      - name: Public readiness never assumes account KYC, rights, or a connected price feed
+        run: node coordinator/test_multi_source_public_readiness.js
