@@ -385,6 +385,41 @@
  }
 
 
+ function validatePaperReadiness(d){
+  const ids=["DURABLE_PAPER_STORAGE","CLOUD_XAUUSD_DATA_RIGHTS",
+    "VERIFIED_CLOSED_M15_H1_H4","LICENSED_MACRO_GC_ORDERFLOW",
+    "INDEPENDENT_FORWARD_PAPER_EVIDENCE"];
+  if(!d||d.mode!=="GOLD_PAPER_READINESS_BLOCKERS_V1"||
+     !["EXTERNAL_PREREQUISITES_PENDING",
+       "INTERNAL_EVIDENCE_RECHECK_REQUIRED"].includes(d.status)||
+     d.requiredCount!==5||d.externallyVerifiedCount!==0||
+     ![0,1].includes(d.locallyCheckedCount)||
+     !Array.isArray(d.requirements)||d.requirements.length!==5||
+     d.requirements.some((r,i)=>r?.id!==ids[i]||
+       r.status!==(i===0?
+       (d.locallyCheckedCount===1?
+       "LOCAL_CHECKPOINT_ONLY_OFFSITE_NOT_PROVEN":
+       "DURABLE_STORAGE_AND_CHECKPOINT_NOT_VERIFIED"):
+       "NOT_EXTERNALLY_VERIFIED"))||
+     d.reviewServiceDeploymentAttested!==false||
+     d.actualGitHubCIPassAttestedByRuntime!==false||
+     d.licensedXauusdFeedReady!==false||
+     d.historicalM15H1H4ParityReady!==false||
+     d.externalMacroOrderflowReady!==false||
+     d.independentPaperHoldoutReady!==false||
+     d.automaticPaperLoggingEnabled!==false||
+     d.paperResultsStatisticallyValidated!==false||
+     d.nextM15ForecastAccuracyPct!==null||
+     d.readyForBuySell!==false||d.readyForPaperExecution!==false||
+     d.liveExecutionEnabled!==false||
+     d.providerRequestsMade!==0||d.brokerOrdersSent!==0||
+     d.paperOrdersSent!==0||d.signal!=="WAIT"||
+     d.executable!==false||
+     (d.status==="INTERNAL_EVIDENCE_RECHECK_REQUIRED"&&
+      d.locallyCheckedCount!==0))return null;
+  return {storageLocallyChecked:d.locallyCheckedCount===1,
+    paperTradeReady:false,signal:"WAIT"};
+ }
  function validateInternalHandoff(d){
   const keys=["sourceRequirements","closedFrameCapacity","candleChronology",
     "externalContextClocks","paperCostHoldout","frozenResearchAndShadow"];
@@ -519,7 +554,7 @@
  // Pure validators are exposed only to local Node offline tests.
  if(typeof module!=="undefined"&&module.exports)
   module.exports={validateChart,validateSnapshot,localLatestParity,
-    localCoveredParityAudit,researchWatch,vendorH4SessionLabel,technicalObservations,continuityReport,validateDailyH15,validateOfficialMacro,validatePreapproval,validateInternalHandoff,validatePaperReport};
+    localCoveredParityAudit,researchWatch,vendorH4SessionLabel,technicalObservations,continuityReport,validateDailyH15,validateOfficialMacro,validatePreapproval,validateInternalHandoff,validatePaperReadiness,validatePaperReport};
  if(typeof document==="undefined")return;
  const $=id=>document.getElementById(id);
  let frame="M15",state=null,pending=false,expiry=0;
@@ -655,7 +690,9 @@ async function loadPaperReport(){
       !/^application\/json(?:\s*;|\s*$)/i.test(r.headers?.get?.("content-type")||""))
      throw Error("OFFLINE_HANDOFF_UNVERIFIED");
    const report=await r.json();
-   if(!validateInternalHandoff(report))throw Error("OFFLINE_HANDOFF_UNVERIFIED");
+   if(!validateInternalHandoff(report)||
+      !validatePaperReadiness(report.paperReadinessBlockers))
+     throw Error("OFFLINE_HANDOFF_UNVERIFIED");
    if(own!==internalHandoffEpoch||document.visibilityState==="hidden")return;
    $("internal-gate-src").textContent="المصادر التسعة: وصلة المتطلبات موجودة، الاتصال الحي بعده غير مرخّص";
    $("internal-gate-candles").textContent="M15 / H1 / H4: فحوص الشموع موصولة؛ التاريخ المؤهّل بعده ناقص";
@@ -663,6 +700,19 @@ async function loadPaperReport(){
    $("internal-gate-macro").textContent="DXY / GC / الأخبار: فحوص التوقيت موصولة؛ البث المرخّص غير متصل";
    $("internal-gate-paper").textContent="الورقي: محرك التكاليف والتحقق موصول؛ لا نتائج أمامية مستقلة";
    $("internal-gate-provider").textContent="المزوّد النهائي: الاتصال والترخيص مؤجّلان لآخر مرحلة";
+   const storage=$("paper-readiness-storage");
+   if(storage)storage.textContent=
+      report.paperReadinessBlockers.locallyCheckedCount===1?
+      "التخزين: فحص محلي للسجل نجح، لكن النسخ الاحتياطي الخارجي غير مثبت":
+      "التخزين الدائم: لا يوجد قرص وسجل مؤهلان مثبتان على الخادم";
+   const reasons={
+    "paper-readiness-rights":"ترخيص بيانات الذهب على الخادم: لم يتم التحقق منه",
+    "paper-readiness-frames":"شموع M15/H1/H4 المغلقة وتاريخها المؤهل: لم تُثبت",
+    "paper-readiness-context":"DXY / السندات / GC / Order Flow: بث مؤهل غير متصل",
+    "paper-readiness-holdout":"اختبار ورقي أمامي مستقل مع تكاليف وسيط: غير مكتمل"
+   };
+   for(const id of Object.keys(reasons))
+     if($(id))$(id).textContent=reasons[id];
    const gate= $("release-audit-summary");
    if(gate)gate.textContent=
     "الفحص الداخلي: ٦/٦ عقود برمجية متوافقة؛ الإثبات الخارجي: ٠/٤. لا بيانات مؤهّلة أو إشارات.";
@@ -676,6 +726,10 @@ async function loadPaperReport(){
    for(const id of ["internal-gate-src","internal-gate-candles","internal-gate-analysis",
      "internal-gate-macro","internal-gate-paper"])
     $(id).textContent="WAIT — ربط داخلي غير متحقق حالياً";
+   for(const id of ["paper-readiness-storage","paper-readiness-rights",
+      "paper-readiness-frames","paper-readiness-context",
+      "paper-readiness-holdout"])
+     if($(id))$(id).textContent="WAIT — لا يمكن التحقق من شروط التشغيل";
    const gate=$("release-audit-summary");
    if(gate)gate.textContent="WAIT — لا يوجد فحص جاهزية نهائية موثوق حالياً.";
    const archive=$("historical-archive-audit");
