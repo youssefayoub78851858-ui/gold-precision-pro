@@ -99,6 +99,8 @@ on:
       - 'coordinator/test_biquote_render_log_export_readonly.js'
       - 'coordinator/biquote_private_archive_predeploy_guard.py'
       - 'coordinator/test_biquote_private_archive_predeploy_guard.py'
+      - 'coordinator/biquote_owner_private_copy_once.py'
+      - 'coordinator/test_biquote_owner_private_copy_once.py'
       - 'private-monitor.html'
       - 'coordinator/test_private_monitor_signal_readiness.js'
       - '.github/workflows/gold-four-stage-batch-offline.yml'
@@ -151,6 +153,9 @@ jobs:
       - name: "Private BiQuote archive predeploy: signed backup compare, separate device and recovery (offline)"
         working-directory: coordinator
         run: python -m unittest -v test_biquote_private_archive_predeploy_guard
+      - name: Owner-private sealed vault one-time copy and isolated recovery (synthetic temp storage only)
+        working-directory: coordinator
+        run: python -m unittest -v test_biquote_owner_private_copy_once
       - name: Synthetic paper WAL backup restore reboot integrity (offline, temp paths only)
         working-directory: coordinator
         run: python -m unittest -v test_offline_paper_snapshot_recovery
