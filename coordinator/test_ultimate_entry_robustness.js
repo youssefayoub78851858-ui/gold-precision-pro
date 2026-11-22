@@ -53,7 +53,7 @@ a.equal(wrong.status,'INSUFFICIENT_EVIDENCE');
 a.equal(wrong.scenarios.length,0);
 const sell={entry:110,stop:112,target:104,spread:.1};
 const bear=structuredClone(snapshot);
-for(const bar of bear.frames.M15){bar.open=bar.close;bar.close=bar.open-.1;}
+for(const bar of bear.frames.M15){bar.open=bar.close;bar.close=bar.open-.05;}
 const sells=inspect(bear,'SELL',sell,risk);
 a.equal(sells.status,'STRESS_DIAGNOSTIC_ONLY');
 a(sells.scenarios[0].netRewardRisk>sells.scenarios[2].netRewardRisk);
