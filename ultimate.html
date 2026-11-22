@@ -666,7 +666,7 @@ document.addEventListener('DOMContentLoaded',function(){
 <div id="multi-source-grid" class="overview-grid">
 <div class="overview-card">الذهب BID/ASK، GC، DXY، السندات، الأخبار والتكاليف<strong>غير موصولة ببيانات مدفوعة — جاري عرض المتطلبات فقط</strong></div>
 </div>
-<p id="capital-kyc-handoff" class="overview-status" role="status">Capital.com Demo هو المصدر المختار للذهب، لكن غير متصل. توثيق الهوية مؤجّل لآخر مرحلة تتطلّب تدخّلك، بعد إثبات حقوق البيانات وتجهيز الحماية. WAIT — لا صفقات.</p>
+<p id="capital-kyc-handoff" class="overview-status" role="status">Capital.com Demo هو المرشح للذهب، لكنه غير متصل. الخطوة المعلّقة هي موافقة الشركة الخطية على استخدام بيانات BID/ASK للبحث الخاص على Render، ثم عزل المفتاح الذي قد يتيح التداول. حالة توثيق حسابك لا تُفحص من هذه الشاشة. WAIT — لا صفقات.</p>
 <button id="multi-source-check" type="button">فحص وضع المصادر (مجاني، بلا طلب بيانات)</button>
 <p class="overview-status">المصدر المرشح ما بيعني أنه شغّال. بيانات السندات المجانية يومية فقط، ولا تعوّض تحديث US02Y/US10Y اللحظي. فحص GitHub غير فحص سوق مباشر؛ التداول معطّل.</p>
 </section><hr>
@@ -695,14 +695,17 @@ document.addEventListener('DOMContentLoaded',function(){
       v.publicLicensedDataShown!==false||
       !v.layers||Object.keys(v.layers).length!==9)throw Error('UNSAFE');
    const c=v.capitalDemoPreKyc;
-   if(!c||c.mode!=='CAPITAL_DEMO_DEFER_USER_KYC_UNTIL_FINAL_CONNECTION_HANDOFF'||
+   if(!c||c.mode!=='CAPITAL_DEMO_PRIVATE_CLOUD_RIGHTS_PENDING_PRECONNECTION_HANDOFF'||
+       c.accountVerificationStatusAttestedByThisPublicModule!==false||
       c.selectedPrimaryCandidate!==true||c.kycRequestedNow!==false||
       c.credentialRequestedNow!==false||c.connected!==false||
       c.permissionToStoreOnPrivateRenderConfirmed!==false||
       c.kycRequiredBeforeRealDemoAPIUse!==true||
+       c.nextExternalDependency!=='WRITTEN_PRIVATE_RENDER_DATA_RIGHTS_AND_RETENTION_REPLY'||
+       c.nextUserAction!=='NO_API_KEY_UNTIL_WRITTEN_RIGHTS_AND_EGRESS_ISOLATION'||
       c.providerRequestsMade!==0||c.ordersSent!==0||
-      c.executable!==false||c.signal!=='WAIT')throw Error('UNSAFE_KYC_GATE');
-   if(kyc)kyc.textContent='Capital.com Demo مختار لكنه غير متصل. توثيق الهوية مؤجّل لآخر إجراء مطلوب منك، بعد موافقة الشركة على حقوق البيانات. حتى بعد التوثيق لازم اختبار تاريخ BID/ASK والتداول الورقي. WAIT — لا مفتاح ولا صفقات.';
+      c.executable!==false||c.signal!=='WAIT')throw Error('UNSAFE_CAPITAL_RIGHTS_GATE');
+   if(kyc)kyc.textContent='Capital.com Demo مرشح لكنه غير متصل. بانتظار موافقة مكتوبة على بحث Render والتخزين، ثم عزل مفتاح API الذي يتيح التداول. حالة توثيق الحساب لا تفحصها هذه الشاشة. بعدها لازم اختبار شموع BID/ASK والتداول الورقي. WAIT — لا مفاتيح ولا صفقات.';
    const nodes=[];
    for(const [id,name] of Object.entries(names)){
     const layer=v.layers[id];
@@ -728,7 +731,7 @@ document.addEventListener('DOMContentLoaded',function(){
    item.textContent='تعذّر التحقق من وضع المصادر — لا تعتبر أي مصدر جاهزاً';
    grid.appendChild(item);
    status.textContent='WAIT — حالة المصادر غير متاحة';
-   if(kyc)kyc.textContent='WAIT — تعذّر فحص تأجيل التوثيق. لا ترسل أي بيانات هوية أو مفاتيح API؛ لا يوجد إذن لتشغيل الصفقات.';
+   if(kyc)kyc.textContent='WAIT — تعذّر فحص صلاحية استخدام بيانات الذهب على Render. لا ترسل بيانات الهوية أو مفاتيح API؛ لا يوجد إذن لتشغيل الصفقات.';
    const decisionProof=document.getElementById("gdc-source-proof");
    if(decisionProof)decisionProof.textContent=
      "متطلبات المصادر: تعذّر التحقق؛ العدد غير معروف، ولا يوجد إثبات لاتصال GC / DXY / السندات / الأخبار.";
