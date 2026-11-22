@@ -62,6 +62,23 @@ unclosed.frames.M15.push({...unclosed.frames.M15.at(-1),datetime:AT});
 a.equal(inspect(unclosed,'BUY',plan,risk).status,'INSUFFICIENT_EVIDENCE');
 const stale={...snapshot,asOfUTC:'2026-11-19T20:00:00Z'};
 a.equal(inspect(stale,'BUY',plan,risk).status,'INSUFFICIENT_EVIDENCE');
+// A missing market interval is NOT a valid ATR/history bridge.
+for(const tf of ['M15','H1','H4']){
+ const gapped=structuredClone(snapshot);
+ gapped.frames[tf].splice(-2,1);
+ const flagged=inspect(gapped,'BUY',plan,risk);
+ a.equal(flagged.status,'INSUFFICIENT_EVIDENCE');
+ a.equal(flagged.reason,tf+'_RECENT_SESSION_GAP_NOT_VERIFIED');
+ a.equal(flagged.signal,'WAIT');
+}
+// Constant-price last bar during an unverified maintenance window cannot
+// prove usable entry conditions or a genuine market trend.
+const flat=structuredClone(snapshot);
+const lastFlat=flat.frames.M15.at(-1);
+lastFlat.high=lastFlat.low=lastFlat.open=lastFlat.close;
+const flatReview=inspect(flat,'BUY',plan,risk);
+a.equal(flatReview.status,'INSUFFICIENT_EVIDENCE');
+a.equal(flatReview.reason,'LAST_M15_ZERO_RANGE_NO_PRICE_DISCOVERY');
 const missingCosts=inspect(snapshot,'BUY',plan,{},);
 a.equal(missingCosts.status,'INSUFFICIENT_EVIDENCE');
 a.equal(missingCosts.postCostRiskQuality,'UNAVAILABLE');
