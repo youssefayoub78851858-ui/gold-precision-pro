@@ -82,7 +82,11 @@ try{
  a(root.includes('session.setCookie(issued.cookie)'));
  a(root.includes('privateMonitor.relay(token,{approved:true})') ||
    root.includes('proxy.relay(token,{approved:true})'));
- a(root.includes("liveOrdersAllowed")===false);
+ // Read-only paper report routes may explicitly reject unsafe live-order
+ // flags. Require the denial; never confuse a guard with an order endpoint.
+ a(root.includes('result.body.liveOrdersAllowed!==false'));
+ a(!root.includes('order_send('));
+ a(!root.includes('executeBrokerOrder('));
  const frontend=fs.readFileSync("biquote-mobile-ui.js","utf8");
  a(frontend.includes('credentials:"same-origin"'));
  a(frontend.includes('"/api/v3/ultimate/biquote-viewer-session"'));
