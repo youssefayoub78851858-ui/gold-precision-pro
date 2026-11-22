@@ -108,7 +108,6 @@ class PaperStartupRecovery(unittest.TestCase):
         new = OfflineJournal(alternative, freeze_utc="2026-11-18T00:00:30Z")
         try:
             new.append(event("wait", 1, "WAIT"))
-            new.append(event("trade", 92, "PAPER_CLOSED", close(1, 2)))
         finally:
             new.close()
         with self.assertRaises(ValueError):
