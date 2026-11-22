@@ -42,6 +42,21 @@ function latestValid(rows,times,index,decision,width){
  return times[index]+width<=decision&&decision-(times[index]+width)<=width&&
   times[index]-times[index-1]===width;
 }
+// Equality among locally rebuilt BID frames is useful integrity evidence,
+// but it is NOT independent confirmation of a broker or upstream vendor.
+function m15ConstituentsMatch(higher,segments,m15Lookup){
+ const start=Date.parse(higher.datetime);
+ const parts=Array.from({length:segments},(_,i)=>m15Lookup.get(start+i*900000));
+ if(parts.some(x=>!x))return false;
+ const ref={
+  open:parts[0].open,
+  high:Math.max(...parts.map(x=>x.high)),
+  low:Math.min(...parts.map(x=>x.low)),
+  close:parts.at(-1).close
+ };
+ return ['open','high','low','close'].every(key=>
+  Math.abs(higher[key]-ref[key])<=Math.max(.00001,Math.abs(ref[key])*1e-8));
+}
 function describeDataset(data,meta){
  if(!data||data.symbol!=='XAU/USD'||!data.frames||!meta?.qualityReport?.frames||
     meta.priceConvention!=='BID')bad('BID_SOURCE_MANIFEST_REQUIRED');
@@ -52,7 +67,8 @@ function describeDataset(data,meta){
   parsed[name]=frame;
  }
  const m=parsed['15min'],h1=parsed['1h'],h4=parsed['4h'];
- let contiguousM15=0,nonflatM15=0,contextCovered=0,unknownContext=0;
+ let contiguousM15=0,nonflatM15=0,contextCovered=0,parityMatched=0,unknownContext=0;
+ const m15Lookup=new Map(m.times.map((t,i)=>[t,m.rows[i]]));
  let one=-1,four=-1;
  for(let i=0;i<m.rows.length;i++){
   const decision=m.times[i]+FRAMES['15min'];
@@ -72,8 +88,11 @@ function describeDataset(data,meta){
   nonflatM15++;
   const ready1=latestValid(h1.rows,h1.times,one,decision,FRAMES['1h']);
   const ready4=latestValid(h4.rows,h4.times,four,decision,FRAMES['4h']);
-  if(ready1&&ready4)contextCovered++;
-  else unknownContext++;
+  if(ready1&&ready4){
+   contextCovered++;
+   if(m15ConstituentsMatch(h1.rows[one],4,m15Lookup)&&
+      m15ConstituentsMatch(h4.rows[four],16,m15Lookup))parityMatched++;
+  }else unknownContext++;
  }
  return {
   rows:{M15:m.rows.length,H1:h1.rows.length,H4:h4.rows.length},
@@ -81,7 +100,8 @@ function describeDataset(data,meta){
   zeroRangeCounts:{M15:m.flats,H1:h1.flats,H4:h4.flats},
   m15PriorATRContiguousWindows:contiguousM15,
   m15NonflatPriorATRWindows:nonflatM15,
-  m15WindowsWithRecentClosedH1AndH4Geometry:contextCovered,
+  m15WindowsWithRecentClosedH1AndH4Timing:contextCovered,
+  m15WindowsWithLocallyMatchedH1AndH4BIDOHLC:parityMatched,
   m15WindowsMissingRecentH1OrH4:unknownContext,
   hasBrokerSessionCalendar:false,
   hasCompleteAskSide:false,
@@ -101,7 +121,8 @@ function inspect(records){
   totalM15:add(x=>x.rows.M15),
   totalStrictM15PriorATRWindows:add(x=>x.m15PriorATRContiguousWindows),
   totalStrictM15WithNonflatLastBar:add(x=>x.m15NonflatPriorATRWindows),
-  totalStrictM15WithRecentH1H4:add(x=>x.m15WindowsWithRecentClosedH1AndH4Geometry),
+  totalStrictM15WithRecentH1H4Timing:add(x=>x.m15WindowsWithRecentClosedH1AndH4Timing),
+  totalStrictM15WithLocallyMatchedBIDOHLC:add(x=>x.m15WindowsWithLocallyMatchedH1AndH4BIDOHLC),
   brokerCostsIndependentlyVerified:false,
   independentProviderRightsVerified:false,
   underlyingBrokerSessionVerified:false,
