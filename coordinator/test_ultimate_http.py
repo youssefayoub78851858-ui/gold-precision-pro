@@ -94,7 +94,11 @@ class UltimateHTTP(unittest.TestCase):
             self.assertEqual(len(ms['layers']), 9)
             self.assertEqual(ms['layers']['XAUUSD_BBO']['status'], 'NOT_CONNECTED')
             handoff = ms['capitalDemoPreKyc']
-            self.assertEqual(handoff['mode'], 'CAPITAL_DEMO_DEFER_USER_KYC_UNTIL_FINAL_CONNECTION_HANDOFF')
+            self.assertEqual(handoff['mode'], 'CAPITAL_DEMO_PRIVATE_CLOUD_RIGHTS_PENDING_PRECONNECTION_HANDOFF')
+            self.assertFalse(handoff['accountVerificationStatusAttestedByThisPublicModule'])
+            self.assertEqual(handoff['nextExternalDependency'], 'WRITTEN_PRIVATE_RENDER_DATA_RIGHTS_AND_RETENTION_REPLY')
+            self.assertEqual(handoff['nextUserAction'], 'NO_API_KEY_UNTIL_WRITTEN_RIGHTS_AND_EGRESS_ISOLATION')
+            self.assertFalse(handoff['actualDemoHistoryReceived'])
             self.assertTrue(handoff['selectedPrimaryCandidate'])
             self.assertFalse(handoff['kycRequestedNow'])
             self.assertFalse(handoff['credentialRequestedNow'])
