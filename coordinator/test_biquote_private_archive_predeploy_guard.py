@@ -110,7 +110,7 @@ class ArchivePredeployGate(unittest.TestCase):
         for delta in [
             {**recovery, "closedCounts": {"M15": 2, "H1": 1, "H4": 1}},
             {**recovery, "sourceRightsVerified": True},
-            {**recovery, "isolatedRestorePassed": False},
+            {**recovery, "isolatedLocalRestorePassed": False},
         ]:
             with patch("biquote_private_archive_predeploy_guard.review",
                        return_value=base), patch(
