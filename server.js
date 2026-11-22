@@ -5,6 +5,9 @@ const fs = require("fs");
 const path = require("path");
 const PORT = process.env.PORT || 3000;
 const DEMO_MODE = process.env.DEMO_MODE === "standby";
+const PAPER_STARTUP_RECOVERY = DEMO_MODE
+  ? require("./coordinator/paper_startup_recovery_gate").inspect()
+  : null;
 const v2Api = DEMO_MODE ? null : require("./coordinator/service/server");
 const BROKER_URL = process.env.MARKET_DATA_BROKER_URL;
 const BROKER_TOKEN = process.env.BROKER_TOKEN || "";
@@ -137,7 +140,8 @@ const server = http.createServer(async (req, res) => {
     if(req.method!=="GET")return send(res,405,{signal:"WAIT",executable:false});
     const session=require("./coordinator/biquote_viewer_session");
     const result=require("./coordinator/review_paper_report_bridge").inspect({
-      authenticated:session.authenticated(req.headers)
+      authenticated:session.authenticated(req.headers),
+      startupState:PAPER_STARTUP_RECOVERY
     });
     if(result.body.signal!=="WAIT"||result.body.executable!==false||
        result.body.liveOrdersAllowed!==false||
