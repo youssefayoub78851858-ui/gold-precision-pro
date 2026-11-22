@@ -34,8 +34,11 @@ function snapshot(){
   verifiedLiveLayerCount:0,requiredLayerCount:IDS.length,
   sourceRequestsMade:0,providerRequestsMade:0,secretReads:0,payments:0,
   publicLicensedDataShown:false,privateAccountRead:false,
+  // Legacy JSON key retained for existing review consumers; NOT a claim
+  // that any specific owner's KYC is incomplete. No account data is read.
   capitalDemoPreKyc:{
-   mode:'CAPITAL_DEMO_DEFER_USER_KYC_UNTIL_FINAL_CONNECTION_HANDOFF',
+   mode:'CAPITAL_DEMO_PRIVATE_CLOUD_RIGHTS_PENDING_PRECONNECTION_HANDOFF',
+   accountVerificationStatusAttestedByThisPublicModule:false,
    selectedPrimaryCandidate:true,
    credentialRequestedNow:false,kycRequestedNow:false,
    kycRequiredBeforeRealDemoAPIUse:true,
@@ -45,16 +48,16 @@ function snapshot(){
    actualDemoHistoryReceived:false,
    endToEndPaperHoldoutValidated:false,
    connected:false,providerRequestsMade:0,ordersSent:0,
-   nextUserAction:'NONE_WHILE_OFFLINE_PREPARATION_CONTINUES',
+   nextUserAction:'NO_API_KEY_UNTIL_WRITTEN_RIGHTS_AND_EGRESS_ISOLATION',
    nextExternalDependency:'WRITTEN_PRIVATE_RENDER_DATA_RIGHTS_AND_RETENTION_REPLY',
-   workPossibleWithoutKyc:[
+   workPossibleWithoutAccountAccess:[
     'OFFLINE_GET_ONLY_DEMO_ROUTE_ALLOWLIST_TESTS',
     'SYNTHETIC_BID_ASK_M15_H1_H4_AGGREGATION_TESTS',
     'OFFLINE_SPREAD_COST_AND_PAPER_AUDIT_TESTS',
     'COLLECTOR_COUNTS_ONLY_READONLY_AUDIT'
    ],
-   beforeKycExternalPrerequisite:'COMPANY_PERMISSION_FOR_PRIVATE_CLOUD_DATA_STORAGE_AND_RETENTION',
-   afterKycValidationRequired:[
+   beforeConnectionExternalPrerequisite:'COMPANY_PERMISSION_FOR_PRIVATE_CLOUD_DATA_STORAGE_AND_RETENTION',
+   afterPermissionValidationRequired:[
     'INDEPENDENT_DEMO_EPIC_AND_MARKET_SESSION_VERIFICATION',
     'REAL_DEMO_HISTORY_VALIDATION_AND_FORWARD_HOLDOUT'
    ],
