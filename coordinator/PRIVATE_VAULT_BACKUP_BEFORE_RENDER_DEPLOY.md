@@ -22,9 +22,11 @@ signed archive of XAUUSD quotes or closed candles.
   has **no attached persistent disk**. Neither service is auto-deployed
   from review-branch commits (`autoDeploy: no`).
 - The coordinator's last observed live deploy was `b01574f` on Nov 18.
-  Its existing Dockerfile DOES NOT COPY the new backup/copy/restore scripts
-  into the running container. **Do not redeploy just to install them**;
-  code in GitHub is not equivalent to a command available on the service.
+  That **running image** does not include the newly developed copy/restore
+  tools. The **review-branch Dockerfile** now stages these modules for a
+  future approved build, but no new image has been deployed. **Do not
+  redeploy just to install them**; code in GitHub is not equivalent to a
+  command already available on the service.
 - Render supports an interactive **Shell** on the running private service
   under its Dashboard. The connected Render API tools cannot execute a
   shell or read private files. A signed-in owner can open the service's
