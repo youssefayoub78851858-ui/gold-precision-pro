@@ -87,6 +87,42 @@ The offline test is run by
 `.github/workflows/capital-demo-preconnection-offline.yml` and
 does **not** connect to Capital.com or request an API key.
 
+## Synthetic sealed three-frame replay (2026-11-23)
+
+The separate `capital_demo_synthetic_archive_mtf_replay.py` exercise
+has now passed five offline GitHub Actions regression tests with
+`test_capital_demo_synthetic_archive_mtf_replay.py`.
+
+For the fictional `TEST.GOLD.EPIC` instrument only, the test:
+- Commits **16 M15, 4 H1 and 1 H4** fully closed synthetic BID/ASK
+  candles to three owner-only locally sealed files.
+- Reopens the already saved files, independently revalidates
+  the original synthetic receipt and every price shape, reconstructs
+  all three frame pages, and calls the existing BID/ASK cross-frame
+  parity and missing-slot auditor.
+- Rejects a missing M15 constituent, conflicting H1 aggregate,
+  checksum or file-permission tampering, a missing page,
+  a changed request plan, and any non-fictional instrument.
+- Returns only sanitized counts and flags; no quoted prices,
+  credentials, file paths or private data in the report.
+- Retains `signal:WAIT`, `paperOrdersAllowed:false`,
+  `executable:false`, zero provider calls and zero orders,
+  even when all three synthetic frames agree.
+
+The synthetic 4-hour sample has **only one H4 candle**, so it cannot
+warm up indicators or support real signals. This workflow tests the
+safe offline file-to-audit handoff, not the live private coordinator,
+provider licensing, real historical continuity, a recoverable offsite
+backup or price feed.
+
+Once (and only once) a written Capital.com decision permits private
+cloud collection/storage/research, the live collector will still need
+separately reviewed credential isolation, the proper broker instrument,
+actual bid/ask source tests, closed-candle plus market-session checks,
+reliable private preservation, and independent after-cost forward paper
+validation. Do not deploy/restart the existing coordinator just to
+run this rehearsal.
+
 ## Operational handoff in order
 
 1. Confirm **in writing** broker eligibility for Lebanon, private Render
