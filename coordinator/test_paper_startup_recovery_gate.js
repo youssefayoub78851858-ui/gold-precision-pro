@@ -19,11 +19,13 @@ a.equal(missing.status,"STARTUP_PAPER_CHECKPOINT_CONFIGURATION_INCOMPLETE");
 a.equal(missing.paperResultsDisplayAllowed,false);
 const root=fs.mkdtempSync(path.join(os.tmpdir(),"startup-synthetic-"));
 try{
- const file=path.join(root,"test.sqlite3");
- const backup=path.join(root,"check.sqlite3");
- const manifest=path.join(root,"check.json");
+ const paperDirectory=path.join(root,"synthetic-paper");
+ fs.mkdirSync(paperDirectory,{mode:0o700});
+ const file=path.join(paperDirectory,"test.sqlite3");
+ const backup=path.join(paperDirectory,"check.sqlite3");
+ const manifest=path.join(paperDirectory,"check.json");
  for(const p of [file,backup,manifest])fs.writeFileSync(p,"fixture");
- const base={databasePath:file,mountRoot:root,
+ const base={databasePath:file,mountRoot:root,paperDirectory,
   checkpointPath:backup,manifestPath:manifest};
  const verified={
   mode:"GOLD_SYNTHETIC_PAPER_STARTUP_RECOVERY_GATE_V1",
@@ -64,13 +66,26 @@ try{
   a.equal(r.paperResultsDisplayAllowed,false);
   a.equal(r.signal,"WAIT");
  }
+ for(const badDir of ["",root,path.join(root,"gold-live"),"/tmp/synthetic-paper"]){
+  const result=inspect({...mock,paperDirectory:badDir});
+  a.equal(result.checkpointSafe,false);
+  a.equal(result.status,"STARTUP_DEDICATED_PAPER_SUBDIRECTORY_REQUIRED");
+ }
+ const outside=inspect({...mock,databasePath:path.join(root,"test.sqlite3")});
+ a.equal(outside.status,"STARTUP_DEDICATED_PAPER_SUBDIRECTORY_REQUIRED");
+ fs.chmodSync(paperDirectory,0o755);
+ a.equal(inspect(mock).status,"STARTUP_PAPER_SUBDIRECTORY_NOT_OWNER_ONLY");
+ fs.chmodSync(paperDirectory,0o700);
+ const alias=path.join(root,"linked-paper");
+ fs.symlinkSync(paperDirectory,alias,"dir");
+ a.equal(inspect({...mock,paperDirectory:alias}).checkpointSafe,false);
  const bad=inspect({...mock,verifyMount:()=>({safe:false})});
  a.equal(bad.status,"PERSISTENT_PAPER_DISK_NOT_ATTESTED");
  a.equal(bad.checkpointSafe,false);
  for(const p of ["/opt/render/project/check.sqlite3","/tmp/check.sqlite3","relative.sqlite3"]){
   a.equal(inspect({...mock,checkpointPath:p}).checkpointSafe,false);
  }
- const fake=path.join(root,"sym.sqlite3");
+ const fake=path.join(paperDirectory,"sym.sqlite3");
  fs.symlinkSync(backup,fake);
  a.equal(inspect({...mock,checkpointPath:fake}).checkpointSafe,false);
  const proc=inspect({...mock,runner:()=>({status:2,stdout:"",stderr:"bad"})});
