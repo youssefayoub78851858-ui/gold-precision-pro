@@ -19,6 +19,9 @@ class FakeReply:
     def __enter__(self):return self
     def __exit__(self,*_):return False
     def read(self,n):return self.data[:n]
+    def geturl(self):
+        # Test fixture's exact approved Demo GET URL, never a redirect.
+        return self.final_url
 
 
 class FakeOpener:
@@ -27,7 +30,9 @@ class FakeOpener:
         self.calls=[]
     def open(self,req,timeout):
         self.calls.append((req,timeout))
-        return FakeReply(self.body)
+        reply=FakeReply(self.body)
+        reply.final_url=req.full_url
+        return reply
 
 
 class IntegratedPriceTests(unittest.TestCase):
