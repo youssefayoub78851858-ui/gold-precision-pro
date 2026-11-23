@@ -1,0 +1,30 @@
+name: Paper storage isolation and bootstrap safety (offline)
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - 'coordinator/paper_volume_bootstrap.js'
+      - 'coordinator/test_paper_volume_bootstrap.js'
+      - 'coordinator/paper_persistent_disk_gate.js'
+      - 'coordinator/test_paper_persistent_disk_gate.js'
+      - 'coordinator/paper_startup_recovery_gate.js'
+      - 'coordinator/test_paper_startup_recovery_gate.js'
+      - 'coordinator/PAPER_STORAGE_ACTIVATION.md'
+      - '.github/workflows/paper-storage-isolation-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  private-paper-disk-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Reject ephemeral filesystem, symlinks, quote-vault overlap and unsafe permissions
+        run: |
+          node coordinator/test_paper_persistent_disk_gate.js
+          node coordinator/test_paper_volume_bootstrap.js
+          node coordinator/test_paper_startup_recovery_gate.js
