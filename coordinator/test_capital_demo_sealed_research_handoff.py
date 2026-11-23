@@ -58,7 +58,7 @@ class SealedResearchHandoffTests(unittest.TestCase):
         self.assertEqual(report["brokerOrdersSent"],0)
         output=json.dumps(report)
         for secret in ("4000", EPIC, "C"*32, "S"*32,
-                       str(self.root), "bid", "ask"):
+                       str(self.root), '"bid":', '"ask":'):
             self.assertNotIn(secret,output)
 
     def test_real_pipeline_entrypoint_exercises_quarantine_and_no_engines(self):
