@@ -43,6 +43,7 @@ function base(reason){
   independentHoldoutValidated:false,
   sampleTradeCount:0,distinctUtcTradeDates:0,distinctUtcWeeks:0,
   daysSinceFreeze:null,nominalNetUsd:null,doubleCostStressNetUsd:null,
+  maxModeledClosedDrawdownR:null,
   modeledProfitFactor:null,arithmeticMeanNetR:null,
   conservativeDailyBlockResampleLower5PctNetR:null,
   chronologicalThirdsNetUsd:null,
@@ -56,6 +57,7 @@ function base(reason){
    positiveNominalNetAfterCosts:true,
    positiveNetUnder2xModeledCosts:true,
    minimumModeledProfitFactor:1.2,
+   maximumModeledClosedDrawdownR:10,
    positiveEachChronologicalThird:true,
    dailyClusterBootstrap5thPercentileMeanNetRPositive:true
   },
@@ -80,7 +82,8 @@ function assess(input){
  }
  const days=new Map(),weeks=new Set();
  const segments=[0,0,0];
- let riskTotal=0,nominal=0,stress=0,profits=0,losses=0;
+ let riskTotal=0,nominal=0,stress=0,profits=0,losses=0,
+   pathR=0,peakR=0,maxDrawdownR=0;
  for(let i=0;i<n;i++){
   const t=tr[i],cost=t.spreadUsd+t.slippageUsd+t.commissionUsd;
   const result=t.grossPnLUsd-cost;
@@ -92,6 +95,9 @@ function assess(input){
   days.set(key,entry);weeks.add(mondayUTC(t.decisionUTC));
   segments[Math.min(2,Math.floor(i*3/n))]+=result;
   riskTotal+=t.initialRiskUsd;nominal+=result;stress+=stressed;
+  pathR+=result/t.initialRiskUsd;
+  peakR=Math.max(peakR,pathR);
+  maxDrawdownR=Math.max(maxDrawdownR,peakR-pathR);
   if(result>0)profits+=result;
   else if(result<0)losses-=result;
  }
@@ -124,7 +130,7 @@ function assess(input){
     days.size>=MIN_UTC_TRADE_DAYS&&weeks.size>=MIN_UTC_WEEKS&&
     countDays<=MAX_STUDY_CALENDAR_DAYS&&
     nominal>0&&stress>0&&factor!==null&&factor>=1.2&&
-    segments.every(x=>x>0)&&lower>0;
+    segments.every(x=>x>0)&&lower>0&&maxDrawdownR<=10;
  return {...base("UNATTESTED_INPUTS_REQUIRE_FORWARD_INDEPENDENT_PROVENANCE"),
    status:"SANITIZED_PROFITABILITY_SCREEN_ONLY_NOT_MARKET_PROOF",
    sampleTradeCount:n,
@@ -134,6 +140,7 @@ function assess(input){
    nominalNetUsd:two(nominal),
    doubleCostStressNetUsd:two(stress),
    modeledProfitFactor:factor===null?null:ROUND(factor),
+   maxModeledClosedDrawdownR:ROUND(maxDrawdownR),
    arithmeticMeanNetR:stats.averageNetR,
    conservativeDailyBlockResampleLower5PctNetR:ROUND(lower),
    chronologicalThirdsNetUsd:segments.map(two),
