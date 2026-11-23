@@ -206,6 +206,44 @@ This is the last class of offline timing issues to rule out before the
 external compliance/egress/credentials cutover, not authorization to
 collect data or redeploy the private coordinator.
 
+## Sealed archive to real XAU/USD intake gate — offline end-to-end
+
+`capital_demo_sealed_research_handoff.py` and its independent tests
+connect the sealed fictional BID/ASK M15/H1/H4 files to the **existing**
+`xauusd_feed_gate.intake_payload` and
+`xauusd_research_pipeline.run_research_pipeline`. This closes a
+previously untested *software integration* boundary, without changing
+the frozen V3/r2 engines, public UI or private Render coordinator.
+
+The handoff rereads the actual sealed synthetic files, verifies both
+sides' multi-timeframe parity and the page-level decision cutoff,
+normalizes **BID** separately from ASK, and passes an explicit
+`mode:synthetic` packet through the existing source gate. It uses
+the immutable original synthetic receipt timestamps, **never**
+forges a receipt matching the decision time. With simulation disabled
+at the research entry point, the V3/r2/diagnostics/paper engines must
+report **SKIPPED**. The exact same BID bars, if relabelled as
+`mode:recorded`, must be rejected by a default, unentitled
+`SourcePolicy`; source-rights flags from the archive or environment
+cannot authorize the handoff.
+
+The seven added CI checks cover a valid sealed local mock; a stale
+original receipt; an absent M15 constituent; a mismatching H1 aggregate;
+an arrival after the decision; tampered or missing archived bytes;
+and operator/environment flags that pretend permissions exist.
+Only sanitized counts and hard `WAIT` status leave this routine;
+no prices, file paths, tokens, network requests or trade orders.
+A local pass is **not** evidence of licensed Capital.com data,
+real broker feed, independent source rights, genuine market sessions,
+external token isolation, offsite recovery, forward performance or
+profitable paper trading.
+
+The 16 M15 / 4 H1 / 1 H4 sample is also too small to warm indicators.
+Do not deploy the running services or activate a trading-capable API
+token because this offline handoff passes. A future independently
+approved private live collector must still prove actual external
+prerequisites before any research signals can be promoted.
+
 ## Operational handoff in order
 
 1. Confirm **in writing** broker eligibility for Lebanon, private Render
