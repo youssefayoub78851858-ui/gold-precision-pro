@@ -30,6 +30,43 @@ aligned, fresh bars and an expected-session schedule, and it never fills gaps.
   derived output, retention duration, or the exact C:XAUUSD entitlement. Those
   remain unverified; do not attach credentials or admit data until confirmed.
 
+## No-purchase acceptance: synthetic adapter-to-intake wiring (2026-11-23)
+
+`coordinator/massive_pre_purchase_handoff.py` feeds the existing
+`massive_bbo_history_adapter.review_synthetic_massive_bbo` output
+through the **real** `xauusd_feed_gate.intake_payload` and
+`xauusd_research_pipeline.run_research_pipeline` interfaces, with
+all inputs expressly `SYNTHETIC_TEST_ONLY`. It does not create
+REST/WebSocket connections, credentials, subscriptions, paper journals,
+trading orders or network requests.
+
+In the isolated local acceptance fixture, 12,000 fictional quotes form
+800 closed M15, 200 H1 and 50 H4 bars. Removing **one** internal quote
+creates a 120-second interval and drops that M15, its H1 and its H4,
+leaving 799 / 199 / 49 respectively. This is a resilience test, not
+proof that the advertised real 2026 history contains even a single
+complete H4 or an ASK observation.
+
+The existing intake recognizes mock data as synthetic only; the V3/r2
+and paper engines are **SKIPPED**, even if the test includes 50 H4
+groups. The same bars relabelled `recorded` must fail the
+unentitled `SourcePolicy`. An old batch, forged rights,
+wrong ticker, crossed quote, invalid timestamp, environmental approval
+flags or absent M15 coverage cannot authorize a trade or paid request.
+The sample contains an **assumed weekend gap**, not an authenticated
+Massive/broker trading calendar. This and synthetic paper exercises
+never prove real account entitlement or future win rate.
+
+**Actual purchase decision: NOT APPROVED.** No plan purchase, billed
+provider request, Render deployment or live signal is allowed by a
+passing CI job. Request legitimate non-billable evidence of 2026
+`C:XAUUSD` historical BID+ASK density in each Aug/Sep/Oct window and
+actual Starter entitlement, then independently verify source rights,
+session schedule, quote chronology, cross-frame BID/ASK parity,
+current stream continuity, and prospective broker-cost paper results.
+If no permitted free sample is available, report this as the remaining
+*external commercial risk*, not an internal test passing.
+
 ## Historical coverage caveat (provider documentation; 2026-11-16)
 
 Massive's Currencies FAQ documents that gold `C:XAUUSD` starts from
