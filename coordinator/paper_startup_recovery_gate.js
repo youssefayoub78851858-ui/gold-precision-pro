@@ -27,6 +27,7 @@ function wait(status){
 function inspect({
  databasePath=process.env.GOLD_SYNTHETIC_PAPER_JOURNAL||"",
  mountRoot=process.env.GOLD_SYNTHETIC_PAPER_DISK_MOUNT||"",
+ paperDirectory=process.env.GOLD_SYNTHETIC_PAPER_PRIVATE_DIR||"",
  checkpointPath=process.env.GOLD_SYNTHETIC_PAPER_CHECKPOINT||"",
  manifestPath=process.env.GOLD_SYNTHETIC_PAPER_CHECKPOINT_MANIFEST||"",
  verifyMount=verifyDisk,
@@ -45,6 +46,16 @@ function inspect({
        path.normalize(x)===x)||new Set(paths).size!==3||
      !checkpointPath.endsWith(".sqlite3")||!manifestPath.endsWith(".json"))
    return wait("STARTUP_PAPER_CHECKPOINT_LOCATION_INVALID");
+  const expectedPrivate=path.join(mountRoot,"synthetic-paper");
+  if(typeof paperDirectory!=="string"||paperDirectory!==expectedPrivate||
+     paths.some(x=>path.dirname(x)!==paperDirectory))
+   return wait("STARTUP_DEDICATED_PAPER_SUBDIRECTORY_REQUIRED");
+  const dir=fs.lstatSync(paperDirectory);
+  const owner=typeof process.getuid==="function"?process.getuid():null;
+  if(!dir.isDirectory()||dir.isSymbolicLink()||typeof dir.mode!=="number"||
+     (dir.mode&0o077)!==0||owner===null||dir.uid!==owner||
+     fs.realpathSync(paperDirectory)!==paperDirectory)
+   return wait("STARTUP_PAPER_SUBDIRECTORY_NOT_OWNER_ONLY");
   for(const p of [checkpointPath,manifestPath]){
    const st=fs.lstatSync(p);
    if(!st.isFile()||st.isSymbolicLink()||st.size>25_000_000||
