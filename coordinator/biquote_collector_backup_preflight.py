@@ -64,7 +64,7 @@ def _secure_existing_archive_bytes(folder):
             identity(after) != identity(latest) or
             len(contents) > MAX_VAULT_BYTES):
             raise ValueError("ARCHIVE_CHANGED_WHILE_CHECKING")
-        return contents, after.st_dev
+        return contents, identity(after)
     finally:
         os.close(fd)
 
@@ -101,8 +101,12 @@ def review(source,backup,*,now_utc,finished=False):
             return blocked("BACKUP_COUNTERS_MISMATCH")
         if src_before!=dst_before:
             return blocked("BACKUP_SEALED_CONTENT_MISMATCH")
-        same_device=src_device==dst_device
-    except (OSError,ValueError,KeyError,TypeError):
+        same_device=src_device[0]==dst_device[0]
+    except ValueError as error:
+        if str(error) == "INSECURE_OR_ALIASED_PRIVATE_ARCHIVE":
+            return blocked("INSECURE_SNAPSHOT_PERMISSIONS")
+        return blocked("SNAPSHOT_UNREADABLE_OR_CORRUPTED")
+    except (OSError,KeyError,TypeError):
         return blocked("SNAPSHOT_UNREADABLE_OR_CORRUPTED")
     phase=("ACTIVE_CAPTURE_DO_NOT_RESTART" if now_utc<END
            else "FINAL_CAPTURE_PROOF_REQUIRED" if not finished
