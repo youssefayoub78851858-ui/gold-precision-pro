@@ -74,6 +74,7 @@ assert(good.doubleCostStressNetUsd>0);
 assert(good.modeledProfitFactor>=1.2);
 assert(good.chronologicalThirdsNetUsd.every(x=>x>0));
 assert(good.conservativeDailyBlockResampleLower5PctNetR>0);
+assert(good.maxModeledClosedDrawdownR<=10);
 assert.equal(good.hypotheticalScreenChecksPassed,true);
 // Even a perfectly fabricated and "qualified" sample NEVER attests
 // real-time market rights, real fills, chance of profit or authorizes a trade.
@@ -89,6 +90,12 @@ assert.equal(stressFail.hypotheticalScreenChecksPassed,false);
 const highWinRateNegative=assess(fixture(105,i=>i%5===0?-10:1));safe(highWinRateNegative);
 assert(highWinRateNegative.nominalNetUsd<0);
 assert.equal(highWinRateNegative.hypotheticalScreenChecksPassed,false);
+const longStreak=assess(fixture(105,i=>i>=45&&i<60?-1:2));
+safe(longStreak);
+assert(longStreak.nominalNetUsd>0);
+assert(longStreak.doubleCostStressNetUsd>0);
+assert(longStreak.maxModeledClosedDrawdownR>10);
+assert.equal(longStreak.hypotheticalScreenChecksPassed,false);
 const cherryPicked=assess(fixture(105,i=>i===105?200:-.2));safe(cherryPicked);
 assert.equal(cherryPicked.hypotheticalScreenChecksPassed,false);
 // No losses -> not enough to derive a finite profit factor. Never
