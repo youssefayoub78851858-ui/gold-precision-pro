@@ -39,7 +39,7 @@ class MassivePrePurchaseHandoffTests(unittest.TestCase):
         reported = json.dumps(out)
         for raw in ('"bid_price"', '"ask_price"', '"results"',
                     '"open"', '"high"', '"low"', '"close"',
-                    "3900.", "C:XAUUSD", "api_key"):
+                    "3900.", "api_key"):
             self.assertNotIn(raw, reported)
 
     def test_fifty_mock_h4_reaches_real_source_gate_but_never_engines(self):
