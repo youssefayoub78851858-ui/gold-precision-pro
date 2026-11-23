@@ -123,6 +123,34 @@ reliable private preservation, and independent after-cost forward paper
 validation. Do not deploy/restart the existing coordinator just to
 run this rehearsal.
 
+## Offline page-arrival / decision-time guard — 2026-11-23
+
+`capital_demo_synthetic_arrival_cutoff.py` is a non-network, non-executable
+cutover rehearsal which consumes the existing sealed **fictional** multi-frame
+BID/ASK pages. It reconstructs the disabled plan, verifies local M15/H1/H4
+geometry, then checks that each historical page's retained **local test
+receipt** is not after the explicit strategy decision time. A page received
+after the decision is rejected even if every OHLC bar in it had already closed.
+A decision timestamp different from the original inert plan is rejected too.
+
+Six offline tests protect: page receipt at/before cutoff; pages retrieved
+after cutoff; backdated decisions; missing M15 constituent; sealed-file
+tampering/missing archive; and inability to turn the test into a market
+connection by setting arbitrary environment flags. The CI test suite is
+`test_capital_demo_synthetic_arrival_cutoff.py`.
+
+**Critical limitation:** the page-level local test receipt only proves when
+the synthetic historical page was saved locally *in the mock*. It is not an
+authenticated timestamp from Capital.com, does not prove first observation
+of individual historical bars, cannot establish a real prospective
+holdout or successful trades, and must never be substituted for an
+independent real first-seen audit. A local pass retains all market-data
+rights, archival backup, paper and live trading gates as **false**.
+
+This is the last class of offline timing issues to rule out before the
+external compliance/egress/credentials cutover, not authorization to
+collect data or redeploy the private coordinator.
+
 ## Operational handoff in order
 
 1. Confirm **in writing** broker eligibility for Lebanon, private Render
