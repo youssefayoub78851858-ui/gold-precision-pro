@@ -1,0 +1,29 @@
+name: Massive pre-purchase no-billing XAUUSD handoff (offline)
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - 'coordinator/massive_pre_purchase_handoff.py'
+      - 'coordinator/test_massive_pre_purchase_handoff.py'
+      - 'coordinator/massive_bbo_history_adapter.py'
+      - 'coordinator/xauusd_feed_gate.py'
+      - 'coordinator/xauusd_research_pipeline.py'
+      - '.github/workflows/massive-prepurchase-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  no-billing-massive-handoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Real research intake must refuse synthetic and unlicensed Massive quotes
+        working-directory: coordinator
+        run: python -m unittest -v test_massive_pre_purchase_handoff test_massive_bbo_history_adapter
+      - name: Historical-vs-streaming mock BID/ASK M15 H1 H4 has no market-availability claims
+        working-directory: coordinator
+        run: python -m unittest -v test_massive_history_stream_parity
