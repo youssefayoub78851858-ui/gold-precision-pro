@@ -82,6 +82,13 @@ def demo_https_price_get(method, url, headers, *, opener=None,
     with client.open(request, timeout=8) as response:
         if getattr(response, "status", None) != 200:
             raise ValueError("DEMO_NON_200")
+        # Defense in depth: even an injected or accidentally misconfigured
+        # opener that followed an HTTP redirect must not return a successful
+        # market data response from a different endpoint. The real urllib
+        # HTTPSResponse has geturl(); unknown response objects fail closed.
+        final_url = getattr(response, "geturl", None)
+        if not callable(final_url) or final_url() != url:
+            raise ValueError("DEMO_REDIRECT_OR_ENDPOINT_CHANGED")
         ct = response.headers.get("Content-Type", "")
         if not isinstance(ct, str) or ct.lower().split(";", 1)[0].strip() != "application/json":
             raise ValueError("DEMO_CONTENT_TYPE_INVALID")
