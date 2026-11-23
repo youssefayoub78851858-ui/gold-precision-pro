@@ -63,6 +63,54 @@ class BackupPreflight(unittest.TestCase):
             ingest(self.a,sample(later),received_utc=iso(later))
         self.assertEqual(review(self.a,self.b,now_utc=later)["reason"],
                          "BACKUP_COUNTERS_MISMATCH")
+    def test_cannot_validate_backup_through_symlinked_ancestor(self):
+        alias = self.a.parent / "source-alias"
+        alias.symlink_to(self.a, target_is_directory=True)
+        # Even if the final file is ordinary, an intermediate symlink
+        # must not bypass owner-only private archive identity.
+        report = review(alias, self.b, now_utc=NOW)
+        self.assertEqual(report["status"], "BLOCKED")
+        self.assertFalse(report["exactSealedBytesMatch"])
+        self.assertFalse(report["deployApproved"])
+
+    def test_rejects_hardlinks_even_when_identical_bytes(self):
+        original = (self.b / FILE).read_bytes()
+        (self.b / FILE).unlink()
+        os.link(self.a / FILE, self.b / FILE)
+        try:
+            result = review(self.a, self.b, now_utc=NOW)
+            self.assertEqual(result["status"], "BLOCKED")
+            self.assertFalse(result["exactSealedBytesMatch"])
+            self.assertFalse(result["archiveRecoveryProven"])
+        finally:
+            (self.b / FILE).unlink()
+            (self.b / FILE).write_bytes(original)
+            os.chmod(self.b / FILE, 0o600)
+
+    def test_rejects_source_metadata_mutation_during_signed_validation(self):
+        from biquote_private_forward_vault import load_vault as actual_load
+        first = True
+
+        def mutate_after_read(folder):
+            nonlocal first
+            result = actual_load(folder)
+            if first:
+                first = False
+                file = self.a / FILE
+                stat = file.stat()
+                # No data bytes change. An inode metadata race must
+                # still fail the predeploy point-in-time validation.
+                os.utime(file, ns=(stat.st_atime_ns,
+                                   stat.st_mtime_ns + 1_000_000_000))
+            return result
+
+        with patch("biquote_collector_backup_preflight.load_vault",
+                   side_effect=mutate_after_read):
+            checked = review(self.a, self.b, now_utc=NOW)
+        self.assertEqual(checked["status"], "BLOCKED")
+        self.assertFalse(checked["exactSealedBytesMatch"])
+        self.assertFalse(checked["deployApproved"])
+
     def test_rejects_untrusted_time_and_status(self):
         self.assertEqual(review(self.a,self.b,now_utc=dt.datetime(2026,11,19))["status"],"BLOCKED")
         self.assertEqual(review(self.a,self.b,now_utc=NOW,finished="yes")["status"],"BLOCKED")
