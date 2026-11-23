@@ -56,6 +56,8 @@ on:
       - 'coordinator/test_independent_context_timing_preflight.js'
       - 'coordinator/prospective_paper_holdout_audit.js'
       - 'coordinator/test_prospective_paper_holdout_audit.js'
+      - 'coordinator/prospective_paper_edge_screen.js'
+      - 'coordinator/test_prospective_paper_edge_screen.js'
       - 'coordinator/offline_paper_outcome_journal.py'
       - 'coordinator/test_offline_paper_outcome_journal.py'
       - 'coordinator/offline_paper_safe_recorder.py'
@@ -140,6 +142,8 @@ jobs:
         run: node coordinator/test_historical_accuracy_evidence_audit.js
       - name: Prospective paper outcome arithmetic, modeled costs, no-trade approval (offline only)
         run: node coordinator/test_prospective_paper_holdout_audit.js
+      - name: Predeclared 100-papercase profitability arithmetic, 2x costs, chronology, no performance claim
+        run: node coordinator/test_prospective_paper_edge_screen.js
       - name: Daily, weekly, five-close and first-100-close synthetic paper reports (offline only)
         working-directory: coordinator
         run: python -m unittest -v test_offline_paper_periodic_reports
