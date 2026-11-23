@@ -9,6 +9,8 @@ on:
       - 'coordinator/test_capital_demo_private_page_store.py'
       - 'coordinator/capital_demo_synthetic_archive_mtf_replay.py'
       - 'coordinator/test_capital_demo_synthetic_archive_mtf_replay.py'
+      - 'coordinator/capital_demo_synthetic_arrival_cutoff.py'
+      - 'coordinator/test_capital_demo_synthetic_arrival_cutoff.py'
       - 'coordinator/test_capital_demo_historical_batch_plan.py'
       - 'coordinator/capital_demo_private_get_boundary.py'
       - 'coordinator/capital_demo_https_transport.py'
@@ -45,5 +47,8 @@ jobs:
       - name: Three-frame synthetic sealed BID ASK archive restart and parity gap audit
         working-directory: coordinator
         run: python -m unittest -v test_capital_demo_synthetic_archive_mtf_replay
+      - name: Reject historical pages fetched after simulated decision, no retrospective lookahead
+        working-directory: coordinator
+        run: python -m unittest -v test_capital_demo_synthetic_arrival_cutoff
       - name: Public readiness never assumes account KYC, rights, or a connected price feed
         run: node coordinator/test_multi_source_public_readiness.js
