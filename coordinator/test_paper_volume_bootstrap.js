@@ -38,12 +38,17 @@ try {
  a.equal(fs.readdirSync(tmp).length,0);
 }finally{fs.rmSync(tmp,{recursive:true,force:true});}
 let runs=0,checks=0;
+const paperDirectory="/var/data/synthetic-paper";
+const ownerId=typeof process.getuid==="function"?process.getuid():0;
+const privateStat={isDirectory:()=>true,isSymbolicLink:()=>false,mode:0o40700,uid:ownerId};
 const files={
  lstatSync(p){
+  if(p===paperDirectory)return privateStat;
   const e=new Error("not found");
   e.code="ENOENT";
   throw e;
- }
+ },
+ realpathSync(p){return p;}
 };
 const root="/var/data";
 const rootGate=({mountRoot})=>{
@@ -54,14 +59,14 @@ const rootGate=({mountRoot})=>{
 const runner=(_program,args,options)=>{
  runs++;
  a.equal(_program,"python3");
- a.equal(args[1],root);
+ a.equal(args[1],paperDirectory);
  a.deepEqual(args.slice(2),[
   "synthetic-paper.sqlite3","synthetic-checkpoint.sqlite3",
   "synthetic-checkpoint.json"]);
  a.equal(options.timeout,20000);
  return {status:0,stdout:JSON.stringify(defaults)};
 };
-const test={mountRoot:root,rootGate,fsAPI:files,runner};
+const test={mountRoot:root,paperDirectory,rootGate,fsAPI:files,runner};
 const dry=prepare(test);wait(dry);
 a.equal(dry.status,"EXTERNAL_VOLUME_VERIFIED_INITIALIZATION_DISABLED");
 a.equal(runs,0);
@@ -83,9 +88,37 @@ for(const forged of [
   runner:()=>({status:0,stdout:JSON.stringify(forged)})});
  wait(outcome);a.equal(outcome.storagePrepared,false);
 }
-const exists={lstatSync:p=>({isFile:()=>true})};
+const exists={...files,lstatSync:p=>p===paperDirectory?privateStat:{isFile:()=>true}};
 const stop=prepare({...test,fsAPI:exists,initialize:true});
 wait(stop);a.equal(stop.status,"EXISTING_OR_PARTIAL_JOURNAL_NEEDS_MANUAL_REVIEW");
+for(const malformed of [
+ "",
+ root,
+ "/var/data/gold-live",
+ "/var/data/synthetic-paper/..",
+ "/tmp/synthetic-paper",
+ "/var/data/synthetic-paper/extra"
+]){
+ const state=prepare({...test,paperDirectory:malformed,initialize:true});
+ wait(state);
+ a.equal(state.storagePrepared,false);
+ a.equal(state.status,"DEDICATED_PAPER_SUBDIRECTORY_REQUIRED");
+}
+for(const unsafe of [
+ {...privateStat,mode:0o40755},
+ {...privateStat,uid:ownerId+1},
+ {...privateStat,isSymbolicLink:()=>true},
+]){
+ const state=prepare({...test,initialize:true,fsAPI:{
+  ...files,lstatSync:p=>p===paperDirectory?unsafe:files.lstatSync(p)
+ }});
+ wait(state);a.equal(state.status,"PAPER_SUBDIRECTORY_NOT_OWNER_ONLY");
+}
+const linked=prepare({...test,initialize:true,fsAPI:{
+ ...files,realpathSync:p=>p===paperDirectory?"/var/data/gold-live":p
+}});
+wait(linked);a.equal(linked.status,"PAPER_SUBDIRECTORY_NOT_OWNER_ONLY");
+a.equal(runs,1,"unsafe attempts never initialize journal");
 const down=prepare({...test,rootGate:()=>({safe:false,status:"NO_VOLUME"}),initialize:true});
 wait(down);a.equal(down.storagePrepared,false);
 for(const names of [
