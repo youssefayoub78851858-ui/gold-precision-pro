@@ -80,6 +80,9 @@ jobs:
         run: |
           node test_massive_ws_standby.js
           python -m unittest -v test_massive_bbo_history_adapter
+      - name: Massive pre-purchase 50 H4 mock BBO to actual source intake (no license, no provider, no orders)
+        working-directory: coordinator
+        run: python -m unittest -v test_massive_pre_purchase_handoff
       - name: EODHD XAUUSD WebSocket safety preflight (offline)
         working-directory: coordinator
         run: node test_eodhd_ws_bridge.js
