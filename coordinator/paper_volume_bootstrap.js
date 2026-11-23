@@ -12,6 +12,9 @@
  *   node coordinator/paper_volume_bootstrap.js --initialize
  *
  * The paths are operator-only env vars, never browser-supplied or logged.
+ * GOLD_SYNTHETIC_PAPER_PRIVATE_DIR must refer to the pre-existing,
+ * owner-only /var/data/synthetic-paper folder (when mount is /var/data).
+ * Never auto-create it or accept the live XAU vault as a substitute.
  */
 const fs=require("node:fs");
 const path=require("node:path");
@@ -29,6 +32,9 @@ function blocked(status){
 }
 function prepare({
  mountRoot=process.env.GOLD_SYNTHETIC_PAPER_DISK_MOUNT||"",
+ // Explicitly dedicated paper folder INSIDE the already-attached volume.
+ // Never put synthetic SQLite files alongside the existing XAU quote vault.
+ paperDirectory=process.env.GOLD_SYNTHETIC_PAPER_PRIVATE_DIR||"",
  fileNames=DEFAULT_FILES,
  initialize=false,rootGate=verifyMountRoot,fsAPI=fs,runner=spawnSync
 }={}){
@@ -46,7 +52,20 @@ function prepare({
   if(!m||m.safe!==true||
      m.status!=="EXPLICIT_ATTACHED_MOUNT_ROOT_CHECKED")
     return blocked("ATTACHED_PERSISTENT_VOLUME_NOT_VERIFIED");
-  const names=fileNames.map(x=>path.join(mountRoot,x));
+  const fixedPrivateDir=path.join(mountRoot,"synthetic-paper");
+  if(typeof paperDirectory!=="string"||paperDirectory!==fixedPrivateDir||
+     path.normalize(paperDirectory)!==paperDirectory)
+    return blocked("DEDICATED_PAPER_SUBDIRECTORY_REQUIRED");
+  // Strictly read-only, never auto-create a folder or a new Render disk.
+  // No symlinks, shared permissions or other data folders are accepted.
+  const st=fsAPI.lstatSync(paperDirectory);
+  const userId=typeof process.getuid==="function"?process.getuid():null;
+  if(!st.isDirectory()||st.isSymbolicLink()||
+     typeof st.mode!=="number"||(st.mode&0o077)!==0||
+     userId===null||st.uid!==userId||
+     fsAPI.realpathSync(paperDirectory)!==paperDirectory)
+    return blocked("PAPER_SUBDIRECTORY_NOT_OWNER_ONLY");
+  const names=fileNames.map(x=>path.join(paperDirectory,x));
   for(const filepath of names){
    try{
     fsAPI.lstatSync(filepath);
@@ -58,7 +77,7 @@ function prepare({
   }
   if(!initialize)return blocked("EXTERNAL_VOLUME_VERIFIED_INITIALIZATION_DISABLED");
   const out=runner("python3",[
-   path.join(__dirname,"paper_fresh_volume_init.py"),mountRoot,...fileNames
+   path.join(__dirname,"paper_fresh_volume_init.py"),paperDirectory,...fileNames
   ],{encoding:"utf8",timeout:20000,maxBuffer:4000,
      env:{PATH:process.env.PATH||"/usr/bin:/bin",PYTHONIOENCODING:"utf-8"}});
   if(out?.status!==0||out.error||typeof out.stdout!=="string")
