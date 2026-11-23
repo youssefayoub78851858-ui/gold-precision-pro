@@ -11,6 +11,8 @@ on:
       - 'coordinator/test_capital_demo_synthetic_archive_mtf_replay.py'
       - 'coordinator/capital_demo_synthetic_arrival_cutoff.py'
       - 'coordinator/test_capital_demo_synthetic_arrival_cutoff.py'
+      - 'coordinator/capital_demo_sealed_research_handoff.py'
+      - 'coordinator/test_capital_demo_sealed_research_handoff.py'
       - 'coordinator/test_capital_demo_historical_batch_plan.py'
       - 'coordinator/capital_demo_private_get_boundary.py'
       - 'coordinator/capital_demo_https_transport.py'
@@ -55,5 +57,8 @@ jobs:
       - name: Proposed egress deny-by-default GET-only contract, offline route and bypass tests
         working-directory: coordinator
         run: python -m unittest -v test_capital_demo_egress_contract
+      - name: Sealed synthetic BID ASK archive to real research intake, never promote to engines or orders
+        working-directory: coordinator
+        run: python -m unittest -v test_capital_demo_sealed_research_handoff
       - name: Public readiness never assumes account KYC, rights, or a connected price feed
         run: node coordinator/test_multi_source_public_readiness.js
