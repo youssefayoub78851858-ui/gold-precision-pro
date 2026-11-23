@@ -32,6 +32,30 @@ signal engine, browser, public Render service, or a repository file.
 - NEVER set the activation environment variables just to pass tests;
   tests use disposable patched values without any remote calls.
 
+## Double-layer redirect protection (2026-11-23)
+
+The private HTTPS price transport now checks not only that its requested
+method/URL is the exact approved Demo prices GET but also that the
+**completed response URL is byte-for-byte identical to the requested URL**.
+The default transport uses a redirect-rejecting HTTPS opener and no
+environment proxy. The independent response check also refuses
+a synthetically injected opener that follows a redirect to a trading
+route and then returns HTTP 200. An opener response without a verifiable
+final URL is rejected. Offline tests cover both cases; they never use
+real credentials or contact a provider.
+
+**This is application-level defense, not external network isolation.**
+Before a real trading-capable Capital session token is ever provisioned,
+an operator must create and verify a separate private token-holding process
+with network egress controlled outside the application. IP/host firewalls
+alone cannot enforce HTTP paths; a dedicated egress proxy or equivalent
+layer must enforce GET plus the narrowly allowed prices route and deny
+all session/order/position endpoints, redirects and unknown hosts.
+The dashboard, research worker and public services must have no access
+to tokens or unrestricted proxy bypass. The running Render coordinator
+was NOT modified or deployed, and no such real egress isolation has
+been independently attested here.
+
 ## What a verified account does NOT authorize
 
 A verified Capital.com account may unlock the API integrations screen,
