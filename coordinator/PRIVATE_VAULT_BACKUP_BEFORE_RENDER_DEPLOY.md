@@ -151,6 +151,25 @@ means only that a caller-supplied timestamp is within 36 hours. It does
 rights, or external recovery. Its output permanently keeps
 `reviewDeployApproved:false` and `signal:WAIT`.
 
+## Strengthened offline byte-for-byte backup safety
+
+The review-branch `biquote_collector_backup_preflight.py` now performs
+bounded `O_NOFOLLOW` reads of the existing sealed source and backup files,
+rejects symbolic-link ancestors and hard-linked archives, checks owner-only
+permissions, and compares exact file bytes **and inode metadata before and
+after** loading/verifying the archive. The offline regression suite also
+tests a metadata mutation made while a sealed source file is being
+validated. This closes a race where a replaced or changing archive could
+otherwise look like a stable backup during one check.
+
+This is a **read-only, point-in-time** check. It cannot guarantee that
+an active collector will not write new bars immediately afterwards,
+cannot back up any Render file via the connected tools, and does not
+supply an authenticated offsite copy. A passing GitHub Actions test uses
+temporary fictional data, not the real private Render vault. No production
+deploy, restart, disk restore, archive export, vendor request or trading
+action was performed. The real independent-backup requirement remains open.
+
 ## Existing read-only verification tools
 
 - `biquote_private_forward_vault.py`: the private signed owner-only
