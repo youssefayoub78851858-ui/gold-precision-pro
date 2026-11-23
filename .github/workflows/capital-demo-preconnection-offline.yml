@@ -14,6 +14,8 @@ on:
       - 'coordinator/test_capital_demo_historical_batch_plan.py'
       - 'coordinator/capital_demo_private_get_boundary.py'
       - 'coordinator/capital_demo_https_transport.py'
+      - 'coordinator/capital_demo_egress_contract.py'
+      - 'coordinator/test_capital_demo_egress_contract.py'
       - 'coordinator/test_capital_demo_https_transport.py'
       - 'coordinator/test_capital_demo_private_get_boundary.py'
       - 'coordinator/test_capital_demo_private_end_to_end.py'
@@ -50,5 +52,8 @@ jobs:
       - name: Reject historical pages fetched after simulated decision, no retrospective lookahead
         working-directory: coordinator
         run: python -m unittest -v test_capital_demo_synthetic_arrival_cutoff
+      - name: Proposed egress deny-by-default GET-only contract, offline route and bypass tests
+        working-directory: coordinator
+        run: python -m unittest -v test_capital_demo_egress_contract
       - name: Public readiness never assumes account KYC, rights, or a connected price feed
         run: node coordinator/test_multi_source_public_readiness.js
