@@ -17,12 +17,15 @@ TOKENS={"CST":"C"*32,"X-SECURITY-TOKEN":"S"*32}
 
 
 class FakeReply:
-    def __init__(self, data=b"{}", status=200, content_type="application/json"):
+    def __init__(self, data=b"{}", status=200, content_type="application/json",
+                 final_url=URL):
         self.status=status;self.data=data
+        self.final_url=final_url
         self.headers={"Content-Type":content_type}
     def __enter__(self):return self
     def __exit__(self,*_):return False
     def read(self,n):return self.data[:n]
+    def geturl(self):return self.final_url
 
 
 class FakeOpener:
@@ -111,6 +114,23 @@ class DemoHttpsTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     demo_https_price_get("GET",URL,TOKENS,opener=fake)
             self.assertEqual(len(fake.calls),1)
+
+    def test_followed_redirect_to_trading_route_rejected_even_with_http_200(self):
+        # A noncompliant/injected opener can return 200 after following
+        # a forbidden redirect: URL equality is an independent veto.
+        bad="https://api-capital.backend-capital.com/api/v1/positions"
+        accepted=FakeReply(b'{"epic":"TEST.GOLD.EPIC","resolution":"MINUTE_15","prices":[]}',
+                           final_url=bad)
+        fake=FakeOpener(accepted)
+        with self.assertRaisesRegex(ValueError,"DEMO_REDIRECT_OR_ENDPOINT_CHANGED"):
+            demo_https_price_get("GET",URL,TOKENS,opener=fake)
+        self.assertEqual(len(fake.calls),1)
+        missing=FakeOpener(type("NoURL",(),{
+            "status":200,"headers":{"Content-Type":"application/json"},
+            "__enter__":lambda s:s,"__exit__":lambda s,*_:False,
+            "read":lambda s,n:b"{}"})())
+        with self.assertRaisesRegex(ValueError,"DEMO_REDIRECT_OR_ENDPOINT_CHANGED"):
+            demo_https_price_get("GET",URL,TOKENS,opener=missing)
 
     def test_redirect_never_followed(self):
         with self.assertRaisesRegex(ValueError,"DEMO_REDIRECT_BLOCKED"):
