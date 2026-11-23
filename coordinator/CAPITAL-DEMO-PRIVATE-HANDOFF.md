@@ -56,6 +56,37 @@ to tokens or unrestricted proxy bypass. The running Render coordinator
 was NOT modified or deployed, and no such real egress isolation has
 been independently attested here.
 
+## Proposed outbound gateway contract — offline only
+
+Added `capital_demo_egress_contract.py` and
+`test_capital_demo_egress_contract.py`. The offline Python tests compare
+a proposed **deny-by-default** gateway configuration to a fixed contract
+and reject simulated requests to the live Capital.com trading host,
+positions/orders/session routes, mutations (POST/PUT/PATCH/DELETE/CONNECT),
+HTTP downgrades, redirects, extra token/query fields, and ambiguous
+paths. Only the expected Demo `GET /api/v1/prices/{epic}` request
+shape for M15/H1/H4 passes the *simulation*. It reuses the real
+transport's strict request validator and never accesses a credential,
+a socket, a vendor, a disk, or an account.
+
+A proposed gateway must deny arbitrary proxies, CONNECT tunnels,
+WebSocket upgrades, redirects and direct outbound bypasses; validate
+the broker TLS certificate; enforce the method and price route **after
+TLS is terminated at the trusted gateway**; and isolate trading-capable
+tokens in an independent private process, inaccessible to the public UI
+and research worker. The contract is a *specification*, not a deployed
+proxy. Simply passing a configuration dictionary as input can never
+prove that a real Render network enforces it.
+
+Consequently the simulation always returns
+`actualProxyInstalledAndEnforcing:false`,
+`realNetworkIsolationVerified:false`, no provider requests, no
+orders and `WAIT`, even when all synthetic requests match.
+**Do not use the simulated success result to activate an API key.**
+Only externally verifiable deployment details, network/bypass negative
+testing on the approved isolated service, provider data rights and
+an independent recovery plan can close the real connection blocker.
+
 ## What a verified account does NOT authorize
 
 A verified Capital.com account may unlock the API integrations screen,
