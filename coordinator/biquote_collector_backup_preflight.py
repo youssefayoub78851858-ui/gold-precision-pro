@@ -4,7 +4,7 @@ import datetime as dt
 import os
 import pathlib
 import stat
-from biquote_private_forward_vault import FILE,START,FRAMES_ORDER,load_vault
+from biquote_private_forward_vault import FILE,START,FRAMES_ORDER,MAX_VAULT_BYTES,load_vault
 
 END=START+dt.timedelta(days=7)
 SAFE={"mode":"BIQUOTE_COLLECTOR_BACKUP_PREFLIGHT_V1","signal":"WAIT",
@@ -16,6 +16,58 @@ SAFE={"mode":"BIQUOTE_COLLECTOR_BACKUP_PREFLIGHT_V1","signal":"WAIT",
 def blocked(reason):
     return {**SAFE,"status":"BLOCKED","reason":reason,
             "exactSealedBytesMatch":False,"sourceClosedCounts":None}
+
+def _secure_existing_archive_bytes(folder):
+    """Read one sealed private file without following symlinks or accepting
+    multiple hard links, then reject any inode/metadata change while read.
+
+    A passing comparison is only a *point-in-time local check*, not an
+    offsite backup or exclusive lock on a running source collector.
+    """
+    if folder.resolve(strict=True) != folder:
+        raise ValueError("NON_CANONICAL_ARCHIVE_DIRECTORY")
+    file = folder / FILE
+    directory = folder.lstat()
+    before = file.lstat()
+    if (not stat.S_ISDIR(directory.st_mode) or
+        stat.S_ISLNK(directory.st_mode) or
+        (directory.st_mode & 0o077) != 0 or
+        directory.st_uid != os.getuid() or
+        not stat.S_ISREG(before.st_mode) or
+        stat.S_ISLNK(before.st_mode) or
+        (before.st_mode & 0o077) != 0 or
+        before.st_uid != os.getuid() or
+        before.st_nlink != 1 or
+        not 0 < before.st_size <= MAX_VAULT_BYTES):
+        raise ValueError("INSECURE_OR_ALIASED_PRIVATE_ARCHIVE")
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(file, flags)
+    try:
+        opened = os.fstat(fd)
+        if (not stat.S_ISREG(opened.st_mode) or
+            (opened.st_dev, opened.st_ino) !=
+            (before.st_dev, before.st_ino) or
+            opened.st_nlink != 1 or opened.st_uid != os.getuid() or
+            (opened.st_mode & 0o077) != 0):
+            raise ValueError("ARCHIVE_REPLACED_DURING_OPEN")
+        with os.fdopen(fd, "rb", closefd=False) as source:
+            contents = source.read(MAX_VAULT_BYTES + 1)
+        after = os.fstat(fd)
+        latest = file.lstat()
+        identity = lambda st: (
+            st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns,
+            st.st_ctime_ns, st.st_nlink, st.st_mode, st.st_uid
+        )
+        if (len(contents) != before.st_size or
+            identity(before) != identity(opened) or
+            identity(opened) != identity(after) or
+            identity(after) != identity(latest) or
+            len(contents) > MAX_VAULT_BYTES):
+            raise ValueError("ARCHIVE_CHANGED_WHILE_CHECKING")
+        return contents, after.st_dev
+    finally:
+        os.close(fd)
+
 
 def review(source,backup,*,now_utc,finished=False):
     """Compare existing private signed snapshots, never write/copy either."""
@@ -30,27 +82,26 @@ def review(source,backup,*,now_utc,finished=False):
     if not a.is_absolute() or not b.is_absolute() or a==b or ".." in a.parts+b.parts:
         return blocked("INVALID_OR_IDENTICAL_ARCHIVE_PATH")
     try:
-        for folder in (a,b):
-            folder_stat=folder.lstat()
-            fstat=(folder/FILE).lstat()
-            if (not stat.S_ISDIR(folder_stat.st_mode) or
-                stat.S_ISLNK(folder_stat.st_mode) or folder_stat.st_mode&0o077 or
-                not stat.S_ISREG(fstat.st_mode) or stat.S_ISLNK(fstat.st_mode) or
-                fstat.st_mode&0o077 or fstat.st_uid!=os.getuid() or
-                folder_stat.st_uid!=os.getuid()):
-                return blocked("INSECURE_SNAPSHOT_PERMISSIONS")
+        # Reuse only the files whose exact owner-only bytes were checked.
+        # Reading those bytes again after load_vault makes concurrent source
+        # collection activity a conservative failed check, not a green copy.
+        src_before, src_device=_secure_existing_archive_bytes(a)
+        dst_before, dst_device=_secure_existing_archive_bytes(b)
         if os.path.samefile(a/FILE,b/FILE):
             return blocked("BACKUP_ALIAS_NOT_INDEPENDENT")
         original,snapshot=load_vault(a),load_vault(b)
+        if (src_before,src_device)!=_secure_existing_archive_bytes(a) or (
+            dst_before,dst_device)!=_secure_existing_archive_bytes(b):
+            return blocked("ARCHIVE_CHANGED_WHILE_CHECKING")
         counts={tf:len(original["closed"][tf]) for tf in FRAMES_ORDER}
         if not original["quoteObservations"] or not any(counts.values()):
             return blocked("EMPTY_SOURCE_ARCHIVE")
         if (counts!={tf:len(snapshot["closed"][tf]) for tf in FRAMES_ORDER} or
             len(original["quoteObservations"])!=len(snapshot["quoteObservations"])):
             return blocked("BACKUP_COUNTERS_MISMATCH")
-        if (a/FILE).read_bytes()!=(b/FILE).read_bytes():
+        if src_before!=dst_before:
             return blocked("BACKUP_SEALED_CONTENT_MISMATCH")
-        same_device=(a/FILE).stat().st_dev==(b/FILE).stat().st_dev
+        same_device=src_device==dst_device
     except (OSError,ValueError,KeyError,TypeError):
         return blocked("SNAPSHOT_UNREADABLE_OR_CORRUPTED")
     phase=("ACTIVE_CAPTURE_DO_NOT_RESTART" if now_utc<END
