@@ -109,3 +109,37 @@ Official references:
 
 Prices and docs can change; check the current order/entitlement screen before
 any later approval. This review is not legal advice or a provider confirmation.
+
+
+## 2026-11-25 — provider evidence update, no purchase or activation
+
+Massive support's 2026-11-24 reply reports actual C:XAUUSD BBO samples
+for 2026-08-12, 2026-09-16 and 2026-10-14 (00:00–06:30 UTC each,
+page-size limited). Support reports both bid/ask populated, participant
+timestamps on every row, and no sampled gap above approximately 20 seconds.
+Support also confirms the $49/month Currencies Starter plan includes both
+historical quotes and live WebSockets. This supersedes the absence of
+provider-reported 2026 coverage evidence noted above, but does not establish
+independent observation, full-day/month coverage, account-specific entitlement,
+50 complete H4 bars, or historical/live parity. No raw sample was received
+or independently tested.
+
+The published individual terms (updated 2026-11-03), sections 2 and 7,
+and Market Data Terms sections 1, 4.5, 5 and 8 allow personal research and
+storage within entitlement, including hosting that processes only on the
+subscriber's behalf, subject to applicable source-specific/order terms.
+Information no longer licensed must cease to be used and be deleted within
+30 days; inactive automatic backup copies may persist up to 90 days only
+under the stated conditions. Non-reconstructible personal results may be
+retained. Any eventual private archive needs entitlement-aware deletion,
+backup expiry and proof of compliance before activation. This is a review
+of general published terms, not custom legal approval or a substitute for
+checking the actual checkout/order and source restrictions.
+
+Decision: Massive is a technically credible paid fallback; Capital.com
+remains the preferred free candidate pending its data-use decision.
+Do not purchase or connect either on the strength of this note. Actual
+market data, source rights, full real holdout coverage, other market layers,
+host costs, and prospective after-cost performance remain open. No production
+changes, credentials, provider data requests, paid services, paper orders,
+or real trading. WAIT remains unchanged.
