@@ -66,7 +66,8 @@ class OfflineM15Cycle:
             if hashlib.sha256(row['payload'].encode()).hexdigest() != row['digest']:
                 raise ValueError('Observation checksum mismatch')
             data = json.loads(row['payload'])
-            checkpoint = data.get('cycleCheckpoint')
+            snapshot = data.get('snapshot')
+            checkpoint = snapshot.get('syntheticCycleCheckpoint') if isinstance(snapshot, dict) else None
             if (data['bar'].get('dataOrigin') != 'SYNTHETIC_TEST_ONLY'
                     or not isinstance(checkpoint, dict)
                     or set(checkpoint) != {'15min','1h','4h'}):
@@ -175,7 +176,9 @@ class OfflineM15Cycle:
             # Re-evaluate V3 with persisted account risk, then veto any
             # disagreement. Never promote the public WAIT decision.
             def evaluate_agreement(supplied):
-                decision = evaluate(supplied)
+                # Test metadata belongs in the stored snapshot, not in the frozen evaluator.
+                decision = evaluate({k: v for k, v in supplied.items()
+                                     if k != 'syntheticCycleCheckpoint'})
                 side = decision.get('researchCandidate')
                 if (side not in ('BUY', 'SELL')
                         or agreement.get('v3') != side
@@ -187,8 +190,9 @@ class OfflineM15Cycle:
                 if bar.get('dataOrigin') != 'SYNTHETIC_TEST_ONLY':
                     raise ValueError('Synthetic bar required')
                 checkpoint = {k: v['candles'] for k,v in checked['frames'].items()}
-                self.paper.step(bar, snapshot, evaluator=evaluate_agreement,
-                                cycle_checkpoint=checkpoint if self.persistent_rehearsal else None)
+                if self.persistent_rehearsal:
+                    snapshot = {**snapshot, 'syntheticCycleCheckpoint': checkpoint}
+                self.paper.step(bar, snapshot, evaluator=evaluate_agreement)
             except Exception:
                 self.lock()
                 return self.report("SYNTHETIC_PAPER_FAILURE")

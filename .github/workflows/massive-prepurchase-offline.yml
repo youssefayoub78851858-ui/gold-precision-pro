@@ -20,6 +20,8 @@ on:
       - 'coordinator/research_monitor*.py'
       - 'coordinator/research_notification.py'
       - 'coordinator/ultimate_paper.py'
+      - 'coordinator/ultimate_forward_plan.py'
+      - 'research/ultimate-prospective-plan.json'
       - 'coordinator/massive_ws_handshake.js'
       - 'coordinator/test_massive_ws_handshake.js'
       - 'coordinator/massive_pre_purchase_handoff.py'
@@ -62,3 +64,5 @@ jobs:
       - name: Offline M15 event cycle through real research engines
         working-directory: coordinator
         run: python -m unittest -v test_offline_m15_cycle test_offline_m15_paper_cycle test_offline_m15_restart test_offline_m15_supervisor
+      - name: Verify original prospective strategy freeze without changing manifest
+        run: python coordinator/ultimate_forward_plan.py research/ultimate-prospective-plan.json

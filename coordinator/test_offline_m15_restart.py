@@ -25,6 +25,11 @@ class RestartTests(unittest.TestCase):
                 return p,later
             cycle=open_cycle()
             self.assertEqual(cycle.accept(p,c,now)["syntheticPending"],1)
+            import json
+            row=cycle.paper.db.execute('SELECT payload FROM observations').fetchone()
+            stored=json.loads(row[0])
+            self.assertIn('syntheticCycleCheckpoint',stored['snapshot'])
+            self.assertNotIn('cycleCheckpoint',stored)
             cycle.close()
             cycle=open_cycle()
             self.assertEqual(cycle.accept(p,c,now)["status"],"DUPLICATE_SKIPPED")
