@@ -137,3 +137,64 @@ class PaperLifecycle(unittest.TestCase):
         trade = self.account.summary()['trades'][0]
         self.assertEqual(trade['reason'], 'GAP_TARGET')
         self.assertAlmostEqual(trade['exit'],109.9)
+
+
+    def test_small_account_fixed_lot_rejects_excess_risk_and_closes_target(self):
+        # Hypothetical 500 USD account and fixed 0.01 lot, not an actual
+        # account balance, broker contract, signal or profitability claim.
+        self.account.close()
+        self.path = pathlib.Path(self.temp.name) / 'small-account.sqlite3'
+        self.account = PaperAccount(self.path, {
+            'initialBalance': 500, 'minLot': .01, 'maxLot': .01,
+            'lotStep': .01,
+        })
+        self.decide(bar('2026-11-10T12:00:00Z'), signal('BUY', 95, 110))
+        self.account.step(bar('2026-11-10T12:15:00Z'))
+        self.assertEqual(self.account.summary()['position'], [])
+        self.assertEqual(self.account.summary()['pending'], [])
+        self.assertEqual(self.account.summary()['trades'], [])
+        self.assertEqual(self.account.summary()['account']['balance'], 500)
+        rejected = self.account.db.execute(
+            "SELECT payload FROM events WHERE kind='REJECT_ENTRY'"
+        ).fetchone()
+        self.assertEqual(json.loads(rejected[0])['reason'],
+                         'Risk budget below minimum lot')
+
+        self.decide(bar('2026-11-10T12:30:00Z'), signal('BUY', 99, 103))
+        self.account.step(bar('2026-11-10T12:45:00Z', l=99.5))
+        position = self.account.summary()['position'][0]
+        self.assertAlmostEqual(position['lots'], .01)
+        self.assertLessEqual(position['risk'], 2.50)
+        self.assertAlmostEqual(position['entry'], 100.5)
+        self.account.close()
+        self.account = PaperAccount(self.path)
+        self.assertEqual(self.account.config['maxLot'], .01)
+        exit_bar = bar('2026-11-10T13:00:00Z', h=104, l=99.5)
+        self.account.step(exit_bar)
+        trade = self.account.summary()['trades'][0]
+        self.assertEqual(trade['reason'], 'TARGET')
+        self.assertAlmostEqual(trade['net'], 2.33)
+        self.assertAlmostEqual(self.account.summary()['account']['balance'], 502.33)
+        self.assertTrue(self.account.step(exit_bar)['duplicate'])
+        self.assertEqual(len(self.account.summary()['trades']), 1)
+
+    def test_small_account_fixed_lot_sell_uses_ask_stop_and_costs(self):
+        self.account.close()
+        self.path = pathlib.Path(self.temp.name) / 'small-sell.sqlite3'
+        self.account = PaperAccount(self.path, {
+            'initialBalance': 500, 'minLot': .01, 'maxLot': .01,
+            'lotStep': .01,
+        })
+        self.decide(bar('2026-11-10T12:00:00Z'), signal('SELL', 101, 97))
+        self.account.step(bar('2026-11-10T12:15:00Z', h=100.5, l=99.5))
+        position = self.account.summary()['position'][0]
+        self.assertAlmostEqual(position['lots'], .01)
+        self.assertLessEqual(position['risk'], 2.50)
+        # The BID high is below 101, but modeled ASK high exceeds the stop.
+        self.account.step(bar('2026-11-10T12:30:00Z', h=100.8, l=99.5))
+        trade = self.account.summary()['trades'][0]
+        self.assertEqual(trade['reason'], 'STOP')
+        self.assertAlmostEqual(trade['entry'], 99.9)
+        self.assertAlmostEqual(trade['exit'], 101.1)
+        self.assertAlmostEqual(trade['net'], -1.27)
+        self.assertAlmostEqual(self.account.summary()['account']['balance'], 498.73)
