@@ -1,0 +1,11 @@
+# Independent CI-only image. NOT a Render service entrypoint.
+FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9
+RUN apt-get update && apt-get install -y --no-install-recommends python3 && rm -rf /var/lib/apt/lists/*
+WORKDIR /rehearsal
+COPY offline_m15_cycle.py test_offline_m15_cycle.py test_offline_m15_paper_cycle.py xauusd_feed_gate.py xauusd_research_pipeline.py ultimate_paper.py test_xauusd_research_pipeline.py ./
+COPY v3_ultimate.js v3_multitimeframe.js v3_trade_plan.js v3_market_structure.js ultimate_v2.js ultimate_v2_contracts.js ultimate_diagnostics.js ultimate_news_impact.js test_ultimate_v2.js ./
+COPY massive_ws_handshake.js massive_ws_standby.js massive_ws_synthetic_bridge.js test_massive_ws_synthetic_bridge.js massive_readonly_probe.js test_massive_readonly_probe.js massive_reconnect_controller.js test_massive_reconnect_controller.js ./
+COPY fixtures/ultimate-synthetic.json ./fixtures/ultimate-synthetic.json
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+USER node
+CMD ["python3", "-m", "unittest", "-v", "test_offline_m15_cycle", "test_offline_m15_paper_cycle"]

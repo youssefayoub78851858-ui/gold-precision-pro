@@ -1,0 +1,33 @@
+name: Isolated Linux review runtime rehearsal (no billing)
+on:
+  push:
+    branches: [review/v2-portable-tests-20261109]
+    paths:
+      - 'coordinator/Dockerfile.review-rehearsal'
+      - 'coordinator/offline_m15_cycle.py'
+      - 'coordinator/test_offline_m15*.py'
+      - 'coordinator/massive*.js'
+      - 'coordinator/test_massive*.js'
+      - 'coordinator/xauusd_*.py'
+      - 'coordinator/ultimate_*.js'
+      - 'coordinator/ultimate_paper.py'
+      - 'coordinator/v3_*.js'
+      - 'coordinator/fixtures/ultimate-synthetic.json'
+      - '.github/workflows/isolated-review-runtime.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build isolated rehearsal image (not Render)
+        run: docker build -f coordinator/Dockerfile.review-rehearsal -t gold-offline-rehearsal coordinator
+      - name: Run analysis and paper lifecycle without network or persistent writes
+        run: docker run --rm --network none --read-only --tmpfs /tmp:rw,nosuid,nodev,size=64m --memory 512m --cpus 0.5 --cap-drop ALL --security-opt no-new-privileges gold-offline-rehearsal
+      - name: Run mocked connection and retry in same isolated image
+        run: |
+          docker run --rm --network none --read-only --memory 512m --cpus 0.5 --cap-drop ALL --security-opt no-new-privileges gold-offline-rehearsal node test_massive_readonly_probe.js
+          docker run --rm --network none --read-only --memory 512m --cpus 0.5 --cap-drop ALL --security-opt no-new-privileges gold-offline-rehearsal node test_massive_reconnect_controller.js
