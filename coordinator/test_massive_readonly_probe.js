@@ -21,7 +21,10 @@ class FakeSocket{
  a.equal(blocked.socketAttempted,false);a.equal(created,0);
  const invalid=await probe({authorized:true,WebSocketImpl:FakeSocket,credential:'MOCK_ONLY',durationMs:1});
  a.equal(invalid.status,'INVALID_PROBE_CONFIGURATION');a.equal(created,0);
- const result=await probe({authorized:true,credential:'MOCK_ONLY',WebSocketImpl:FakeSocket,durationMs:1000,clock:()=>now});
+ const captured=[];
+ const result=await probe({authorized:true,credential:'MOCK_ONLY',WebSocketImpl:FakeSocket,durationMs:1000,clock:()=>now,onQuote:q=>{captured.push(q);}});
+ a.deepEqual(captured,[{instrument:'XAU/USD',bid:100,ask:100.4,observedUTC:'2026-11-27T12:00:00.000Z',receivedUTC:'2026-11-27T12:00:00.000Z'}]);
+ a(Object.isFrozen(captured[0]));
  a.equal(created,1);a.equal(result.acceptedQuoteMessages,1);
  a.equal(result.status,'BOUNDED_OBSERVATION_ENDED_NOT_QUALIFIED');
  a.equal(result.signal,'WAIT');a.equal(result.executable,false);a.equal(result.realDataQualificationProven,false);
@@ -29,5 +32,11 @@ class FakeSocket{
  class BadSocket extends FakeSocket{send(){queueMicrotask(()=>this.emit('message',JSON.stringify({ev:'status',status:'auth_failed'})));}}
  const bad=await probe({authorized:true,credential:'MOCK_ONLY',WebSocketImpl:BadSocket,durationMs:1000,clock:()=>now});
  a.equal(bad.status,'AUTH_OR_ENTITLEMENT_REFUSED');a.equal(bad.acceptedQuoteMessages,0);
+ const failed=await probe({authorized:true,credential:'MOCK_ONLY',WebSocketImpl:FakeSocket,durationMs:1000,clock:()=>now,onQuote:()=>{throw Error('PRIVATE_QUOTE_DETAILS');}});
+ a.equal(failed.status,'PRIVATE_QUOTE_CONSUMER_FAILED');a.equal(failed.acceptedQuoteMessages,0);
+ a(!JSON.stringify(failed).includes('PRIVATE_QUOTE_DETAILS'));
+ const asyncSink=await probe({authorized:true,credential:'MOCK_ONLY',WebSocketImpl:FakeSocket,durationMs:1000,clock:()=>now,onQuote:async()=>{throw Error('PRIVATE');}});
+ a.equal(asyncSink.status,'ASYNC_QUOTE_CONSUMER_UNSUPPORTED');
+ a.equal(asyncSink.acceptedQuoteMessages,0);
  console.log('PASS disabled-default and bounded read-only socket probe with mock transport only');
 })().catch(e=>{console.error(e);process.exitCode=1;});

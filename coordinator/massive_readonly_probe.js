@@ -5,13 +5,13 @@
 const {createHandshake}=require('./massive_ws_handshake');
 const ENDPOINT='wss://socket.massive.com/forex';
 async function probe({authorized=false,credential,WebSocketImpl=globalThis.WebSocket,
- durationMs=60000,clock=Date.now}={}){
+ durationMs=60000,clock=Date.now,onQuote=()=>{}}={}){
  const blocked={status:'NOT_AUTHORIZED',signal:'WAIT',executable:false,
    paperOrdersAllowed:false,liveOrdersAllowed:false,socketAttempted:false,
    acceptedQuoteMessages:0,realDataQualificationProven:false};
  if(authorized!==true)return blocked;
  if(typeof credential!=='string'||!credential||credential.length>4096||
-    typeof WebSocketImpl!=='function'||typeof clock!=='function'||
+    typeof WebSocketImpl!=='function'||typeof clock!=='function'||typeof onQuote!=='function'||
     !Number.isInteger(durationMs)||durationMs<1000||durationMs>300000)
   return {...blocked,status:'INVALID_PROBE_CONFIGURATION'};
  return new Promise(resolve=>{
@@ -25,7 +25,7 @@ async function probe({authorized=false,credential,WebSocketImpl=globalThis.WebSo
   }
   try{
    socket=new WebSocketImpl(ENDPOINT);
-   handshake=createHandshake({credential,clock,send:x=>socket.send(x),
+   handshake=createHandshake({credential,clock,onQuote,send:x=>socket.send(x),
     close:()=>{try{socket.close();}catch{}}});
    credential=null;
    socket.addEventListener('message',e=>{
