@@ -1,0 +1,21 @@
+'use strict';
+const a=require('node:assert/strict');
+const {calculate}=require('./fx_dollar_basket_proxy');
+const now='2026-11-27T12:00:00Z';
+const fixture=()=>({origin:'SYNTHETIC_TEST_ONLY',decisionUTC:now,quotes:Object.fromEntries(
+ ['EURUSD','USDJPY','GBPUSD','USDCAD','USDSEK','USDCHF'].map(p=>[p,{bid:1,ask:1,observedUTC:now,receivedUTC:now}]))});
+const calc=x=>{const r=calculate(x);a.equal(r.signal,'WAIT');a.equal(r.executable,false);
+ a.equal(r.officialDxy,false);a.equal(r.directionalVote,false);a.equal(r.providerRequestsMade,0);return r;};
+let f=fixture();a(Math.abs(calc(f).proxyValue-50.14348112)<1e-10);
+f.quotes.EURUSD.bid=f.quotes.EURUSD.ask=2;
+a(Math.abs(calc(f).proxyValue-50.14348112*2**(-.576))<1e-10);
+f=fixture();f.quotes.USDJPY.bid=f.quotes.USDJPY.ask=2;
+a(Math.abs(calc(f).proxyValue-50.14348112*2**.136)<1e-10);
+f=fixture();delete f.quotes.USDCAD;a.equal(calc(f).reason,'SIX_PAIRS_AND_VALID_CLOCK_REQUIRED');
+f=fixture();f.quotes.EURUSD.ask=.9;a.equal(calc(f).reason,'INVALID_OR_CROSSED_QUOTE');
+f=fixture();f.quotes.EURUSD.ask=1.1;a.equal(calc(f).reason,'EXCESSIVE_RELATIVE_SPREAD');
+f=fixture();f.quotes.EURUSD.receivedUTC='2026-11-27T12:00:00.001Z';a.equal(calc(f).reason,'STALE_OR_FUTURE_QUOTE');
+f=fixture();f.quotes.EURUSD.observedUTC='2026-11-27T11:59:29Z';a.equal(calc(f).reason,'STALE_OR_FUTURE_QUOTE');
+f=fixture();f.quotes.EURUSD.observedUTC='2026-11-27T11:59:54Z';a.equal(calc(f).reason,'PAIR_CLOCK_SKEW');
+f=fixture();f.origin='LIVE';a.equal(calc(f).reason,'SYNTHETIC_ONLY');
+console.log('PASS offline FX basket proxy and stale/future/missing/skew guards; not official DXY');

@@ -5,6 +5,8 @@ on:
     paths:
       - 'coordinator/massive_ws_synthetic_bridge.js'
       - 'coordinator/test_massive_ws_synthetic_bridge.js'
+      - 'coordinator/fx_dollar_basket_proxy.js'
+      - 'coordinator/test_fx_dollar_basket_proxy.js'
       - 'coordinator/massive_ws_handshake.js'
       - 'coordinator/test_massive_ws_handshake.js'
       - 'coordinator/massive_pre_purchase_handoff.py'
@@ -38,3 +40,5 @@ jobs:
         run: node coordinator/test_massive_ws_handshake.js
       - name: Offline transport to candle to research gate integration
         run: node coordinator/test_massive_ws_synthetic_bridge.js
+      - name: Offline six-currency dollar proxy (not official DXY)
+        run: node coordinator/test_fx_dollar_basket_proxy.js
