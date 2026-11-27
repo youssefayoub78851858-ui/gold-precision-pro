@@ -48,6 +48,6 @@ now=start;const c=createSyntheticBridge(()=>now);
 for(const e of [{ev:'status',status:'connected'},{ev:'status',status:'auth_success'},
  {ev:'status',status:'success',message:'subscribed to: C.XAU-USD'}])c.frame(JSON.stringify(e));
 now+=10000;c.frame(JSON.stringify({ev:'C',p:'XAU/USD',t:now,b:100,a:100.4}));
-now+=1;a.equal(c.frame(JSON.stringify({ev:'C',p:'XAU/USD',t:now-2,b:100,a:100.4})).reason,'CANDLE_VALIDATION_FAILED');
+now+=1;a.equal(c.frame(JSON.stringify({ev:'C',p:'XAU/USD',t:now-2,b:100,a:100.4})).reason,'QUOTE_SEQUENCE_GAP_OR_REVERSE');
 a.equal(c.packet(),null);
 console.log('PASS synthetic handshake -> closed 16 M15/4 H1/1 H4 -> real research gate; no provider or orders');

@@ -9,6 +9,8 @@ on:
       - 'coordinator/test_fx_dollar_basket_proxy.js'
       - 'coordinator/massive_readonly_probe.js'
       - 'coordinator/test_massive_readonly_probe.js'
+      - 'coordinator/massive_reconnect_controller.js'
+      - 'coordinator/test_massive_reconnect_controller.js'
       - 'coordinator/massive_ws_handshake.js'
       - 'coordinator/test_massive_ws_handshake.js'
       - 'coordinator/massive_pre_purchase_handoff.py'
@@ -46,3 +48,5 @@ jobs:
         run: node coordinator/test_fx_dollar_basket_proxy.js
       - name: Bounded read-only connection probe with injected fake socket
         run: node coordinator/test_massive_readonly_probe.js
+      - name: Bounded reconnect policy with mocked attempts only
+        run: node coordinator/test_massive_reconnect_controller.js
