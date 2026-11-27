@@ -15,6 +15,10 @@ on:
       - 'coordinator/test_offline_m15_cycle.py'
       - 'coordinator/test_offline_m15_paper_cycle.py'
       - 'coordinator/test_offline_m15_restart.py'
+      - 'coordinator/offline_m15_supervisor.py'
+      - 'coordinator/test_offline_m15_supervisor.py'
+      - 'coordinator/research_monitor*.py'
+      - 'coordinator/research_notification.py'
       - 'coordinator/ultimate_paper.py'
       - 'coordinator/massive_ws_handshake.js'
       - 'coordinator/test_massive_ws_handshake.js'
@@ -57,4 +61,4 @@ jobs:
         run: node coordinator/test_massive_reconnect_controller.js
       - name: Offline M15 event cycle through real research engines
         working-directory: coordinator
-        run: python -m unittest -v test_offline_m15_cycle test_offline_m15_paper_cycle test_offline_m15_restart
+        run: python -m unittest -v test_offline_m15_cycle test_offline_m15_paper_cycle test_offline_m15_restart test_offline_m15_supervisor

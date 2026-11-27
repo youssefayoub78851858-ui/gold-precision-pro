@@ -5,6 +5,9 @@ on:
     paths:
       - 'coordinator/Dockerfile.review-rehearsal'
       - 'coordinator/offline_m15_cycle.py'
+      - 'coordinator/offline_m15_supervisor.py'
+      - 'coordinator/research_monitor*.py'
+      - 'coordinator/research_notification.py'
       - 'coordinator/test_offline_m15*.py'
       - 'coordinator/massive*.js'
       - 'coordinator/test_massive*.js'
