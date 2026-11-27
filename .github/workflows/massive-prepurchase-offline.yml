@@ -3,6 +3,8 @@ on:
   push:
     branches: [review/v2-portable-tests-20261109]
     paths:
+      - 'coordinator/massive_ws_synthetic_bridge.js'
+      - 'coordinator/test_massive_ws_synthetic_bridge.js'
       - 'coordinator/massive_ws_handshake.js'
       - 'coordinator/test_massive_ws_handshake.js'
       - 'coordinator/massive_pre_purchase_handoff.py'
@@ -34,3 +36,5 @@ jobs:
           node-version: '22'
       - name: Mock transport handshake and failure handling (no socket)
         run: node coordinator/test_massive_ws_handshake.js
+      - name: Offline transport to candle to research gate integration
+        run: node coordinator/test_massive_ws_synthetic_bridge.js
