@@ -8,6 +8,7 @@ import pathlib
 import sqlite3
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from offline_paper_outcome_journal import OfflineJournal
 from offline_paper_snapshot_recovery import snapshot, restore
@@ -140,6 +141,36 @@ class BackupAndRestartRecovery(unittest.TestCase):
             snapshot(link, self.backup, self.manifest)
         self.assertFalse(self.backup.exists())
         self.assertFalse(self.manifest.exists())
+
+
+    def test_directory_sync_failure_rolls_back_both_new_snapshot_outputs(self):
+        self.populate()
+        before = self.j.summary()
+        with patch("offline_paper_snapshot_recovery._fsync_dir",
+                   side_effect=OSError("simulated storage sync failure")):
+            with self.assertRaises(OSError):
+                snapshot(self.original, self.backup, self.manifest)
+        self.assertFalse(self.backup.exists())
+        self.assertFalse(self.manifest.exists())
+        self.assertEqual(self.j.summary(), before)
+        snapshot(self.original, self.backup, self.manifest)
+        self.assertTrue(self.backup.exists())
+        self.assertTrue(self.manifest.exists())
+
+    def test_restore_sync_failure_leaves_no_unverified_destination(self):
+        self.populate()
+        before = self.j.summary()
+        snapshot(self.original, self.backup, self.manifest)
+        with patch("offline_paper_snapshot_recovery._fsync_dir",
+                   side_effect=OSError("simulated restore sync failure")):
+            with self.assertRaises(OSError):
+                restore(self.backup, self.manifest, self.restored)
+        self.assertFalse(self.restored.exists())
+        self.assertTrue(self.backup.exists())
+        self.assertTrue(self.manifest.exists())
+        self.assertEqual(self.j.summary(), before)
+        result = restore(self.backup, self.manifest, self.restored)
+        self.assertEqual(result["rows"], before["rows"])
 
 
 if __name__ == "__main__":

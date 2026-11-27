@@ -3,6 +3,8 @@ on:
   push:
     branches: [review/v2-portable-tests-20261109]
     paths:
+      - 'coordinator/offline_paper_snapshot_recovery.py'
+      - 'coordinator/test_offline_paper_snapshot_recovery.py'
       - 'coordinator/paper_volume_bootstrap.js'
       - 'coordinator/test_paper_volume_bootstrap.js'
       - 'coordinator/paper_persistent_disk_gate.js'
@@ -28,3 +30,9 @@ jobs:
           node coordinator/test_paper_persistent_disk_gate.js
           node coordinator/test_paper_volume_bootstrap.js
           node coordinator/test_paper_startup_recovery_gate.js
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Offline journal backup, failed storage sync and retry
+        working-directory: coordinator
+        run: python -m unittest -v test_offline_paper_snapshot_recovery test_paper_volume_end_to_end_dress_rehearsal

@@ -146,6 +146,7 @@ def snapshot(existing_db, snapshot_db, manifest_path):
     temp_db = _temp(snapshot_dest.parent, ".sqlite3")
     temp_manifest = None
     published_db = False
+    published_manifest = False
     try:
         src = sqlite3.connect(
             "file:" + quote(str(original), safe="/") + "?mode=ro",
@@ -190,6 +191,7 @@ def snapshot(existing_db, snapshot_db, manifest_path):
         os.link(temp_db, snapshot_dest)
         published_db = True
         os.link(temp_manifest, manifest_dest)
+        published_manifest = True
         _fsync_dir(snapshot_dest.parent)
         if snapshot_dest.parent != manifest_dest.parent:
             _fsync_dir(manifest_dest.parent)
@@ -200,6 +202,10 @@ def snapshot(existing_db, snapshot_db, manifest_path):
             "signal": "WAIT", "executable": False, "brokerOrdersSent": 0,
         }
     except Exception:
+        # A failed directory sync must not leave a published manifest
+        # pointing to a removed database. Only remove outputs we created.
+        if published_manifest:
+            manifest_dest.unlink(missing_ok=True)
         if published_db:
             snapshot_dest.unlink(missing_ok=True)
         raise
@@ -238,12 +244,14 @@ def restore(snapshot_db, manifest_path, new_db):
     if any(data.get(k) != v for k, v in checked.items()):
         raise ValueError("Manifest journal head or freeze mismatch")
     tmp = _temp(dest.parent, ".sqlite3")
+    published_restore = False
     try:
         shutil.copyfile(source, tmp)
         _fsync_file(tmp)
         if _sha256(tmp) != data["sha256"] or _verified_view(tmp) != checked:
             raise ValueError("Restored journal failed independent verification")
         os.link(tmp, dest)
+        published_restore = True
         _fsync_dir(dest.parent)
         return {
             "status": "OFFLINE_SYNTHETIC_JOURNAL_RESTORED",
@@ -252,6 +260,10 @@ def restore(snapshot_db, manifest_path, new_db):
             "headDigest": checked["headDigest"],
             "signal": "WAIT", "executable": False, "brokerOrdersSent": 0,
         }
+    except Exception:
+        if published_restore:
+            dest.unlink(missing_ok=True)
+        raise
     finally:
         tmp.unlink(missing_ok=True)
 
