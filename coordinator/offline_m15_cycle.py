@@ -1,7 +1,7 @@
 """Isolated, event-driven M15 research rehearsal. Never activates market data.
 
 A caller delivers a synthetic packet; only a newly closed M15 bar invokes
-the existing V3/r2 pipeline. State is process-local, not durable, and a
+the existing V3/r2 pipeline. Optional test-only SQLite stores checkpoints, and a
 gap or conflicting revision latches the instance closed. No orders,
 network, scheduler, or market feed authorization.
 """
@@ -9,6 +9,8 @@ import datetime as dt
 import hashlib
 import json
 import os
+import pathlib
+import stat
 from ultimate_paper import PaperAccount, evaluate
 from xauusd_feed_gate import SourcePolicy, intake_payload, parse_utc
 from xauusd_research_pipeline import run_research_pipeline
@@ -16,17 +18,74 @@ from xauusd_research_pipeline import run_research_pipeline
 WIDTH = dt.timedelta(minutes=15)
 
 class OfflineM15Cycle:
-    def __init__(self, *, paper_rehearsal=False):
+    def __init__(self, *, paper_rehearsal=False, paper_database=None):
         self.last_close = None
         self.last_digest = None
         self.last_frames = None
         self.blocked = False
         self.calls = 0
         self.paper = None
+        self.persistent_rehearsal = paper_database is not None
+        if self.persistent_rehearsal and paper_rehearsal is not True:
+            raise ValueError('Explicit synthetic paper mode required')
         if paper_rehearsal is True:
             if os.environ.get('GPP_SYNTHETIC_TEST_SIMULATION') != '1':
                 raise ValueError('Explicit isolated test process required')
-            self.paper = PaperAccount(':memory:')
+            if self.persistent_rehearsal:
+                path = pathlib.Path(paper_database)
+                if (not path.is_absolute() or path.name != 'synthetic-m15-rehearsal.sqlite3'
+                        or path.parent.resolve() != path.parent or path.is_symlink()
+                        or not path.parent.is_dir() or stat.S_IMODE(path.parent.stat().st_mode) & 0o077):
+                    raise ValueError('Dedicated private test directory required')
+                if path.exists() and (not path.is_file() or stat.S_IMODE(path.stat().st_mode) & 0o077):
+                    raise ValueError('Unsafe rehearsal database')
+                if not path.exists():
+                    fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+                    os.close(fd)
+                self.paper = PaperAccount(path)
+                try:
+                    self.restore_checkpoint()
+                except Exception:
+                    self.paper.close()
+                    self.paper = None
+                    raise
+            else:
+                self.paper = PaperAccount(':memory:')
+
+    def restore_checkpoint(self):
+        summary = self.paper.summary()
+        self.blocked = bool(summary['account']['killed'])
+        rows = self.paper.db.execute('SELECT open_ms,digest,payload FROM observations ORDER BY open_ms').fetchall()
+        if not rows:
+            if summary['account']['last_ms'] is not None:
+                raise ValueError('Missing rehearsal checkpoint')
+            return
+        if summary['account']['last_ms'] != rows[-1]['open_ms']:
+            raise ValueError('Rehearsal checkpoint head mismatch')
+        for row in rows:
+            if hashlib.sha256(row['payload'].encode()).hexdigest() != row['digest']:
+                raise ValueError('Observation checksum mismatch')
+            data = json.loads(row['payload'])
+            checkpoint = data.get('cycleCheckpoint')
+            if (data['bar'].get('dataOrigin') != 'SYNTHETIC_TEST_ONLY'
+                    or not isinstance(checkpoint, dict)
+                    or set(checkpoint) != {'15min','1h','4h'}):
+                raise ValueError('Not a dedicated synthetic cycle ledger')
+            close = dt.datetime.fromtimestamp(row['open_ms']/1000, dt.timezone.utc) + WIDTH
+            frames = {k: {'candles': v, 'expectedOpenTimes': [x['openTime'] for x in v]}
+                      for k,v in checkpoint.items()}
+            packet = dict(provider='SYNTHETIC_RESTORE',instrument='XAU/USD',mode='synthetic',
+                          receivedUTC=close.isoformat(),frames=frames)
+            checked = intake_payload(packet,close,SourcePolicy())
+            if (checked['status'] != 'SYNTHETIC_TEST_ONLY' or
+                    parse_utc(checkpoint['15min'][-1]['openTime']) + WIDTH != close):
+                raise ValueError('Invalid stored cycle checkpoint')
+        self.last_close = close
+        self.last_digest = hashlib.sha256(json.dumps(checkpoint,sort_keys=True,
+            separators=(',',':'),allow_nan=False).encode()).hexdigest()
+        self.last_frames = {k: {x['openTime']:x for x in v} for k,v in checkpoint.items()}
+        self.calls = len(rows)
+
 
     def close(self):
         if self.paper is not None:
@@ -127,7 +186,9 @@ class OfflineM15Cycle:
                 bar = snapshot['frames']['M15'][-1]
                 if bar.get('dataOrigin') != 'SYNTHETIC_TEST_ONLY':
                     raise ValueError('Synthetic bar required')
-                self.paper.step(bar, snapshot, evaluator=evaluate_agreement)
+                checkpoint = {k: v['candles'] for k,v in checked['frames'].items()}
+                self.paper.step(bar, snapshot, evaluator=evaluate_agreement,
+                                cycle_checkpoint=checkpoint if self.persistent_rehearsal else None)
             except Exception:
                 self.lock()
                 return self.report("SYNTHETIC_PAPER_FAILURE")

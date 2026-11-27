@@ -99,13 +99,18 @@ class PaperAccount:
             self.db.execute('ROLLBACK')
             raise
 
-    def step(self, bar, snapshot=None, evaluator=None):
+    def step(self, bar, snapshot=None, evaluator=None, *, cycle_checkpoint=None):
         opened = validate_bar(bar)
         if snapshot is not None and timestamp(snapshot['asOfUTC']) != opened + BAR_MS:
             raise ValueError('Snapshot must match this closed bar')
         if snapshot is not None and evaluator is None and snapshot.get('frames', {}).get('M15', [None])[-1] != bar:
             raise ValueError('Snapshot M15 close must match processed bar')
-        payload = canonical({'bar': bar, 'snapshot': snapshot})
+        record = {'bar': bar, 'snapshot': snapshot}
+        if cycle_checkpoint is not None:
+            if bar.get('dataOrigin') != 'SYNTHETIC_TEST_ONLY':
+                raise ValueError('Cycle checkpoint is synthetic only')
+            record['cycleCheckpoint'] = cycle_checkpoint
+        payload = canonical(record)
         digest = hashlib.sha256(payload.encode()).hexdigest()
         self.db.execute('BEGIN IMMEDIATE')
         try:
