@@ -19,6 +19,7 @@ class OfflineM15Cycle:
     def __init__(self, *, paper_rehearsal=False):
         self.last_close = None
         self.last_digest = None
+        self.last_frames = None
         self.blocked = False
         self.calls = 0
         self.paper = None
@@ -61,10 +62,12 @@ class OfflineM15Cycle:
             latest = checked["frames"]["15min"]["candles"][-1]
             close = parse_utc(latest["openTime"]) + WIDTH
             digest = hashlib.sha256(json.dumps(
-                checked["frames"]["15min"]["candles"], sort_keys=True,
+                {k: v["candles"] for k, v in checked["frames"].items()}, sort_keys=True,
                 separators=(",", ":"), allow_nan=False).encode()).hexdigest()
         except (ValueError, TypeError, KeyError, AttributeError, OverflowError):
             return self.report("INTAKE_REJECTED")
+        frames = {k: {row["openTime"]: row for row in v["candles"]}
+                  for k, v in checked["frames"].items()}
         if self.last_close is not None:
             if close == self.last_close:
                 if digest != self.last_digest:
@@ -74,11 +77,21 @@ class OfflineM15Cycle:
             if close != self.last_close + WIDTH:
                 self.lock()
                 return self.report("GAP_OR_REVERSED_CLOSE")
+            for interval, previous in self.last_frames.items():
+                current = frames[interval]
+                common = previous.keys() & current.keys()
+                # A sliding window may drop older bars, but each family
+                # must still contain its previous latest bar unchanged.
+                if (not common or max(previous) not in current
+                        or any(previous[k] != current[k] for k in common)):
+                    self.lock()
+                    return self.report("CONFLICTING_CLOSED_HISTORY")
         if not dt.timedelta(0) <= now-close <= dt.timedelta(seconds=30):
             return self.report("NOT_FRESH_M15_CLOSE")
         # Consume once even if the engine fails: no replay with later
         # context masquerading as evidence available at the original close.
         self.last_close, self.last_digest = close, digest
+        self.last_frames = frames
         self.calls += 1
         result = run_research_pipeline(packet, now, SourcePolicy(), context,
                                        allow_synthetic_simulation=True)

@@ -40,5 +40,34 @@ class M15CycleTests(unittest.TestCase):
         self.assertEqual(cycle.accept(later,c,later_now)["status"],"GAP_OR_REVERSED_CLOSE")
         self.assertEqual(cycle.calls,1)
 
+
+    def test_higher_frame_revision_same_close_and_next_close_blocks(self):
+        p,c,now=fixture_bundle()
+        with patch.dict("os.environ", {"GPP_SYNTHETIC_TEST_SIMULATION":"1"}):
+            for interval in ("1h","4h"):
+                cycle=OfflineM15Cycle()
+                self.assertEqual(cycle.accept(p,c,now)["status"],"OFFLINE_CYCLE_REVIEWED")
+                changed=copy.deepcopy(p)
+                changed["frames"][interval]["candles"][-1]["high"]+=1
+                self.assertEqual(cycle.accept(changed,c,now)["status"],"CONFLICTING_CLOSED_HISTORY")
+                self.assertEqual(cycle.calls,1)
+
+            cycle=OfflineM15Cycle(paper_rehearsal=True)
+            self.addCleanup(cycle.close)
+            self.assertEqual(cycle.accept(p,c,now)["syntheticPending"],1)
+            changed=copy.deepcopy(p)
+            changed["frames"]["4h"]["candles"][-1]["high"]+=1
+            frame=changed["frames"]["15min"]
+            opened=now.isoformat().replace("+00:00","Z")
+            frame["candles"].append(dict(openTime=opened,open=104,high=105,low=103,close=104))
+            frame["expectedOpenTimes"].append(opened)
+            later=now+dt.timedelta(minutes=15)
+            changed["receivedUTC"]=later.isoformat()
+            blocked=cycle.accept(changed,c,later)
+            self.assertEqual(blocked["status"],"CONFLICTING_CLOSED_HISTORY")
+            self.assertEqual(blocked["syntheticPending"],0)
+            self.assertEqual(blocked["syntheticOpen"],0)
+            self.assertEqual(cycle.calls,1)
+
 if __name__=="__main__":
     unittest.main()
