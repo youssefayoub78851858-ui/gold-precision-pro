@@ -274,3 +274,9 @@ interpret this record as permission to redeploy either service, activate
 paper, buy a subscription, or change production. Next action is an
 owner-approved private backup/recovery route, subject to data rights;
 never upload raw vault bytes to GitHub or chat.
+
+## Owner-observed disposable restore drill — 2026-11-28
+
+The owner ran a one-time local temporary-directory copy of the actual sealed vault in the existing coordinator Web Shell. The running loader returned RESTORE OK; restored counts M15 395, H1 98, H4 26 and 2497 quote observations match the earlier source inventory. The command removed the temporary directory after the check. The original archive was not restored over, moved, or replaced. This confirms local copy readability and envelope validation only; no independent offsite retention, exact byte comparison, full disk recovery or broker rights were established.
+
+Render documents SSH public-key access for private services and SCP/SFTP downloads from disk-backed services (https://render.com/docs/ssh and https://render.com/docs/disks#transferring-files). A possible no-new-subscription route is an owner-controlled Android SSH client, an owner-approved private encrypted backup, and local checksum/restore verification, without publishing data or using a temporary paid instance. The user must control the destination and private key. BiQuote's Nov 25 written permission covers private research/storage to the extent of its own rights; upstream rights are not warranted. No archive transfer or service change has been performed. HOLD remains in effect; independent backup and release approval are not established.
