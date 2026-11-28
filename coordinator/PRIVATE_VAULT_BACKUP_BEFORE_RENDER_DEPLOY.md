@@ -241,3 +241,36 @@ offsite archive, no independent broker price rights, no forecast accuracy
 proof, and no authorization to send real or paper orders. Keep the
 existing review service Live on its current commit until the missing
 private archive access and recovery evidence have been established.
+
+## Owner-observed Render evidence — 2026-11-28
+
+The owner supplied dashboard and Web Shell screenshots from the existing
+private coordinator (live revision `b01574f`, no restart or redeploy).
+The existing `load_vault` completed successfully. The path resolved under
+`/var/data/`. Sanitized observed counts: M15 395, H1 98, H4 26, quote
+observations 2497. This is point-in-time local integrity evidence, not a
+broker feed qualification or a complete independent recovery test.
+
+The Disk page displayed seven daily snapshots dated November 22–28, 2026,
+latest November 28 at 02:16 in the dashboard's displayed time zone (not
+independently established). Their existence is owner-observed; vault
+inclusion and successful recovery are not verified. No Restore was run.
+No raw price, archive bytes, account secrets or snapshot keys were copied.
+
+The distinct review web service remains Free without an attached disk,
+last live revision `a0f7a7f` (Nov 22). Candidate review revision
+`33867176a334dbd440782c30daacb6af6969bdba` passed offline V2 CI
+[46116230280](https://github.com/youssefayoub78851858-ui/gold-precision-pro/actions/runs/46116230280)
+and Massive no-billing CI
+[46116230308](https://github.com/youssefayoub78851858-ui/gold-precision-pro/actions/runs/46116230308).
+The review web diff adds the five blocked paper-readiness conditions and
+keeps WAIT/non-execution. Candidate tested in CI, not deployed. The
+coordinator's separate data-bearing runtime is unchanged.
+
+**Predeploy decision: HOLD.** Local archive validity and listed daily
+snapshots are confirmed by owner screenshots; independent offsite copy,
+isolated restore and explicit release approval remain unverified. Do not
+interpret this record as permission to redeploy either service, activate
+paper, buy a subscription, or change production. Next action is an
+owner-approved private backup/recovery route, subject to data rights;
+never upload raw vault bytes to GitHub or chat.
