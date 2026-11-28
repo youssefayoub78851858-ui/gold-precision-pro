@@ -143,3 +143,31 @@ market data, source rights, full real holdout coverage, other market layers,
 host costs, and prospective after-cost performance remain open. No production
 changes, credentials, provider data requests, paid services, paper orders,
 or real trading. WAIT remains unchanged.
+
+## 2026-11-28 — consolidated feed feasibility, no purchase
+
+A fresh documentation-only lookup of Massive API endpoints confirms Forex BBO
+GET /v3/quotes/{fxTicker}, futures contract/trade/snapshot endpoints and
+index snapshots as separate product families; its Treasury yield endpoint
+provides daily data rather than intraday confirmation. No market API call
+or paid plan was activated. Public monthly pricing checked:
+- Currencies Starter $49, real-time forex BBO.
+- Futures Starter $29 delayed; Developer $79 delayed with trades/top of book;
+  Advanced $199 real-time trades and top-of-book quotes. This pricing list
+  does not establish full GC depth/MBO/MBP or aggressor-side coverage.
+- Indices Advanced $99 real-time; actual ICE DXY availability/rights not proven.
+References: https://massive.com/currencies ; https://massive.com/pricing?product=futures ; https://massive.com/indices .
+Therefore do not purchase Currencies Starter as if it covered the full
+Ultimate stack. dxFeed documents COMEX GC and depth in some offerings
+(https://dxfeed.com/market-data/futures/comex/ and
+https://dxfeed-retail.zendesk.com/hc/en-us/articles/4403208723223-COMEX),
+but direct private Linux API pricing, XAUUSD/DXY/yields/news/calendar and
+all rights remain unverified. It is a candidate for a single quote, not a
+selected source. Capital.com and Barchart technical replies still absent
+in the latest inbox search. BiQuote remains existing research-only.
+
+Owner elected to defer phone-based independent backup; keep the live
+coordinator and review deployment unchanged under the existing release
+hold. No new subscriber costs, no provider data requests, no live or paper
+orders. Real-source activation and complete independent validation remain
+blocked; further synthetic tests do not close the external source gaps.
