@@ -27,6 +27,8 @@ on:
       - 'coordinator/massive_pre_purchase_handoff.py'
       - 'coordinator/test_massive_pre_purchase_handoff.py'
       - 'coordinator/massive_bbo_history_adapter.py'
+      - 'coordinator/massive_synthetic_cutover.py'
+      - 'coordinator/test_massive_synthetic_cutover.py'
       - 'coordinator/massive_readonly_history_probe.py'
       - 'coordinator/test_massive_readonly_history_probe.py'
       - 'coordinator/xauusd_feed_gate.py'
@@ -71,3 +73,6 @@ jobs:
       - name: Bounded historical GET sample with injected fake transport
         working-directory: coordinator
         run: python -m unittest -v test_massive_readonly_history_probe
+      - name: Rehearse historical-to-stream overlapping closed candles without real merging
+        working-directory: coordinator
+        run: python -m unittest -v test_massive_synthetic_cutover
